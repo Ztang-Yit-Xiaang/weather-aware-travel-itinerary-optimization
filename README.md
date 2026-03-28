@@ -53,9 +53,9 @@ Key attraction variables:
 
 Each attraction receives a baseline utility score:
 
-\[
+$$
 U_i = rating_i \cdot \log(review\_count_i)
-\]
+$$
 
 This captures both:
 

@@ -194,15 +194,7 @@ The itinerary optimization maximizes overall visitor satisfaction while penalizi
 
 $$
 \max
-\sum_{i \in N} \tilde{U}_i x_i
--
-\alpha \sum_{i \in N} \tilde{W}_i x_i
--
-\beta \sum_{i,j \in N} \tilde{t}_{ij} y_{ij}
--
-\gamma \sum_{i \in N} P(c_i) x_i
-+
-\lambda \sum_{i \in N} x_i
+\sum_{i \in N} \tilde{U}_i x_i - \alpha \sum_{i \in N} \tilde{W}_i x_i - \beta \sum_{i,j \in N} \tilde{t}_{ij} y_{ij} - \gamma \sum_{i \in N} P(c_i) x_i + \lambda \sum_{i \in N} x_i
 $$
 
 where

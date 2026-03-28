@@ -102,11 +102,12 @@ Visit duration is estimated using attraction category heuristics.
 
 Examples:
 
-|Category |	Estimated Duration|
-|Museum | 60–120 minutes |
-|Zoo	| 90–180 minutes | 
-|Park |	60–120 minutes |
-|Landmark |	45–75 minutes |
+| Category  | Estimated Duration |
+|-----------|-------------------|
+| Museum    | 60–120 minutes    |
+| Zoo       | 90–180 minutes    |
+| Park      | 60–120 minutes    |
+| Landmark  | 45–75 minutes     |
 
 A stochastic simulation is used:
 

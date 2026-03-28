@@ -1,1 +1,2 @@
+*.csv filter=lfs diff=lfs merge=lfs -text
 results/outputs/attraction_weather_dataset.csv filter=lfs diff=lfs merge=lfs -text

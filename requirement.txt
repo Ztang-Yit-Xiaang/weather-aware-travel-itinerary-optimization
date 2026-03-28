@@ -1,0 +1,9 @@
+pandas>=2.0
+numpy>=1.24
+matplotlib>=3.7
+requests>=2.31
+geopy>=2.4
+anthropic>=0.34
+jupyter>=1.0
+folium
+openrouteservice

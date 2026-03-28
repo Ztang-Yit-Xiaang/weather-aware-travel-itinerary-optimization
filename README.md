@@ -23,6 +23,293 @@ This project proposes a **three-layer decision framework**:
 The system integrates real-world datasets including Yelp attraction metadata and historical weather data to generate optimized travel itineraries.
 
 ---
+# Mathematical Formulation
+
+The itinerary planning problem is formulated as a **mixed-integer optimization problem** that balances attraction utility, travel time, congestion, and budget constraints.
+
+---
+
+# Decision Variables
+
+Let
+
+$$
+N
+$$
+
+be the set of candidate attractions.
+
+We define the following decision variables:
+
+$$
+x_i =
+\begin{cases}
+1 & \text{if attraction } i \text{ is visited}\\
+0 & \text{otherwise}
+\end{cases}
+$$
+
+$$
+y_{ij} =
+\begin{cases}
+1 & \text{if travel occurs from attraction } i \text{ to } j\\
+0 & \text{otherwise}
+\end{cases}
+$$
+
+Additionally, ordering variables are introduced to eliminate subtours:
+
+$$
+u_i
+$$
+
+which represents the visiting order of attraction \(i\).
+
+---
+
+# Attraction Utility
+
+The baseline utility of an attraction is computed as
+
+$$
+U_i = r_i \cdot \log(n_i)
+$$
+
+where
+
+- $r_i$ = Yelp rating  
+- $n_i$ = review count  
+
+This formulation captures both **quality** and **popularity**.
+
+Utility values are normalized:
+
+$$
+\tilde{U}_i =
+\frac{U_i - U_{min}}
+{U_{max} - U_{min}}
+$$
+
+---
+
+# Weather-Aware Congestion Estimation
+
+Visitor congestion is estimated using a machine learning model trained on historical review density and weather conditions.
+
+Let
+
+$$
+X = (temperature, precipitation, weekend, month)
+$$
+
+be the contextual feature vector.
+
+An XGBoost regression model estimates expected review density:
+
+$$
+\hat{R} = f_{XGBoost}(X)
+$$
+
+Assuming a constant participation rate $p$, visitor density is estimated as
+
+$$
+\hat{V} = \frac{\hat{R}}{p}
+$$
+
+Expected waiting time is modeled using a queue-based approximation:
+
+$$
+W_i =
+w_i \cdot
+\log
+\left(
+1 + \frac{\hat{V}}{C_i}
+\right)
+$$
+
+where
+
+- $C_i$ = attraction capacity
+- $w_i$ = base waiting coefficient
+
+---
+
+# Travel Time Estimation
+
+Travel distance between attractions is calculated using geodesic distance:
+
+$$
+d_{ij} = \text{geodesic}(i,j)
+$$
+
+Travel time is estimated assuming average speed $v$:
+
+$$
+t_{ij} = \frac{d_{ij}}{v}
+$$
+
+---
+
+# Visit Duration Model
+
+Visit durations are sampled from category-specific distributions:
+
+$$
+T_i \sim \mathcal{N}(\mu_c, \sigma_c)
+$$
+
+where $c$ represents the attraction category.
+
+This introduces stochastic variability in visitor behavior.
+
+---
+
+# Cost Model
+
+Each attraction is assigned an estimated cost:
+
+$$
+c_i
+$$
+
+To discourage expensive attractions, a concave penalty is applied:
+
+$$
+P(c_i) = c_i^{p}
+$$
+
+where
+
+$$
+0 < p < 1
+$$
+
+This ensures that marginal cost penalties diminish for higher-cost attractions.
+
+---
+
+# Optimization Objective
+
+The itinerary optimization maximizes overall visitor satisfaction while penalizing travel, congestion, and cost.
+
+$$
+\max
+\sum_{i \in N} \tilde{U}_i x_i
+-
+\alpha \sum_{i \in N} \tilde{W}_i x_i
+-
+\beta \sum_{i,j \in N} \tilde{t}_{ij} y_{ij}
+-
+\gamma \sum_{i \in N} P(c_i) x_i
++
+\lambda \sum_{i \in N} x_i
+$$
+
+where
+
+- $\alpha$ = waiting time penalty  
+- $\beta$ = travel cost weight  
+- $\gamma$ = cost penalty weight  
+- $\lambda$ = attraction exploration bonus
+
+---
+
+# Time Constraint
+
+Total itinerary time must not exceed the daily budget $T$:
+
+$$
+\sum_{i \in N}
+(T_i + \eta W_i)x_i
++
+\sum_{i,j \in N}
+t_{ij}y_{ij}
+\le T
+$$
+
+where
+
+$$
+\eta
+$$
+
+represents the proportion of waiting time experienced during the visit.
+
+---
+
+# Budget Constraint
+
+$$
+\sum_{i \in N} c_i x_i \le B
+$$
+
+where $B$ is the travel budget.
+
+---
+
+# Route Consistency Constraints
+
+Each visited attraction must have exactly one incoming and one outgoing edge:
+
+$$
+\sum_{j} y_{ij} = x_i
+$$
+
+$$
+\sum_{i} y_{ij} = x_j
+$$
+
+---
+
+# Subtour Elimination (MTZ Formulation)
+
+To prevent disconnected routes:
+
+$$
+u_i - u_j + K y_{ij} \le K - 1
+$$
+
+where $K$ is the maximum number of visited attractions.
+
+---
+
+# Overall System Architecture
+
+The system integrates **machine learning predictions with optimization decision making**:
+Historical Data
+│
+▼
+Weather + Reviews
+│
+▼
+ML Congestion Prediction
+│
+▼
+Waiting Time Estimation
+│
+▼
+Mixed-Integer Optimization
+│
+▼
+Recommended Travel Itinerary
+----
+
+---
+
+# Why This Formulation Works
+
+The model captures multiple realistic travel considerations:
+
+- attraction popularity
+- travel efficiency
+- congestion conditions
+- budget limitations
+- visitor preferences
+
+By combining **predictive modeling** with **optimization**, the system produces itineraries that are both **data-driven and operationally feasible**.
+-------
+
+
 
 # Methodology
 

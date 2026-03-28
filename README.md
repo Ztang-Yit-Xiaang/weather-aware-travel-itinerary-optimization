@@ -265,27 +265,18 @@ where $K$ is the maximum number of visited attractions.
 
 ---
 
-# Overall System Architecture
+## Overall System Architecture
 
-The system integrates **machine learning predictions with optimization decision making**:
-Historical Data
-│
-▼
-Weather + Reviews
-│
-▼
-ML Congestion Prediction
-│
-▼
-Waiting Time Estimation
-│
-▼
-Mixed-Integer Optimization
-│
-▼
-Recommended Travel Itinerary
-----
+The system integrates **machine learning predictions with optimization decision making**.
 
+```mermaid
+flowchart TD
+    A[Historical Data] --> B[Weather + Reviews]
+    B --> C[ML Congestion Prediction]
+    C --> D[Waiting Time Estimation]
+    D --> E[Mixed-Integer Optimization]
+    E --> F[Recommended Travel Itinerary]
+```
 ---
 
 # Why This Formulation Works

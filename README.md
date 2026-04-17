@@ -1,10 +1,49 @@
+<div align="center">
+
 # Weather-Aware Travel Itinerary Optimization
 
-A data-driven itinerary planning system that integrates **machine learning, geospatial analytics, and optimization** to recommend travel routes under weather, time, and travel constraints.
+**A hybrid machine learning + operations research pipeline for multi-day travel planning under weather, travel-time, congestion, and budget constraints.**
+
+<p>
+  <img src="https://img.shields.io/badge/Python-3.12-3776AB?style=for-the-badge&logo=python&logoColor=white" alt="Python 3.12" />
+  <img src="https://img.shields.io/badge/Jupyter-Notebook-F37626?style=for-the-badge&logo=jupyter&logoColor=white" alt="Jupyter Notebook" />
+  <img src="https://img.shields.io/badge/Pandas-Data%20Processing-150458?style=for-the-badge&logo=pandas&logoColor=white" alt="Pandas" />
+  <img src="https://img.shields.io/badge/NumPy-Numerical%20Computing-013243?style=for-the-badge&logo=numpy&logoColor=white" alt="NumPy" />
+</p>
+
+<p>
+  <img src="https://img.shields.io/badge/XGBoost-Waiting%20Time%20Prediction-EC6B23?style=for-the-badge" alt="XGBoost" />
+  <img src="https://img.shields.io/badge/Gurobi-MIP%20Optimization-EE3524?style=for-the-badge" alt="Gurobi" />
+  <img src="https://img.shields.io/badge/OR--Tools-Constraint%20Modeling-2F80ED?style=for-the-badge" alt="OR-Tools" />
+  <img src="https://img.shields.io/badge/Folium-Interactive%20Maps-77B829?style=for-the-badge" alt="Folium" />
+</p>
+
+<p>
+  <img src="https://img.shields.io/badge/Yelp-Attraction%20Data-D32323?style=for-the-badge&logo=yelp&logoColor=white" alt="Yelp" />
+  <img src="https://img.shields.io/badge/OpenStreetMap-Lodging%20Data-7EBC6F?style=for-the-badge&logo=openstreetmap&logoColor=white" alt="OpenStreetMap" />
+  <img src="https://img.shields.io/badge/Open--Meteo-Weather%20Features-0B84F3?style=for-the-badge" alt="Open-Meteo" />
+  <img src="https://img.shields.io/badge/Geopy-Distance%20Estimation-5A3E85?style=for-the-badge" alt="Geopy" />
+</p>
+
+<p>
+  <img src="https://img.shields.io/badge/Focus-Weather--Aware%20Tourist%20Trip%20Design-111827?style=flat-square" alt="Project Focus" />
+  <img src="https://img.shields.io/badge/Course-IE5533%20Operations%20Research%20for%20Data%20Science-8B5CF6?style=flat-square" alt="Course" />
+  <img src="https://img.shields.io/badge/Output-Itinerary%20Optimization%20%26%20Route%20Visualization-059669?style=flat-square" alt="Output" />
+</p>
+
+</div>
 
 This project was developed for **IE5533 – Operations Research for Data Science**.
 
-The system combines attraction utility modeling, weather-aware congestion estimation, and travel-time optimization to generate realistic travel itineraries.
+The system combines attraction utility modeling, weather-aware congestion estimation, hotel selection, and travel-time optimization to generate realistic travel itineraries.
+
+**Core workflow**
+
+1. Build attraction utility scores from review and rating signals.
+2. Predict weather-aware congestion and waiting time with machine learning.
+3. Estimate travel time, visit duration, and trip cost from geospatial data.
+4. Solve a multi-day itinerary optimization model with routing and accommodation decisions.
+5. Visualize the final route plan through static figures and interactive maps.
 
 ---
 

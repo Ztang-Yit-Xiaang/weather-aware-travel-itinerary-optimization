@@ -238,23 +238,22 @@ $$
 & \sum_{d \in D}\sum_{i \in A}
 \Big(
 \tilde{u}_i
- - \alpha_p \tilde{w}_i
- - \gamma P(c_i)
- + \lambda_p
+-\alpha_p \tilde{w}_i
+-\gamma P(c_i)
++\lambda_p
 \Big)x_{id} \\
 &\quad
- - \sum_{d \in D}\sum_{(i,j) \in E}
+- \sum_{d \in D}\sum_{(i,j) \in E}
 \beta_p \tilde{t}_{ij} y_{ijd}
- + \omega \sum_{d \in D}\sum_{h \in H} v_h z_{hd} \\
++ \omega \sum_{d \in D}\sum_{h \in H} v_h z_{hd} \\
 &\quad
- - \mu \sum_{d=1}^{K-1}\sum_{h \in H}\sum_{g \in H}\tilde{\tau}_{hg} q_{hgd}
- - \phi \sum_{d=1}^{K-1}\sum_{h \neq g} q_{hgd} \\
+- \mu \sum_{d=1}^{K-1}\sum_{h \in H}\sum_{g \in H}\tilde{\tau}_{hg} q_{hgd}
+- \phi \sum_{d=1}^{K-1}\sum_{h \neq g} q_{hgd} \\
 &\quad
- - \rho_1 \sum_{c \in C} R_c
- - \rho_2 \sum_{c \in C} H_c
- - \rho_3 \Delta_p
+- \rho_1 \sum_{c \in C} R_c
+- \rho_2 \sum_{c \in C} H_c
+- \rho_3 \Delta_p
 \end{aligned}
-
 $$
 
 This objective matches the notebook logic:

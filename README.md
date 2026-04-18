@@ -230,13 +230,7 @@ In addition, the model defines:
 
 For a given tourist profile $p$, the objective maximizes the overall itinerary utility by balancing attraction enjoyment with penalties for waiting time, travel time, monetary cost, hotel relocation, and excessive thematic repetition.
 
-The optimization objective is defined as
-
-### Objective Function
-
-For a given tourist profile $p$, the objective maximizes the overall itinerary utility by balancing attraction enjoyment with penalties for waiting time, travel time, monetary cost, hotel relocation, and excessive thematic repetition.
-
-The optimization objective is defined as
+The optimization objective is:
 
 $$
 \begin{aligned}
@@ -263,27 +257,34 @@ $$
 
 $$
 
-The first term represents the **net utility of visiting attractions**, where the intrinsic attraction utility $\tilde{u}_i$ is adjusted by profile-dependent penalties for waiting time and cost.
+This objective matches the notebook logic:
 
-The second term penalizes **travel time between consecutive attractions**, while rewarding the selection of higher-quality hotels.
-
-The third term captures **hotel relocation effects**, including both the travel time required to move between hotels and an additional penalty discouraging frequent hotel switches.
-
-Finally, the last term introduces **soft penalties** for itinerary imbalance, including excessive repetition of attraction categories and deviation from the desired number of attractions for the given tourist profile.
+- reward attraction utility and a profile-dependent exploration bonus,
+- penalize waiting time, travel time, and attraction cost,
+- reward higher-value accommodations,
+- penalize overnight relocation time and hotel switching,
+- penalize excessive thematic repetition,
+- penalize falling short of the profile target number of attractions.
 
 #### Parameter Interpretation
 
-- $\omega$: weight assigned to hotel quality  
-- $\mu$: penalty for hotel relocation travel time  
-- $\phi$: penalty for switching hotels between days  
-- $R_c, H_c$: slack variables controlling repetition of attraction categories  
-- $\Delta_p$: deviation from the target number of attractions for profile $p$
+- $\alpha_p$: profile-dependent waiting-time penalty
+- $\beta_p$: profile-dependent travel-time penalty
+- $\gamma$: attraction-cost penalty weight
+- $\lambda_p$: profile-dependent attraction bonus
+- $\omega$: weight assigned to hotel quality
+- $\mu$: penalty for overnight relocation time
+- $\phi$: fixed penalty for switching hotels between days
+- $R_c, H_c$: soft repetition penalties for content theme $c$
+- $\Delta_p$: shortfall from the target number of attractions for profile $p$
 
 #### Implementation Note
 
 Since the solver used is **CP-SAT**, which operates over integer variables and coefficients, all objective coefficients are scaled by a constant factor during implementation. This preserves the relative weighting of objective components while ensuring the model remains compatible with the integer constraint requirements of the CP-SAT framework.
 
 ### Constraints
+
+The model is subject to the following main constraint families.
 
 #### 1. Daily time budget
 
@@ -297,13 +298,7 @@ $$
 \le T
 $$
 
-This includes:
-
-- attraction visit duration,
-- waiting time,
-- inter-attraction travel,
-- hotel departure leg,
-- hotel return leg.
+This enforces that each day respects the sightseeing time budget, including visit duration, waiting time, travel between attractions, hotel departure, and hotel return.
 
 #### 2. Total trip budget
 
@@ -313,9 +308,9 @@ $$
 \le B
 $$
 
-So the model jointly controls both attraction spending and accommodation spending.
+This jointly controls attraction spending and accommodation spending.
 
-#### 3. One hotel per day and consistent hotel transitions
+#### 3. Hotel assignment and overnight transition consistency
 
 Each day selects exactly one hotel:
 
@@ -330,6 +325,8 @@ $$
 \sum_{h \in H} q_{hgd} = z_{g,d+1}
 $$
 
+The second pair of equalities forces the overnight transition variables to match the hotel used on consecutive days.
+
 #### 4. Day activation and hotel start/end structure
 
 If a day is used, the itinerary must start from exactly one hotel-to-attraction edge and end with exactly one attraction-to-hotel edge:
@@ -340,7 +337,16 @@ $$
 \sum_{i \in A}\sum_{h \in H} e_{ihd} = a_d
 $$
 
-These start/end edges can only use the hotel selected for that day.
+These edges are further linked to the chosen hotel by:
+
+$$
+\sum_{i \in A} s_{hid} \le z_{hd},
+\qquad
+\sum_{i \in A} e_{ihd} \le z_{hd}
+\qquad \forall h,d
+$$
+
+so a day can only depart from and return to its selected accommodation.
 
 #### 5. Visit-once rule
 
@@ -350,7 +356,7 @@ $$
 \sum_{d \in D} x_{id} \le 1 \qquad \forall i
 $$
 
-#### 6. Profile-dependent attraction counts
+#### 6. Profile-dependent activity and attraction counts
 
 For each day:
 
@@ -362,7 +368,11 @@ $$
 \sum_{i \in A} x_{id} \ge \underline{K}_p a_d
 $$
 
-And over the full trip:
+At the trip level:
+
+$$
+\sum_{d \in D} a_d \ge 1
+$$
 
 $$
 \sum_{d \in D}\sum_{i \in A} x_{id} \ge L_p
@@ -381,7 +391,7 @@ where:
 - $\bar{K}_p$ is the profile daily maximum,
 - $\underline{K}_p$ is the profile daily minimum if a day is active.
 
-#### 7. Waiting-time tolerance by profile
+#### 7. Profile-dependent waiting tolerance and special-category caps
 
 For each day:
 
@@ -392,8 +402,6 @@ $$
 
 This keeps the average waiting exposure aligned with traveler preference.
 
-#### 8. Special-category caps and content diversity
-
 The notebook also limits overconcentration in specific tourism categories:
 
 $$
@@ -401,6 +409,8 @@ $$
 \qquad
 \sum_{d \in D}\sum_{i \in A_{\text{whale}}} x_{id} \le 2
 $$
+
+#### 8. Content-diversity soft constraints
 
 For each inferred theme $c$, content-repeat penalties are activated by:
 
@@ -412,7 +422,7 @@ $$
 H_c \ge \sum_{d \in D}\sum_{i \in A_c} x_{id} - 2
 $$
 
-This is the content-decay component that discourages plans from collapsing into too many beaches, too many parks, or too many attractions of the same type.
+These soft constraints create the content-decay effect that discourages plans from collapsing into too many beaches, too many parks, or too many attractions of the same thematic type.
 
 #### 9. Flow conservation
 
@@ -426,7 +436,7 @@ $$
 \sum_{j:(j,i)\in E} y_{jid} + \sum_{h \in H} s_{hid} = x_{id}
 $$
 
-#### 10. Path edge count
+#### 10. Daily path cardinality
 
 For each active day, the number of attraction-to-attraction edges must be exactly one less than the number of visited attractions:
 
@@ -462,6 +472,8 @@ u_{id} \ge x_{id},
 \qquad
 u_{id} \le \bar{K}_p x_{id}
 $$
+
+Together, these constraints ensure that each daily itinerary is a connected path rather than a disconnected cycle.
 
 ---
 

@@ -426,9 +426,7 @@ $$
 For each active day, the number of attraction-to-attraction edges must be exactly one less than the number of visited attractions:
 
 $$
-\sum_{(i,j)\in E} y_{ijd}
-=
-\sum_{i \in A} x_{id} - a_d
+\sum_{(i,j)\in E} y_{ijd} = \sum_{i \in A} x_{id} - a_d
 $$
 
 #### 11. Overnight relocation limit

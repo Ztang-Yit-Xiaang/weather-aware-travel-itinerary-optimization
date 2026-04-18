@@ -232,32 +232,35 @@ For a given tourist profile $p$, the objective maximizes the overall itinerary u
 
 The optimization objective is defined as
 
+### Objective Function
+
+For a given tourist profile $p$, the objective maximizes the overall itinerary utility by balancing attraction enjoyment with penalties for waiting time, travel time, monetary cost, hotel relocation, and excessive thematic repetition.
+
+The optimization objective is defined as
+
 $$
-\max
-\sum_{d \in D}\sum_{i \in A}
+\begin{aligned}
+\max \quad
+& \sum_{d \in D}\sum_{i \in A}
 \Big(
 \tilde{u}_i
 - \alpha_p \tilde{w}_i
 - \gamma P(c_i)
 + \lambda_p
-\Big)x_{id}
-$$
-
-$$
-\sum_{d \in D}\sum_{(i,j) \in E}
+\Big)x_{id} \\
+&\quad
+- \sum_{d \in D}\sum_{(i,j) \in E}
 \beta_p \tilde{t}_{ij} y_{ijd}
-+ \omega \sum_{d \in D}\sum_{h \in H} v_h z_{hd}
-$$
++ \omega \sum_{d \in D}\sum_{h \in H} v_h z_{hd} \\
+&\quad
+- \mu \sum_{d=1}^{K-1}\sum_{h \in H}\sum_{g \in H}\tilde{\tau}_{hg} q_{hgd}
+- \phi \sum_{d=1}^{K-1}\sum_{h \neq g} q_{hgd} \\
+&\quad
+- \rho_1 \sum_{c \in C} R_c
+- \rho_2 \sum_{c \in C} H_c
+- \rho_3 \Delta_p
+\end{aligned}
 
-$$
-\mu \sum_{d=1}^{K-1}\sum_{h \in H}\sum_{g \in H}\tilde{\tau}_{hg} q_{hgd}
-+ \phi \sum_{d=1}^{K-1}\sum_{h \neq g} q_{hgd}
-$$
-
-$$
-\rho_1 \sum_{c \in C} R_c
-+ \rho_2 \sum_{c \in C} H_c
-+ \rho_3 \Delta_p
 $$
 
 The first term represents the **net utility of visiting attractions**, where the intrinsic attraction utility $\tilde{u}_i$ is adjusted by profile-dependent penalties for waiting time and cost.

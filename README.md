@@ -78,11 +78,11 @@ The current notebook formulation is a **multi-day mixed-integer optimization mod
 
 ### Sets and Indices
 
-- \(i, j \in A\): candidate attractions
-- \(h, g \in H\): candidate hotels / accommodations
-- \(d \in D = \{1, \dots, K\}\): day index
-- \(c \in C\): inferred content themes such as `beach`, `park`, `museum`, `tour`
-- \(E \subseteq A \times A\): feasible attraction-to-attraction arcs, filtered by a maximum travel threshold
+- $i, j \in A$: candidate attractions
+- $h, g \in H$: candidate hotels / accommodations
+- $d \in D = \{1, \dots, K\}$: day index
+- $c \in C$: inferred content themes such as `beach`, `park`, `museum`, `tour`
+- $E \subseteq A \times A$: feasible attraction-to-attraction arcs, filtered by a maximum travel threshold
 
 ### Preprocessing and Feature Normalization
 
@@ -112,13 +112,13 @@ $$
 
 where:
 
-- \(u_i\) is attraction utility,
-- \(w_i\) is the final weather-aware waiting-time estimate,
-- \(s_i\) is the simulated visit duration,
-- \(c_i\) is attraction cost,
-- \(p_h\) is hotel nightly price,
-- \(r_h\) is hotel rating,
-- \(e_h\) is hotel experience score.
+- $u_i$ is attraction utility,
+- $w_i$ is the final weather-aware waiting-time estimate,
+- $s_i$ is the simulated visit duration,
+- $c_i$ is attraction cost,
+- $p_h$ is hotel nightly price,
+- $r_h$ is hotel rating,
+- $e_h$ is hotel experience score.
 
 The accommodation score used in the objective is:
 
@@ -138,7 +138,7 @@ $$
 P(c_i) = \tilde{c}_i^{\,p}, \qquad 0 < p < 1
 $$
 
-with \(p = 0.7\) in the current implementation.
+with $p = 0.7$ in the current implementation.
 
 ### Tourist Profiles
 
@@ -150,17 +150,17 @@ The model supports three traveler profiles:
 
 Each profile defines:
 
-- waiting-time weight \(\alpha_p\),
-- travel-time weight \(\beta_p\),
+- waiting-time weight $\alpha_p$,
+- travel-time weight $\beta_p$,
 - minimum and target number of attractions,
 - maximum attractions per day,
 - minimum attractions per used day,
-- attraction bonus \(\lambda_p\),
+- attraction bonus $\lambda_p$,
 - maximum average waiting tolerance.
 
 ### Decision Variables
 
-For each attraction \(i\), hotel \(h\), and day \(d\), the model uses:
+For each attraction $i$, hotel $h$, and day $d$, the model uses:
 
 $$
 x_{id} =
@@ -218,7 +218,7 @@ a_d =
 \end{cases}
 $$
 
-The MTZ ordering variables \(u_{id}\) are introduced to eliminate subtours within each day.
+The MTZ ordering variables $u_{id}$ are introduced to eliminate subtours within each day.
 
 In addition, the model defines:
 
@@ -228,10 +228,12 @@ In addition, the model defines:
 
 ### Objective Function
 
-For a given profile \(p\), the objective maximizes normalized attraction utility while penalizing waiting, travel, cost, hotel switching, and excessive theme repetition:
+For a given tourist profile $p$, the objective maximizes the overall itinerary utility by balancing attraction enjoyment with penalties for waiting time, travel time, monetary cost, hotel relocation, and excessive thematic repetition.
+
+The optimization objective is defined as
 
 $$
-\max \;
+\max
 \sum_{d \in D}\sum_{i \in A}
 \Big(
 \tilde{u}_i
@@ -242,37 +244,47 @@ $$
 $$
 
 $$
-- \sum_{d \in D}\sum_{(i,j) \in E}
+\sum_{d \in D}\sum_{(i,j) \in E}
 \beta_p \tilde{t}_{ij} y_{ijd}
 + \omega \sum_{d \in D}\sum_{h \in H} v_h z_{hd}
 $$
 
 $$
-- \mu \sum_{d=1}^{K-1}\sum_{h \in H}\sum_{g \in H}\tilde{\tau}_{hg} q_{hgd}
-- \phi \sum_{d=1}^{K-1}\sum_{h \neq g} q_{hgd}
+\mu \sum_{d=1}^{K-1}\sum_{h \in H}\sum_{g \in H}\tilde{\tau}_{hg} q_{hgd}
++ \phi \sum_{d=1}^{K-1}\sum_{h \neq g} q_{hgd}
 $$
 
 $$
-- \rho_1 \sum_{c \in C} R_c
-- \rho_2 \sum_{c \in C} H_c
-- \rho_3 \Delta_p
+\rho_1 \sum_{c \in C} R_c
++ \rho_2 \sum_{c \in C} H_c
++ \rho_3 \Delta_p
 $$
 
-where:
+The first term represents the **net utility of visiting attractions**, where the intrinsic attraction utility $\tilde{u}_i$ is adjusted by profile-dependent penalties for waiting time and cost.
 
-- \(\omega\) weights hotel quality,
-- \(\mu\) penalizes relocation time,
-- \(\phi\) penalizes switching hotels,
-- \(R_c\) and \(H_c\) are content-repeat slack variables,
-- \(\Delta_p\) is the shortfall from the target attraction count for profile \(p\).
+The second term penalizes **travel time between consecutive attractions**, while rewarding the selection of higher-quality hotels.
 
-In the CP-SAT implementation, all objective coefficients are scaled by a constant factor so the model can remain purely integer-valued, consistent with CP-SAT's integer-constraint requirement.
+The third term captures **hotel relocation effects**, including both the travel time required to move between hotels and an additional penalty discouraging frequent hotel switches.
+
+Finally, the last term introduces **soft penalties** for itinerary imbalance, including excessive repetition of attraction categories and deviation from the desired number of attractions for the given tourist profile.
+
+#### Parameter Interpretation
+
+- $\omega$: weight assigned to hotel quality  
+- $\mu$: penalty for hotel relocation travel time  
+- $\phi$: penalty for switching hotels between days  
+- $R_c, H_c$: slack variables controlling repetition of attraction categories  
+- $\Delta_p$: deviation from the target number of attractions for profile $p$
+
+#### Implementation Note
+
+Since the solver used is **CP-SAT**, which operates over integer variables and coefficients, all objective coefficients are scaled by a constant factor during implementation. This preserves the relative weighting of objective components while ensuring the model remains compatible with the integer constraint requirements of the CP-SAT framework.
 
 ### Constraints
 
 #### 1. Daily time budget
 
-For each day \(d\):
+For each day $d$:
 
 $$
 \sum_{i \in A}(s_i + w_i)x_{id}
@@ -361,10 +373,10 @@ $$
 
 where:
 
-- \(L_p\) is the profile minimum,
-- \(T_p\) is the profile target,
-- \(\bar{K}_p\) is the profile daily maximum,
-- \(\underline{K}_p\) is the profile daily minimum if a day is active.
+- $L_p$ is the profile minimum,
+- $T_p$ is the profile target,
+- $\bar{K}_p$ is the profile daily maximum,
+- $\underline{K}_p$ is the profile daily minimum if a day is active.
 
 #### 7. Waiting-time tolerance by profile
 
@@ -387,7 +399,7 @@ $$
 \sum_{d \in D}\sum_{i \in A_{\text{whale}}} x_{id} \le 2
 $$
 
-For each inferred theme \(c\), content-repeat penalties are activated by:
+For each inferred theme $c$, content-repeat penalties are activated by:
 
 $$
 R_c \ge \sum_{d \in D}\sum_{i \in A_c} x_{id} - 1
@@ -401,7 +413,7 @@ This is the content-decay component that discourages plans from collapsing into 
 
 #### 9. Flow conservation
 
-If attraction \(i\) is visited on day \(d\), it must have exactly one predecessor and one successor when hotel start/end arcs are included:
+If attraction $i$ is visited on day $d$, it must have exactly one predecessor and one successor when hotel start/end arcs are included:
 
 $$
 \sum_{j:(i,j)\in E} y_{ijd} + \sum_{h \in H} e_{ihd} = x_{id}
@@ -430,7 +442,7 @@ $$
 \le \Omega
 $$
 
-where \(\Omega\) is the maximum allowed overnight relocation time.
+where $\Omega$ is the maximum allowed overnight relocation time.
 
 #### 12. Subtour elimination
 

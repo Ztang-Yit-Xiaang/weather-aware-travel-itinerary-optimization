@@ -28,7 +28,9 @@
 <p>
   <img src="https://img.shields.io/badge/Focus-Weather--Aware%20Tourist%20Trip%20Design-111827?style=flat-square" alt="Project Focus" />
   <img src="https://img.shields.io/badge/Course-IE5533%20Operations%20Research%20for%20Data%20Science-8B5CF6?style=flat-square" alt="Course" />
-  <img src="https://img.shields.io/badge/Output-Itinerary%20Optimization%20%26%20Interactive%20Routing-059669?style=flat-square" alt="Output" />
+  <a href="results/figures/tourist_routes_map_gurobi.html" title="Open the interactive Gurobi route map">
+    <img src="https://img.shields.io/badge/Output-Itinerary%20Optimization%20%26%20Interactive%20Routing-059669?style=flat-square" alt="Output" />
+  </a>
 </p>
 
 </div>

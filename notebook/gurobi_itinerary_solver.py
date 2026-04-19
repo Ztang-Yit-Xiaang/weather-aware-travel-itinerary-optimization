@@ -1,7 +1,68 @@
+import copy
 import os
 import time
 
 import numpy as np
+
+
+DEFAULT_TOURIST_PROFILES = {
+    "relaxed": {
+        "alpha": 3.0,
+        "beta": 0.8,
+        "min_attractions": 4,
+        "target_attractions": 6,
+        "max_attractions": 5,
+        "min_daily_attractions_if_used": 1,
+        "attraction_bonus": 0.03,
+        "max_wait": 60,
+    },
+    "balanced": {
+        "alpha": 2.0,
+        "beta": 1.0,
+        "min_attractions": 6,
+        "target_attractions": 8,
+        "max_attractions": 6,
+        "min_daily_attractions_if_used": 2,
+        "attraction_bonus": 0.12,
+        "max_wait": 90,
+    },
+    "explorer": {
+        "alpha": 1.0,
+        "beta": 0.9,
+        "min_attractions": 8,
+        "target_attractions": 10,
+        "max_attractions": 10,
+        "min_daily_attractions_if_used": 2,
+        "attraction_bonus": 0.22,
+        "max_wait": 180,
+    },
+}
+
+DEFAULT_MODEL_SETTINGS = {
+    "daily_time_budget": 720,
+    "total_budget": 1000,
+    "gamma": 0.01,
+    "hotel_utility_weight": 0.25,
+    "switch_time_weight": 0.10,
+    "switch_fixed_penalty": 0.08,
+    "content_repeat_penalty_weight": 0.18,
+    "content_heavy_repeat_penalty_weight": 0.12,
+    "attraction_shortfall_penalty_weight": 2.5,
+    "overnight_relocation_limit": 180,
+    "num_days": 3,
+}
+
+DEFAULT_SOLVER_SETTINGS = {
+    "time_limit_seconds": 900.0,
+    "mip_gap_target": 0.02,
+    "objective_scale": 1000,
+    "max_travel": 90,
+    "num_threads": None,
+    "mip_focus": 1,
+    "heuristics": 0.20,
+    "seed": 42,
+    "presolve": 2,
+}
 
 
 def infer_content_theme(row):
@@ -63,7 +124,45 @@ def _detect_license_path():
     return None
 
 
-def run_gurobi_itinerary_optimization(context):
+def _merge_profile_overrides(base_profiles, profile_overrides=None):
+    merged_profiles = copy.deepcopy(base_profiles)
+    if not profile_overrides:
+        return merged_profiles
+
+    for profile_name, overrides in profile_overrides.items():
+        if profile_name not in merged_profiles:
+            raise KeyError(f"Unknown tourist profile override: {profile_name}")
+
+        normalized_overrides = dict(overrides)
+        if "lambda" in normalized_overrides and "attraction_bonus" not in normalized_overrides:
+            normalized_overrides["attraction_bonus"] = normalized_overrides.pop("lambda")
+
+        merged_profiles[profile_name].update(normalized_overrides)
+
+    return merged_profiles
+
+
+def _select_profiles(profile_dict, selected_profiles=None):
+    if selected_profiles is None:
+        return profile_dict
+
+    if isinstance(selected_profiles, str):
+        selected_profiles = [selected_profiles]
+
+    missing_profiles = [profile_name for profile_name in selected_profiles if profile_name not in profile_dict]
+    if missing_profiles:
+        raise KeyError(f"Unknown selected profile(s): {missing_profiles}")
+
+    return {profile_name: profile_dict[profile_name] for profile_name in selected_profiles}
+
+
+def run_gurobi_itinerary_optimization(
+    context,
+    profile_overrides=None,
+    global_overrides=None,
+    solver_overrides=None,
+    selected_profiles=None,
+):
     from sklearn.preprocessing import MinMaxScaler
 
     required_vars = [
@@ -169,56 +268,42 @@ def run_gurobi_itinerary_optimization(context):
     print(f"  Hotel Rating (mean={hotel_rating.mean():.2f})")
     print()
 
-    tourist_profiles = {
-        "relaxed": {
-            "alpha": 3.0,
-            "beta": 0.8,
-            "min_attractions": 4,
-            "target_attractions": 6,
-            "max_attractions": 5,
-            "min_daily_attractions_if_used": 1,
-            "attraction_bonus": 0.03,
-            "max_wait": 60,
-        },
-        "balanced": {
-            "alpha": 2.0,
-            "beta": 1.0,
-            "min_attractions": 6,
-            "target_attractions": 8,
-            "max_attractions": 6,
-            "min_daily_attractions_if_used": 2,
-            "attraction_bonus": 0.12,
-            "max_wait": 90,
-        },
-        "explorer": {
-            "alpha": 1.0,
-            "beta": 0.9,
-            "min_attractions": 8,
-            "target_attractions": 10,
-            "max_attractions": 10,
-            "min_daily_attractions_if_used": 2,
-            "attraction_bonus": 0.22,
-            "max_wait": 180,
-        },
-    }
+    tourist_profiles = _merge_profile_overrides(DEFAULT_TOURIST_PROFILES, profile_overrides)
+    tourist_profiles = _select_profiles(tourist_profiles, selected_profiles)
 
-    t_daily = 720
-    total_budget = 1000
-    gamma = 0.01
-    hotel_utility_weight = 0.25
-    switch_time_weight = 0.10
-    switch_fixed_penalty = 0.08
-    content_repeat_penalty_weight = 0.18
-    content_heavy_repeat_penalty_weight = 0.12
-    attraction_shortfall_penalty_weight = 2.5
-    overnight_relocation_limit = 180
-    time_limit_seconds = 900.0
-    mip_gap_target = 0.02
-    objective_scale = 1000
-    max_travel = 90
-    num_threads = max(1, min(8, os.cpu_count() or 1))
-    mip_focus = 1
-    heuristics = 0.20
+    model_cfg = DEFAULT_MODEL_SETTINGS.copy()
+    if global_overrides:
+        model_cfg.update(global_overrides)
+
+    solver_cfg = DEFAULT_SOLVER_SETTINGS.copy()
+    if solver_overrides:
+        solver_cfg.update(solver_overrides)
+
+    t_daily = int(round(float(model_cfg["daily_time_budget"])))
+    total_budget = float(model_cfg["total_budget"])
+    gamma = float(model_cfg["gamma"])
+    hotel_utility_weight = float(model_cfg["hotel_utility_weight"])
+    switch_time_weight = float(model_cfg["switch_time_weight"])
+    switch_fixed_penalty = float(model_cfg["switch_fixed_penalty"])
+    content_repeat_penalty_weight = float(model_cfg["content_repeat_penalty_weight"])
+    content_heavy_repeat_penalty_weight = float(model_cfg["content_heavy_repeat_penalty_weight"])
+    attraction_shortfall_penalty_weight = float(model_cfg["attraction_shortfall_penalty_weight"])
+    overnight_relocation_limit = float(model_cfg["overnight_relocation_limit"])
+    num_days = int(model_cfg["num_days"])
+
+    time_limit_seconds = float(solver_cfg["time_limit_seconds"])
+    mip_gap_target = float(solver_cfg["mip_gap_target"])
+    objective_scale = int(round(float(solver_cfg["objective_scale"])))
+    max_travel = float(solver_cfg["max_travel"])
+    num_threads = solver_cfg["num_threads"]
+    if num_threads is None:
+        num_threads = max(1, min(8, os.cpu_count() or 1))
+    else:
+        num_threads = int(num_threads)
+    mip_focus = int(solver_cfg["mip_focus"])
+    heuristics = float(solver_cfg["heuristics"])
+    random_seed = int(solver_cfg["seed"])
+    presolve = int(solver_cfg["presolve"])
 
     travel_norm = safe_minmax(travel_time_matrix)
     routes = {}
@@ -234,7 +319,6 @@ def run_gurobi_itinerary_optimization(context):
 
     n = len(top100_with_waiting_time)
     num_hotels = len(hotels_df)
-    num_days = 3
     base_arcs = [
         (i, j)
         for i in range(n)
@@ -274,8 +358,8 @@ def run_gurobi_itinerary_optimization(context):
         model.Params.Threads = num_threads
         model.Params.MIPFocus = mip_focus
         model.Params.Heuristics = heuristics
-        model.Params.Seed = 42
-        model.Params.Presolve = 2
+        model.Params.Seed = random_seed
+        model.Params.Presolve = presolve
 
         alpha = profile_cfg["alpha"]
         beta = profile_cfg["beta"]
@@ -572,6 +656,22 @@ def run_gurobi_itinerary_optimization(context):
             "solution_count": int(model.SolCount),
             "solver_name": "gurobi",
             "content_mix": content_mix,
+            "applied_parameters": {
+                "alpha": alpha,
+                "beta": beta,
+                "gamma": gamma,
+                "lambda": attraction_bonus,
+                "attraction_bonus": attraction_bonus,
+                "min_attractions": min_total_attractions,
+                "target_attractions": target_total_attractions,
+                "max_attractions": max_k,
+                "max_wait": float(profile_cfg["max_wait"]),
+                "content_repeat_penalty_weight": content_repeat_penalty_weight,
+                "content_heavy_repeat_penalty_weight": content_heavy_repeat_penalty_weight,
+                "attraction_shortfall_penalty_weight": attraction_shortfall_penalty_weight,
+                "switch_time_weight": switch_time_weight,
+                "switch_fixed_penalty": switch_fixed_penalty,
+            },
         }
 
         total_visit_wait = sum(
@@ -657,9 +757,27 @@ def run_gurobi_itinerary_optimization(context):
         "threads": num_threads,
         "mip_focus": mip_focus,
         "heuristics": heuristics,
+        "seed": random_seed,
+        "presolve": presolve,
+        "objective_scale": objective_scale,
+        "max_travel": max_travel,
         "daily_time_budget": t_daily,
         "total_budget": total_budget,
         "overnight_relocation_limit": overnight_relocation_limit,
+    }
+
+    model_settings = {
+        "daily_time_budget": t_daily,
+        "total_budget": total_budget,
+        "gamma": gamma,
+        "hotel_utility_weight": hotel_utility_weight,
+        "switch_time_weight": switch_time_weight,
+        "switch_fixed_penalty": switch_fixed_penalty,
+        "content_repeat_penalty_weight": content_repeat_penalty_weight,
+        "content_heavy_repeat_penalty_weight": content_heavy_repeat_penalty_weight,
+        "attraction_shortfall_penalty_weight": attraction_shortfall_penalty_weight,
+        "overnight_relocation_limit": overnight_relocation_limit,
+        "num_days": num_days,
     }
 
     return {
@@ -671,6 +789,7 @@ def run_gurobi_itinerary_optimization(context):
         "waiting_time_norm": waiting_time_norm,
         "tourist_profiles": tourist_profiles,
         "solver_settings": solver_settings,
+        "model_settings": model_settings,
         "K": num_days,
         "n": n,
         "num_hotels": num_hotels,

@@ -794,3 +794,657 @@ def run_gurobi_itinerary_optimization(
         "n": n,
         "num_hotels": num_hotels,
     }
+
+
+def _compute_theme_novelty_bonus(theme_name, visited_theme_counts):
+    visited_theme_counts = visited_theme_counts or {}
+    return 1.0 / (1.0 + float(visited_theme_counts.get(theme_name, 0)))
+
+
+def _reconstruct_ordered_path(start_node, edge_list, selected_nodes):
+    if start_node is None:
+        return list(selected_nodes)
+
+    next_node = {i: j for i, j in edge_list}
+    ordered = []
+    current = start_node
+    visited = set()
+
+    while current is not None and current not in visited:
+        ordered.append(current)
+        visited.add(current)
+        current = next_node.get(current)
+
+    for node in selected_nodes:
+        if node not in visited:
+            ordered.append(node)
+
+    return ordered
+
+
+def _predict_candidate_metrics(
+    sequence,
+    top100_with_waiting_time,
+    travel_time_matrix,
+    hotel_to_attr_time,
+    utility_norm,
+    waiting_time_norm,
+    cost_penalty,
+    alpha,
+    beta,
+    gamma,
+    attraction_bonus,
+    current_hotel_idx,
+    current_attr_idx,
+    visited_theme_counts,
+):
+    if not sequence:
+        return {
+            "predicted_total_utility": 0.0,
+            "predicted_total_wait": 0.0,
+            "predicted_total_visit": 0.0,
+            "predicted_total_travel_time": 0.0,
+            "predicted_total_cost": 0.0,
+            "predicted_total_reward": 0.0,
+            "predicted_diversity_score": 0.0,
+            "predicted_novelty_bonus": 0.0,
+        }
+
+    utility = top100_with_waiting_time["utility"].astype(float)
+    waiting = top100_with_waiting_time["waiting_final"].astype(float)
+    visiting = top100_with_waiting_time["visit_duration_sim"].astype(float)
+    cost = top100_with_waiting_time["cost"].astype(float)
+    themes = top100_with_waiting_time["content_theme"].astype(str)
+
+    novelty_bonus = 0.0
+    travel_time = 0.0
+    theme_counter = dict(visited_theme_counts or {})
+    previous_attr_idx = current_attr_idx
+
+    for attr_idx in sequence:
+        theme_name = themes.iloc[attr_idx]
+        novelty_bonus += _compute_theme_novelty_bonus(theme_name, theme_counter)
+        theme_counter[theme_name] = theme_counter.get(theme_name, 0) + 1
+
+        if previous_attr_idx is None:
+            travel_time += float(hotel_to_attr_time[current_hotel_idx, attr_idx])
+        else:
+            travel_time += float(travel_time_matrix[previous_attr_idx, attr_idx])
+        previous_attr_idx = attr_idx
+
+    travel_time += float(hotel_to_attr_time[current_hotel_idx, sequence[-1]])
+
+    content_mix = top100_with_waiting_time.iloc[list(sequence)]["content_theme"].value_counts()
+    if content_mix.empty or len(content_mix) <= 1:
+        diversity_score = 0.0
+    else:
+        probs = content_mix.astype(float).values / float(content_mix.sum())
+        entropy = -np.sum(probs * np.log(probs))
+        diversity_score = float(entropy / np.log(len(probs)))
+
+    predicted_reward = float(
+        utility_norm[list(sequence)].sum()
+        - alpha * waiting_time_norm[list(sequence)].sum()
+        - gamma * cost_penalty[list(sequence)].sum()
+        + attraction_bonus * novelty_bonus
+    )
+
+    combined_travel_scale = max(
+        1.0,
+        float(np.max(travel_time_matrix)) if np.size(travel_time_matrix) else 1.0,
+        float(np.max(hotel_to_attr_time)) if np.size(hotel_to_attr_time) else 1.0,
+    )
+    predicted_reward -= beta * (travel_time / combined_travel_scale)
+
+    return {
+        "predicted_total_utility": float(utility.iloc[list(sequence)].sum()),
+        "predicted_total_wait": float(waiting.iloc[list(sequence)].sum()),
+        "predicted_total_visit": float(visiting.iloc[list(sequence)].sum()),
+        "predicted_total_travel_time": float(travel_time),
+        "predicted_total_cost": float(cost.iloc[list(sequence)].sum()),
+        "predicted_total_reward": predicted_reward,
+        "predicted_diversity_score": diversity_score,
+        "predicted_novelty_bonus": float(novelty_bonus),
+    }
+
+
+def _generate_heuristic_candidate_pool(
+    candidate_indices,
+    top100_with_waiting_time,
+    travel_time_matrix,
+    hotel_to_attr_time,
+    utility_norm,
+    waiting_time_norm,
+    cost_penalty,
+    profile_cfg,
+    current_hotel_idx,
+    current_attr_idx,
+    remaining_time,
+    remaining_budget,
+    visited_theme_counts,
+    candidate_pool_size,
+):
+    if not candidate_indices:
+        return []
+
+    alpha = float(profile_cfg["alpha"])
+    beta = float(profile_cfg["beta"])
+    gamma = float(profile_cfg.get("gamma", DEFAULT_MODEL_SETTINGS["gamma"]))
+    attraction_bonus = float(profile_cfg["attraction_bonus"])
+    max_wait = float(profile_cfg["max_wait"])
+    max_attractions = int(profile_cfg["max_attractions"])
+
+    top100 = top100_with_waiting_time
+    waiting = top100["waiting_final"].astype(float)
+    visiting = top100["visit_duration_sim"].astype(float)
+    cost = top100["cost"].astype(float)
+    themes = top100["content_theme"].astype(str)
+    travel_scale = max(
+        1.0,
+        float(np.max(travel_time_matrix)) if np.size(travel_time_matrix) else 1.0,
+        float(np.max(hotel_to_attr_time)) if np.size(hotel_to_attr_time) else 1.0,
+    )
+
+    def immediate_score(from_attr_idx, attr_idx, local_theme_counts):
+        travel_time = (
+            float(hotel_to_attr_time[current_hotel_idx, attr_idx])
+            if from_attr_idx is None
+            else float(travel_time_matrix[from_attr_idx, attr_idx])
+        )
+        return (
+            float(utility_norm[attr_idx])
+            - alpha * float(waiting_time_norm[attr_idx])
+            - beta * (travel_time / travel_scale)
+            - gamma * float(cost_penalty[attr_idx])
+            + attraction_bonus * _compute_theme_novelty_bonus(themes.iloc[attr_idx], local_theme_counts)
+        )
+
+    ranked_starts = sorted(
+        candidate_indices,
+        key=lambda idx: immediate_score(current_attr_idx, idx, visited_theme_counts),
+        reverse=True,
+    )
+
+    candidates = []
+    seen_sequences = set()
+    for seed_attr_idx in ranked_starts[: max(candidate_pool_size * 2, candidate_pool_size)]:
+        route = []
+        local_theme_counts = dict(visited_theme_counts or {})
+        local_remaining_time = float(remaining_time)
+        local_remaining_budget = float(remaining_budget)
+        local_wait_total = 0.0
+        current_idx = current_attr_idx
+        available = set(candidate_indices)
+
+        while available and len(route) < max_attractions:
+            feasible_next = []
+            for attr_idx in list(available):
+                outbound = (
+                    float(hotel_to_attr_time[current_hotel_idx, attr_idx])
+                    if current_idx is None
+                    else float(travel_time_matrix[current_idx, attr_idx])
+                )
+                return_leg = float(hotel_to_attr_time[current_hotel_idx, attr_idx])
+                required_time = outbound + float(visiting.iloc[attr_idx]) + float(waiting.iloc[attr_idx]) + return_leg
+                if required_time > local_remaining_time:
+                    continue
+                if float(cost.iloc[attr_idx]) > local_remaining_budget:
+                    continue
+                projected_wait = local_wait_total + float(waiting.iloc[attr_idx])
+                projected_count = len(route) + 1
+                if projected_wait > max_wait * projected_count:
+                    continue
+                feasible_next.append(attr_idx)
+
+            if not feasible_next:
+                break
+
+            if not route and seed_attr_idx in feasible_next:
+                chosen_attr_idx = seed_attr_idx
+            else:
+                chosen_attr_idx = max(
+                    feasible_next,
+                    key=lambda idx: immediate_score(current_idx, idx, local_theme_counts),
+                )
+
+            outbound = (
+                float(hotel_to_attr_time[current_hotel_idx, chosen_attr_idx])
+                if current_idx is None
+                else float(travel_time_matrix[current_idx, chosen_attr_idx])
+            )
+            local_remaining_time -= outbound + float(visiting.iloc[chosen_attr_idx]) + float(waiting.iloc[chosen_attr_idx])
+            local_remaining_budget -= float(cost.iloc[chosen_attr_idx])
+            local_wait_total += float(waiting.iloc[chosen_attr_idx])
+            current_idx = chosen_attr_idx
+            route.append(chosen_attr_idx)
+            available.remove(chosen_attr_idx)
+            theme_name = themes.iloc[chosen_attr_idx]
+            local_theme_counts[theme_name] = local_theme_counts.get(theme_name, 0) + 1
+
+        if not route:
+            continue
+
+        sequence_key = tuple(route)
+        if sequence_key in seen_sequences:
+            continue
+        seen_sequences.add(sequence_key)
+
+        metrics = _predict_candidate_metrics(
+            route,
+            top100,
+            travel_time_matrix,
+            hotel_to_attr_time,
+            utility_norm,
+            waiting_time_norm,
+            cost_penalty,
+            alpha=alpha,
+            beta=beta,
+            gamma=gamma,
+            attraction_bonus=attraction_bonus,
+            current_hotel_idx=current_hotel_idx,
+            current_attr_idx=current_attr_idx,
+            visited_theme_counts=visited_theme_counts,
+        )
+        candidates.append(
+            {
+                "selected_indices": route,
+                "sequence": route,
+                "travel_edges": list(zip(route[:-1], route[1:])),
+                "first_attraction": route[0],
+                "backend": "heuristic",
+                **metrics,
+            }
+        )
+
+    candidates.sort(key=lambda row: row["predicted_total_reward"], reverse=True)
+    return candidates[:candidate_pool_size]
+
+
+def generate_receding_horizon_candidate_pool(
+    context,
+    profile_name,
+    current_hotel_idx,
+    current_attr_idx=None,
+    remaining_time=None,
+    remaining_budget=None,
+    visited_attractions=None,
+    visited_theme_counts=None,
+    candidate_pool_size=5,
+    mode="step",
+    solver_overrides=None,
+):
+    visited_attractions = set(visited_attractions or [])
+    visited_theme_counts = dict(visited_theme_counts or {})
+    solver_overrides = dict(solver_overrides or {})
+
+    backend = str(solver_overrides.get("backend", "gurobi")).lower()
+    fallback_to_heuristic = bool(solver_overrides.get("fallback_to_heuristic", True))
+
+    top100_with_waiting_time = context["top100_with_waiting_time"].copy()
+    if "content_theme" not in top100_with_waiting_time.columns:
+        top100_with_waiting_time["content_theme"] = top100_with_waiting_time.apply(infer_content_theme, axis=1)
+
+    travel_time_matrix = np.asarray(context["travel_time_matrix"], dtype=float)
+    hotel_to_attr_time = np.asarray(context["hotel_to_attr_time"], dtype=float)
+    hotels_df = context["hotels_df"].copy()
+
+    tourist_profiles = context.get("TOURIST_PROFILES") or context.get("tourist_profiles") or DEFAULT_TOURIST_PROFILES
+    if profile_name not in tourist_profiles:
+        raise KeyError(f"Unknown profile '{profile_name}' for candidate pool generation")
+
+    profile_cfg = dict(DEFAULT_TOURIST_PROFILES.get(profile_name, {}))
+    profile_cfg.update(tourist_profiles[profile_name])
+
+    optimizer_outputs = context.get("optimizer_outputs", {})
+    model_settings = dict(DEFAULT_MODEL_SETTINGS)
+    if isinstance(optimizer_outputs, dict):
+        model_settings.update(optimizer_outputs.get("model_settings", {}))
+    model_settings.update(context.get("MODEL_SETTINGS", {}))
+    if "gamma" in solver_overrides:
+        model_settings["gamma"] = solver_overrides["gamma"]
+    profile_cfg["gamma"] = float(model_settings["gamma"])
+
+    solver_settings = dict(DEFAULT_SOLVER_SETTINGS)
+    if isinstance(optimizer_outputs, dict):
+        solver_settings.update(optimizer_outputs.get("solver_settings", {}))
+    solver_settings.update(context.get("SOLVER_SETTINGS", {}))
+    solver_settings.update(
+        {
+            key: value
+            for key, value in solver_overrides.items()
+            if key
+            in {
+                "time_limit_seconds",
+                "mip_gap_target",
+                "objective_scale",
+                "max_travel",
+                "num_threads",
+                "mip_focus",
+                "heuristics",
+                "seed",
+                "presolve",
+            }
+        }
+    )
+
+    if remaining_time is None:
+        remaining_time = float(solver_settings.get("daily_time_budget", DEFAULT_MODEL_SETTINGS["daily_time_budget"]))
+    if remaining_budget is None:
+        remaining_budget = float(solver_settings.get("total_budget", DEFAULT_MODEL_SETTINGS["total_budget"]))
+
+    utility = top100_with_waiting_time["utility"].astype(float).to_numpy()
+    waiting_time = top100_with_waiting_time["waiting_final"].astype(float).to_numpy()
+    cost = top100_with_waiting_time["cost"].astype(float).to_numpy()
+
+    utility_norm = safe_minmax(utility)
+    waiting_time_norm = safe_minmax(waiting_time)
+    cost_norm = safe_minmax(cost)
+    cost_penalty = cost_norm ** 0.7
+
+    immediate_travel = np.asarray(
+        [
+            hotel_to_attr_time[current_hotel_idx, i]
+            if current_attr_idx is None
+            else travel_time_matrix[current_attr_idx, i]
+            for i in range(len(top100_with_waiting_time))
+        ],
+        dtype=float,
+    )
+    return_travel = np.asarray(hotel_to_attr_time[current_hotel_idx], dtype=float)
+    top100_themes = top100_with_waiting_time["content_theme"].astype(str)
+
+    candidate_indices = []
+    for attr_idx in range(len(top100_with_waiting_time)):
+        if attr_idx in visited_attractions:
+            continue
+        travel_out = float(immediate_travel[attr_idx])
+        visit_wait = float(top100_with_waiting_time.iloc[attr_idx]["visit_duration_sim"]) + float(
+            top100_with_waiting_time.iloc[attr_idx]["waiting_final"]
+        )
+        travel_back = float(return_travel[attr_idx])
+        if travel_out + visit_wait + travel_back > float(remaining_time):
+            continue
+        if float(cost[attr_idx]) > float(remaining_budget):
+            continue
+        candidate_indices.append(attr_idx)
+
+    if not candidate_indices:
+        return []
+
+    travel_scale = max(
+        1.0,
+        float(np.max(travel_time_matrix)) if np.size(travel_time_matrix) else 1.0,
+        float(np.max(hotel_to_attr_time)) if np.size(hotel_to_attr_time) else 1.0,
+    )
+    alpha = float(profile_cfg["alpha"])
+    beta = float(profile_cfg["beta"])
+    gamma = float(profile_cfg["gamma"])
+    attraction_bonus = float(profile_cfg["attraction_bonus"])
+    max_candidate_attractions = int(
+        solver_overrides.get("max_candidate_attractions", max(candidate_pool_size * 3, 12))
+    )
+
+    scored_candidates = []
+    for attr_idx in candidate_indices:
+        novelty_bonus = _compute_theme_novelty_bonus(top100_themes.iloc[attr_idx], visited_theme_counts)
+        immediate_score = (
+            float(utility_norm[attr_idx])
+            - alpha * float(waiting_time_norm[attr_idx])
+            - beta * (float(immediate_travel[attr_idx]) / travel_scale)
+            - gamma * float(cost_penalty[attr_idx])
+            + attraction_bonus * novelty_bonus
+        )
+        scored_candidates.append((attr_idx, immediate_score))
+    scored_candidates.sort(key=lambda item: item[1], reverse=True)
+    filtered_candidate_indices = [idx for idx, _ in scored_candidates[:max_candidate_attractions]]
+
+    if backend == "heuristic":
+        return _generate_heuristic_candidate_pool(
+            filtered_candidate_indices,
+            top100_with_waiting_time,
+            travel_time_matrix,
+            hotel_to_attr_time,
+            utility_norm,
+            waiting_time_norm,
+            cost_penalty,
+            profile_cfg,
+            current_hotel_idx,
+            current_attr_idx,
+            remaining_time,
+            remaining_budget,
+            visited_theme_counts,
+            candidate_pool_size,
+        )
+
+    try:
+        import gurobipy as gp
+        from gurobipy import GRB
+    except ImportError as exc:
+        if not fallback_to_heuristic:
+            raise ImportError("gurobipy is required for Gurobi candidate-pool generation") from exc
+        return _generate_heuristic_candidate_pool(
+            filtered_candidate_indices,
+            top100_with_waiting_time,
+            travel_time_matrix,
+            hotel_to_attr_time,
+            utility_norm,
+            waiting_time_norm,
+            cost_penalty,
+            profile_cfg,
+            current_hotel_idx,
+            current_attr_idx,
+            remaining_time,
+            remaining_budget,
+            visited_theme_counts,
+            candidate_pool_size,
+        )
+
+    try:
+        local_to_global = list(filtered_candidate_indices)
+        global_to_local = {global_idx: local_idx for local_idx, global_idx in enumerate(local_to_global)}
+        n_local = len(local_to_global)
+        if n_local == 0:
+            return []
+
+        local_utility_norm = utility_norm[local_to_global]
+        local_waiting_norm = waiting_time_norm[local_to_global]
+        local_cost_penalty = cost_penalty[local_to_global]
+        local_wait = waiting_time[local_to_global]
+        local_visit = top100_with_waiting_time["visit_duration_sim"].astype(float).to_numpy()[local_to_global]
+        local_cost = cost[local_to_global]
+        local_themes = top100_themes.iloc[local_to_global].tolist()
+        local_travel = travel_time_matrix[np.ix_(local_to_global, local_to_global)]
+        local_start = immediate_travel[local_to_global]
+        local_return = return_travel[local_to_global]
+        novelty_bonus = np.asarray(
+            [_compute_theme_novelty_bonus(theme_name, visited_theme_counts) for theme_name in local_themes],
+            dtype=float,
+        )
+
+        local_arcs = [
+            (i, j)
+            for i in range(n_local)
+            for j in range(n_local)
+            if i != j and float(local_travel[i, j]) <= float(solver_settings["max_travel"])
+        ]
+        out_neighbors = {i: [] for i in range(n_local)}
+        in_neighbors = {i: [] for i in range(n_local)}
+        for i, j in local_arcs:
+            out_neighbors[i].append(j)
+            in_neighbors[j].append(i)
+
+        model = gp.Model(f"adaptive_candidate_pool_{profile_name}_{mode}")
+        model.Params.OutputFlag = 0
+        model.Params.TimeLimit = float(solver_settings["time_limit_seconds"])
+        model.Params.MIPGap = float(solver_settings["mip_gap_target"])
+        model.Params.Threads = int(
+            solver_settings["num_threads"]
+            if solver_settings["num_threads"] is not None
+            else max(1, min(4, os.cpu_count() or 1))
+        )
+        model.Params.MIPFocus = int(solver_settings["mip_focus"])
+        model.Params.Heuristics = float(solver_settings["heuristics"])
+        model.Params.Seed = int(solver_settings["seed"])
+        model.Params.Presolve = int(solver_settings["presolve"])
+        model.Params.PoolSearchMode = 2
+        model.Params.PoolSolutions = int(max(candidate_pool_size * 2, candidate_pool_size))
+        model.Params.PoolGap = 0.25
+
+        route_used = model.addVar(vtype=GRB.BINARY, name="route_used")
+        x = model.addVars(n_local, vtype=GRB.BINARY, name="visit")
+        y = model.addVars(local_arcs, vtype=GRB.BINARY, name="travel")
+        s = model.addVars(n_local, vtype=GRB.BINARY, name="start")
+        e = model.addVars(n_local, vtype=GRB.BINARY, name="end")
+        u = model.addVars(
+            n_local,
+            lb=0.0,
+            ub=float(profile_cfg["max_attractions"]),
+            vtype=GRB.CONTINUOUS,
+            name="u",
+        )
+
+        utility_score = scale_to_int(local_utility_norm, int(solver_settings["objective_scale"]))
+        wait_penalty = scale_to_int(alpha * local_waiting_norm, int(solver_settings["objective_scale"]))
+        cost_penalty_scaled = scale_to_int(gamma * local_cost_penalty, int(solver_settings["objective_scale"]))
+        novelty_score = scale_to_int(
+            attraction_bonus * novelty_bonus,
+            int(solver_settings["objective_scale"]),
+        )
+        local_travel_norm = safe_minmax(local_travel)
+        start_travel_norm = safe_minmax(local_start)
+        return_travel_norm = safe_minmax(local_return)
+        travel_penalty = scale_to_int(beta * local_travel_norm, int(solver_settings["objective_scale"]))
+        start_penalty = scale_to_int(beta * start_travel_norm, int(solver_settings["objective_scale"]))
+        return_penalty = scale_to_int(beta * return_travel_norm, int(solver_settings["objective_scale"]))
+
+        objective = gp.quicksum(
+            (
+                utility_score[i]
+                - wait_penalty[i]
+                - cost_penalty_scaled[i]
+                + novelty_score[i]
+            )
+            * x[i]
+            for i in range(n_local)
+        )
+        objective -= gp.quicksum(float(travel_penalty[i, j]) * y[i, j] for i, j in local_arcs)
+        objective -= gp.quicksum(float(start_penalty[i]) * s[i] for i in range(n_local))
+        objective -= gp.quicksum(float(return_penalty[i]) * e[i] for i in range(n_local))
+        model.setObjective(objective, GRB.MAXIMIZE)
+
+        total_selected = gp.quicksum(x[i] for i in range(n_local))
+        model.addConstr(total_selected <= int(profile_cfg["max_attractions"]) * route_used, name="max_attractions")
+        model.addConstr(total_selected >= route_used, name="route_active")
+        model.addConstr(gp.quicksum(s[i] for i in range(n_local)) == route_used, name="single_start")
+        model.addConstr(gp.quicksum(e[i] for i in range(n_local)) == route_used, name="single_end")
+        model.addConstr(
+            gp.quicksum((local_visit[i] + local_wait[i]) * x[i] for i in range(n_local))
+            + gp.quicksum(local_travel[i, j] * y[i, j] for i, j in local_arcs)
+            + gp.quicksum(local_start[i] * s[i] for i in range(n_local))
+            + gp.quicksum(local_return[i] * e[i] for i in range(n_local))
+            <= float(remaining_time),
+            name="remaining_time",
+        )
+        model.addConstr(
+            gp.quicksum(local_cost[i] * x[i] for i in range(n_local)) <= float(remaining_budget),
+            name="remaining_budget",
+        )
+        model.addConstr(
+            gp.quicksum(local_wait[i] * x[i] for i in range(n_local))
+            <= float(profile_cfg["max_wait"]) * total_selected,
+            name="max_wait",
+        )
+
+        for i in range(n_local):
+            outgoing = gp.quicksum(y[i, j] for j in out_neighbors[i])
+            incoming = gp.quicksum(y[j, i] for j in in_neighbors[i])
+            model.addConstr(outgoing + e[i] == x[i], name=f"flow_out_{i}")
+            model.addConstr(incoming + s[i] == x[i], name=f"flow_in_{i}")
+            model.addConstr(s[i] <= x[i], name=f"start_link_{i}")
+            model.addConstr(e[i] <= x[i], name=f"end_link_{i}")
+            model.addConstr(u[i] >= x[i], name=f"mtz_lb_{i}")
+            model.addConstr(u[i] <= float(profile_cfg["max_attractions"]) * x[i], name=f"mtz_ub_{i}")
+
+        model.addConstr(
+            gp.quicksum(y[i, j] for i, j in local_arcs) == total_selected - route_used,
+            name="path_edge_count",
+        )
+        for i, j in local_arcs:
+            model.addConstr(
+                u[i] - u[j] + float(profile_cfg["max_attractions"]) * y[i, j]
+                <= float(profile_cfg["max_attractions"]) - 1,
+                name=f"mtz_arc_{i}_{j}",
+            )
+
+        model.optimize()
+        if model.SolCount == 0:
+            raise RuntimeError("No feasible candidate-pool route found")
+
+        candidates = []
+        seen_sequences = set()
+        for solution_idx in range(min(int(model.SolCount), int(max(candidate_pool_size * 2, candidate_pool_size)))):
+            model.Params.SolutionNumber = solution_idx
+            selected_local = [i for i in range(n_local) if x[i].Xn > 0.5]
+            if not selected_local:
+                continue
+            start_local = next((i for i in range(n_local) if s[i].Xn > 0.5), None)
+            edges_local = [(i, j) for i, j in local_arcs if y[i, j].Xn > 0.5]
+            ordered_local = _reconstruct_ordered_path(start_local, edges_local, selected_local)
+            sequence = [local_to_global[local_idx] for local_idx in ordered_local]
+            sequence_key = tuple(sequence)
+            if sequence_key in seen_sequences:
+                continue
+            seen_sequences.add(sequence_key)
+
+            metrics = _predict_candidate_metrics(
+                sequence,
+                top100_with_waiting_time,
+                travel_time_matrix,
+                hotel_to_attr_time,
+                utility_norm,
+                waiting_time_norm,
+                cost_penalty,
+                alpha=alpha,
+                beta=beta,
+                gamma=gamma,
+                attraction_bonus=attraction_bonus,
+                current_hotel_idx=current_hotel_idx,
+                current_attr_idx=current_attr_idx,
+                visited_theme_counts=visited_theme_counts,
+            )
+            candidates.append(
+                {
+                    "selected_indices": sequence,
+                    "sequence": sequence,
+                    "travel_edges": list(zip(sequence[:-1], sequence[1:])),
+                    "first_attraction": sequence[0],
+                    "backend": "gurobi",
+                    "pool_objective_value": float(model.PoolObjVal),
+                    **metrics,
+                }
+            )
+
+        if not candidates:
+            raise RuntimeError("Candidate-pool solve succeeded but produced no unique routes")
+
+        candidates.sort(key=lambda row: row["predicted_total_reward"], reverse=True)
+        return candidates[:candidate_pool_size]
+    except Exception:
+        if not fallback_to_heuristic:
+            raise
+        return _generate_heuristic_candidate_pool(
+            filtered_candidate_indices,
+            top100_with_waiting_time,
+            travel_time_matrix,
+            hotel_to_attr_time,
+            utility_norm,
+            waiting_time_norm,
+            cost_penalty,
+            profile_cfg,
+            current_hotel_idx,
+            current_attr_idx,
+            remaining_time,
+            remaining_budget,
+            visited_theme_counts,
+            candidate_pool_size,
+        )

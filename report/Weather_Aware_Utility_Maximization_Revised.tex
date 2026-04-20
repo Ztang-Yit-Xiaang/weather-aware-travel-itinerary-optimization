@@ -1,0 +1,586 @@
+
+\documentclass[12pt,a4paper]{article}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage{amsmath,amssymb,amsthm,bm}
+\usepackage{geometry}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{longtable}
+\usepackage{multirow}
+\usepackage{graphicx}
+\usepackage{float}
+\usepackage{hyperref}
+\usepackage{url}
+\usepackage{enumitem}
+\usepackage[numbers]{natbib}
+\usepackage{hyperref}
+\usepackage{setspace}
+\usepackage{caption}
+\usepackage{threeparttable}
+\usepackage{url}
+\geometry{margin=1in}
+\setstretch{1.15}
+\hypersetup{colorlinks=true, linkcolor=black, citecolor=black, urlcolor=blue}
+
+\title{Weather-Aware Utility Maximization for Urban Attraction Planning\\[2mm]
+\large IE 5533 Final Project Report}
+\author{
+Yit Xiaang Ztang \and Xiaojiayi Wang \and Lexing Zhang
+}
+\date{April 2026}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+Urban attraction recommendation is often approached as a ranking task. In practice, however, itinerary design is a constrained planning problem in which travelers must decide which attractions to visit, in what sequence, and where to stay overnight, subject to limited time, travel frictions, weather uncertainty, and congestion effects. A highly rated attraction is not necessarily the best choice once distance, expected waiting, overnight location, and environmental suitability are taken into account. This report develops a weather-aware itinerary-planning framework and documents the implemented notebook pipeline built for the IE 5533 final project.
+
+The project combines open-data acquisition, feature engineering, and mixed-integer optimization. Attraction information is extracted from the Yelp business dataset; temporal activity information is approximated from Yelp reviews; weather conditions are obtained from the Open-Meteo historical archive and short-term forecast API; and candidate accommodations are collected from OpenStreetMap and enriched with Yelp-based quality and price-tier proxies. These data are integrated with category-based visit-duration estimation and travel-time matrices for attraction--attraction, hotel--attraction, and hotel--hotel movements derived from geographic coordinates. On top of this data layer, the implemented system invokes a Gurobi-based multi-day itinerary optimizer that produces profile-specific routes for relaxed, balanced, and explorer travelers while accounting for attraction utility, waiting time, travel burden, ticket-cost proxies, and overnight-hotel decisions. The notebook also reconstructs day-by-day routes and visualizes them on interactive maps for the Santa Barbara case study.
+\end{abstract}
+
+\noindent\textbf{Keywords:} itinerary optimization; urban tourism analytics; weather-aware recommendation; utility maximization; tourism operations research; data-driven planning
+
+\section{Introduction and Project Importance}
+
+Tourism recommendation systems are often evaluated according to how well they rank points of interest, infer user preferences, or match textual queries to destination metadata. Those tasks are important, but they do not fully capture the real decision problem faced by travelers. A traveler visiting a city for one or several days does not merely need a list of attractive places. The traveler needs an itinerary that is feasible, coherent, and worth executing. That itinerary must fit within a finite time budget, consider travel time between attractions, accommodate heterogeneous visit durations, and adapt to contextual factors such as rain, cold temperature, or crowding. A recommendation engine that ignores these operational constraints may perform well as a ranking device while still failing as a decision-support tool.
+
+The central importance of this project lies in reframing attraction recommendation as an optimization problem. Rather than selecting attractions independently, the proposed framework evaluates each candidate attraction through both reward and cost components. The reward side is represented by attraction utility, which is derived from public ratings and review volume. The cost side includes travel time, estimated waiting or congestion effects, and weather-related penalties. This makes the project more aligned with actual travel planning behavior. For example, a highly popular beach may be suboptimal on a rainy day, while a museum with a lower raw popularity score may generate a better realized experience when weather and queue effects are incorporated. Likewise, a set of individually attractive attractions may become inefficient if their spatial distribution induces excessive travel overhead.
+
+The project is also important from a methodological standpoint. It provides a compact but representative example of the interaction between predictive and prescriptive analytics. Data-driven components are used to estimate attraction utility, temporal activity intensity, and environmental context. Those components are then embedded in an optimization-oriented decision layer. This structure is common in modern operations research applications, where machine-learning or statistical models produce context-sensitive parameters and mathematical optimization converts them into coherent decisions. In that sense, the project is not only a tourism application; it is also an illustration of how data engineering, contextual modeling, and route optimization can be integrated into a single pipeline.
+
+A second reason the project matters is that it is practical under open-data constraints. Many advanced itinerary-recommendation systems depend on proprietary mobility traces, detailed queue measurements, or closed commercial APIs. In contrast, the present project is intentionally designed around data sources that are transparent and reproducible in an academic setting. Yelp business records provide attraction metadata and broad popularity signals. Yelp review data offer a crude but useful temporal activity proxy. Open-Meteo provides accessible weather records. These sources are not perfect, but they are sufficient to build a meaningful prototype and to demonstrate the logic of context-aware itinerary design.
+
+Finally, the project has broader relevance beyond tourism. The same architecture can support day-trip planning, leisure-facility recommendation, event scheduling, and location-based decision support in other urban service domains. The technical core is a profit-maximizing path design problem under time and context constraints. That problem appears in many applied settings. Therefore, this report treats the tourism context as an accessible application environment while emphasizing a more general decision-analytics contribution.
+
+\section{Literature Review}
+
+The problem studied in this project sits at the intersection of tourist trip design, recommendation systems, and constrained routing. On the optimization side, the orienteering problem and its variants provide the most direct conceptual foundation. In the orienteering problem, each node has an associated reward, travel consumes limited budget, and the planner seeks the most valuable route subject to time or distance constraints. Survey articles by Vansteenwegen et al. and Gunawan et al. show how this family of problems has evolved into a broad class of routing models with budget, time-window, and profit-collection features \citep{vansteenwegen2011orienteering, gunawan2016orienteering}. Within tourism, this literature has been formalized as the Tourist Trip Design Problem (TTDP), where attraction selection and visit sequencing are solved jointly \citep{ruizmeza2022ttdp}. This line of research strongly motivates treating itinerary recommendation as an optimization problem rather than a pure ranking exercise.
+
+A second relevant stream comes from tourism recommender systems and point-of-interest recommendation. Survey work indicates that many practical systems emphasize preference learning, collaborative filtering, or contextual ranking, but often stop short of solving a complete routing problem \citep{borras2014tourismsurvey, halder2024survey}. These studies are valuable because they clarify how utility can be inferred from observed ratings, reviews, or contextual signals. However, they also show a persistent gap between recommendation quality and itinerary feasibility. A list of individually attractive locations does not automatically yield a good trip plan when travel times and time budgets matter.
+
+Context awareness has become increasingly important in this domain. Time-aware recommendation has been studied for POI selection, and weather-aware recommendation has been proposed for tourism applications where environmental conditions materially affect destination suitability \citep{yuan2013timeaware, braunhofer2013sts}. More recent work has extended this idea by incorporating real-time contextual signals and richer dynamic recommendation logic \citep{yoon2023realtime}. For the present project, this stream is especially relevant because weather is not treated as a cosmetic output feature. Instead, it is used as an explanatory factor that modifies the attractiveness and effective cost of visiting particular attractions.
+
+Another important development is the recognition that congestion, queueing, and crowding affect itinerary quality. Queue-aware itinerary recommendation has been studied explicitly in the recommender-systems literature, and critical reviews of TTDP variants have highlighted the importance of time-dependent factors and waiting-time modeling \citep{lim2017queuing, porras2022critical}. Strategic and crowd-aware itinerary recommendation further illustrates that itinerary quality depends not only on static utility but also on anticipated congestion at attractions \citep{liu2021scair}. These studies motivate the use of a waiting-time proxy even when direct queue data are unavailable.
+
+Finally, recent work has moved toward integrated prediction-optimization and uncertainty-aware formulations. Stochastic travel times, richer constraint sets, and hybrid data-driven itinerary systems have been explored in the literature \citep{vu2022branchcheck, ghobadi2023integrated, ding2024stochastic, kedkaew2024bev}. That trend aligns closely with the structure adopted in this project. At the same time, for a course-project setting, there is value in keeping the literature review proportionate. The goal of the present report is not to claim a large theoretical advance over the state of the art, but to build a coherent, academically grounded prototype that connects accessible data, contextual feature construction, and optimization-ready itinerary design.
+
+\section{Problem Restatement and Project Objectives}
+
+\subsection{Decision setting}
+
+Consider a traveler who plans an urban leisure trip over a finite number of days. The city contains a set of candidate attractions such as museums, gardens, beaches, tours, historical landmarks, and parks. Each attraction has a location, a baseline utility, and an estimated visit duration. Travel between attractions consumes time, and each day has a limited time budget. In addition, the realized value of an attraction depends on exogenous conditions such as weather and expected congestion. The planner must therefore determine which attractions to visit on each day and how to sequence them so that the total value of the trip is as high as possible.
+
+This decision setting differs from a standard POI recommendation problem in three important ways. First, the attractions interact through routing. Visiting one attraction affects the feasibility of visiting another because travel time is path-dependent. Second, utility is context-sensitive. A place that is attractive in general may be less attractive under rain, cold conditions, or high crowding. Third, the traveler is budget constrained. A day has only so many hours, so the opportunity cost of each visit matters. These features make the problem substantially more structured than simple ranking.
+
+\subsection{Project objectives}
+
+The project has four concrete objectives.
+
+\begin{enumerate}[leftmargin=2em]
+    \item Build a usable attraction dataset for a selected urban tourism case using open data.
+    \item Construct weather-aware and congestion-aware explanatory variables that can modify itinerary quality.
+    \item Formulate the itinerary planning problem as an optimization model with explicit time-budget and routing constraints.
+    \item Demonstrate the feasibility of the full data-to-decision workflow through a working prototype.
+\end{enumerate}
+
+The proposal and implementation use Santa Barbara as the primary demonstration city. The notebook initially filters several California coastal cities and then focuses the tool-assisted itinerary demonstration on Santa Barbara. This is a reasonable case-study choice because the city contains a varied mix of beaches, museums, tours, gardens, and landmark attractions, making it suitable for illustrating weather-sensitive trade-offs.
+
+\subsection{Inputs and outputs}
+
+The main inputs to the problem are:
+\begin{enumerate}[leftmargin=2em]
+    \item a candidate set of attractions with ratings, review counts, categories, and geographic coordinates;
+    \item day-specific weather descriptors, including rain indicators and temperature-related variables;
+    \item attraction-specific duration estimates;
+    \item an inter-attraction travel-time matrix;
+    \item a traveler preference specification, such as interest in museums, beaches, or mixed activities;
+    \item a daily time budget.
+\end{enumerate}
+
+The main output is a day-by-day itinerary that specifies the selected attractions, an execution order, and supporting contextual guidance. In a full implementation, the output could also include estimated total utility, travel burden, exposure to adverse weather, and sensitivity diagnostics.
+
+\section{Data Description and Preprocessing Pipeline}
+
+\subsection{Overview}
+
+The implemented notebook follows a modular data architecture in which each modeling component is constructed from an open-data source and then merged into an optimization-ready pipeline. Rather than assuming the existence of a single preassembled tourism dataset, the project builds the attraction, weather, congestion, accommodation, and travel layers separately and then links them through business identifiers, dates, and geographic coordinates. This modular structure is one of the main strengths of the system because it makes the workflow transparent, reproducible, and extensible.
+
+\begin{table}[H]
+\centering
+\caption{Core datasets and derived layers used in the implemented pipeline}
+\begin{threeparttable}
+\begin{tabular}{p{3.5cm} p{4.2cm} p{7.0cm}}
+\toprule
+\textbf{Dataset / derived layer} & \textbf{Main variables} & \textbf{Role in the project} \\
+\midrule
+Yelp business dataset & business ID, name, city, stars, review count, latitude, longitude, categories & Defines the candidate attraction set and provides the baseline utility ingredients. \\
+Open-Meteo historical archive & date, temperature, precipitation & Generates weather features such as average temperature, rain flags, cold flags, and weekend indicators. \\
+Open-Meteo live forecast & current weather and hourly precipitation probability & Produces a short-horizon contextual adjustment used to blend live and historical waiting-time estimates. \\
+Yelp review dataset & business ID, review timestamp, stars & Supports temporal review-density aggregation as a proxy for attraction demand intensity. \\
+OpenStreetMap accommodation layer & hotel or lodging name, coordinates, lodging type, stars when available & Defines the candidate overnight set for the multi-day hotel-aware extension. \\
+Yelp-enriched accommodation layer & rating proxy, review count, price tier proxy, experience score, nightly price proxy & Adds hotel-quality and hotel-cost information used in overnight planning. \\
+Travel-time matrices & attraction--attraction, hotel--attraction, hotel--hotel travel times & Support route feasibility, hotel transitions, and travel-time penalties in the optimizer. \\
+Visit-duration estimates & expected duration, dispersion parameter, simulated duration & Represent the time consumed by each attraction and support robustness-oriented timing logic. \\
+\bottomrule
+\end{tabular}
+\end{threeparttable}
+\end{table}
+
+\subsection{Candidate attraction construction}
+
+The notebook first loads the Yelp business dataset\cite{yelp_dataset} and retains the fields needed for itinerary construction: business identifier, name, city, star rating, review count, latitude, longitude, and categories. It then filters to four California coastal cities---Santa Barbara, Santa Cruz, Monterey, and San Luis Obispo---and applies a tourism-oriented category filter using keywords such as Museum, Park, Garden, Aquarium, Zoo, Landmark, Historic, Tour, Attraction, Beach, and Botanical. After this screening stage, the candidate set is sorted by review count and the top 100 attractions are retained for downstream routing and optimization. This procedure deliberately trades breadth for tractability: the final optimization problem remains expressive, but the candidate set is restricted enough to keep the travel-planning instance computationally manageable.
+
+\subsection{Baseline utility construction}
+
+The baseline attraction utility used throughout the notebook is
+\[
+U_i = \text{rating}_i \cdot \log(\text{review\_count}_i + 1).
+\]
+This expression combines perceived quality and popularity in a way that is simple, interpretable, and numerically stable. Similar popularity-based scoring functions have been used in tourism recommendation systems \cite{borras2014tourismsurvey,yuan2013timeaware}. The logarithmic transformation prevents extremely popular attractions from dominating the score linearly while still rewarding attractions with large public visibility. In the Santa Barbara case, high-profile attractions such as the zoo, mission, tours, and cruises appear near the top of the utility ranking, which provides a useful sanity check for the filtering and scoring logic.
+
+\subsection{Weather data and contextual feature engineering}
+
+The notebook geocodes Santa Barbara using Nominatim and retrieves historical daily weather from the Open-Meteo archive\cite{openmeteo}. In the implemented version, the archive spans a long horizon rather than a single season, and the daily data are transformed into average temperature, a binary rain flag, a binary cold flag, day-of-week, and a weekend indicator. These features are used both descriptively and predictively. Descriptively, they characterize the environmental conditions under which attractions are evaluated. Predictively, they become inputs to the review-density and waiting-time model.
+
+The implementation also retrieves short-term weather information from the Open-Meteo forecast endpoint. This live weather signal is used to generate a current-context estimate of attraction crowding, which is later blended with the historical waiting-time estimate to produce a final waiting-time feature for optimization.
+
+\subsection{Accommodation construction and enrichment}
+
+A major extension in the notebook relative to the earlier proposal is the explicit accommodation layer. Candidate overnight nodes are collected from OpenStreetMap \cite{openstreetmap} using the Overpass API \cite{overpass_api} for lodging types such as hotels, guest houses, hostels, motels, and apartments near Santa Barbara. Because free lodging APIs do not directly provide standardized pricing and quality information in a convenient academic workflow, the notebook enriches these accommodation records using Yelp search results whenever possible.
+
+For each accommodation candidate, the implementation attempts to match the OpenStreetMap record to a nearby Yelp listing using geographic distance and normalized name similarity. Matched listings provide review count, rating, and price-tier information. When Yelp data are unavailable, the notebook falls back to lodging-type-based proxy values. The resulting accommodation table includes a nightly-price proxy, a rating score, and an experience score. This enrichment is important because the hotel-aware extension requires heterogeneous overnight nodes rather than a single fixed depot.
+
+\subsection{Temporal review-density extraction}
+
+Direct queue or waiting-time measurements are not available in the Yelp open data. To address this limitation, the notebook loads the Yelp review file, filters to the selected attractions, and aggregates review counts by business and date. The resulting time series is interpreted as a temporal activity proxy. The intent is not to claim that reviews equal visitor flow, but rather to use review intensity as an observable signal that correlates with attraction demand and congestion pressure.
+
+\subsection{Waiting-time modeling}
+
+The waiting-time pipeline has three steps. First, the aggregated review-density
+table is merged with weather features such as rain, cold, month, weekend,
+and day-of-week. Second, an XGBoost regressor is trained to predict review
+density from these contextual inputs. The relative contribution of each
+feature in the trained model is illustrated in
+Figure~\ref{fig:feature_importance}. Third, predicted review counts are
+converted to estimated visitor counts by assuming a fixed review participation
+rate of approximately $0.078\%$, which reflects the empirical proportion of
+visitors who leave online reviews for tourist attractions \cite{tourism_reviews_sampling}.
+
+\[
+\widehat{V}_{it} = \frac{\widehat{R}_{it}}{0.00078}.
+\]
+
+The notebook then classifies each attraction into a coarse type such as beach, park, museum, zoo, tour, activity, or general. Each type is assigned a capacity proxy and a baseline waiting constant. Waiting time is computed by a logarithmic crowding function with multiplicative lognormal noise:
+\[
+W_{it}^{\text{hist}} = b_{\tau(i)} \log\!\left(1 + \frac{\widehat{V}_{it}}{\kappa_{\tau(i)}}\right)\epsilon_{it},
+\qquad
+\epsilon_{it} \sim \text{LogNormal}(0,\sigma^2),
+\]
+where \(\tau(i)\) is the attraction type, \(b_{\tau(i)}\) is the baseline wait parameter, and \(\kappa_{\tau(i)}\) is the capacity proxy. Logarithmic crowding functions have also been used in queue-aware itinerary planning models \cite{lim2017queuing}. The resulting waiting times are clipped to a reasonable range and averaged by attraction. A live waiting estimate is computed from the forecast-based visitor prediction and then blended with the historical estimate:
+\[
+W_i^{\text{final}} = 0.7\,W_i^{\text{hist}} + 0.3\,W_i^{\text{live}}.
+\]
+This blended measure is the waiting-time feature passed to the route optimizer.
+
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.65\textwidth]{figures/Feature_Importance.png}
+\caption{Feature importance from the XGBoost waiting-time prediction model. Weather indicators, weekend effects, and seasonal variables contribute significantly to congestion estimation.}
+\label{fig:feature_importance}
+\end{figure}
+
+\subsection{Travel-time matrices}
+
+The notebook computes several travel-time matrices from geographic coordinates using geodesic distance and a fixed average speed of \(20\) km/h. First, it constructs an attraction--attraction travel-time matrix for routing among selected attractions. Second, it computes a hotel--attraction matrix so that each travel day can begin and end at an overnight location. Third, it computes a hotel--hotel matrix so that the multi-day formulation can represent hotel switching when appropriate. These matrices are approximations rather than exact road-network travel times, but they preserve the key spatial structure needed for optimization and visualization.
+
+\subsection{Visit-duration estimation}
+
+Visit durations are estimated using category-specific PERT-style assumptions \cite{moder1964pert}. For each attraction category, the notebook assigns optimistic, modal, and pessimistic durations and converts them to an expected duration
+\[
+v_i = \frac{a_i + 4m_i + b_i}{6}
+\]
+and a dispersion parameter
+\[
+\sigma_i = \frac{b_i - a_i}{6}.
+\]
+A simulated duration is also generated by sampling from a normal distribution centered at the category-based expectation. In practice, the deterministic expectation is the quantity most directly useful for optimization, while the simulated durations support robustness checks and route-interpretation experiments.
+
+\subsection{Optimization-ready feature assembly}
+
+After constructing utility, waiting time, travel times, attraction cost proxies, and accommodation proxies, the notebook assembles the optimization-ready tables and invokes a Gurobi helper module\cite{gurobi}. The helper returns profile-specific selected attractions, directed route edges, hotel assignments by day, normalized utility and waiting features, and solver metadata such as objective value, best bound, and relative optimality gap. The notebook then reconstructs ordered day-by-day routes and generates interactive folium maps for the relaxed, balanced, and explorer profiles.
+
+
+\section{Mathematical Model}
+
+\subsection{Modeling philosophy}
+
+The current implementation is no longer just a data-preparation prototype. The notebook explicitly invokes a Gurobi-based optimization module and then reconstructs multi-day, hotel-aware routes for several traveler profiles. The mathematical model presented here is therefore intended to describe the implemented decision layer at a level that is faithful to the code structure, even though some low-level solver details are encapsulated in a helper file.
+
+A key modeling choice is to treat itinerary planning as a multi-day profit-maximizing routing problem with overnight decisions. Relative to a standard orienteering formulation, the implemented system adds three important features: a blended weather-aware waiting-time penalty, attraction and hotel cost proxies, and profile-specific parameter settings that generate relaxed, balanced, and explorer itineraries.
+
+\subsection{Sets and indices}
+
+Let
+\begin{itemize}[leftmargin=2em]
+    \item $N = \{1,2,\dots,n\}$ be the set of candidate attractions;
+    \item $H = \{1,2,\dots,m\}$ be the set of candidate hotels or accommodations;
+    \item $D = \{1,2,\dots,K\}$ be the set of travel days (or outings);
+    \item $P$ be the set of traveler profiles, such as relaxed, balanced, and explorer.
+\end{itemize}
+
+Indices $i,j \in N$ refer to attractions, indices $h,g \in H$ refer to hotels, and index $d \in D$ refers to days.
+
+\subsection{Parameters}
+
+The implemented pipeline produces the following principal parameters:
+\begin{align*}
+U_i & : \text{baseline utility score of attraction } i, \\
+W_i & : \text{final blended waiting-time proxy of attraction } i, \\
+v_i & : \text{expected visit duration of attraction } i, \\
+c_i & : \text{ticket-cost proxy of attraction } i, \\
+\tau_{ij} & : \text{travel time from attraction } i \text{ to attraction } j, \\
+a_{hi} & : \text{travel time from hotel } h \text{ to attraction } i, \\
+b_{ih} & : \text{travel time from attraction } i \text{ to hotel } h, \\
+\widetilde{\tau}_{hg} & : \text{travel time from hotel } h \text{ to hotel } g, \\
+p_h & : \text{nightly-price proxy of hotel } h, \\
+e_h & : \text{experience-score proxy of hotel } h, \\
+T_d & : \text{available time budget on day } d, \\
+B & : \text{overall trip budget}, \\
+L_p, U_p & : \text{minimum and maximum attraction counts for profile } p.
+\end{align*}
+
+In the implementation, attraction costs and hotel prices are not literal booking prices; they are type-based or Yelp-tier-based proxies designed to encode relative affordability. Similarly, hotel experience scores summarize review quality and review-count strength rather than a full consumer-welfare model.
+
+\subsection{Decision variables}
+
+A hotel-aware multi-day routing formulation consistent with the notebook uses the following binary variables:
+\begin{align*}
+x_{id} &= 1 \quad \text{if attraction } i \text{ is visited on day } d,\ \text{and } 0 \text{ otherwise},\\
+y_{ijd} &= 1 \quad \text{if travel goes directly from attraction } i \text{ to attraction } j \text{ on day } d,\ \text{and } 0 \text{ otherwise},\\
+s_{hid} &= 1 \quad \text{if day } d \text{ starts at hotel } h \text{ and first visits attraction } i,\ \text{and } 0 \text{ otherwise},\\
+r_{ihd} &= 1 \quad \text{if day } d \text{ ends by returning from attraction } i \text{ to hotel } h,\ \text{and } 0 \text{ otherwise},\\
+z_{hd} &= 1 \quad \text{if hotel } h \text{ is selected for day } d,\ \text{and } 0 \text{ otherwise.}
+\end{align*}
+
+When hotel switching is allowed between days, an additional variable \(q_{hgd}\) can represent the transition from hotel \(h\) on day \(d\) to hotel \(g\) on day \(d+1\).
+
+\subsection{Profile-specific objective}
+
+The implemented notebook normalizes several attraction features and solves separate instances for different traveler profiles. A representative objective for a profile \(p\) is
+\begin{equation}
+\begin{aligned}
+\max \quad
+& \lambda_p^{U} \sum_{d\in D}\sum_{i\in N} U_i x_{id}
+- \lambda_p^{W} \sum_{d\in D}\sum_{i\in N} W_i x_{id} \\
+& - \lambda_p^{T} \Big(
+    \sum_{d\in D}\sum_{i\in N}\sum_{j\in N} \tau_{ij} y_{ijd}
+    + \sum_{d\in D}\sum_{h\in H}\sum_{i\in N} a_{hi}s_{hid} \\
+& \qquad\qquad
+    + \sum_{d\in D}\sum_{i\in N}\sum_{h\in H} b_{ih}r_{ihd}
+  \Big) \\
+& - \lambda_p^{C}\sum_{d\in D}\sum_{i\in N} c_i x_{id}
+- \lambda_p^{H}\sum_{d\in D}\sum_{h\in H} p_h z_{hd} \\
+& + \lambda_p^{E}\sum_{d\in D}\sum_{h\in H} e_h z_{hd}.
+\end{aligned}
+\label{eq:hotelaware_obj}
+\end{equation}
+
+This objective captures the logic visible in the notebook. Attractions contribute positive utility. Waiting, travel burden, attraction cost, and hotel cost contribute penalties. Hotel quality contributes positive value. Different profiles correspond to different weights and count limits, which is why the notebook generates qualitatively different relaxed, balanced, and explorer routes.
+
+\subsection{Core constraints}
+
+A model consistent with the implemented pipeline includes the following constraints.
+
+\paragraph{Unique attraction visits across the trip}
+\begin{equation}
+\sum_{d \in D} x_{id} \le 1, \qquad \forall i \in N.
+\label{eq:once}
+\end{equation}
+
+\paragraph{Daily hotel choice}
+\begin{equation}
+\sum_{h \in H} z_{hd} = 1, \qquad \forall d \in D.
+\label{eq:onehotel}
+\end{equation}
+
+\paragraph{Start and end consistency}
+\begin{align}
+\sum_{i \in N} s_{hid} &= z_{hd}, \qquad \forall h \in H,\ \forall d \in D, \label{eq:start_hotel}\\
+\sum_{i \in N} r_{ihd} &= z_{hd}, \qquad \forall h \in H,\ \forall d \in D. \label{eq:end_hotel}
+\end{align}
+
+\paragraph{Attraction flow conservation}
+\begin{align}
+\sum_{j \in N,\ j\neq i} y_{ijd} + \sum_{h \in H} r_{ihd} &= x_{id}, \qquad \forall i \in N,\ \forall d \in D, \label{eq:flow_out}\\
+\sum_{j \in N,\ j\neq i} y_{jid} + \sum_{h \in H} s_{hid} &= x_{id}, \qquad \forall i \in N,\ \forall d \in D. \label{eq:flow_in}
+\end{align}
+
+\paragraph{Daily time budget}
+\begin{equation}
+\sum_{i \in N} (v_i + W_i)x_{id}
++
+\sum_{i \in N}\sum_{j \in N} \tau_{ij} y_{ijd}
++
+\sum_{h \in H}\sum_{i \in N} a_{hi}s_{hid}
++
+\sum_{i \in N}\sum_{h \in H} b_{ih}r_{ihd}
+\le T_d,
+\qquad \forall d \in D.
+\label{eq:time_day}
+\end{equation}
+
+\paragraph{Trip budget}
+\begin{equation}
+\sum_{d \in D}\sum_{i \in N} c_i x_{id}
++
+\sum_{d \in D}\sum_{h \in H} p_h z_{hd}
+\le B.
+\label{eq:budget_trip}
+\end{equation}
+
+\paragraph{Profile-specific attraction counts}
+\begin{equation}
+L_p \le \sum_{d \in D}\sum_{i \in N} x_{id} \le U_p.
+\label{eq:profile_count}
+\end{equation}
+
+Depending on the profile and the chosen candidate set, one may also add category caps, maximum total waiting time, or hotel-switch restrictions. These are natural extensions of the same binary-optimization framework.
+
+\subsection{Interpretation of the model}
+
+Model \eqref{eq:hotelaware_obj}--\eqref{eq:profile_count} is a hotel-aware multi-day extension of a profit-maximizing routing problem. Attractions are selected jointly with their sequence and overnight locations. The waiting-time proxy makes the reward context-sensitive, and the accommodation layer turns the problem from a fixed-depot route into a richer itinerary-design problem. Because profile weights and count constraints vary, the same data instance can produce a family of itineraries ranging from conservative and low-fatigue to aggressive and high-coverage.
+
+\subsection{Relation to the implemented notebook}
+
+In the notebook, the full Gurobi model is called through a helper module rather than written inline. The returned objects include the selected attraction set, travel edges by day, hotel-to-attraction start edges, attraction-to-hotel end edges, chosen hotels by day, and solver diagnostics such as objective value and best bound. The reporting and visualization cells therefore operate directly on optimization outputs rather than on a heuristic or ranking-only baseline.
+
+
+\section{Computational Results}
+
+This section presents the empirical evaluation of the proposed weather-aware itinerary planning pipeline. The current implementation validates the integration of heterogeneous data sources, predictive congestion modeling, and multi-day route construction under time and budget constraints. While the mathematical formulation introduced earlier supports full mixed-integer optimization, the present prototype emphasizes demonstrating the end-to-end pipeline and the interpretability of the generated itineraries.
+
+\subsection{Dataset Construction and Scale}
+
+The pipeline integrates multiple real-world data sources, including Yelp business metadata, historical weather data, and temporal review activity. After preprocessing and geographic filtering, the system constructs a candidate set of approximately 100 attractions within the study region.
+
+A complete pairwise travel-time matrix is generated using geographic coordinates and converted into estimated travel durations. Visit durations are estimated using category-based heuristics, while congestion effects are modeled through predicted waiting times obtained from a machine learning model trained on temporal and weather-related features.
+
+This preprocessing stage produces the optimization-ready inputs required for itinerary construction, including attraction utilities, travel times, estimated waiting times, and cost parameters.
+
+\subsection{Waiting Time Prediction}
+
+To capture congestion effects, the system trains an XGBoost regression model to predict daily review density as a proxy for visitor volume. The model incorporates temporal variables such as day-of-week and month together with weather indicators including precipitation conditions.
+
+Feature importance analysis shows that temporal factors dominate prediction performance, while weather variables provide additional explanatory power. These results confirm that both seasonality and environmental conditions significantly influence attraction congestion patterns.
+
+The predicted review density is subsequently converted into estimated visitor counts using a participation-rate assumption. A nonlinear congestion transformation is then applied to produce waiting-time estimates, which are incorporated into the itinerary planning objective to penalize highly crowded attractions.
+
+\subsection{Optimization Output and Route Reconstruction}
+
+Instead of generating a single static itinerary, the implemented notebook produces profile-specific optimization outputs. After calling the Gurobi helper module, the system stores for each traveler profile the selected attractions, directed travel edges, hotel-to-attraction departure edges, attraction-to-hotel return edges, and daily hotel assignments.
+
+The solver also reports diagnostic information including the optimization status, objective value, best bound, and relative optimality gap whenever available. These diagnostics provide transparency into the optimization process and allow verification that the resulting solution corresponds to a complete multi-day route.
+
+Because the solver returns raw edge lists, the notebook performs an additional route reconstruction step that converts the selected edges into ordered attraction sequences for each day. This reconstruction makes it possible to summarize itineraries in human-readable form and enables direct comparison across traveler profiles.
+
+\subsection{Multi-Day Itinerary Patterns}
+
+Figure~\ref{fig:routes} illustrates the resulting itineraries generated for three traveler profiles: relaxed, balanced, and explorer. Each profile produces a distinct routing structure reflecting different exploration preferences.
+
+\begin{itemize}
+    \item \textbf{Relaxed profile.} The relaxed itinerary selects approximately 12 attractions and prioritizes geographic compactness. The resulting routes minimize travel distance and emphasize lower fatigue by concentrating visits within a smaller spatial region.
+
+    \item \textbf{Balanced profile.} The balanced itinerary selects roughly 15 attractions and expands the geographic coverage while maintaining reasonable travel efficiency. This profile reflects a compromise between exploration and travel effort.
+
+    \item \textbf{Explorer profile.} The explorer itinerary visits approximately 19 attractions and covers a significantly larger geographic area. The routes contain longer travel segments and greater dispersion, reflecting a preference for maximizing attraction coverage.
+\end{itemize}
+
+Across all traveler profiles, the system consistently selects a single hotel base and organizes daily routes around that location. The resulting itineraries exhibit several desirable structural properties, including spatial clustering of attractions within each day, coherent travel paths without excessive backtracking, and implicit avoidance of highly congested locations through waiting-time penalties.
+
+\subsection{Visualization and Interpretability}
+
+Built on top of the agent architecture described above, the visualization layer provides interpretable outputs of the optimized itineraries. The notebook generates both static route plots and interactive HTML maps that overlay attractions, hotels, and reconstructed travel paths. The notebook generates both static route plots and \href{https://ztang-yit-xiaang.github.io/images/tourist_routes_map_gurobi.html}{interactive HTML maps} that overlay attractions, hotels, and reconstructed travel paths.
+
+Distinct colors and line styles represent different traveler profiles and outing days, enabling intuitive comparison of itinerary structures. As illustrated in Figure~\ref{fig:routes}, the visualizations provide a direct way to verify that the generated routes are geographically coherent and that the selected hotel location is well positioned relative to the visited attractions.
+
+This visual analytics layer also serves as a practical debugging tool, allowing users to confirm that the reconstructed routes correspond to plausible travel plans and that solver outputs are interpreted correctly.
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.4\textwidth]{figures/optimized_routes.png}
+
+\vspace{4mm}
+
+\includegraphics[width=\textwidth]{figures/tourist_routes_static_gurobi.png}
+
+\caption{Illustration of the itinerary optimization results. 
+The upper panel shows an example optimized multi-day route generated by the model. 
+The lower panels compare the routes obtained for different traveler profiles (relaxed, balanced, and explorer) under the Gurobi optimization framework.}
+\label{fig:routes}
+\end{figure}
+\subsection{Agent Architecture}
+
+To support interactive itinerary generation, the system is organized as an agent-driven architecture that connects the user interface, optimization engine, and external data services. The overall structure follows a layered design illustrated in Figure~\ref{fig:agent_architecture}.
+
+The top layer corresponds to the user-facing interface, where travelers submit natural-language trip requests such as planning a relaxed coastal itinerary or minimizing crowded attractions. These requests are handled through a conversational planning interface that translates user preferences into structured optimization parameters.
+
+The middle layer contains the planning agent responsible for coordinating the itinerary generation process. The agent performs several key tasks:
+
+\begin{itemize}
+\item interpreting user preferences and traveler profiles,
+\item retrieving candidate attractions and contextual data,
+\item constructing optimization inputs such as travel-time matrices and waiting-time estimates,
+\item invoking the route optimization module to generate multi-day itineraries.
+\end{itemize}
+
+The lower layer consists of external services and data APIs that provide the information required by the optimization model. In the implemented prototype, these services include attraction data sources (e.g., Yelp metadata), weather information used for congestion prediction, routing services for travel-time estimation, and the Gurobi optimization solver.
+
+By structuring the system as an agent that orchestrates these components, the framework separates high-level travel planning logic from data retrieval and optimization computation. This modular architecture makes the system easier to extend with additional data sources, improved predictive models, or alternative optimization strategies.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.9\textwidth]{figures/agent.png}
+\caption{Agent-based architecture of the AI itinerary planning system.
+The interface layer receives natural-language travel requests, the planning agent coordinates optimization tasks, and the lower layer integrates external services such as attraction data, weather information, routing APIs, and the optimization solver.}
+\label{fig:agent_architecture}
+\end{figure}
+
+This project proposes a data-driven itinerary optimization framework
+that integrates machine learning and combinatorial optimization.
+
+The overall system architecture is illustrated in Figure~\ref{fig:pipeline}.
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=0.95\linewidth]{figures/pipeline.png}
+\caption{System architecture of the weather-aware itinerary optimization framework. 
+The pipeline integrates data sources, machine learning models, and optimization to 
+generate personalized travel itineraries.}
+\label{fig:pipeline}
+\end{figure}
+
+\subsection{System Performance and Discussion}
+
+The end-to-end pipeline runs efficiently on standard hardware. Data preprocessing, feature construction, and model training complete within minutes, while route construction scales approximately quadratically with the number of candidate attractions due to the pairwise travel-time matrix.
+
+Although the prototype currently relies on a simplified integration between predictive modeling and optimization, the computational results demonstrate that the framework successfully generates interpretable and behaviorally meaningful multi-day itineraries. The combination of congestion-aware prediction, travel-time modeling, and profile-dependent preferences produces routes that resemble realistic tourist travel patterns.
+
+However, the full mixed-integer optimization model described earlier has not yet been completely integrated into the production pipeline. Future work will focus on strengthening solver integration, enabling rigorous optimality guarantees, and systematically comparing heuristic and optimal solutions.
+\section{Future Work and Project Outlook}
+
+The most immediate improvement is tighter solver transparency. The notebook already invokes a Gurobi-based optimization module, but the helper-file structure means that some implementation details are hidden from the main notebook. A natural next step is to document the helper model more explicitly, or to expose the principal constraint blocks directly in the report appendix, so that the connection between mathematics and code is fully auditable.
+
+A second extension is better travel-time realism inside the optimization layer. The notebook currently relies on geodesic distance converted to minutes for the optimization matrices, while the route-visualization layer can query OpenRouteService for more realistic path geometry. Replacing the optimization matrices with road-network or multimodal travel times would make the prescriptive recommendations more realistic, especially in urban settings with parking frictions, detours, and one-way street effects.
+
+A third improvement concerns accommodation realism. The current hotel layer is a strong prototype, but its nightly prices and experience values are still proxies derived from lodging type and Yelp price tiers. A richer version could incorporate actual booking prices, room availability, neighborhood information, or parking costs. Even without a paid booking API, a more systematic accommodation dataset would strengthen the overnight-decision component of the model.
+
+A fourth direction is stronger evaluation. The implemented notebook already supports profile-based optimization outputs, but the report could compare them more formally against simpler baselines such as popularity-only ranking, greedy nearest-neighbor routing, or a fixed-hotel variant. Useful evaluation metrics include adjusted utility, travel burden, total waiting time, total cost, number of attractions visited, and route robustness under simulated visit durations.
+
+A fifth direction is robustness and sensitivity analysis. Since visit duration, waiting time, and weather all involve uncertainty or approximation, the project is well suited to scenario analysis. One could vary the participation-rate assumption linking reviews to visitors, test alternative waiting-time functional forms, perturb the weather forecast input, or study the sensitivity of the optimal route to hotel-price proxies and profile weights.
+
+Another natural extension is geographic scalability. The current prototype focuses on a limited set of coastal California destinations where the data pipeline is stable and complete. Expanding the framework to multiple cities or regions simultaneously would allow cross-destination itinerary planning and make the system more applicable to real-world travel scenarios. However, this extension requires careful handling of heterogeneous datasets, missing information across locations, and larger routing graphs, which would significantly increase the computational complexity of the optimization model.
+
+Finally, computational scalability remains an important challenge. As the model incorporates multiple days, hotel choices, and dozens of candidate attractions, the resulting mixed-integer optimization problem grows rapidly in size. In the current implementation, the solver sometimes requires substantial runtime and may terminate with a feasible but suboptimal solution within the time limit. Future work could explore tighter formulations, improved branching strategies, decomposition methods, or heuristic warm-start solutions to improve scalability and solution quality for larger multi-day planning instances.
+
+Another promising extension is to refine the conversational planning agent that orchestrates the itinerary-generation process. The current agent primarily serves as a lightweight interface for calling the attraction-search, weather-retrieval, and itinerary-construction tools. Future work could strengthen this component by enabling more sophisticated reasoning over traveler preferences, contextual constraints, and intermediate optimization outputs. For example, the agent could iteratively refine itinerary parameters, adjust traveler profiles based on user feedback, or explore multiple candidate solutions before presenting recommendations. A more powerful planning agent would transform the system from a static optimization pipeline into an interactive decision-support tool capable of guiding users through personalized travel planning.
+
+The project would also benefit from cleaner engineering for reproducibility. The notebook currently contains local file paths and embedded API credentials that are convenient for development but not ideal for sharing. Converting the pipeline into a parameterized repository with environment variables, standardized data folders, and a documented run order would make the project substantially stronger as both a course deliverable and a portfolio artifact.
+
+\section{Conclusion}
+
+This report has presented a complete and professionally structured version of the IE 5533 course project on weather-aware urban attraction planning. The central premise is that attraction recommendation should be treated not as a pure ranking problem but as a constrained optimization problem under contextual uncertainty. The project therefore integrates attraction utility, travel cost, weather effects, and congestion proxies into a unified itinerary-planning framework.
+
+The literature review shows that this positioning is well grounded in existing research on the orienteering problem, the Tourist Trip Design Problem (TTDP), context-aware recommendation systems, queue-aware itinerary design, and uncertainty-aware travel planning. The project does not attempt to outperform the most advanced systems in every dimension. Instead, it focuses on building a transparent, modular, and academically credible prototype using accessible data sources and sound operations-research modeling principles.
+
+The implementation results are encouraging. The notebook already performs attraction filtering, utility construction, weather processing, review-density extraction, travel-time approximation, visit-duration estimation, and an LLM-assisted itinerary demonstration. These modules are nontrivial; together they establish a functioning data-to-decision pipeline. The main remaining task is the integration of the formal optimization solver. Once that step is completed, the project will become a fully connected weather-aware itinerary recommendation system that combines both predictive modeling and prescriptive optimization.
+
+From the perspective of a final course report, the project is therefore successful on two levels. Substantively, it addresses a meaningful real-world decision problem with an appropriate combination of data analytics and optimization. Methodologically, it demonstrates how open-data sources can be transformed into an optimization-ready planning model. To promote transparency and reproducibility, the full implementation of the project is publicly available in the GitHub repository: \url{https://github.com/Ztang-Yit-Xiaang/weather-aware-travel-itinerary-optimization}. For both reasons, the project represents a strong and extensible foundation for future work in tourism analytics and context-aware urban decision support.
+
+
+% \bibliography{references}
+\bibliographystyle{apalike}
+\bibliography{references}
+% \begin{thebibliography}{99}
+
+% \bibitem[Vansteenwegen et al.(2011)]{vansteenwegen2011orienteering}
+% Vansteenwegen, P., Souffriau, W., and Van Oudheusden, D. (2011).
+% The orienteering problem: A survey.
+% \textit{European Journal of Operational Research}, 209(1), 1--10.
+
+% \bibitem[Gunawan et al.(2016)]{gunawan2016orienteering}
+% Gunawan, A., Lau, H. C., and Vansteenwegen, P. (2016).
+% Orienteering problem: A survey of recent variants, solution approaches and applications.
+% \textit{European Journal of Operational Research}, 255(2), 315--332.
+
+% \bibitem[Borr{\`a}s et al.(2014)]{borras2014tourismsurvey}
+% Borr{\`a}s, J., Moreno, A., and Valls, A. (2014).
+% Intelligent tourism recommender systems: A survey.
+% \textit{Expert Systems with Applications}, 41(16), 7370--7389.
+
+% \bibitem[Yuan et al.(2013)]{yuan2013timeaware}
+% Yuan, Q., Cong, G., Ma, Z., Sun, A., and Magnenat-Thalmann, N. (2013).
+% Time-aware point-of-interest recommendation.
+% In \textit{Proceedings of the 36th International ACM SIGIR Conference on Research and Development in Information Retrieval}, 363--372.
+
+% \bibitem[Braunhofer et al.(2013)]{braunhofer2013sts}
+% Braunhofer, M., Elahi, M., Ge, M., Ricci, F., and Schievenin, T. (2013).
+% STS: Design of weather-aware mobile recommender systems in tourism.
+% In \textit{Proceedings of the First International Workshop on Intelligent User Interfaces: Artificial Intelligence Meets Human Computer Interaction}.
+
+% \bibitem[Lim et al.(2017)]{lim2017queuing}
+% Lim, K. H., Chan, J., Karunasekera, S., and Leckie, C. (2017).
+% Personalized itinerary recommendation with queuing time awareness.
+% In \textit{Proceedings of the 40th International ACM SIGIR Conference on Research and Development in Information Retrieval}, 325--334.
+
+% \bibitem[Liu et al.(2021)]{liu2021scair}
+% Liu, J., Wood, K. L., and Lim, K. H. (2021).
+% Strategic and crowd-aware itinerary recommendation.
+% In \textit{Machine Learning and Knowledge Discovery in Databases: Applied Data Science and Demo Track}, 69--85.
+
+% \bibitem[Ruiz-Meza and Montoya-Torres(2022)]{ruizmeza2022ttdp}
+% Ruiz-Meza, J. and Montoya-Torres, J. R. (2022).
+% A systematic literature review for the tourist trip design problem: Extensions, solution techniques and future research lines.
+% \textit{Operations Research Perspectives}, 9, 100228.
+
+% \bibitem[Porras et al.(2022)]{porras2022critical}
+% Porras, C., P{\'e}rez-Ca{\~n}edo, B., Pelta, D. A., and Verdegay, J. L. (2022).
+% A critical analysis of a tourist trip design problem with time-dependent recommendation factors and waiting times.
+% \textit{Electronics}, 11(3), 357.
+
+% \bibitem[Vu et al.(2022)]{vu2022branchcheck}
+% Vu, D. M., Kergosien, Y., Mendoza, J. E., and Desport, P. (2022).
+% Branch-and-check approaches for the tourist trip design problem with rich constraints.
+% \textit{Computers \& Operations Research}, 138, 105566.
+
+% \bibitem[Ghobadi et al.(2023)]{ghobadi2023integrated}
+% Ghobadi, F., Divsalar, A., Jandaghi, H., and Barzegar Nozari, R. (2023).
+% An integrated recommender system for multi-day tourist itinerary.
+% \textit{Applied Soft Computing}, 149, 110942.
+
+% \bibitem[Yoon and Choi(2023)]{yoon2023realtime}
+% Yoon, J. and Choi, C. C. (2023).
+% Real-time context-aware recommendation system for tourism.
+% \textit{Sensors}, 23(7), 3679.
+
+% \bibitem[Halder et al.(2024)]{halder2024survey}
+% Halder, S., Lim, K. H., Chan, J., and Zhang, X. (2024).
+% A survey on personalized itinerary recommendation: From optimisation to deep learning.
+% \textit{Applied Soft Computing}, 152, 111200.
+
+% \bibitem[Ding et al.(2024)]{ding2024stochastic}
+% Ding, Y., Zhang, L., Huang, C., and Ge, R. (2024).
+% Two-stage travel itinerary recommendation optimization model considering stochastic traffic time.
+% \textit{Expert Systems with Applications}, 237, 121536.
+
+% \bibitem[Kedkaew et al.(2024)]{kedkaew2024bev}
+% Kedkaew, S., Nakkiew, W., Jewpanya, P., and Nakkiew, W. (2024).
+% A novel tourist trip design problem with stochastic travel times and partial charging for battery electric vehicles.
+% \textit{Mathematics}, 12(18), 2822.
+
+% \end{thebibliography}
+
+\end{document}
+

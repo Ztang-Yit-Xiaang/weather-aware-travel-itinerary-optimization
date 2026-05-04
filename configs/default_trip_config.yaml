@@ -1,0 +1,104 @@
+trip:
+  state: California
+  trip_days: 7
+  start_city_options: [San Francisco, Los Angeles]
+  end_city_options: [Los Angeles, San Francisco]
+  traveler_profile: balanced
+
+budget:
+  user_budget: 2000
+  budget_mode: approximate
+  hard_budget_multiplier: 1.20
+  food_cost_per_day: 72
+  attraction_cost_per_day: 28
+  local_transport_buffer_per_day: 18
+
+time:
+  daily_time_budget_minutes: 720
+  max_detour_minutes: 45
+  max_intercity_drive_minutes_per_day: 360
+
+hotels:
+  allow_visit_city_without_hotel: true
+  charge_hotel_only_for_overnight_base: true
+  hotel_price_fallback: 150
+
+enrichment:
+  run_live_apis: false
+  cache_ttl_days: 30
+  use_yelp_live_api: false
+  use_local_yelp_dataset: true
+  use_yelp: true
+  use_osm: true
+  use_wikidata: true
+  use_wikipedia: true
+  use_open_meteo: true
+  use_osrm: true
+  use_social_signals: true
+  overpass_radius_meters: 18000
+  yelp_radius_meters: 2500
+
+optimization:
+  gurobi_time_limit_seconds: 120
+  gurobi_mip_gap: 0.05
+  max_cities: 6
+  min_days_per_base_city: 1
+  max_days_per_base_city: 3
+  city_day_value_exponent: 0.82
+  pass_through_city_bonus_weight: 0.18
+  base_switch_penalty: 0.07
+  max_pois_per_day: 4
+  run_original_yelp_only_baseline: true
+
+bandit:
+  enabled: true
+  episodes: 40
+  seeds: [42, 73, 101]
+  episode_grid: [20, 40, 80]
+  candidate_size_grid: [8, 12, 16]
+  arms: [scenic_social, fastest_low_cost, balanced, high_must_go, low_detour]
+  exploration_scale: 0.25
+  top_k_gurobi_repairs: 3
+
+social:
+  must_go_is_mandatory: false
+  must_go_bonus_weight: 0.85
+  social_score_weight: 1.10
+  corridor_fit_weight: 0.30
+  detour_penalty_weight: 0.01
+
+utility:
+  method: bayesian_ucb
+  uncertainty_bonus_kappa: 0.25
+  bayes_prior_mean: 0.50
+  bayes_prior_strength: 6.0
+  corridor_fit_weight: 0.30
+  detour_penalty_weight: 0.01
+  must_go_bonus_weight: 0.85
+  weather_risk_penalty_weight: 0.08
+
+multi_objective:
+  use_epsilon_constraints: true
+  epsilon_detour_minutes: 45
+  epsilon_weather_risk: 0.35
+  min_diversity_score: 2.5
+  diversity_bonus_weight: 0.12
+  secondary_travel_penalty: 0.005
+
+diversity:
+  method: submodular_sqrt
+  mmr_lambda: 0.72
+  category_similarity_weight: 0.45
+  geo_similarity_weight: 0.25
+  city_similarity_weight: 0.20
+  source_similarity_weight: 0.10
+
+learning_to_rank:
+  enabled: false
+  method: bpr
+  min_pairwise_examples: 200
+
+trip_duration_comparison:
+  enabled: true
+  days: [7, 9, 12]
+  scale_budget_with_days: true

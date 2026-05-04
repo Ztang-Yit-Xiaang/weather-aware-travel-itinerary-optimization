@@ -1,0 +1,8 @@
+{
+  "city": "city name",
+  "candidate_attractions": "number of mined attraction candidates",
+  "mean_utility": "mean catalog utility",
+  "total_reviews": "aggregate review volume",
+  "data_status": "yelp_sufficient / yelp_sparse / fallback needed",
+  "data_quality_score": "0-1 readiness score for optimization"
+}

@@ -115,13 +115,25 @@ def _detect_license_path():
     candidates = [
         os.environ.get("GRB_LICENSE_FILE"),
         os.path.expanduser("~/Library/gurobi/gurobi.lic"),
+        os.path.expanduser("~/gurobi/gurobi.lic"),
         os.path.expanduser("~/gurobi.lic"),
+        r"C:\gurobi\gurobi.lic",
+        r"C:\gurobi1300\gurobi.lic",
+        r"C:\gurobi1200\gurobi.lic",
+        r"C:\gurobi1100\gurobi.lic",
         "/Library/gurobi/gurobi.lic",
     ]
     for candidate in candidates:
         if candidate and os.path.exists(candidate):
             return candidate
     return None
+
+
+def _has_wls_env_credentials():
+    return all(
+        os.environ.get(var_name)
+        for var_name in ["GRB_WLSACCESSID", "GRB_WLSSECRET", "GRB_LICENSEID"]
+    )
 
 
 def _merge_profile_overrides(base_profiles, profile_overrides=None):
@@ -222,6 +234,8 @@ def run_gurobi_itinerary_optimization(
     print("All prerequisite data verified")
     if license_path:
         print(f"Using Gurobi license: {license_path}")
+    elif _has_wls_env_credentials():
+        print("Using Gurobi WLS credentials from GRB_WLSACCESSID / GRB_WLSSECRET / GRB_LICENSEID.")
     else:
         print("Gurobi license path not auto-detected; falling back to Gurobi defaults.")
     print()

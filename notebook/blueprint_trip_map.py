@@ -23,6 +23,9 @@ CITY_COORDS = {
 SCENIC_CA1_COLOR = "#2A9D8F"
 FASTEST_ROUTE_COLOR = "#6C757D"
 STANFORD_WAYPOINT_NAME = "Stanford University Main Quad"
+ROUTE_CONTEXT_PANE = "routeContextPane"
+ROUTE_CORE_PANE = "routeCorePane"
+ROUTE_TOP_PANE = "routeTopPane"
 
 DAY_COLORS = ["#2563EB", "#4C78A8", "#F4A261", "#7A5195", "#C1121F", "#5FAD56", "#6C757D"]
 
@@ -1021,6 +1024,240 @@ def build_day_plan(context, stops_per_day=None, profile_name="balanced"):
     return pd.DataFrame(rows)
 
 
+def _select_greedy_day_stops(poi_catalog, hotel, used_names, stops_per_day=3):
+    if poi_catalog.empty:
+        return poi_catalog
+
+    available = poi_catalog[~poi_catalog["name"].astype(str).isin(used_names)].copy()
+    if available.empty:
+        available = poi_catalog.copy()
+
+    available["latitude"] = pd.to_numeric(available["latitude"], errors="coerce")
+    available["longitude"] = pd.to_numeric(available["longitude"], errors="coerce")
+    available["final_poi_value"] = pd.to_numeric(
+        available.get("final_poi_value", available.get("source_score", 0.0)),
+        errors="coerce",
+    ).fillna(0.0)
+    available["source_score"] = pd.to_numeric(available.get("source_score", 0.0), errors="coerce").fillna(0.0)
+    available["social_score"] = pd.to_numeric(available.get("social_score", 0.0), errors="coerce").fillna(0.0)
+    available["social_must_go"] = available.get("social_must_go", False)
+    available["social_must_go"] = available["social_must_go"].fillna(False).astype(bool)
+    available["must_go_weight"] = pd.to_numeric(available.get("must_go_weight", 0.0), errors="coerce").fillna(0.0)
+    available["corridor_fit"] = pd.to_numeric(available.get("corridor_fit", 0.0), errors="coerce").fillna(0.0)
+    available["detour_minutes"] = pd.to_numeric(available.get("detour_minutes", 0.0), errors="coerce").fillna(0.0)
+    available = available.dropna(subset=["latitude", "longitude"]).reset_index(drop=True)
+    if available.empty:
+        return poi_catalog.head(stops_per_day)
+
+    hotel_lat = float(hotel.get("latitude"))
+    hotel_lon = float(hotel.get("longitude"))
+    current_lat = hotel_lat
+    current_lon = hotel_lon
+    selected_rows = []
+    remaining = available.copy()
+
+    while len(selected_rows) < stops_per_day and not remaining.empty:
+        remaining["greedy_score"] = remaining.apply(
+            lambda row: float(row["final_poi_value"])
+            + 0.12 * float(row["social_score"])
+            + 0.08 * float(row["corridor_fit"])
+            - 0.02 * _point_distance_km(current_lat, current_lon, row["latitude"], row["longitude"])
+            - 0.004 * float(row["detour_minutes"]),
+            axis=1,
+        )
+        next_row = remaining.sort_values(
+            ["greedy_score", "final_poi_value", "source_score", "name"],
+            ascending=[False, False, False, True],
+        ).iloc[0]
+        selected_rows.append(next_row)
+        current_lat = float(next_row["latitude"])
+        current_lon = float(next_row["longitude"])
+        remaining = remaining[remaining["name"].astype(str) != str(next_row["name"])].reset_index(drop=True)
+
+    selected = pd.DataFrame(selected_rows).reset_index(drop=True) if selected_rows else available.head(stops_per_day)
+    output_columns = [
+        "city",
+        "name",
+        "category",
+        "latitude",
+        "longitude",
+        "source",
+        "source_score",
+        "source_list",
+        "social_score",
+        "social_must_go",
+        "must_go_weight",
+        "corridor_fit",
+        "detour_minutes",
+        "data_confidence",
+        "final_poi_value",
+        "social_reason",
+    ]
+    for column in output_columns:
+        if column not in selected.columns:
+            if column == "social_reason":
+                selected[column] = ""
+            elif column == "source_list":
+                selected[column] = selected.get("source", "unknown")
+            else:
+                selected[column] = 0.0
+    return selected[output_columns]
+
+
+def _select_greedy_pass_through_day_stops(context, pass_through_cities, used_names_by_city, max_stops):
+    selected_rows = []
+    if max_stops <= 0:
+        return pd.DataFrame()
+    for city in pass_through_cities:
+        if len(selected_rows) >= max_stops:
+            break
+        catalog = _city_poi_catalog(context, city).copy()
+        if catalog.empty:
+            continue
+        used_names = used_names_by_city.setdefault(city, set())
+        catalog = catalog[~catalog["name"].astype(str).isin(used_names)].copy()
+        if catalog.empty:
+            continue
+        catalog["final_poi_value"] = pd.to_numeric(catalog.get("final_poi_value", 0.0), errors="coerce").fillna(0.0)
+        catalog["source_score"] = pd.to_numeric(catalog.get("source_score", 0.0), errors="coerce").fillna(0.0)
+        stop = catalog.sort_values(["final_poi_value", "source_score", "name"], ascending=[False, False, True]).iloc[0]
+        selected_rows.append(stop)
+        used_names.add(str(stop["name"]))
+    if not selected_rows:
+        return pd.DataFrame()
+    return pd.DataFrame(selected_rows).reset_index(drop=True)
+
+
+def build_greedy_baseline_day_plan(context, stops_per_day=None, profile_name="balanced"):
+    profile_config = _profile_config(profile_name, stops_per_day=stops_per_day)
+    stops_per_day = int(profile_config["stops_per_day"])
+    trip = context["best_hierarchical_trip"]
+    sequence = _trip_sequence_with_pass_through(trip)
+    days_by_city = _coerce_days_by_city(trip["days_by_city"])
+    total_trip_days = int(sum(int(value) for value in days_by_city.values()))
+    base_cities = [city for city in sequence if int(days_by_city.get(city, 0)) > 0]
+
+    rows = []
+    day_number = 1
+    used_names_by_city = {city: set() for city in sequence}
+    selected_hotels_by_city = {}
+
+    for base_index, city in enumerate(base_cities):
+        allocated_days = int(days_by_city.get(city, 0))
+        if allocated_days <= 0:
+            continue
+
+        poi_catalog = _city_poi_catalog(context, city).reset_index(drop=True)
+        hotel_catalog = _city_hotel_catalog(context, city).reset_index(drop=True)
+        used_names = used_names_by_city.setdefault(city, set())
+        hotel = _select_hotel_for_city_plan(
+            hotel_catalog,
+            poi_catalog,
+            used_names,
+            stops_per_day=stops_per_day,
+            profile_config=profile_config,
+        )
+        selected_hotels_by_city[city] = hotel
+
+        for local_day in range(1, allocated_days + 1):
+            is_transition_day = bool(local_day == 1 and base_index > 0)
+            previous_city = base_cities[base_index - 1] if is_transition_day else city
+            previous_hotel = selected_hotels_by_city.get(previous_city, hotel)
+            route_start_name = previous_hotel.get("name", f"{previous_city} hotel")
+            route_start_latitude = float(previous_hotel.get("latitude", CITY_COORDS[previous_city][0]))
+            route_start_longitude = float(previous_hotel.get("longitude", CITY_COORDS[previous_city][1]))
+            route_end_name = hotel.get("name", f"{city} hotel")
+            route_end_latitude = float(hotel.get("latitude", CITY_COORDS[city][0]))
+            route_end_longitude = float(hotel.get("longitude", CITY_COORDS[city][1]))
+            route_type = "base_city_local"
+            pass_through_cities = []
+            drive_minutes = 0.0
+            drive_time_source = "local_day_no_intercity_drive"
+
+            if is_transition_day:
+                segment = _sequence_between(sequence, previous_city, city)
+                pass_through_cities = [stop_city for stop_city in segment[1:-1] if stop_city != city]
+                drive_minutes, drive_time_source = _transition_drive_minutes(context, previous_city, city, pass_through_cities)
+                route_type = "relocation_pass_through" if pass_through_cities else "relocation_direct"
+
+            available_visit_minutes = max(60.0, 720.0 - float(drive_minutes) - 45.0)
+            if is_transition_day:
+                transition_stops = _select_greedy_pass_through_day_stops(
+                    context,
+                    pass_through_cities,
+                    used_names_by_city,
+                    min(stops_per_day, max(1, int(available_visit_minutes // 30.0))),
+                )
+                remaining_slots = max(0, stops_per_day - len(transition_stops))
+                if remaining_slots > 0:
+                    local_fill = _select_greedy_day_stops(poi_catalog, hotel, used_names, stops_per_day=remaining_slots)
+                    if not local_fill.empty:
+                        used_names.update(local_fill["name"].astype(str).tolist())
+                        transition_stops = pd.concat([transition_stops, local_fill], ignore_index=True, sort=False)
+                stops = transition_stops if not transition_stops.empty else _select_greedy_day_stops(
+                    poi_catalog,
+                    hotel,
+                    used_names,
+                    stops_per_day=max(1, min(stops_per_day, int(available_visit_minutes // 75.0) or 1)),
+                )
+            else:
+                stops = _select_greedy_day_stops(poi_catalog, hotel, used_names, stops_per_day=stops_per_day)
+            if stops.empty:
+                stops = poi_catalog.head(1)
+            used_names.update(stops["name"].astype(str).tolist())
+
+            for stop_order, (_, stop) in enumerate(stops.iterrows(), start=1):
+                stop_city = str(stop.get("city", city))
+                rows.append(
+                    {
+                        "profile": str(profile_name).lower(),
+                        "profile_label": f"{profile_config['label']} Greedy Baseline",
+                        "day": day_number,
+                        "city": stop_city,
+                        "overnight_city": city,
+                        "city_day": local_day,
+                        "hotel_name": hotel.get("name", f"{city} hotel"),
+                        "hotel_latitude": float(hotel.get("latitude", CITY_COORDS[city][0])),
+                        "hotel_longitude": float(hotel.get("longitude", CITY_COORDS[city][1])),
+                        "hotel_source": hotel.get("source", "unknown"),
+                        "overnight_base": bool(stop_city == city),
+                        "stop_is_overnight_city": bool(stop_city == city),
+                        "hotel_booked": bool(day_number < total_trip_days),
+                        "route_type": route_type,
+                        "route_start_city": previous_city,
+                        "route_start_name": route_start_name,
+                        "route_start_latitude": route_start_latitude,
+                        "route_start_longitude": route_start_longitude,
+                        "route_end_city": city,
+                        "route_end_name": route_end_name,
+                        "route_end_latitude": route_end_latitude,
+                        "route_end_longitude": route_end_longitude,
+                        "pass_through_cities": "; ".join(pass_through_cities),
+                        "drive_minutes_to_next_base": round(float(drive_minutes), 2),
+                        "available_visit_minutes": round(float(available_visit_minutes), 2),
+                        "drive_time_source": drive_time_source,
+                        "stop_order": stop_order,
+                        "attraction_name": stop["name"],
+                        "category": stop.get("category", "attraction"),
+                        "latitude": float(stop["latitude"]),
+                        "longitude": float(stop["longitude"]),
+                        "attraction_source": stop.get("source", "unknown"),
+                        "source_list": stop.get("source_list", stop.get("source", "unknown")),
+                        "social_score": float(stop.get("social_score", 0.0) or 0.0),
+                        "social_must_go": bool(stop.get("social_must_go", False)),
+                        "must_go_weight": float(stop.get("must_go_weight", 0.0) or 0.0),
+                        "corridor_fit": float(stop.get("corridor_fit", 0.0) or 0.0),
+                        "detour_minutes": float(stop.get("detour_minutes", 0.0) or 0.0),
+                        "data_confidence": float(stop.get("data_confidence", 0.5) or 0.5),
+                        "final_poi_value": float(stop.get("final_poi_value", stop.get("source_score", 0.0)) or 0.0),
+                        "social_reason": stop.get("social_reason", ""),
+                    }
+                )
+            day_number += 1
+
+    return pd.DataFrame(rows)
+
+
 def build_profile_day_plans(context):
     return {
         profile_name: build_day_plan(context, profile_name=profile_name)
@@ -1038,12 +1275,37 @@ def _fetch_osrm_route(points, cache, run_live=False):
 
     key = _route_cache_key(points)
     if key in cache:
-        cached_mode = cache[key].get("mode", "cached-osrm")
-        if "fallback" not in cached_mode:
-            return cache[key]["path"], cached_mode
+        cached_path = cache[key].get("path", points)
+        if cached_path:
+            return cached_path, "cached-osrm"
+
+    def stitch_cached_or_fallback(route_points):
+        stitched_path = []
+        used_cached_leg = False
+        used_fallback_leg = False
+        for left, right in zip(route_points[:-1], route_points[1:]):
+            leg_key = _route_cache_key([left, right])
+            leg_mode = cache.get(leg_key, {}).get("mode", "")
+            if leg_key in cache and "fallback" not in str(leg_mode):
+                leg_path = cache[leg_key]["path"]
+                used_cached_leg = True
+            else:
+                leg_path = [left, right]
+                used_fallback_leg = True
+            if stitched_path and leg_path:
+                stitched_path.extend(leg_path[1:])
+            else:
+                stitched_path.extend(leg_path)
+        if not stitched_path:
+            return route_points, "straight-line-fallback"
+        if used_cached_leg and used_fallback_leg:
+            return stitched_path, "cached-stitched-with-fallback"
+        if used_cached_leg:
+            return stitched_path, "cached-stitched"
+        return route_points, "straight-line-fallback"
 
     if not run_live:
-        return points, "straight-line-fallback"
+        return stitch_cached_or_fallback(points)
 
     def request_route(route_points):
         coord_text = ";".join(f"{lon:.6f},{lat:.6f}" for lat, lon in route_points)
@@ -1064,16 +1326,20 @@ def _fetch_osrm_route(points, cache, run_live=False):
             return points, "straight-line-fallback"
 
     stitched_path = []
+    used_live_leg = False
+    used_cached_leg = False
     used_fallback = False
     for left, right in zip(points[:-1], points[1:]):
         leg_key = _route_cache_key([left, right])
         leg_mode = cache.get(leg_key, {}).get("mode", "")
-        if leg_key in cache and "fallback" not in leg_mode:
+        if leg_key in cache and "fallback" not in str(leg_mode):
             leg_path = cache[leg_key]["path"]
+            used_cached_leg = True
         else:
             try:
                 leg_path = request_route([left, right])
                 cache[leg_key] = {"path": leg_path, "mode": "osrm-driving-leg"}
+                used_live_leg = True
             except Exception:
                 leg_path = [left, right]
                 used_fallback = True
@@ -1082,7 +1348,14 @@ def _fetch_osrm_route(points, cache, run_live=False):
         else:
             stitched_path.extend(leg_path)
 
-    mode = "osrm-driving-stitched" if not used_fallback else "mixed-road-and-straight-fallback"
+    if used_fallback:
+        mode = "cached-stitched-with-fallback"
+    elif used_live_leg:
+        mode = "osrm-driving-stitched"
+    elif used_cached_leg:
+        mode = "cached-stitched"
+    else:
+        mode = "straight-line-fallback"
     cache[key] = {"path": stitched_path, "mode": mode}
     return stitched_path, mode
 
@@ -1135,6 +1408,13 @@ def _route_mode_label(modes):
     return "stitched-leg-cache"
 
 
+def _add_route_panes(map_object):
+    """Keep generated route lines above the basemap and under marker labels."""
+    folium.map.CustomPane(ROUTE_CONTEXT_PANE, z_index=620).add_to(map_object)
+    folium.map.CustomPane(ROUTE_CORE_PANE, z_index=650).add_to(map_object)
+    folium.map.CustomPane(ROUTE_TOP_PANE, z_index=690).add_to(map_object)
+
+
 def _add_flow_route(
     layer,
     points,
@@ -1149,6 +1429,7 @@ def _add_flow_route(
     opacity=0.88,
     arrow_offset=7,
     ant_delay=850,
+    pane=ROUTE_CORE_PANE,
 ):
     """Draw every route leg separately so one bad leg cannot hide the rest."""
     clean_points = _dedupe_route_points(points)
@@ -1170,7 +1451,7 @@ def _add_flow_route(
             full_path.extend(leg_path)
 
         leg_popup = popup_html if leg_idx == 1 and popup_html else None
-        folium.PolyLine(leg_path, color="#FFFFFF", weight=weight + 3, opacity=0.68).add_to(layer)
+        folium.PolyLine(leg_path, color="#FFFFFF", weight=weight + 3, opacity=0.74, pane=pane).add_to(layer)
         route_line = folium.PolyLine(
             leg_path,
             color=color,
@@ -1179,6 +1460,7 @@ def _add_flow_route(
             dash_array=dash_array,
             tooltip=f"{tooltip} · leg {leg_idx}: {leg_mode}",
             popup=folium.Popup(leg_popup, max_width=320) if leg_popup else None,
+            pane=pane,
         ).add_to(layer)
         plugins.PolyLineTextPath(
             route_line,
@@ -1199,6 +1481,7 @@ def _add_flow_route(
             opacity=max(0.72, opacity - 0.06),
             delay=ant_delay,
             dash_array=[8, 16] if dash_array else [10, 16],
+            pane=pane,
         ).add_to(layer)
     return full_path, f"{mode}; {line_count} connected legs"
 
@@ -1352,7 +1635,8 @@ def _add_intercity_route_layer(map_object, route_name, sequence, color, route_ca
         """
         tooltip = f"{waypoint_label}: {classification}"
         opacity = 0.82 if "fallback" not in route_mode else 0.46
-        folium.PolyLine(path, color="#FFFFFF", weight=8, opacity=0.64).add_to(layer)
+        route_pane = ROUTE_CONTEXT_PANE if scenic else ROUTE_TOP_PANE
+        folium.PolyLine(path, color="#FFFFFF", weight=8, opacity=0.74, pane=route_pane).add_to(layer)
         route_line = folium.PolyLine(
             path,
             color=color,
@@ -1361,6 +1645,7 @@ def _add_intercity_route_layer(map_object, route_name, sequence, color, route_ca
             dash_array=None if scenic else "8, 10",
             tooltip=tooltip,
             popup=folium.Popup(popup, max_width=330, min_width=220),
+            pane=route_pane,
         ).add_to(layer)
         plugins.PolyLineTextPath(
             route_line,
@@ -1395,6 +1680,7 @@ def _add_intercity_route_layer(map_object, route_name, sequence, color, route_ca
             opacity=0.76 if scenic else 0.56,
             delay=950 if scenic else 1050,
             dash_array=[14, 18] if scenic else [8, 14],
+            pane=route_pane,
         ).add_to(layer)
 
     layer.add_to(map_object)
@@ -1440,121 +1726,80 @@ def _finite_float(value, default=np.nan):
 
 
 def _build_method_comparison(output_dir):
-    experiment_df = _load_csv(Path(output_dir) / "production_experiment_summary.csv")
-    if experiment_df.empty:
-        return pd.DataFrame()
-
-    method_notes = {
-        "ranking_baseline": "Ranks enriched POIs by value only; useful upper-bound signal but route naive.",
-        "greedy_route_baseline": "Adds route-aware greedy sequencing over the same enriched catalog.",
-        "hierarchical_gurobi": "Gurobi chooses gateway, overnight bases, day allocation, and pass-through cities.",
-        "hybrid_bandit_gurobi": "Bandit selects candidate bundle/strategy; Gurobi solves small route repairs.",
-        "original_yelp_only_full_gurobi_baseline": "Historical Santa Barbara/Yelp-only baseline kept for continuity, not same data scope.",
-    }
-    method_roles = {
-        "ranking_baseline": "baseline",
-        "greedy_route_baseline": "baseline",
-        "hierarchical_gurobi": "main optimizer",
-        "hybrid_bandit_gurobi": "scalable hybrid optimizer",
-        "original_yelp_only_full_gurobi_baseline": "historical compatibility baseline",
-    }
-
-    rows = []
-    for _, row in experiment_df.iterrows():
-        method = str(row.get("strategy", "unknown"))
-        within_city_minutes = _finite_float(row.get("within_city_travel_time"))
-        intercity_minutes = _finite_float(row.get("intercity_driving_time"))
-        intercity_hours = _finite_float(row.get("intercity_drive_hours"))
-        if np.isfinite(intercity_hours) and intercity_hours > 0:
-            travel_display_hours = intercity_hours
-        elif np.isfinite(intercity_minutes) and intercity_minutes > 0:
-            travel_display_hours = intercity_minutes / 60.0
-        elif np.isfinite(within_city_minutes) and within_city_minutes > 0:
-            travel_display_hours = within_city_minutes / 60.0
-        else:
-            travel_display_hours = np.nan
-
-        rows.append(
-            {
-                "method": method,
-                "comparison_role": method_roles.get(method, "comparison"),
-                "data_source_scope": row.get("data_source_scope", "unknown"),
-                "profile": row.get("profile", "balanced"),
-                "utility_or_reward": _finite_float(row.get("total_utility")),
-                "number_attractions": _finite_float(row.get("number_attractions")),
-                "travel_hours_display": travel_display_hours,
-                "budget_used": _finite_float(row.get("budget_used")),
-                "route_feasible": bool(row.get("route_feasibility", True)),
-                "diversity_score": _finite_float(row.get("diversity_score")),
-                "runtime_seconds": _finite_float(row.get("runtime_seconds")),
-                "optimality_gap": _finite_float(row.get("optimality_gap")),
-                "data_quality_score": _finite_float(row.get("data_quality_score")),
-                "route_search_strategy": row.get("route_search_strategy", ""),
-                "small_optimizer_calls": _finite_float(row.get("small_optimizer_calls")),
-                "interpretation": method_notes.get(method, ""),
-            }
-        )
-    return pd.DataFrame(rows)
+    output_dir = Path(output_dir)
+    method_df = _load_csv(output_dir / "production_method_comparison.csv")
+    if not method_df.empty and "method" in method_df.columns:
+        return method_df
+    return pd.DataFrame()
 
 
 def _build_method_comparison_html(method_comparison_df):
     if method_comparison_df.empty:
-        return "<div class=\"summary-line\"><b>Strategy comparison:</b> not available yet.</div>"
+        return "<div class=\"panel-section-title\">Method Comparison</div><div class=\"summary-line\">Method comparison not generated yet.</div>"
 
-    rows = []
-    for row in method_comparison_df.itertuples(index=False):
-        utility = _escape(f"{row.utility_or_reward:.2f}" if np.isfinite(row.utility_or_reward) else "n/a")
-        travel = _escape(f"{row.travel_hours_display:.1f}h" if np.isfinite(row.travel_hours_display) else "n/a")
-        budget = _escape(f"${row.budget_used:,.0f}" if np.isfinite(row.budget_used) else "n/a")
-        stops = _escape(f"{int(row.number_attractions)}" if np.isfinite(row.number_attractions) else "n/a")
-        feasible = "yes" if bool(row.route_feasible) else "no"
-        rows.append(
-            f"""
-            <tr>
-                <td>{_escape(row.method)}</td>
-                <td>{_escape(row.comparison_role)}</td>
-                <td>{utility}</td>
-                <td>{stops}</td>
-                <td>{travel}</td>
-                <td>{budget}</td>
-                <td>{feasible}</td>
-            </tr>
-            """
-        )
-    return f"""
-    <div class="panel-section-title">Strategy Comparison</div>
-    <table class="method-table">
-        <thead><tr><th>Strategy</th><th>Role</th><th>Score</th><th>Stops</th><th>Travel</th><th>Cost</th><th>Feas.</th></tr></thead>
-        <tbody>{''.join(rows)}</tbody>
-    </table>
-    <div class="summary-line muted-note">Full comparison saved to production_method_comparison.csv. Yelp-only rows are historical baselines and should not be mixed as the same data scope.</div>
-    """
+    if "method" in method_comparison_df.columns and "total_utility" in method_comparison_df.columns:
+        rows = []
+        for row in method_comparison_df.itertuples(index=False):
+            utility = _escape(f"{float(getattr(row, 'total_utility', np.nan)):.2f}" if np.isfinite(_finite_float(getattr(row, "total_utility", np.nan))) else "n/a")
+            travel_minutes = _finite_float(getattr(row, "total_travel_time", np.nan))
+            travel = _escape(f"{travel_minutes / 60.0:.1f}h" if np.isfinite(travel_minutes) else "n/a")
+            budget = _escape(f"${float(getattr(row, 'budget_used', getattr(row, 'total_cost', np.nan))):,.0f}" if np.isfinite(_finite_float(getattr(row, "budget_used", getattr(row, "total_cost", np.nan)))) else "n/a")
+            stops = _escape(f"{int(getattr(row, 'selected_attractions', 0))}" if np.isfinite(_finite_float(getattr(row, "selected_attractions", np.nan))) else "n/a")
+            status = _escape(str(getattr(row, "status", "n/a")))
+            display_name = _escape(str(getattr(row, "method_display_name", getattr(row, "method", "unknown"))))
+            rows.append(
+                f"""
+                <tr>
+                    <td>{display_name}</td>
+                    <td>{utility}</td>
+                    <td>{stops}</td>
+                    <td>{travel}</td>
+                    <td>{budget}</td>
+                    <td>{status}</td>
+                </tr>
+                """
+            )
+        return f"""
+        <div class="panel-section-title">Method Comparison</div>
+        <table class="method-table">
+            <thead><tr><th>Method</th><th>Utility</th><th>Stops</th><th>Travel</th><th>Cost</th><th>Status</th></tr></thead>
+            <tbody>{''.join(rows)}</tbody>
+        </table>
+        <div class="summary-line muted-note">Full comparison saved to production_method_comparison.csv with matching route stops in production_method_route_stops.csv.</div>
+        """
+    return "<div class=\"panel-section-title\">Method Comparison</div><div class=\"summary-line\">Method comparison not generated yet.</div>"
 
 
 def _build_trip_length_comparison_html(output_dir):
     comparison_df = _load_csv(Path(output_dir) / "production_trip_length_comparison.csv")
     if comparison_df.empty:
-        return ""
+        return "<div class=\"panel-section-title\">Trip Length Comparison</div><div class=\"summary-line\">Trip-length comparison not generated yet.</div>"
     rows = []
     for row in comparison_df.itertuples(index=False):
+        drive_hours = _finite_float(getattr(row, "intercity_drive_hours", np.nan))
+        budget = _finite_float(getattr(row, "estimated_budget", np.nan))
+        status = _escape(str(getattr(row, "status", getattr(row, "solver_status", "n/a"))))
+        drive_text = f"{drive_hours:.1f}h" if np.isfinite(drive_hours) else "n/a"
+        budget_text = f"${budget:,.0f}" if np.isfinite(budget) else "n/a"
         rows.append(
             f"""
             <tr>
                 <td>{int(row.trip_days)}</td>
                 <td>{_escape(row.gateway_start)} → {_escape(row.gateway_end)}</td>
                 <td>{_escape(row.days_by_city)}</td>
-                <td>{float(row.objective):.2f}</td>
-                <td>${float(row.estimated_budget):,.0f}</td>
+                <td>{_escape(drive_text)}</td>
+                <td>{_escape(budget_text)}</td>
+                <td>{status}</td>
             </tr>
             """
         )
     return f"""
-    <div class="panel-section-title">Date / Trip Length Comparison</div>
+    <div class="panel-section-title">Trip Length Comparison</div>
     <table class="method-table">
-        <thead><tr><th>Days</th><th>Gateway</th><th>Days by city</th><th>Obj.</th><th>Budget</th></tr></thead>
+        <thead><tr><th>Days</th><th>Gateway</th><th>Cities/Bases</th><th>Drive</th><th>Budget</th><th>Status</th></tr></thead>
         <tbody>{''.join(rows)}</tbody>
     </table>
-    <div class="summary-line muted-note">Saved to production_trip_length_comparison.csv; budget is scaled per configured approximate-budget policy.</div>
+    <div class="summary-line muted-note">Saved to production_trip_length_comparison.csv with map-ready stops in production_trip_length_route_stops.csv.</div>
     """
 
 
@@ -1663,57 +1908,629 @@ def _add_comparison_route_layer(map_object, *, layer_name, stop_df, color, route
     layer.add_to(map_object)
     return layer
 
+def _add_static_result_line(
+    layer,
+    points,
+    *,
+    color,
+    dash_array=None,
+    tooltip=None,
+    popup_html=None,
+    weight=6,
+    opacity=0.95,
+    pane=ROUTE_CORE_PANE,
+):
+    clean_points = _dedupe_route_points(points)
+    if len(clean_points) < 2:
+        return "not_enough_points"
 
-def _add_model_comparison_layers(map_object, output_dir, route_cache, run_live):
+    # White casing so the route is visible on any basemap
+    folium.PolyLine(
+        clean_points,
+        color="#FFFFFF",
+        weight=weight + 4,
+        opacity=0.86,
+        pane=pane,
+    ).add_to(layer)
+
+    folium.PolyLine(
+        clean_points,
+        color=color,
+        weight=weight,
+        opacity=opacity,
+        dash_array=dash_array,
+        tooltip=tooltip,
+        popup=folium.Popup(popup_html, max_width=320) if popup_html else None,
+        pane=pane,
+    ).add_to(layer)
+
+    return "static-polyline"
+
+
+def _route_debug_value(value, default=""):
+    if value is None:
+        return default
+    try:
+        if pd.isna(value):
+            return default
+    except Exception:
+        pass
+    return value
+
+
+def _route_points_from_day_group(group):
+    if group is None or group.empty:
+        return []
+    first = group.iloc[0]
+    hotel_lat = _finite_float(first.get("hotel_latitude"))
+    hotel_lon = _finite_float(first.get("hotel_longitude"))
+    route_start = [
+        _finite_float(first.get("route_start_latitude", hotel_lat), hotel_lat),
+        _finite_float(first.get("route_start_longitude", hotel_lon), hotel_lon),
+    ]
+    route_end = [
+        _finite_float(first.get("route_end_latitude", hotel_lat), hotel_lat),
+        _finite_float(first.get("route_end_longitude", hotel_lon), hotel_lon),
+    ]
+    stop_points = group[["latitude", "longitude"]].dropna().astype(float).values.tolist()
+    return [
+        point
+        for point in [route_start, *stop_points, route_end]
+        if len(point) >= 2 and np.isfinite(float(point[0])) and np.isfinite(float(point[1]))
+    ]
+
+
+def _append_route_debug_row(
+    route_debug_rows,
+    *,
+    layer_group,
+    layer_name,
+    comparison_type,
+    points,
+    geometry_mode,
+    show_by_default=False,
+    source_rows=0,
+    profile="",
+    method="",
+    trip_days="",
+    day="",
+    route_type="",
+    route_start_city="",
+    route_end_city="",
+    pass_through_cities="",
+    drive_minutes=np.nan,
+    available_visit_minutes=np.nan,
+    notes="",
+):
+    if route_debug_rows is None:
+        return
+    clean_points = _dedupe_route_points(points)
+    distance_km = _route_distance_km(clean_points)
+    issue = ""
+    status = "OK"
+    if len(clean_points) < 2:
+        status = "FAILED"
+        issue = "not enough unique finite coordinates to draw a route"
+    elif source_rows and distance_km < 0.05:
+        status = "FAILED"
+        issue = "route collapsed to a single point"
+    elif str(route_type).startswith("relocation") and distance_km < 50.0:
+        status = "WARN"
+        issue = "relocation day has unexpectedly short geometry"
+    elif (
+        str(comparison_type) in {"selected_result", "traveler_day", "trip_length", "method"}
+        and str(route_start_city) != str(route_end_city)
+        and _finite_float(drive_minutes, 0.0) <= 0
+    ):
+        status = "WARN"
+        issue = "route changes base city but has no positive drive-time metadata"
+
+    route_debug_rows.append(
+        {
+            "layer_group": layer_group,
+            "layer_name": layer_name,
+            "comparison_type": comparison_type,
+            "profile": profile,
+            "method": method,
+            "trip_days": trip_days,
+            "day": day,
+            "route_type": route_type,
+            "route_start_city": route_start_city,
+            "route_end_city": route_end_city,
+            "pass_through_cities": pass_through_cities,
+            "source_rows": int(source_rows),
+            "unique_points": int(len(clean_points)),
+            "distance_km": round(float(distance_km), 3),
+            "drive_minutes_to_next_base": _finite_float(drive_minutes),
+            "available_visit_minutes": _finite_float(available_visit_minutes),
+            "geometry_mode": geometry_mode,
+            "show_by_default": bool(show_by_default),
+            "draw_status": status,
+            "issue": issue,
+            "notes": notes,
+        }
+    )
+
+
+def _build_route_debug_summary_html(route_debug_df):
+    if route_debug_df is None or route_debug_df.empty:
+        return """
+        <div class="panel-section-title">Map Route Validation</div>
+        <div class="summary-line">No route validation rows were generated.</div>
+        """
+    status_counts = route_debug_df["draw_status"].astype(str).value_counts().to_dict()
+    ok_count = int(status_counts.get("OK", 0))
+    warn_count = int(status_counts.get("WARN", 0))
+    failed_count = int(status_counts.get("FAILED", 0))
+    visible_count = int(route_debug_df["show_by_default"].astype(bool).sum())
+    groups = ", ".join(
+        f"{group}: {count}"
+        for group, count in route_debug_df["layer_group"].astype(str).value_counts().sort_index().items()
+    )
+    problem_df = route_debug_df[route_debug_df["draw_status"].astype(str).ne("OK")].head(4)
+    if problem_df.empty:
+        problem_html = "<div class=\"summary-line muted-note\">All audited route layers have drawable geometry.</div>"
+    else:
+        problem_items = "".join(
+            f"<li>{_escape(row.layer_name)}: {_escape(row.issue)}</li>"
+            for row in problem_df.itertuples(index=False)
+        )
+        problem_html = f"<ol>{problem_items}</ol>"
+    return f"""
+    <div class="panel-section-title">Map Route Validation</div>
+    <div class="summary-line"><b>Audited routes:</b> {len(route_debug_df)} ({ok_count} OK, {warn_count} warnings, {failed_count} failed)</div>
+    <div class="summary-line"><b>Visible by default:</b> {visible_count} route layers</div>
+    <div class="summary-line muted-note">Debug rows saved to production_map_route_debug.csv. Layer groups: {_escape(groups)}</div>
+    {problem_html}
+    """
+
+
+def _add_selected_result_layer(map_object, day_plan_df, route_debug_rows=None):
+    if day_plan_df is None or day_plan_df.empty:
+        return None
+
+    layer = folium.FeatureGroup(
+        name="Selected Result · Default Hierarchical Route",
+        show=True,
+    )
+
+    day_frame = day_plan_df.copy()
+    day_frame["day"] = pd.to_numeric(day_frame.get("day", 1), errors="coerce").fillna(1).astype(int)
+    day_frame["stop_order"] = pd.to_numeric(day_frame.get("stop_order", 1), errors="coerce").fillna(1).astype(int)
+    day_frame = day_frame.sort_values(["day", "stop_order", "attraction_name"]).reset_index(drop=True)
+
+    for day, group in day_frame.groupby("day", sort=True):
+        color = DAY_COLORS[(int(day) - 1) % len(DAY_COLORS)]
+        first = group.iloc[0]
+        day_points = _route_points_from_day_group(group)
+
+        geometry_mode = _add_static_result_line(
+            layer,
+            day_points,
+            color=color,
+            tooltip=f"Selected result day {int(day)}",
+            popup_html=f"<b>Selected result route</b><br/>Day {int(day)}",
+            weight=7,
+            opacity=0.98,
+        )
+        _append_route_debug_row(
+            route_debug_rows,
+            layer_group="Selected Result",
+            layer_name=f"Selected Result · Day {int(day)}",
+            comparison_type="selected_result",
+            profile=str(first.get("profile", "balanced")),
+            method=str(first.get("method", "hierarchical_gurobi_pipeline")),
+            trip_days=_route_debug_value(first.get("trip_days", "")),
+            day=int(day),
+            route_type=str(first.get("route_type", "")),
+            route_start_city=str(first.get("route_start_city", first.get("city", ""))),
+            route_end_city=str(first.get("route_end_city", first.get("overnight_city", ""))),
+            pass_through_cities=str(first.get("pass_through_cities", "")),
+            drive_minutes=first.get("drive_minutes_to_next_base", np.nan),
+            available_visit_minutes=first.get("available_visit_minutes", np.nan),
+            points=day_points,
+            geometry_mode=geometry_mode,
+            show_by_default=True,
+            source_rows=len(group),
+        )
+
+        for row in group.itertuples(index=False):
+            point = [float(row.latitude), float(row.longitude)]
+            badge_text = f"R{int(row.day)}.{int(row.stop_order)}"
+            popup = (
+                f"<b>{_escape(row.attraction_name)}</b><br/>"
+                f"Selected result route<br/>"
+                f"Day {int(row.day)}, stop {int(row.stop_order)}<br/>"
+                f"City: {_escape(row.city)}"
+            )
+            folium.CircleMarker(
+                location=point,
+                radius=9,
+                color=color,
+                fill=True,
+                fillColor=color,
+                fillOpacity=0.92,
+                weight=3,
+                tooltip=f"Selected result {badge_text}: {row.attraction_name}",
+                popup=folium.Popup(popup, max_width=280),
+            ).add_to(layer)
+            folium.Marker(
+                location=point,
+                icon=folium.DivIcon(
+                    html=f"""
+                    <div style='background:{color}; color:white; border:2px solid white;
+                        border-radius:14px; font-size:12px; font-weight:800;
+                        padding:3px 8px; box-shadow:0 2px 8px rgba(0,0,0,0.35);
+                        white-space:nowrap;'>
+                        {badge_text}
+                    </div>
+                    """
+                ),
+                tooltip=f"Selected result {badge_text}: {row.attraction_name}",
+                popup=folium.Popup(popup, max_width=280),
+            ).add_to(layer)
+
+    layer.add_to(map_object)
+    return layer
+
+
+def _add_model_comparison_layers(map_object, output_dir, route_cache, run_live, show_by_default=False, route_debug_rows=None):
     output_dir = Path(output_dir)
+    grouped_layers = {"Trip Length Comparison": [], "Method Comparison": []}
+    # These CSVs are the handoff point from the experiment pipeline into the map.
+    route_files = [
+        output_dir / "production_trip_length_route_stops.csv",
+        output_dir / "production_method_route_stops.csv",
+    ]
+    frames = [frame for frame in (_load_csv(path) for path in route_files) if not frame.empty]
+    if not frames:
+        print("[map comparison debug] no comparison route-stop CSVs loaded from", output_dir)
+        return {}
+
+    comparison_df = pd.concat(frames, ignore_index=True, sort=False)
+    if comparison_df.empty:
+        print("[map comparison debug] no comparison route-stop CSVs loaded from", output_dir)
+        return {}
+    print("[map comparison debug] loaded comparison route stops:", comparison_df.shape)
+    debug_cols = [
+        col
+        for col in ["comparison_type", "comparison_label", "method", "trip_days"]
+        if col in comparison_df.columns
+    ]
+    if debug_cols:
+        print(comparison_df[debug_cols].drop_duplicates().to_string(index=False))
+
+    def layer_name_for_group(comparison_type, comparison_label, method, trip_days):
+        if str(comparison_type) == "trip_length":
+            try:
+                label_days = int(trip_days)
+            except Exception:
+                label_days = int(str(comparison_label).split()[0])
+            return f"Trip Length · {label_days}-Day Hierarchical Route"
+        if str(comparison_label).strip():
+            return str(comparison_label)
+        return f"Method · {method}"
+
+    def style_for_group(comparison_type, method, trip_days):
+        if str(comparison_type) == "trip_length":
+            day_color_map = {7: "#2563EB", 9: "#F4A261", 12: "#7A5195"}
+            try:
+                color = day_color_map.get(int(trip_days), "#2563EB")
+            except Exception:
+                color = "#2563EB"
+            return color, None, f"{int(trip_days)}D"
+        if str(method) == "hierarchical_gurobi_pipeline":
+            return "#2563EB", None, "H"
+        if str(method) == "hierarchical_greedy_baseline":
+            return "#6C757D", "8 10", "G"
+        if str(method) == "hierarchical_bandit_gurobi_repair":
+            return "#5FAD56", None, "B"
+        return "#2563EB", None, "M"
+
+    for group_values, layer_df in comparison_df.groupby(["comparison_type", "comparison_label", "method", "trip_days"], dropna=False):
+        comparison_type, comparison_label, method, trip_days = group_values
+        layer_name = layer_name_for_group(comparison_type, comparison_label, method, trip_days)
+        color, dash_array, badge_prefix = style_for_group(comparison_type, method, trip_days)
+        show_layer = bool(show_by_default)
+
+        layer = folium.FeatureGroup(
+            name=layer_name,
+            show=show_layer,
+        )
+        day_frame = layer_df.copy()
+        day_frame["day"] = pd.to_numeric(day_frame.get("day", 1), errors="coerce").fillna(1).astype(int)
+        day_frame["stop_order"] = pd.to_numeric(day_frame.get("stop_order", 1), errors="coerce").fillna(1).astype(int)
+        day_frame = day_frame.sort_values(["day", "stop_order", "attraction_name"]).reset_index(drop=True)
+        for day, group in day_frame.groupby("day", sort=True):
+            first = group.iloc[0]
+            method_display_name = str(first.get("method_display_name", layer_name.replace("Method · ", "")))
+            hotel_lat = _finite_float(first.get("hotel_latitude"))
+            hotel_lon = _finite_float(first.get("hotel_longitude"))
+            day_points = _route_points_from_day_group(group)
+            popup_html = (
+                f"<b>{_escape(layer_name)}</b><br/>"
+                f"Day {int(day)}<br/>"
+                f"Method: {_escape(method_display_name)}"
+            )
+            geometry_mode = _add_static_result_line(
+                layer,
+                day_points,
+                color=color,
+                dash_array=dash_array,
+                tooltip=f"{layer_name} day {int(day)}",
+                popup_html=popup_html,
+                opacity=0.95,
+            )   
+            _append_route_debug_row(
+                route_debug_rows,
+                layer_group="Trip Length Comparison" if str(comparison_type) == "trip_length" else "Method Comparison",
+                layer_name=f"{layer_name} · Day {int(day)}",
+                comparison_type=str(comparison_type),
+                profile="balanced",
+                method=str(method),
+                trip_days=_route_debug_value(trip_days),
+                day=int(day),
+                route_type=str(first.get("route_type", "")),
+                route_start_city=str(first.get("route_start_city", first.get("city", ""))),
+                route_end_city=str(first.get("route_end_city", first.get("overnight_city", ""))),
+                pass_through_cities=str(first.get("pass_through_cities", "")),
+                drive_minutes=first.get("drive_minutes_to_next_base", np.nan),
+                available_visit_minutes=first.get("available_visit_minutes", np.nan),
+                points=day_points,
+                geometry_mode=geometry_mode,
+                show_by_default=show_layer,
+                source_rows=len(group),
+            )
+            if np.isfinite(hotel_lat) and np.isfinite(hotel_lon):
+                folium.Marker(
+                    location=[hotel_lat, hotel_lon],
+                    tooltip=f"{layer_name} hotel/base: {first.get('hotel_name', 'hotel')}",
+                    popup=folium.Popup(
+                        f"<b>{_escape(str(first.get('hotel_name', 'hotel/base')))}</b><br/>"
+                        f"Layer: {_escape(layer_name)}<br/>"
+                        f"Overnight city: {_escape(str(first.get('overnight_city', first.get('city', 'unknown'))))}",
+                        max_width=260,
+                    ),
+                    icon=folium.Icon(color="darkred", icon="hotel", prefix="fa"),
+                ).add_to(layer)
+            for row in group.itertuples(index=False):
+                point = [float(row.latitude), float(row.longitude)]
+                popup = f"""
+                <b>{_escape(row.attraction_name)}</b><br/>
+                Layer: {_escape(layer_name)}<br/>
+                Method: {_escape(str(getattr(row, "method_display_name", method_display_name)))}<br/>
+                Day {int(row.day)}, stop {int(row.stop_order)}<br/>
+                City: {_escape(row.city)}<br/>
+                Category: {_escape(row.category)}<br/>
+                Source list: {_escape(getattr(row, "source_list", "unknown"))}<br/>
+                Final POI value: {float(getattr(row, "final_poi_value", 0.0) or 0.0):.3f}<br/>
+                Social must-go: {"yes" if bool(getattr(row, "social_must_go", False)) else "no"}<br/>
+                Geometry source: {_escape(str(geometry_mode))}<br/>
+                Status: {_escape(str(getattr(row, "status", "unknown")))}<br/>
+                Notes: {_escape(str(getattr(row, "notes", "")))}
+                """
+                folium.CircleMarker(
+                    location=point,
+                    radius=8,
+                    color=color,
+                    fill=True,
+                    fillColor=color,
+                    fillOpacity=0.86,
+                    weight=3,
+                    tooltip=f"{layer_name} stop {int(row.stop_order)}: {row.attraction_name}",
+                    popup=folium.Popup(popup, max_width=290),
+                ).add_to(layer)
+                if str(comparison_type) == "trip_length":
+                    badge_text = f"{badge_prefix}{int(row.day)}.{int(row.stop_order)}"
+                else:
+                    badge_text = f"{badge_prefix}{int(row.day)}.{int(row.stop_order)}"
+                folium.Marker(
+                    location=point,
+                    icon=folium.DivIcon(
+                        html=f"""
+                        <div style='background:{color}; color:white; border:2px solid white; border-radius:14px;
+                            font-size:11px; font-weight:700; padding:2px 7px; box-shadow:0 1px 6px rgba(0,0,0,0.30); white-space:nowrap;'>
+                            {badge_text}
+                        </div>
+                        """
+                    ),
+                    tooltip=f"{layer_name} stop {int(row.stop_order)}: {row.attraction_name}",
+                    popup=folium.Popup(popup, max_width=290),
+                ).add_to(layer)
+        layer.add_to(map_object)
+        group_name = "Trip Length Comparison" if str(comparison_type) == "trip_length" else "Method Comparison"
+        grouped_layers[group_name].append(layer)
+    return {name: layers for name, layers in grouped_layers.items() if layers}
+
+
+def _add_traveler_overview_layers(map_object, profile_day_plans, route_debug_rows=None, show_by_default=True):
     layers = []
-    gurobi_stops = _load_csv(output_dir / "gurobi_route_stops.csv")
-    if not gurobi_stops.empty:
-        if "profile" in gurobi_stops.columns:
-            gurobi_stops = gurobi_stops[gurobi_stops["profile"].astype(str).str.lower().eq("balanced")].copy()
-        names = gurobi_stops.sort_values(["day", "stop_order"])["attraction_name"].astype(str).head(12).tolist()
-        stop_df = _catalog_lookup_for_names(names, output_dir)
-        if not stop_df.empty:
-            layers.append(
-                _add_comparison_route_layer(
-                    map_object,
-                    layer_name="Original full Gurobi route comparison",
-                    stop_df=stop_df,
-                    color="#7A5195",
-                    route_cache=route_cache,
-                    run_live=run_live,
-                    label_prefix="G",
-                    note="Santa Barbara/Yelp-only full Gurobi baseline. This is a historical compatibility route, not the multi-city enriched route.",
+    styles = {
+        "relaxed": ("#2A9D8F", "8 10"),
+        "balanced": ("#2563EB", None),
+        "explorer": ("#7A5195", "2 8"),
+    }
+    for profile_name, plan_df in profile_day_plans.items():
+        if plan_df is None or plan_df.empty:
+            continue
+        config = PROFILE_CONFIGS[profile_name]
+        color, dash_array = styles.get(profile_name, ("#2563EB", None))
+        layer_name = f"Traveler · {config['label']} Full Route"
+        layer = folium.FeatureGroup(name=layer_name, show=bool(show_by_default))
+
+        sorted_plan = plan_df.copy()
+        sorted_plan["day"] = pd.to_numeric(sorted_plan.get("day", 1), errors="coerce").fillna(1).astype(int)
+        sorted_plan["stop_order"] = pd.to_numeric(sorted_plan.get("stop_order", 1), errors="coerce").fillna(1).astype(int)
+        sorted_plan = sorted_plan.sort_values(["day", "stop_order", "attraction_name"]).reset_index(drop=True)
+
+        full_points = []
+        for _, group in sorted_plan.groupby("day", sort=True):
+            day_points = _route_points_from_day_group(group)
+            if full_points and day_points:
+                full_points.extend(day_points[1:] if full_points[-1] == day_points[0] else day_points)
+            else:
+                full_points.extend(day_points)
+
+        geometry_mode = _add_static_result_line(
+            layer,
+            full_points,
+            color=color,
+            dash_array=dash_array,
+            tooltip=layer_name,
+            popup_html=(
+                f"<b>{_escape(layer_name)}</b><br/>"
+                f"Stops: {len(sorted_plan)}<br/>"
+                f"Mode: {_escape(config['route_mode'])}"
+            ),
+            weight=5,
+            opacity=0.82,
+        )
+        _append_route_debug_row(
+            route_debug_rows,
+            layer_group="Traveler Comparison",
+            layer_name=layer_name,
+            comparison_type="traveler_profile",
+            profile=profile_name,
+            method=str(sorted_plan.iloc[0].get("method", "profile_day_plan")),
+            trip_days=_route_debug_value(sorted_plan.iloc[0].get("trip_days", sorted_plan["day"].max())),
+            day="all",
+            route_type="full_profile_route",
+            route_start_city=str(sorted_plan.iloc[0].get("route_start_city", sorted_plan.iloc[0].get("city", ""))),
+            route_end_city=str(sorted_plan.iloc[-1].get("route_end_city", sorted_plan.iloc[-1].get("overnight_city", ""))),
+            points=full_points,
+            geometry_mode=geometry_mode,
+            show_by_default=bool(show_by_default),
+            source_rows=len(sorted_plan),
+        )
+        layer.add_to(map_object)
+        layers.append(layer)
+    return layers
+
+
+def _full_route_points_from_plan(plan_df):
+    if plan_df is None or plan_df.empty:
+        return []
+    sorted_plan = plan_df.copy()
+    sorted_plan["day"] = pd.to_numeric(sorted_plan.get("day", 1), errors="coerce").fillna(1).astype(int)
+    sorted_plan["stop_order"] = pd.to_numeric(sorted_plan.get("stop_order", 1), errors="coerce").fillna(1).astype(int)
+    sorted_plan = sorted_plan.sort_values(["day", "stop_order", "attraction_name"]).reset_index(drop=True)
+    full_points = []
+    for _, group in sorted_plan.groupby("day", sort=True):
+        day_points = _route_points_from_day_group(group)
+        if full_points and day_points:
+            full_points.extend(day_points[1:] if full_points[-1] == day_points[0] else day_points)
+        else:
+            full_points.extend(day_points)
+    return _dedupe_route_points(full_points)
+
+
+def _add_full_scene_overview_layer(
+    map_object,
+    *,
+    output_dir,
+    fastest_path,
+    scenic_path,
+    profile_day_plans,
+    route_debug_rows=None,
+):
+    """Always-visible foreground layer for the routes the report compares."""
+    layer = folium.FeatureGroup(name="Full Scene · Always Visible Route Overview", show=True)
+    route_specs = [
+        ("Fastest", "intercity", fastest_path, FASTEST_ROUTE_COLOR, "8 10", 7, 0.92),
+        ("Scenic CA-1/PCH", "intercity", scenic_path, SCENIC_CA1_COLOR, None, 7, 0.92),
+    ]
+
+    comparison_files = [
+        Path(output_dir) / "production_trip_length_route_stops.csv",
+        Path(output_dir) / "production_method_route_stops.csv",
+    ]
+    comparison_frames = [frame for frame in (_load_csv(path) for path in comparison_files) if not frame.empty]
+    if comparison_frames:
+        comparison_df = pd.concat(comparison_frames, ignore_index=True, sort=False)
+        for group_values, group in comparison_df.groupby(["comparison_type", "comparison_label", "method", "trip_days"], dropna=False):
+            comparison_type, comparison_label, method, trip_days = group_values
+            if str(comparison_type) == "trip_length":
+                color = {7: "#2563EB", 9: "#F4A261", 12: "#7A5195"}.get(int(trip_days), "#2563EB")
+                label = f"{int(trip_days)}-day"
+                dash_array = None
+            elif str(method) == "hierarchical_gurobi_pipeline":
+                color = "#1D4ED8"
+                label = "Method: Gurobi"
+                dash_array = None
+            elif str(method) == "hierarchical_greedy_baseline":
+                color = "#4B5563"
+                label = "Method: Greedy"
+                dash_array = "7 11"
+            else:
+                color = "#16A34A"
+                label = "Method: Bandit repair"
+                dash_array = None
+            route_specs.append(
+                (
+                    label,
+                    str(comparison_type),
+                    _full_route_points_from_plan(group),
+                    color,
+                    dash_array,
+                    5,
+                    0.72 if str(comparison_type) == "trip_length" else 0.64,
                 )
             )
 
-    bandit_names = []
-    stress = _load_csv(output_dir / "production_bandit_stress_runs.csv")
-    if not stress.empty and "selected_pois" in stress.columns:
-        sort_col = "combined_reward" if "combined_reward" in stress.columns else stress.columns[0]
-        for value in stress.sort_values(sort_col, ascending=False)["selected_pois"].tolist():
-            bandit_names = _parse_name_list(value)
-            if bandit_names:
-                break
-    if not bandit_names:
-        pareto = _load_csv(output_dir / "production_pareto_epsilon_runs.csv")
-        if not pareto.empty and "selected_pois" in pareto.columns:
-            bandit_names = _parse_name_list(pareto.iloc[0]["selected_pois"])
-    bandit_df = _catalog_lookup_for_names(bandit_names, output_dir)
-    if not bandit_df.empty:
-        layers.append(
-            _add_comparison_route_layer(
-                map_object,
-                layer_name="Bandit + small Gurobi route comparison",
-                stop_df=bandit_df,
-                color="#E76F51",
-                route_cache=route_cache,
-                run_live=run_live,
-                label_prefix="B",
-                note="Bandit selects the candidate bundle/strategy; the small Gurobi oracle solves or repairs the route.",
-            )
+    traveler_styles = {
+        "relaxed": ("Traveler: Relaxed", "#0F766E", "8 12"),
+        "balanced": ("Traveler: Balanced", "#2563EB", None),
+        "explorer": ("Traveler: Explorer", "#7A5195", "2 9"),
+    }
+    for profile_name, plan_df in profile_day_plans.items():
+        label, color, dash_array = traveler_styles.get(profile_name, (f"Traveler: {profile_name}", "#2563EB", None))
+        route_specs.append((label, "traveler_profile", _full_route_points_from_plan(plan_df), color, dash_array, 4, 0.70))
+
+    drawn = 0
+    all_points = []
+    for label, comparison_type, points, color, dash_array, weight, opacity in route_specs:
+        if not points or len(points) < 2:
+            continue
+        geometry_mode = _add_static_result_line(
+            layer,
+            points,
+            color=color,
+            dash_array=dash_array,
+            tooltip=f"Full scene overview · {label}",
+            popup_html=f"<b>Full scene overview</b><br/>{_escape(label)}",
+            weight=weight,
+            opacity=opacity,
+            pane=ROUTE_TOP_PANE,
         )
-    return layers
+        all_points.extend(points)
+        drawn += 1
+        _append_route_debug_row(
+            route_debug_rows,
+            layer_group="Full Scene Overview",
+            layer_name=f"Full Scene · {label}",
+            comparison_type=comparison_type,
+            points=points,
+            geometry_mode=geometry_mode,
+            show_by_default=True,
+            source_rows=len(points),
+            route_type="full_scene_overview",
+        )
+
+    if all_points:
+        layer.add_to(map_object)
+        _append_route_debug_row(
+            route_debug_rows,
+            layer_group="Full Scene Overview",
+            layer_name="Full Scene · Always Visible Route Overview",
+            comparison_type="full_scene",
+            points=all_points,
+            geometry_mode=f"full-scene-layer; {drawn} routes",
+            show_by_default=True,
+            source_rows=drawn,
+            route_type="always_visible_route_overview",
+        )
+        return layer
+    return None
 
 
 def _build_html_data_source_summary(output_dir):
@@ -1933,6 +2750,48 @@ def _add_browser_road_routing(map_object, route_specs):
     map_object.get_root().script.add_child(folium.Element(control_js))
 
 
+def _load_default_hierarchical_gurobi_day_plan(output_dir, fallback_df):
+    route_stops = _load_csv(Path(output_dir) / "production_method_route_stops.csv")
+    if route_stops.empty or "method" not in route_stops.columns:
+        return fallback_df
+    route_stops = route_stops[route_stops["method"].astype(str).eq("hierarchical_gurobi_pipeline")].copy()
+    if route_stops.empty:
+        return fallback_df
+
+    route_stops["day"] = pd.to_numeric(route_stops.get("day", 1), errors="coerce").fillna(1).astype(int)
+    route_stops["stop_order"] = pd.to_numeric(route_stops.get("stop_order", 1), errors="coerce").fillna(1).astype(int)
+    route_stops = route_stops.sort_values(["day", "stop_order", "attraction_name"]).reset_index(drop=True)
+    total_days = int(route_stops["day"].max()) if not route_stops.empty else 0
+    output = route_stops.copy()
+    scalar_series = lambda default: pd.Series(default, index=output.index)
+    output["profile"] = "balanced"
+    output["profile_label"] = "Balanced"
+    output["hotel_source"] = output.get("hotel_source", "production_method_route_stops")
+    output["overnight_base"] = output["city"].astype(str).eq(output["overnight_city"].astype(str))
+    output["stop_is_overnight_city"] = output["overnight_base"]
+    output["hotel_booked"] = output["day"].astype(int) < total_days
+    output["route_start_city"] = output.get("route_start_city", output["city"])
+    output["route_end_city"] = output.get("route_end_city", output["overnight_city"])
+    output["pass_through_cities"] = output.get("pass_through_cities", "")
+    output["drive_minutes_to_next_base"] = pd.to_numeric(
+        output.get("drive_minutes_to_next_base", scalar_series(0.0)),
+        errors="coerce",
+    ).fillna(0.0)
+    output["available_visit_minutes"] = pd.to_numeric(
+        output.get("available_visit_minutes", scalar_series(0.0)),
+        errors="coerce",
+    ).fillna(0.0)
+    output["drive_time_source"] = output.get("drive_time_source", "production_method_route_stops")
+    output["attraction_source"] = output.get("attraction_source", output.get("source_list", "production_method_route_stops"))
+    output["must_go_weight"] = pd.to_numeric(output.get("must_go_weight", scalar_series(0.0)), errors="coerce").fillna(0.0)
+    output["corridor_fit"] = pd.to_numeric(output.get("corridor_fit", scalar_series(0.0)), errors="coerce").fillna(0.0)
+    output["detour_minutes"] = pd.to_numeric(output.get("detour_minutes", scalar_series(0.0)), errors="coerce").fillna(0.0)
+    output["data_confidence"] = pd.to_numeric(output.get("data_confidence", scalar_series(0.5)), errors="coerce").fillna(0.5)
+    output["social_reason"] = output.get("social_reason", "")
+    output["pass_through_cities"] = output.get("pass_through_cities", "")
+    return output
+
+
 def build_production_trip_map(context, output_path=None, run_live_routing=None):
     output_dir = Path(context["OUTPUT_DIR"])
     figure_dir = Path(context["FIGURE_DIR"])
@@ -1948,11 +2807,15 @@ def build_production_trip_map(context, output_path=None, run_live_routing=None):
         route_cache = {}
 
     run_live = bool(context.get("RUN_LIVE_APIS", False) if run_live_routing is None else run_live_routing)
+    route_debug_rows = []
 
     trip = context["best_hierarchical_trip"]
     city_sequence = _trip_sequence_with_pass_through(trip)
+    main_trip_days = int(sum(int(value) for value in _coerce_days_by_city(trip.get("days_by_city", {})).values()))
 
     profile_day_plans = build_profile_day_plans(context)
+    balanced_default_plan = _load_default_hierarchical_gurobi_day_plan(output_dir, profile_day_plans["balanced"])
+    profile_day_plans["balanced"] = balanced_default_plan
     day_plan_df = profile_day_plans["balanced"]
     profile_day_plan_df = pd.concat(profile_day_plans.values(), ignore_index=True)
     day_plan_df.to_csv(output_dir / "production_day_plan.csv", index=False)
@@ -1968,6 +2831,17 @@ def build_production_trip_map(context, output_path=None, run_live_routing=None):
         social_catalog_for_bounds["city"].isin(city_sequence)
         | social_catalog_for_bounds["name"].astype(str).eq(STANFORD_WAYPOINT_NAME)
     ]
+    fit_points = []
+    for left_col, right_col in [
+        ("latitude", "longitude"),
+        ("hotel_latitude", "hotel_longitude"),
+        ("route_start_latitude", "route_start_longitude"),
+        ("route_end_latitude", "route_end_longitude"),
+    ]:
+        if left_col in day_plan_df.columns and right_col in day_plan_df.columns:
+            fit_points.extend(
+                day_plan_df[[left_col, right_col]].dropna().astype(float).values.tolist()
+            )
     all_points = (
         scenic_points
         + fastest_points
@@ -1981,8 +2855,11 @@ def build_production_trip_map(context, output_path=None, run_live_routing=None):
     trip_map = folium.Map(location=[center_lat, center_lon], zoom_start=6, tiles=None, control_scale=True, prefer_canvas=True)
     folium.TileLayer("CartoDB Positron", name="Light basemap", control=True, overlay=False, show=True).add_to(trip_map)
     folium.TileLayer("OpenStreetMap", name="OpenStreetMap (alt)", control=True, overlay=False, show=False).add_to(trip_map)
+    _add_route_panes(trip_map)
     plugins.Fullscreen(position="topleft", title="Expand map", title_cancel="Exit full screen").add_to(trip_map)
 
+    show_full_scene_default = bool(context.get("SHOW_FULL_SCENE_DEFAULT", True))
+    show_context_routes = show_full_scene_default or bool(context.get("SHOW_CONTEXT_ROUTES_BY_DEFAULT", True))
     fastest_rows, fastest_path, fastest_layer = _add_intercity_route_layer(
         trip_map,
         "Fastest inter-city route",
@@ -1991,7 +2868,7 @@ def build_production_trip_map(context, output_path=None, run_live_routing=None):
         route_cache,
         run_live,
         scenic=False,
-        show=False,
+        show=show_context_routes,
     )
     scenic_rows, scenic_path, scenic_layer = _add_intercity_route_layer(
         trip_map,
@@ -2001,13 +2878,42 @@ def build_production_trip_map(context, output_path=None, run_live_routing=None):
         route_cache,
         run_live,
         scenic=True,
-        show=True,
+        show=show_context_routes,
+    )
+    _append_route_debug_row(
+        route_debug_rows,
+        layer_group="Routes",
+        layer_name="Fastest inter-city route",
+        comparison_type="intercity",
+        points=fastest_path,
+        geometry_mode="intercity-leg-layer",
+        show_by_default=show_context_routes,
+        source_rows=len(fastest_rows),
+        route_type="fastest_intercity_route",
+        route_start_city=fastest_sequence[0] if fastest_sequence else "",
+        route_end_city=fastest_sequence[-1] if fastest_sequence else "",
+    )
+    _append_route_debug_row(
+        route_debug_rows,
+        layer_group="Routes",
+        layer_name="Scenic CA-1 / PCH route with Stanford detour",
+        comparison_type="intercity",
+        points=scenic_path,
+        geometry_mode="intercity-leg-layer",
+        show_by_default=show_context_routes,
+        source_rows=len(scenic_rows),
+        route_type="scenic_ca1_pch_with_stanford_detour",
+        route_start_city=scenic_sequence[0] if scenic_sequence else "",
+        route_end_city=scenic_sequence[-1] if scenic_sequence else "",
     )
     intercity_legs_df = pd.DataFrame(fastest_rows + scenic_rows)
     intercity_legs_df.to_csv(output_dir / "production_intercity_legs.csv", index=False)
     all_points.extend(fastest_path + scenic_path)
 
-    candidate_hotel_layer = folium.FeatureGroup(name="Candidate hotels", show=False)
+    candidate_hotel_layer = folium.FeatureGroup(
+        name="Candidate hotels",
+        show=bool(context.get("SHOW_CANDIDATE_HOTELS_BY_DEFAULT", False)),
+    )
     selected_hotels = {
         (str(getattr(row, "overnight_city", row.city)), str(row.hotel_name))
         for row in profile_day_plan_df[["city", "overnight_city", "hotel_name"]].drop_duplicates().itertuples(index=False)
@@ -2042,7 +2948,10 @@ def build_production_trip_map(context, output_path=None, run_live_routing=None):
             ).add_to(candidate_hotel_layer)
     candidate_hotel_layer.add_to(trip_map)
 
-    social_layer = folium.FeatureGroup(name="Social must-go candidates", show=True)
+    social_layer = folium.FeatureGroup(
+        name="Social must-go candidates",
+        show=bool(context.get("SHOW_SOCIAL_CANDIDATES_BY_DEFAULT", False)),
+    )
     enriched_catalog = _load_csv(output_dir / "production_enriched_poi_catalog.csv")
     if not enriched_catalog.empty:
         social_catalog = enriched_catalog[
@@ -2094,7 +3003,10 @@ def build_production_trip_map(context, output_path=None, run_live_routing=None):
             overnight_city = str(first.get("overnight_city", first["city"]))
             route_type = str(first.get("route_type", "base_city_local"))
             if route_type.startswith("relocation"):
-                pass_through_label = str(first.get("pass_through_cities", "") or "").replace("; ", " -> ")
+                raw_pass_through = first.get("pass_through_cities", "")
+                if raw_pass_through is None or pd.isna(raw_pass_through):
+                    raw_pass_through = ""
+                pass_through_label = str(raw_pass_through).replace("; ", " -> ")
                 day_label_city = f"{first.get('route_start_city', first['city'])} -> {pass_through_label + ' -> ' if pass_through_label else ''}{overnight_city}"
             else:
                 day_label_city = overnight_city
@@ -2130,6 +3042,26 @@ def build_production_trip_map(context, output_path=None, run_live_routing=None):
                 dash_array="8 10" if not run_live else None,
                 opacity=0.86,
                 ant_delay=850,
+            )
+            _append_route_debug_row(
+                route_debug_rows,
+                layer_group=f"{config['label']} Traveler",
+                layer_name=layer_name,
+                comparison_type="traveler_day",
+                profile=profile_name,
+                method=str(first.get("method", "profile_day_plan")),
+                trip_days=_route_debug_value(first.get("trip_days", main_trip_days)),
+                day=int(day),
+                route_type=route_type,
+                route_start_city=str(first.get("route_start_city", first.get("city", ""))),
+                route_end_city=str(first.get("route_end_city", overnight_city)),
+                pass_through_cities=str(first.get("pass_through_cities", "")),
+                drive_minutes=first.get("drive_minutes_to_next_base", np.nan),
+                available_visit_minutes=first.get("available_visit_minutes", np.nan),
+                points=day_points,
+                geometry_mode=day_route_mode,
+                show_by_default=bool(config["show"]),
+                source_rows=len(group),
             )
 
             if route_type.startswith("relocation") and route_start_point != route_end_point:
@@ -2217,19 +3149,53 @@ def build_production_trip_map(context, output_path=None, run_live_routing=None):
         bandit_reward = float(best_bandit.iloc[0].get("posterior_mean_reward", best_bandit.iloc[0].get("posterior_mean", np.nan)))
 
     method_comparison_df = _build_method_comparison(output_dir)
-    if not method_comparison_df.empty:
-        method_comparison_df.to_csv(output_dir / "production_method_comparison.csv", index=False)
-    comparison_layers = _add_model_comparison_layers(trip_map, output_dir, route_cache, run_live)
+    # Comparison layers are loaded from exported route-stop CSVs so the HTML map
+    # can toggle real method/trip-length routes instead of summary-only tables.
+    comparison_layers = _add_model_comparison_layers(
+        trip_map,
+        output_dir,
+        route_cache,
+        run_live,
+        show_by_default=show_full_scene_default or bool(context.get("SHOW_COMPARISON_LAYERS_BY_DEFAULT", False)),
+        route_debug_rows=route_debug_rows,
+    )
+    selected_result_layer = _add_selected_result_layer(trip_map, day_plan_df, route_debug_rows=route_debug_rows)
+    traveler_overview_layers = _add_traveler_overview_layers(
+        trip_map,
+        profile_day_plans,
+        route_debug_rows=route_debug_rows,
+        show_by_default=show_full_scene_default or bool(context.get("SHOW_TRAVELER_OVERVIEWS_BY_DEFAULT", True)),
+    )
+    full_scene_layer = _add_full_scene_overview_layer(
+        trip_map,
+        output_dir=output_dir,
+        fastest_path=fastest_path,
+        scenic_path=scenic_path,
+        profile_day_plans=profile_day_plans,
+        route_debug_rows=route_debug_rows,
+    )
+    for comparison_path in [
+        output_dir / "production_trip_length_route_stops.csv",
+        output_dir / "production_method_route_stops.csv",
+    ]:
+        comparison_df = _load_csv(comparison_path)
+        if not fit_points and not comparison_df.empty and {"latitude", "longitude"}.issubset(comparison_df.columns):
+            fit_points.extend(comparison_df[["latitude", "longitude"]].dropna().astype(float).values.tolist())
+        if not fit_points and not comparison_df.empty and {"hotel_latitude", "hotel_longitude"}.issubset(comparison_df.columns):
+            fit_points.extend(comparison_df[["hotel_latitude", "hotel_longitude"]].dropna().astype(float).values.tolist())
 
     fastest_drive_hours = float(intercity_legs_df[intercity_legs_df["route_layer"].eq("Fastest inter-city route")]["estimated_drive_minutes"].sum()) / 60.0
     scenic_drive_hours = float(intercity_legs_df[intercity_legs_df["route_layer"].eq("Scenic CA-1 / PCH route with Stanford detour")]["estimated_drive_minutes"].sum()) / 60.0
+    route_debug_df = pd.DataFrame(route_debug_rows)
+    route_debug_df.to_csv(output_dir / "production_map_route_debug.csv", index=False)
+    route_debug_summary_html = _build_route_debug_summary_html(route_debug_df)
 
     panel_html = f"""
     <style>
     #blueprint-result-panel {{
-        position: fixed; top: 82px; right: 18px; width: 420px; max-height: 78vh; overflow-y: auto;
+        position: fixed; top: 82px; right: 18px; width: 520px; max-height: calc(100vh - 36px); overflow-y: auto;
         background: rgba(255,255,255,0.97); border: 1px solid #CFCFCF; border-radius: 8px;
-        box-shadow: 0 2px 10px rgba(0,0,0,0.16); z-index: 9998; font-size: 12px; padding: 12px 14px; line-height: 1.38;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.16); z-index: 9998; font-size: 11px; padding: 12px 14px; line-height: 1.38;
     }}
     #blueprint-result-panel .panel-title {{ font-weight: 700; font-size: 14px; margin-bottom: 3px; }}
     #blueprint-result-panel .panel-subtitle {{ color:#5c5c5c; margin-bottom: 10px; }}
@@ -2248,8 +3214,9 @@ def build_production_trip_map(context, output_path=None, run_live_routing=None):
     #blueprint-result-panel li {{ margin: 2px 0; overflow-wrap: anywhere; }}
     </style>
     <div id="blueprint-result-panel">
-        <div class="panel-title">7-Day California Itinerary</div>
+        <div class="panel-title">California Itinerary Dashboard</div>
         <div class="panel-subtitle">Hierarchical day allocation + hybrid bandit/optimization route search</div>
+        <div class="summary-line"><b>Default displayed plan:</b> {main_trip_days}-day Balanced route</div>
         <div class="summary-line"><b>Gateway:</b> {_escape(trip['gateway_start'])} → {_escape(trip['gateway_end'])}</div>
         <div class="summary-line"><b>Default profile:</b> <span class="strategy-pill">Balanced</span></div>
         <div class="summary-line"><b>Fastest route estimate:</b> {fastest_drive_hours:.2f} hours</div>
@@ -2257,6 +3224,8 @@ def build_production_trip_map(context, output_path=None, run_live_routing=None):
         <div class="summary-line"><b>CA-1 note:</b> San Francisco → Stanford → Santa Cruz is a Silicon Valley detour / connector, not CA-1. Coastal legs after Santa Cruz use CA-1 / PCH where available, with US-101/local connectors where necessary.</div>
         <div class="summary-line"><b>Bandit strategy:</b> <span class="strategy-pill">{_escape(bandit_strategy)}</span></div>
         <div class="summary-line"><b>Posterior reward:</b> {_escape(f"{bandit_reward:.3f}" if np.isfinite(bandit_reward) else "n/a")}</div>
+        <div class="summary-line"><b>Layer toggles:</b> open the left layer control to switch among 7/9/12-day routes, hierarchical/greedy/bandit comparison routes, traveler profiles, candidate hotels, and social must-go markers.</div>
+        {route_debug_summary_html}
         {_build_html_data_source_summary(output_dir)}
         {_build_method_comparison_html(method_comparison_df)}
         {_build_trip_length_comparison_html(output_dir)}
@@ -2274,6 +3243,8 @@ def build_production_trip_map(context, output_path=None, run_live_routing=None):
     legend_html = """
     <div id="blueprint-map-legend">
     <div style="font-weight:700; margin-bottom:8px;">Blueprint Map Layers</div>
+    <div><span style="display:inline-block;width:16px;border-top:6px solid #111827;margin-right:8px;vertical-align:middle;"></span>Full Scene · Always Visible Route Overview</div>
+    <div><span style="display:inline-block;width:16px;border-top:5px solid #2563EB;margin-right:8px;vertical-align:middle;"></span>Selected Result · Default Hierarchical Route</div>
     <div><span style="display:inline-block;width:16px;border-top:4px solid #2A9D8F;margin-right:8px;vertical-align:middle;"></span>Scenic CA-1 / PCH route</div>
     <div><span style="display:inline-block;width:16px;border-top:4px dashed #6C757D;margin-right:8px;vertical-align:middle;"></span>Fastest inter-city route</div>
     <div><span style="display:inline-block;width:16px;border-top:4px solid #2563EB;margin-right:8px;vertical-align:middle;"></span>Day 1 San Francisco route</div>
@@ -2281,19 +3252,31 @@ def build_production_trip_map(context, output_path=None, run_live_routing=None):
     <div><span style="display:inline-block;width:12px;height:12px;border-radius:50%;background:#6A4C93;margin-right:8px;"></span>Candidate hotel</div>
     <div><span style="display:inline-block;width:12px;height:12px;border-radius:50%;background:#F4A261;margin-right:8px;"></span>Social must-go candidate</div>
     <div><span style="display:inline-block;width:12px;height:12px;border-radius:50%;background:#4C78A8;margin-right:8px;"></span>Daily attraction stop</div>
-    <div style="margin-top:8px; color:#555;">Balanced layers are shown by default. Toggle relaxed/explorer days, candidate hotels, and social must-go candidates in the layer control. Stop labels are clickable for details.</div>
+    <div><span style="display:inline-block;width:16px;border-top:4px solid #2563EB;margin-right:8px;vertical-align:middle;"></span>Trip Length · 7-Day Hierarchical Route</div>
+    <div><span style="display:inline-block;width:16px;border-top:4px solid #F4A261;margin-right:8px;vertical-align:middle;"></span>Trip Length · 9-Day Hierarchical Route</div>
+    <div><span style="display:inline-block;width:16px;border-top:4px solid #7A5195;margin-right:8px;vertical-align:middle;"></span>Trip Length · 12-Day Hierarchical Route</div>
+    <div><span style="display:inline-block;width:16px;border-top:4px solid #2563EB;margin-right:8px;vertical-align:middle;"></span>Method · Hierarchical Gurobi Pipeline</div>
+    <div><span style="display:inline-block;width:16px;border-top:4px dashed #6C757D;margin-right:8px;vertical-align:middle;"></span>Method · Hierarchical Greedy Baseline</div>
+    <div><span style="display:inline-block;width:16px;border-top:4px solid #5FAD56;margin-right:8px;vertical-align:middle;"></span>Method · Hierarchical + Bandit + Small Gurobi Repair</div>
+    <div><span style="display:inline-block;width:16px;border-top:4px dashed #2A9D8F;margin-right:8px;vertical-align:middle;"></span>Traveler · Relaxed Full Route</div>
+    <div><span style="display:inline-block;width:16px;border-top:4px solid #2563EB;margin-right:8px;vertical-align:middle;"></span>Traveler · Balanced Full Route</div>
+    <div><span style="display:inline-block;width:16px;border-top:4px dotted #7A5195;margin-right:8px;vertical-align:middle;"></span>Traveler · Explorer Full Route</div>
+    <div style="margin-top:8px; color:#555;">The full-scene overview is always visible above the basemap; detailed comparison layers can still be toggled in the layer control.</div>
     </div>
     """
     trip_map.get_root().html.add_child(folium.Element(legend_html))
 
     grouped_layers = {
+        "Full Scene": [full_scene_layer] if full_scene_layer is not None else [],
+        "Selected Result": [selected_result_layer] if selected_result_layer is not None else [],
         "Routes": [scenic_layer, fastest_layer],
         "Map Context": [social_layer, candidate_hotel_layer],
-        "Model Comparison": comparison_layers,
+        "Traveler Comparison": traveler_overview_layers,
         "Relaxed Traveler": profile_layer_groups["Relaxed"],
         "Balanced Traveler": profile_layer_groups["Balanced"],
         "Explorer Traveler": profile_layer_groups["Explorer"],
     }
+    grouped_layers.update(comparison_layers)
     grouped_layers = {name: layers for name, layers in grouped_layers.items() if layers}
     plugins.GroupedLayerControl(
         grouped_layers,
@@ -2303,8 +3286,9 @@ def build_production_trip_map(context, output_path=None, run_live_routing=None):
         collapsed=True,
     ).add_to(trip_map)
     _add_layer_control_overlap_guard(trip_map)
-    if all_points:
-        trip_map.fit_bounds(all_points, padding=(25, 25))
+    bounds_points = fit_points or all_points
+    if bounds_points:
+        trip_map.fit_bounds(bounds_points, padding=(40, 40))
 
     if run_live:
         with cache_path.open("w", encoding="utf-8") as handle:

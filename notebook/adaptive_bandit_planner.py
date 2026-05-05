@@ -212,6 +212,27 @@ def _resolve_solver_settings(notebook_context, optimizer_outputs):
     solver_settings.update(notebook_context.get("SOLVER_SETTINGS", {}))
     return solver_settings
 
+def _safe_optimizer_outputs_for_production_context(notebook_context):
+    if not isinstance(notebook_context, dict):
+        return {}
+
+    if notebook_context.get("USE_LOCAL_GUROBI_DEMO_IN_PRODUCTION_MAP") is False:
+        return {}
+
+    optimizer_outputs = notebook_context.get("optimizer_outputs", {})
+    if not isinstance(optimizer_outputs, dict):
+        return {}
+
+    canonical_days = notebook_context.get("CANONICAL_TRIP_DAYS")
+    old_k = optimizer_outputs.get("K")
+
+    try:
+        if canonical_days is not None and old_k is not None and int(old_k) != int(canonical_days):
+            return {}
+    except Exception:
+        return {}
+
+    return optimizer_outputs
 
 def _build_candidate_generation_context(state):
     return {
@@ -223,6 +244,12 @@ def _build_candidate_generation_context(state):
         "TOURIST_PROFILES": state.tourist_profiles,
         "SOLVER_SETTINGS": state.solver_settings,
         "MODEL_SETTINGS": state.model_settings,
+
+        # Production safety flags passed into gurobi_itinerary_solver.
+        "USE_LOCAL_GUROBI_DEMO_IN_PRODUCTION_MAP": False,
+        "CANONICAL_TRIP_DAYS": int(state.num_days),
+        "CANONICAL_TOTAL_BUDGET": float(state.total_budget),
+        "CANONICAL_DAILY_TIME_BUDGET": float(state.daily_time_budget),
     }
 
 
@@ -265,7 +292,7 @@ def build_adaptive_bandit_context(notebook_context, profile_name, seed=42, scena
     cost_norm = np.asarray(gurobi_itinerary_solver.safe_minmax(cost_raw), dtype=float)
     cost_penalty = cost_norm ** 0.7
 
-    optimizer_outputs = notebook_context.get("optimizer_outputs", {})
+    optimizer_outputs = _safe_optimizer_outputs_for_production_context(notebook_context)
     tourist_profiles = copy.deepcopy(gurobi_itinerary_solver.DEFAULT_TOURIST_PROFILES)
     notebook_profiles = notebook_context.get("TOURIST_PROFILES") or {}
     for local_profile, config in notebook_profiles.items():
@@ -276,14 +303,26 @@ def build_adaptive_bandit_context(notebook_context, profile_name, seed=42, scena
     if profile_name not in tourist_profiles:
         raise KeyError(f"Unknown profile '{profile_name}' for adaptive planning context")
 
-    route_details_all = notebook_context.get("route_details") or optimizer_outputs.get("route_details", {}) or {}
+    if notebook_context.get("USE_LOCAL_GUROBI_DEMO_IN_PRODUCTION_MAP") is False:
+        route_details_all = {}
+    else:
+        route_details_all = notebook_context.get("route_details") or optimizer_outputs.get("route_details", {}) or {}
+
     static_route_details = route_details_all.get(profile_name, {})
 
     model_settings = _resolve_model_settings(notebook_context, optimizer_outputs)
     solver_settings = _resolve_solver_settings(notebook_context, optimizer_outputs)
-    num_days = int(
-        notebook_context.get("K", optimizer_outputs.get("K", model_settings.get("num_days", 3)))
-    )
+    if "CANONICAL_TRIP_DAYS" in notebook_context:
+        model_settings["num_days"] = int(notebook_context["CANONICAL_TRIP_DAYS"])
+
+    if "CANONICAL_TOTAL_BUDGET" in notebook_context:
+        model_settings["total_budget"] = float(notebook_context["CANONICAL_TOTAL_BUDGET"])
+        solver_settings["total_budget"] = float(notebook_context["CANONICAL_TOTAL_BUDGET"])
+
+    if "CANONICAL_DAILY_TIME_BUDGET" in notebook_context:
+        model_settings["daily_time_budget"] = float(notebook_context["CANONICAL_DAILY_TIME_BUDGET"])
+        solver_settings["daily_time_budget"] = float(notebook_context["CANONICAL_DAILY_TIME_BUDGET"])
+    num_days = int(model_settings.get("num_days", 3))
     static_day_sequences = _build_static_sequences(static_route_details, num_days)
     static_hotels_by_day = dict(static_route_details.get("hotels_by_day", {}))
     if not static_hotels_by_day:

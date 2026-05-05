@@ -1,0 +1,8 @@
+{
+  "summary": {
+    "PASS": 44
+  },
+  "failed_checks": [],
+  "warning_checks": [],
+  "root_cause_if_failures": "If route CSV checks pass but visible/default or html addTo checks fail, the issue is code/rendering sanity in the map notebook or renderer, not the optimization math."
+}

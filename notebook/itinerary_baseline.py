@@ -312,6 +312,60 @@ def _compute_greedy_baseline(profile_name, context):
     }
 
 
+def build_route_stop_rows_from_details(context, detail_payload, profile_name, variant="baseline"):
+    """Convert optimized/baseline detail payloads into map-renderable stop rows."""
+    if not detail_payload:
+        return pd.DataFrame()
+    if profile_name in detail_payload:
+        detail_payload = detail_payload[profile_name]
+    details = detail_payload.get(variant, detail_payload)
+    if not isinstance(details, dict):
+        return pd.DataFrame()
+
+    top100 = context["top100_with_waiting_time"]
+    hotels_df = context["hotels_df"]
+    k_days = int(context["K"])
+    selected_by_day = details.get("selected_by_day", {})
+    hotels_by_day = details.get("hotels_by_day", {})
+    rows = []
+
+    for day_idx in range(k_days):
+        hotel_idx = hotels_by_day.get(day_idx)
+        if hotel_idx is None or day_idx not in selected_by_day:
+            continue
+        hotel_row = hotels_df.iloc[hotel_idx]
+        selected_today = list(selected_by_day.get(day_idx, []))
+        for stop_order, attr_idx in enumerate(selected_today, start=1):
+            attr_row = top100.iloc[attr_idx]
+            rows.append(
+                {
+                    "comparison_type": "method",
+                    "comparison_label": f"{profile_name} {variant}",
+                    "method": f"{variant}_legacy_baseline",
+                    "day": int(day_idx + 1),
+                    "stop_order": int(stop_order),
+                    "city": attr_row.get("city", attr_row.get("location_city", "unknown")),
+                    "overnight_city": attr_row.get("city", attr_row.get("location_city", "unknown")),
+                    "hotel_name": hotel_row.get("name", f"hotel_{hotel_idx}"),
+                    "hotel_latitude": hotel_row.get("latitude"),
+                    "hotel_longitude": hotel_row.get("longitude"),
+                    "attraction_name": attr_row.get("name", f"attraction_{attr_idx}"),
+                    "latitude": attr_row.get("latitude"),
+                    "longitude": attr_row.get("longitude"),
+                    "category": attr_row.get("category", attr_row.get("content_theme", attr_row.get("type", "attraction"))),
+                    "social_must_go": False,
+                    "social_score": 0.0,
+                    "final_poi_value": float(attr_row.get("utility", 0.0) or 0.0),
+                    "route_start_latitude": hotel_row.get("latitude"),
+                    "route_start_longitude": hotel_row.get("longitude"),
+                    "route_end_latitude": hotel_row.get("latitude"),
+                    "route_end_longitude": hotel_row.get("longitude"),
+                    "route_type": f"legacy_{variant}_route",
+                }
+            )
+    return pd.DataFrame(rows)
+
+
 def compare_optimized_vs_greedy_rating_baseline(context, save_path=None):
     required = [
         "top100_with_waiting_time",

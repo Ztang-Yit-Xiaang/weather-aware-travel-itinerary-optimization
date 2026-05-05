@@ -3,6 +3,8 @@ import os
 import time
 
 import numpy as np
+import pandas as pd
+from geopy.distance import geodesic
 
 
 DEFAULT_TOURIST_PROFILES = {
@@ -64,7 +66,31 @@ DEFAULT_SOLVER_SETTINGS = {
     "presolve": 2,
 }
 
+def _safe_optimizer_outputs_for_production(context):
+    """
+    Prevent old local 3-day optimizer outputs from leaking into
+    the hierarchical California production pipeline.
+    """
+    if not isinstance(context, dict):
+        return {}
 
+    if context.get("USE_LOCAL_GUROBI_DEMO_IN_PRODUCTION_MAP") is False:
+        return {}
+
+    optimizer_outputs = context.get("optimizer_outputs", {})
+    if not isinstance(optimizer_outputs, dict):
+        return {}
+
+    canonical_days = context.get("CANONICAL_TRIP_DAYS")
+    old_k = optimizer_outputs.get("K")
+
+    try:
+        if canonical_days is not None and old_k is not None and int(old_k) != int(canonical_days):
+            return {}
+    except Exception:
+        return {}
+
+    return optimizer_outputs
 def infer_content_theme(row):
     category_text = str(row.get("categories", "")).lower()
     type_text = str(row.get("type", "")).lower()
@@ -836,6 +862,364 @@ def _reconstruct_ordered_path(start_node, edge_list, selected_nodes):
     return ordered
 
 
+def estimate_local_route_visit_minutes(row):
+    value = row.get("visit_duration_sim")
+    try:
+        value = float(value)
+    except Exception:
+        value = np.nan
+    if np.isfinite(value) and value > 0:
+        return float(value)
+
+    category_text = str(row.get("category", row.get("categories", ""))).lower()
+    name_text = str(row.get("name", "")).lower()
+    combined_text = " ".join([category_text, name_text])
+    if any(keyword in combined_text for keyword in ["museum", "gallery"]):
+        return 105.0
+    if any(keyword in combined_text for keyword in ["theatre", "theater", "observatory"]):
+        return 100.0
+    if any(keyword in combined_text for keyword in ["park", "garden", "beach", "wharf", "waterfront"]):
+        return 75.0
+    if any(keyword in combined_text for keyword in ["bridge", "viewpoint", "landmark", "courthouse", "campus"]):
+        return 50.0
+    if any(keyword in combined_text for keyword in ["tour", "wine", "cruise", "adventure", "surf"]):
+        return 120.0
+    return 75.0
+
+
+def estimate_local_route_wait_minutes(row):
+    for column in ["pred_wait_minutes", "waiting_final", "waiting_time_live", "waiting_time_avg"]:
+        value = row.get(column)
+        try:
+            value = float(value)
+        except Exception:
+            value = np.nan
+        if np.isfinite(value) and value >= 0:
+            return float(value)
+    return 0.0
+
+
+def estimate_local_route_cost(row):
+    for column in ["cost", "estimated_cost", "ticket_price", "price_proxy"]:
+        value = row.get(column)
+        try:
+            value = float(value)
+        except Exception:
+            value = np.nan
+        if np.isfinite(value) and value >= 0:
+            return float(value)
+
+    category_text = str(row.get("category", row.get("categories", ""))).lower()
+    name_text = str(row.get("name", "")).lower()
+    combined_text = " ".join([category_text, name_text])
+    if any(keyword in combined_text for keyword in ["museum", "gallery", "theatre", "theater", "observatory"]):
+        return 24.0
+    if any(keyword in combined_text for keyword in ["tour", "wine", "cruise", "adventure", "whale", "surf"]):
+        return 38.0
+    if any(keyword in combined_text for keyword in ["zoo", "aquarium"]):
+        return 32.0
+    if any(keyword in combined_text for keyword in ["landmark", "bridge", "viewpoint", "courthouse", "campus"]):
+        return 10.0
+    if any(keyword in combined_text for keyword in ["park", "garden", "beach", "wharf", "waterfront"]):
+        return 6.0
+    return 12.0
+
+
+def solve_legacy_local_day_route(
+    candidate_df,
+    *,
+    route_start,
+    route_end=None,
+    remaining_time=None,
+    remaining_budget=None,
+    max_pois=None,
+    profile_name="balanced",
+    solver_overrides=None,
+):
+    """Solve one intra-day route using the legacy local Gurobi path formulation.
+
+    This is a reusable day-level oracle for the hierarchical California pipeline.
+    It intentionally accepts arbitrary candidate POIs and does not inherit the
+    old monolithic defaults such as 3 fixed days or a fixed total trip budget.
+    """
+
+    solver_overrides = dict(solver_overrides or {})
+    route_end = route_end or route_start
+    candidate_df = candidate_df.copy().reset_index(drop=True)
+    if candidate_df.empty:
+        return {
+            "solver_status": "FAILED",
+            "selected_positions": [],
+            "selected_pois": [],
+            "objective_value": np.nan,
+            "total_travel_minutes": 0.0,
+            "total_visit_minutes": 0.0,
+            "total_waiting_minutes": 0.0,
+            "total_cost": 0.0,
+            "total_time_minutes": 0.0,
+            "feasible": False,
+            "optimality_gap": np.nan,
+            "runtime_seconds": 0.0,
+        }
+
+    candidate_df["_legacy_route_position"] = np.arange(len(candidate_df))
+    candidate_df["latitude"] = candidate_df["latitude"].astype(float)
+    candidate_df["longitude"] = candidate_df["longitude"].astype(float)
+    candidate_df = candidate_df.dropna(subset=["latitude", "longitude"]).reset_index(drop=True)
+    if candidate_df.empty:
+        return {
+            "solver_status": "FAILED",
+            "selected_positions": [],
+            "selected_pois": [],
+            "objective_value": np.nan,
+            "total_travel_minutes": 0.0,
+            "total_visit_minutes": 0.0,
+            "total_waiting_minutes": 0.0,
+            "total_cost": 0.0,
+            "total_time_minutes": 0.0,
+            "feasible": False,
+            "optimality_gap": np.nan,
+            "runtime_seconds": 0.0,
+        }
+
+    start = time.perf_counter()
+    utility_raw = pd.Series(candidate_df.get("utility", candidate_df.get("final_poi_value", candidate_df.get("source_score", 0.0)))).astype(float).to_numpy()
+    waiting_raw = candidate_df.apply(estimate_local_route_wait_minutes, axis=1).astype(float).to_numpy()
+    visit_raw = candidate_df.apply(estimate_local_route_visit_minutes, axis=1).astype(float).to_numpy()
+    cost_raw = candidate_df.apply(estimate_local_route_cost, axis=1).astype(float).to_numpy()
+    social_bonus = pd.to_numeric(candidate_df.get("social_score", 0.0), errors="coerce").fillna(0.0).to_numpy()
+    must_go_bonus = pd.to_numeric(candidate_df.get("social_must_go", False), errors="coerce").fillna(0.0).to_numpy()
+    detour_penalty = pd.to_numeric(candidate_df.get("detour_minutes", 0.0), errors="coerce").fillna(0.0).to_numpy()
+    theme_series = candidate_df.apply(infer_content_theme, axis=1)
+
+    utility_signal = utility_raw + 0.45 * social_bonus + 0.20 * must_go_bonus - 0.005 * detour_penalty
+    utility_norm = safe_minmax(utility_signal)
+    waiting_norm = safe_minmax(waiting_raw)
+    cost_penalty = safe_minmax(cost_raw) ** 0.7
+
+    n_local = len(candidate_df)
+    points = candidate_df[["latitude", "longitude"]].astype(float).values.tolist()
+    local_travel = np.asarray(
+        [
+            [
+                geodesic(tuple(left), tuple(right)).km * 1.25 / 38.0 * 60.0 if i != j else 0.0
+                for j, right in enumerate(points)
+            ]
+            for i, left in enumerate(points)
+        ],
+        dtype=float,
+    )
+    local_start = np.asarray(
+        [geodesic(tuple(route_start), tuple(point)).km * 1.25 / 38.0 * 60.0 for point in points],
+        dtype=float,
+    )
+    local_return = np.asarray(
+        [geodesic(tuple(point), tuple(route_end)).km * 1.25 / 38.0 * 60.0 for point in points],
+        dtype=float,
+    )
+
+    profile_cfg = dict(DEFAULT_TOURIST_PROFILES.get(profile_name, DEFAULT_TOURIST_PROFILES["balanced"]))
+    solver_cfg = dict(DEFAULT_SOLVER_SETTINGS)
+    model_cfg = dict(DEFAULT_MODEL_SETTINGS)
+    if solver_overrides:
+        profile_cfg.update({key: value for key, value in solver_overrides.items() if key in profile_cfg})
+        solver_cfg.update({key: value for key, value in solver_overrides.items() if key in solver_cfg})
+        model_cfg.update({key: value for key, value in solver_overrides.items() if key in model_cfg})
+
+    if remaining_time is None:
+        remaining_time = float(solver_overrides.get("daily_time_budget", model_cfg["daily_time_budget"]))
+    if remaining_budget is None:
+        remaining_budget = float(solver_overrides.get("remaining_budget", model_cfg["total_budget"]))
+    max_pois = int(max_pois or profile_cfg.get("max_attractions", 6))
+    max_pois = min(max_pois, int(profile_cfg.get("max_attractions", max_pois)))
+
+    alpha = float(profile_cfg["alpha"])
+    beta = float(profile_cfg["beta"])
+    gamma = float(solver_overrides.get("gamma", model_cfg["gamma"]))
+    attraction_bonus = float(profile_cfg["attraction_bonus"])
+    max_wait = float(profile_cfg.get("max_wait", 90))
+
+    def _heuristic_result(status_suffix="heuristic_repair"):
+        order = sorted(
+            range(n_local),
+            key=lambda idx: float(utility_signal[idx]) - 0.012 * float(local_start[idx]) - 0.007 * float(local_return[idx]),
+            reverse=True,
+        )
+        selected = []
+        spent_time = 0.0
+        spent_cost = 0.0
+        current_point = tuple(route_start)
+        remaining = set(order)
+        while remaining and len(selected) < max_pois:
+            feasible = []
+            for idx in list(remaining):
+                travel_out = geodesic(current_point, tuple(points[idx])).km * 1.25 / 38.0 * 60.0
+                travel_back = geodesic(tuple(points[idx]), tuple(route_end)).km * 1.25 / 38.0 * 60.0
+                total_time = spent_time + travel_out + visit_raw[idx] + waiting_raw[idx] + travel_back
+                total_cost = spent_cost + cost_raw[idx]
+                if total_time <= float(remaining_time) and total_cost <= float(remaining_budget):
+                    feasible.append((idx, travel_out))
+            if not feasible:
+                break
+            next_idx = max(
+                feasible,
+                key=lambda item: float(utility_signal[item[0]]) - 0.015 * float(item[1]) - 0.003 * float(local_return[item[0]]),
+            )[0]
+            selected.append(next_idx)
+            remaining.remove(next_idx)
+            spent_time += float(geodesic(current_point, tuple(points[next_idx])).km * 1.25 / 38.0 * 60.0) + float(visit_raw[next_idx]) + float(waiting_raw[next_idx])
+            spent_cost += float(cost_raw[next_idx])
+            current_point = tuple(points[next_idx])
+        total_travel = 0.0
+        current_point = tuple(route_start)
+        for idx in selected:
+            total_travel += float(geodesic(current_point, tuple(points[idx])).km * 1.25 / 38.0 * 60.0)
+            current_point = tuple(points[idx])
+        if selected:
+            total_travel += float(geodesic(current_point, tuple(route_end)).km * 1.25 / 38.0 * 60.0)
+        total_visit = float(sum(visit_raw[idx] for idx in selected))
+        total_wait = float(sum(waiting_raw[idx] for idx in selected))
+        total_cost = float(sum(cost_raw[idx] for idx in selected))
+        objective = float(sum(utility_signal[idx] for idx in selected) - 0.01 * total_travel - gamma * total_cost * 0.02)
+        return {
+            "solver_status": status_suffix,
+            "selected_positions": [int(candidate_df.iloc[idx]["_legacy_route_position"]) for idx in selected],
+            "selected_pois": candidate_df.iloc[selected]["name"].astype(str).tolist() if selected else [],
+            "objective_value": objective,
+            "total_travel_minutes": float(total_travel),
+            "total_visit_minutes": total_visit,
+            "total_waiting_minutes": total_wait,
+            "total_cost": total_cost,
+            "total_time_minutes": float(total_travel + total_visit + total_wait),
+            "feasible": bool(total_travel + total_visit + total_wait <= float(remaining_time) and total_cost <= float(remaining_budget)),
+            "optimality_gap": np.nan,
+            "runtime_seconds": float(time.perf_counter() - start),
+        }
+
+    travel_scale = max(1.0, float(np.max(local_travel)) if local_travel.size else 1.0, float(np.max(local_start)) if local_start.size else 1.0)
+    local_arcs = [(i, j) for i in range(n_local) for j in range(n_local) if i != j and float(local_travel[i, j]) <= float(solver_cfg["max_travel"])]
+    out_neighbors = {i: [] for i in range(n_local)}
+    in_neighbors = {i: [] for i in range(n_local)}
+    for i, j in local_arcs:
+        out_neighbors[i].append(j)
+        in_neighbors[j].append(i)
+
+    try:
+        import gurobipy as gp
+        from gurobipy import GRB
+
+        model = gp.Model(f"legacy_local_day_route_{profile_name}")
+        model.Params.OutputFlag = 0
+        model.Params.TimeLimit = float(solver_cfg["time_limit_seconds"])
+        model.Params.MIPGap = float(solver_cfg["mip_gap_target"])
+        model.Params.Threads = int(
+            solver_cfg["num_threads"] if solver_cfg["num_threads"] is not None else max(1, min(4, os.cpu_count() or 1))
+        )
+        model.Params.MIPFocus = int(solver_cfg["mip_focus"])
+        model.Params.Heuristics = float(solver_cfg["heuristics"])
+        model.Params.Seed = int(solver_cfg["seed"])
+        model.Params.Presolve = int(solver_cfg["presolve"])
+
+        route_used = model.addVar(vtype=GRB.BINARY, name="route_used")
+        x = model.addVars(n_local, vtype=GRB.BINARY, name="visit")
+        y = model.addVars(local_arcs, vtype=GRB.BINARY, name="travel")
+        s = model.addVars(n_local, vtype=GRB.BINARY, name="start")
+        e = model.addVars(n_local, vtype=GRB.BINARY, name="end")
+        u = model.addVars(n_local, lb=0.0, ub=float(max_pois), vtype=GRB.CONTINUOUS, name="u")
+
+        utility_score = scale_to_int(utility_norm, int(solver_cfg["objective_scale"]))
+        wait_penalty = scale_to_int(alpha * waiting_norm, int(solver_cfg["objective_scale"]))
+        cost_penalty_scaled = scale_to_int(gamma * cost_penalty, int(solver_cfg["objective_scale"]))
+        travel_penalty = scale_to_int(beta * safe_minmax(local_travel), int(solver_cfg["objective_scale"]))
+        start_penalty = scale_to_int(beta * safe_minmax(local_start), int(solver_cfg["objective_scale"]))
+        return_penalty = scale_to_int(beta * safe_minmax(local_return), int(solver_cfg["objective_scale"]))
+        attraction_bonus_score = int(round(float(solver_cfg["objective_scale"]) * attraction_bonus))
+
+        objective = gp.quicksum(
+            (utility_score[i] - wait_penalty[i] - cost_penalty_scaled[i] + attraction_bonus_score) * x[i]
+            for i in range(n_local)
+        )
+        objective -= gp.quicksum(float(travel_penalty[i, j]) * y[i, j] for i, j in local_arcs)
+        objective -= gp.quicksum(float(start_penalty[i]) * s[i] for i in range(n_local))
+        objective -= gp.quicksum(float(return_penalty[i]) * e[i] for i in range(n_local))
+        model.setObjective(objective, GRB.MAXIMIZE)
+
+        total_selected = gp.quicksum(x[i] for i in range(n_local))
+        model.addConstr(total_selected <= int(max_pois) * route_used, name="max_attractions")
+        model.addConstr(total_selected >= route_used, name="route_active")
+        model.addConstr(gp.quicksum(s[i] for i in range(n_local)) == route_used, name="single_start")
+        model.addConstr(gp.quicksum(e[i] for i in range(n_local)) == route_used, name="single_end")
+        model.addConstr(
+            gp.quicksum((visit_raw[i] + waiting_raw[i]) * x[i] for i in range(n_local))
+            + gp.quicksum(local_travel[i, j] * y[i, j] for i, j in local_arcs)
+            + gp.quicksum(local_start[i] * s[i] for i in range(n_local))
+            + gp.quicksum(local_return[i] * e[i] for i in range(n_local))
+            <= float(remaining_time),
+            name="daily_time_budget",
+        )
+        model.addConstr(
+            gp.quicksum(cost_raw[i] * x[i] for i in range(n_local)) <= float(remaining_budget),
+            name="remaining_budget",
+        )
+        model.addConstr(
+            gp.quicksum(waiting_raw[i] * x[i] for i in range(n_local)) <= max_wait * total_selected,
+            name="max_wait",
+        )
+
+        for i in range(n_local):
+            outgoing = gp.quicksum(y[i, j] for j in out_neighbors[i])
+            incoming = gp.quicksum(y[j, i] for j in in_neighbors[i])
+            model.addConstr(outgoing + e[i] == x[i], name=f"flow_out_{i}")
+            model.addConstr(incoming + s[i] == x[i], name=f"flow_in_{i}")
+            model.addConstr(u[i] >= x[i], name=f"mtz_lb_{i}")
+            model.addConstr(u[i] <= float(max_pois) * x[i], name=f"mtz_ub_{i}")
+
+        model.addConstr(
+            gp.quicksum(y[i, j] for i, j in local_arcs) == total_selected - route_used,
+            name="path_edge_count",
+        )
+        for i, j in local_arcs:
+            model.addConstr(u[i] - u[j] + float(max_pois) * y[i, j] <= float(max_pois) - 1, name=f"mtz_arc_{i}_{j}")
+
+        model.optimize()
+        if model.SolCount == 0:
+            return _heuristic_result("heuristic_repair_after_gurobi_error:NoFeasibleRoute")
+
+        selected_local = [i for i in range(n_local) if x[i].X > 0.5]
+        start_local = next((i for i in range(n_local) if s[i].X > 0.5), None)
+        edges_local = [(i, j) for i, j in local_arcs if y[i, j].X > 0.5]
+        ordered_local = _reconstruct_ordered_path(start_local, edges_local, selected_local)
+        selected_positions = [int(candidate_df.iloc[idx]["_legacy_route_position"]) for idx in ordered_local]
+        total_travel = 0.0
+        current_point = tuple(route_start)
+        for idx in ordered_local:
+            total_travel += float(geodesic(current_point, tuple(points[idx])).km * 1.25 / 38.0 * 60.0)
+            current_point = tuple(points[idx])
+        if ordered_local:
+            total_travel += float(geodesic(current_point, tuple(route_end)).km * 1.25 / 38.0 * 60.0)
+        total_visit = float(sum(visit_raw[idx] for idx in ordered_local))
+        total_wait = float(sum(waiting_raw[idx] for idx in ordered_local))
+        total_cost = float(sum(cost_raw[idx] for idx in ordered_local))
+        return {
+            "solver_status": _status_name(model.Status, GRB),
+            "selected_positions": selected_positions,
+            "selected_pois": candidate_df.iloc[ordered_local]["name"].astype(str).tolist() if ordered_local else [],
+            "objective_value": float(model.ObjVal) if model.SolCount else np.nan,
+            "total_travel_minutes": float(total_travel),
+            "total_visit_minutes": total_visit,
+            "total_waiting_minutes": total_wait,
+            "total_cost": total_cost,
+            "total_time_minutes": float(total_travel + total_visit + total_wait),
+            "feasible": bool(total_travel + total_visit + total_wait <= float(remaining_time) and total_cost <= float(remaining_budget)),
+            "optimality_gap": float(model.MIPGap) if model.SolCount else np.nan,
+            "runtime_seconds": float(time.perf_counter() - start),
+        }
+    except Exception as exc:
+        result = _heuristic_result(f"heuristic_repair_after_gurobi_error:{type(exc).__name__}")
+        result["runtime_seconds"] = float(time.perf_counter() - start)
+        return result
+
+
 def _predict_candidate_metrics(
     sequence,
     top100_with_waiting_time,
@@ -1109,7 +1493,7 @@ def generate_receding_horizon_candidate_pool(
     profile_cfg = dict(DEFAULT_TOURIST_PROFILES.get(profile_name, {}))
     profile_cfg.update(tourist_profiles[profile_name])
 
-    optimizer_outputs = context.get("optimizer_outputs", {})
+    optimizer_outputs = _safe_optimizer_outputs_for_production(context)
     model_settings = dict(DEFAULT_MODEL_SETTINGS)
     if isinstance(optimizer_outputs, dict):
         model_settings.update(optimizer_outputs.get("model_settings", {}))
@@ -1142,9 +1526,19 @@ def generate_receding_horizon_candidate_pool(
     )
 
     if remaining_time is None:
-        remaining_time = float(solver_settings.get("daily_time_budget", DEFAULT_MODEL_SETTINGS["daily_time_budget"]))
+        remaining_time = float(
+            context.get(
+                "CANONICAL_DAILY_TIME_BUDGET",
+                solver_settings.get("daily_time_budget", DEFAULT_MODEL_SETTINGS["daily_time_budget"]),
+            )
+        )
     if remaining_budget is None:
-        remaining_budget = float(solver_settings.get("total_budget", DEFAULT_MODEL_SETTINGS["total_budget"]))
+        remaining_budget = float(
+            context.get(
+                "CANONICAL_TOTAL_BUDGET",
+                solver_settings.get("total_budget", DEFAULT_MODEL_SETTINGS["total_budget"]),
+            )
+        )
 
     utility = top100_with_waiting_time["utility"].astype(float).to_numpy()
     waiting_time = top100_with_waiting_time["waiting_final"].astype(float).to_numpy()

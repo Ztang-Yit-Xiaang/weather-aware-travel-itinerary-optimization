@@ -26,6 +26,8 @@ STANFORD_WAYPOINT_NAME = "Stanford University Main Quad"
 ROUTE_CONTEXT_PANE = "routeContextPane"
 ROUTE_CORE_PANE = "routeCorePane"
 ROUTE_TOP_PANE = "routeTopPane"
+FULL_SCENE_OFFSET_LAT_STEP = 0.009
+FULL_SCENE_OFFSET_LON_STEP = 0.016
 
 DAY_COLORS = ["#2563EB", "#4C78A8", "#F4A261", "#7A5195", "#C1121F", "#5FAD56", "#6C757D"]
 
@@ -1371,6 +1373,16 @@ def _dedupe_route_points(points):
     return output
 
 
+def _offset_route_points_for_visibility(points, offset_index):
+    """Shift overview routes into visible bands so overlapping plans can be audited."""
+    clean_points = _dedupe_route_points(points)
+    if not clean_points or not offset_index:
+        return clean_points
+    lat_shift = float(offset_index) * FULL_SCENE_OFFSET_LAT_STEP
+    lon_shift = float(offset_index) * FULL_SCENE_OFFSET_LON_STEP
+    return [[lat + lat_shift, lon + lon_shift] for lat, lon in clean_points]
+
+
 def _fetch_stitched_route(points, cache, run_live=False):
     """Fetch/draw each leg separately so every visible stop is connected.
 
@@ -1634,13 +1646,13 @@ def _add_intercity_route_layer(map_object, route_name, sequence, color, route_ca
         Estimated drive: {estimated_minutes:.1f} minutes
         """
         tooltip = f"{waypoint_label}: {classification}"
-        opacity = 0.82 if "fallback" not in route_mode else 0.46
-        route_pane = ROUTE_CONTEXT_PANE if scenic else ROUTE_TOP_PANE
-        folium.PolyLine(path, color="#FFFFFF", weight=8, opacity=0.74, pane=route_pane).add_to(layer)
+        opacity = (0.68 if scenic else 0.48) if "fallback" not in route_mode else 0.34
+        route_pane = ROUTE_CONTEXT_PANE
+        folium.PolyLine(path, color="#FFFFFF", weight=6 if scenic else 5, opacity=0.58, pane=route_pane).add_to(layer)
         route_line = folium.PolyLine(
             path,
             color=color,
-            weight=5 if scenic else 4,
+            weight=4 if scenic else 3,
             opacity=opacity,
             dash_array=None if scenic else "8, 10",
             tooltip=tooltip,
@@ -1676,8 +1688,8 @@ def _add_intercity_route_layer(map_object, route_name, sequence, color, route_ca
             all_path_points,
             color=color,
             pulse_color="#FFFFFF",
-            weight=5 if scenic else 4,
-            opacity=0.76 if scenic else 0.56,
+            weight=4 if scenic else 3,
+            opacity=0.52 if scenic else 0.36,
             delay=950 if scenic else 1050,
             dash_array=[14, 18] if scenic else [8, 14],
             pane=route_pane,
@@ -1746,15 +1758,22 @@ def _build_method_comparison_html(method_comparison_df):
             budget = _escape(f"${float(getattr(row, 'budget_used', getattr(row, 'total_cost', np.nan))):,.0f}" if np.isfinite(_finite_float(getattr(row, "budget_used", getattr(row, "total_cost", np.nan)))) else "n/a")
             stops = _escape(f"{int(getattr(row, 'selected_attractions', 0))}" if np.isfinite(_finite_float(getattr(row, "selected_attractions", np.nan))) else "n/a")
             status = _escape(str(getattr(row, "status", "n/a")))
+            score_value = _finite_float(getattr(row, "comparison_score", np.nan))
+            score = _escape(f"{score_value:.3f}" if np.isfinite(score_value) else "n/a")
+            solvers = _escape(
+                f"{getattr(row, 'allocation_solver', 'n/a')} / {getattr(row, 'local_route_solver', 'n/a')}"
+            )
             display_name = _escape(str(getattr(row, "method_display_name", getattr(row, "method", "unknown"))))
             rows.append(
                 f"""
                 <tr>
                     <td>{display_name}</td>
+                    <td>{score}</td>
                     <td>{utility}</td>
                     <td>{stops}</td>
                     <td>{travel}</td>
                     <td>{budget}</td>
+                    <td>{solvers}</td>
                     <td>{status}</td>
                 </tr>
                 """
@@ -1762,9 +1781,10 @@ def _build_method_comparison_html(method_comparison_df):
         return f"""
         <div class="panel-section-title">Method Comparison</div>
         <table class="method-table">
-            <thead><tr><th>Method</th><th>Utility</th><th>Stops</th><th>Travel</th><th>Cost</th><th>Status</th></tr></thead>
+            <thead><tr><th>Method</th><th>Score</th><th>Utility</th><th>Stops</th><th>Travel</th><th>Cost</th><th>Solvers</th><th>Status</th></tr></thead>
             <tbody>{''.join(rows)}</tbody>
         </table>
+        <div class="summary-line muted-note"><b>Metric math:</b> U=sum selected POI values; T=sum route travel minutes; C=hotel+transport+POI cost; M=count of must-go stops; H=normalized Shannon category diversity. Score=0.40U' + 0.15M' + 0.15H + 0.15T' + 0.10C' + 0.05W', with lower travel/cost/wait inverted.</div>
         <div class="summary-line muted-note">Full comparison saved to production_method_comparison.csv with matching route stops in production_method_route_stops.csv.</div>
         """
     return "<div class=\"panel-section-title\">Method Comparison</div><div class=\"summary-line\">Method comparison not generated yet.</div>"
@@ -1947,6 +1967,121 @@ def _add_static_result_line(
     return "static-polyline"
 
 
+def _route_bounds(points):
+    clean_points = _dedupe_route_points(points)
+    if not clean_points:
+        return []
+    latitudes = [point[0] for point in clean_points]
+    longitudes = [point[1] for point in clean_points]
+    return [
+        [float(min(latitudes)), float(min(longitudes))],
+        [float(max(latitudes)), float(max(longitudes))],
+    ]
+
+
+def _route_midpoint(points):
+    clean_points = _dedupe_route_points(points)
+    if not clean_points:
+        return None
+    if len(clean_points) == 1:
+        return clean_points[0]
+    total_distance = _route_distance_km(clean_points)
+    if total_distance <= 0:
+        return clean_points[len(clean_points) // 2]
+    target_distance = total_distance / 2.0
+    walked = 0.0
+    for left, right in zip(clean_points[:-1], clean_points[1:]):
+        segment_distance = _point_distance_km(left[0], left[1], right[0], right[1])
+        if walked + segment_distance >= target_distance:
+            ratio = 0.0 if segment_distance <= 0 else (target_distance - walked) / segment_distance
+            return [
+                float(left[0] + (right[0] - left[0]) * ratio),
+                float(left[1] + (right[1] - left[1]) * ratio),
+            ]
+        walked += segment_distance
+    return clean_points[-1]
+
+
+def _add_full_scene_route_band(
+    layer,
+    points,
+    *,
+    color,
+    dash_array=None,
+    tooltip=None,
+    popup_html=None,
+    label="route",
+    weight=9,
+    opacity=0.96,
+    pane=ROUTE_TOP_PANE,
+    start_label=None,
+    end_label=None,
+    arrow_offset=8,
+):
+    clean_points = _dedupe_route_points(points)
+    if len(clean_points) < 2:
+        return "not_enough_points"
+
+    route_line = folium.PolyLine(
+        clean_points,
+        color=color,
+        weight=weight,
+        opacity=opacity,
+        dash_array=dash_array,
+        tooltip=tooltip,
+        popup=folium.Popup(popup_html, max_width=320) if popup_html else None,
+        pane=pane,
+    ).add_to(layer)
+    plugins.PolyLineTextPath(
+        route_line,
+        "   >   ",
+        repeat=True,
+        offset=arrow_offset,
+        attributes={"fill": color, "font-weight": "800", "font-size": "13"},
+    ).add_to(layer)
+
+    endpoint_specs = [
+        (clean_points[0], start_label, "blueprint-route-endpoint-start"),
+        (clean_points[-1], end_label, "blueprint-route-endpoint-end"),
+    ]
+    for point, endpoint_label, class_name in endpoint_specs:
+        if not endpoint_label:
+            continue
+        folium.Marker(
+            location=point,
+            icon=folium.DivIcon(
+                html=f"""
+                <div class="blueprint-route-endpoint {class_name}" style="background:rgba(255,255,255,0.95);
+                    color:#111827; border:2px solid {color}; border-radius:13px; font-size:10px;
+                    font-weight:800; padding:2px 7px; box-shadow:0 1px 6px rgba(0,0,0,0.22);
+                    white-space:nowrap;">
+                    {_escape(endpoint_label)}
+                </div>
+                """
+            ),
+            tooltip=endpoint_label,
+        ).add_to(layer)
+
+    midpoint = _route_midpoint(clean_points)
+    if midpoint:
+        folium.Marker(
+            location=midpoint,
+            icon=folium.DivIcon(
+                html=f"""
+                <div class="blueprint-route-badge" style="background:{color}; color:white;
+                    border:2px solid rgba(255,255,255,0.92); border-radius:13px;
+                    font-size:11px; font-weight:800; padding:3px 8px;
+                    box-shadow:0 2px 8px rgba(0,0,0,0.30); white-space:nowrap;">
+                    {_escape(label)}
+                </div>
+                """
+            ),
+            tooltip=tooltip or label,
+        ).add_to(layer)
+
+    return "full-route-polyline-with-arrows"
+
+
 def _route_debug_value(value, default=""):
     if value is None:
         return default
@@ -2000,6 +2135,7 @@ def _append_route_debug_row(
     pass_through_cities="",
     drive_minutes=np.nan,
     available_visit_minutes=np.nan,
+    layer_var="",
     notes="",
 ):
     if route_debug_rows is None:
@@ -2044,6 +2180,7 @@ def _append_route_debug_row(
             "drive_minutes_to_next_base": _finite_float(drive_minutes),
             "available_visit_minutes": _finite_float(available_visit_minutes),
             "geometry_mode": geometry_mode,
+            "layer_var": layer_var,
             "show_by_default": bool(show_by_default),
             "draw_status": status,
             "issue": issue,
@@ -2076,22 +2213,56 @@ def _build_route_debug_summary_html(route_debug_df):
             for row in problem_df.itertuples(index=False)
         )
         problem_html = f"<ol>{problem_items}</ol>"
+    table_rows = []
+    for group, group_df in route_debug_df.groupby("layer_group", sort=True):
+        visible = int(group_df["show_by_default"].astype(bool).sum())
+        max_distance = _finite_float(pd.to_numeric(group_df["distance_km"], errors="coerce").max(), 0.0)
+        max_points = int(pd.to_numeric(group_df["unique_points"], errors="coerce").fillna(0).max())
+        layer_vars = []
+        if "layer_var" in group_df.columns:
+            layer_vars = [
+                str(value)
+                for value in group_df["layer_var"].dropna().astype(str).unique().tolist()
+                if value and value.lower() != "nan"
+            ]
+        layer_var_text = ", ".join(layer_vars[:2]) if layer_vars else "HTML audit"
+        html_state = "added; remove checked by validator" if visible else "toggle-only"
+        table_rows.append(
+            f"""
+            <tr>
+                <td>{_escape(group)}</td>
+                <td>{len(group_df)}</td>
+                <td>{visible}</td>
+                <td>{max_distance:.1f} km</td>
+                <td>{max_points}</td>
+                <td>{_escape(layer_var_text)}</td>
+                <td>{_escape(html_state)}</td>
+            </tr>
+            """
+        )
+    family_table_html = f"""
+    <table class="method-table">
+        <thead><tr><th>Route family</th><th>Rows</th><th>Visible</th><th>Distance</th><th>Pts</th><th>Layer var</th><th>HTML state</th></tr></thead>
+        <tbody>{''.join(table_rows)}</tbody>
+    </table>
+    """
     return f"""
     <div class="panel-section-title">Map Route Validation</div>
     <div class="summary-line"><b>Audited routes:</b> {len(route_debug_df)} ({ok_count} OK, {warn_count} warnings, {failed_count} failed)</div>
     <div class="summary-line"><b>Visible by default:</b> {visible_count} route layers</div>
     <div class="summary-line muted-note">Debug rows saved to production_map_route_debug.csv. Layer groups: {_escape(groups)}</div>
+    {family_table_html}
     {problem_html}
     """
 
 
-def _add_selected_result_layer(map_object, day_plan_df, route_debug_rows=None):
+def _add_selected_result_layer(map_object, day_plan_df, route_debug_rows=None, show_by_default=True):
     if day_plan_df is None or day_plan_df.empty:
         return None
 
     layer = folium.FeatureGroup(
         name="Selected Result · Default Hierarchical Route",
-        show=True,
+        show=bool(show_by_default),
     )
 
     day_frame = day_plan_df.copy()
@@ -2130,7 +2301,7 @@ def _add_selected_result_layer(map_object, day_plan_df, route_debug_rows=None):
             available_visit_minutes=first.get("available_visit_minutes", np.nan),
             points=day_points,
             geometry_mode=geometry_mode,
-            show_by_default=True,
+            show_by_default=bool(show_by_default),
             source_rows=len(group),
         )
 
@@ -2407,6 +2578,162 @@ def _add_traveler_overview_layers(map_object, profile_day_plans, route_debug_row
     return layers
 
 
+def _city_detail_layer_label(day, first):
+    route_type = str(first.get("route_type", "base_city_local"))
+    overnight_city = str(first.get("overnight_city", first.get("city", "")))
+    if route_type.startswith("relocation"):
+        start_city = str(first.get("route_start_city", first.get("city", "")))
+        end_city = str(first.get("route_end_city", overnight_city))
+        return f"City Detail · Day {int(day)} Transition {start_city} to {end_city}"
+    return f"City Detail · {overnight_city}"
+
+
+def _add_city_detail_layers(map_object, day_plan_df, route_cache, run_live, route_debug_rows=None, route_debug_registry=None):
+    if day_plan_df is None or day_plan_df.empty:
+        return []
+
+    sorted_plan = day_plan_df.copy()
+    sorted_plan["day"] = pd.to_numeric(sorted_plan.get("day", 1), errors="coerce").fillna(1).astype(int)
+    sorted_plan["stop_order"] = pd.to_numeric(sorted_plan.get("stop_order", 1), errors="coerce").fillna(1).astype(int)
+    sorted_plan = sorted_plan.sort_values(["day", "stop_order", "attraction_name"]).reset_index(drop=True)
+
+    grouped_days = {}
+    for day, group in sorted_plan.groupby("day", sort=True):
+        first = group.iloc[0]
+        grouped_days.setdefault(_city_detail_layer_label(day, first), []).append((int(day), group))
+
+    layers = []
+    for layer_index, (layer_name, day_groups) in enumerate(grouped_days.items()):
+        layer = folium.FeatureGroup(name=layer_name, show=False)
+        layer_points = []
+        for day, group in day_groups:
+            first = group.iloc[0]
+            color = DAY_COLORS[(int(day) - 1) % len(DAY_COLORS)]
+            route_type = str(first.get("route_type", "base_city_local"))
+            overnight_city = str(first.get("overnight_city", first["city"]))
+            route_start_point = [
+                float(first.get("route_start_latitude", first["hotel_latitude"])),
+                float(first.get("route_start_longitude", first["hotel_longitude"])),
+            ]
+            route_end_point = [
+                float(first.get("route_end_latitude", first["hotel_latitude"])),
+                float(first.get("route_end_longitude", first["hotel_longitude"])),
+            ]
+            stop_points = group[["latitude", "longitude"]].values.tolist()
+            day_points = [route_start_point, *stop_points, route_end_point]
+            popup_html = (
+                f"<b>{_escape(layer_name)}</b><br/>"
+                f"Day {int(day)}<br/>"
+                f"Route type: {_escape(route_type)}<br/>"
+                f"Drive after previous base: {float(first.get('drive_minutes_to_next_base', 0.0) or 0.0):.1f} min"
+            )
+            day_path, day_route_mode = _add_flow_route(
+                layer,
+                day_points,
+                color=color,
+                route_cache=route_cache,
+                run_live=run_live,
+                tooltip=f"{layer_name} · Day {int(day)}",
+                popup_html=popup_html,
+                dash_array="8 10" if not run_live else None,
+                opacity=0.88,
+                ant_delay=760,
+                pane=ROUTE_TOP_PANE,
+            )
+            layer_points.extend(day_path or day_points)
+            _append_route_debug_row(
+                route_debug_rows,
+                layer_group="City Detail",
+                layer_name=f"{layer_name} · Day {int(day)}",
+                comparison_type="city_detail",
+                profile="balanced",
+                method=str(first.get("method", "profile_day_plan")),
+                trip_days=_route_debug_value(first.get("trip_days", sorted_plan["day"].max())),
+                day=int(day),
+                route_type=route_type,
+                route_start_city=str(first.get("route_start_city", first.get("city", ""))),
+                route_end_city=str(first.get("route_end_city", overnight_city)),
+                pass_through_cities=str(first.get("pass_through_cities", "")),
+                drive_minutes=first.get("drive_minutes_to_next_base", np.nan),
+                available_visit_minutes=first.get("available_visit_minutes", np.nan),
+                points=day_points,
+                geometry_mode=f"{day_route_mode}; city-detail-arrows",
+                show_by_default=False,
+                source_rows=len(group),
+                layer_var=layer.get_name(),
+            )
+
+            for point, label, icon_name, icon_color in [
+                (route_start_point, f"Day {int(day)} start", "play", "cadetblue"),
+                (route_end_point, f"Day {int(day)} end/base", "flag-checkered", "darkred"),
+            ]:
+                folium.Marker(
+                    location=point,
+                    tooltip=f"{layer_name}: {label}",
+                    popup=folium.Popup(f"<b>{_escape(label)}</b><br/>{_escape(layer_name)}", max_width=250),
+                    icon=folium.Icon(color=icon_color, icon=icon_name, prefix="fa"),
+                ).add_to(layer)
+
+            for row in group.itertuples(index=False):
+                point = [float(row.latitude), float(row.longitude)]
+                popup = f"""
+                <b>{_escape(row.attraction_name)}</b><br/>
+                { _escape(layer_name) }<br/>
+                Day {int(row.day)}, stop {int(row.stop_order)}<br/>
+                City: {_escape(row.city)}<br/>
+                Category: {_escape(row.category)}<br/>
+                Source: {_escape(getattr(row, "attraction_source", getattr(row, "source_list", "unknown")))}
+                """
+                folium.CircleMarker(
+                    location=point,
+                    radius=8,
+                    color=color,
+                    fill=True,
+                    fillColor=color,
+                    fillOpacity=0.88,
+                    weight=3,
+                    tooltip=f"{layer_name} Day {int(row.day)} stop {int(row.stop_order)}: {row.attraction_name}",
+                    popup=folium.Popup(popup, max_width=280),
+                ).add_to(layer)
+                folium.Marker(
+                    location=point,
+                    icon=folium.DivIcon(
+                        html=f"""
+                        <div style='background:{color}; color:white; border:2px solid white; border-radius:14px;
+                            font-size:11px; font-weight:700; padding:2px 7px; box-shadow:0 1px 6px rgba(0,0,0,0.30); white-space:nowrap;'>
+                            D{int(row.day)}.{int(row.stop_order)}
+                        </div>
+                        """
+                    ),
+                    tooltip=f"{layer_name} stop {int(row.stop_order)}: {row.attraction_name}",
+                    popup=folium.Popup(popup, max_width=280),
+                ).add_to(layer)
+
+        layer.add_to(map_object)
+        layers.append(layer)
+        bounds = _route_bounds(layer_points)
+        if route_debug_registry is not None:
+            route_debug_registry.append(
+                {
+                    "label": layer_name.replace("City Detail · ", ""),
+                    "control_label": layer_name,
+                    "control_id": f"city_detail_{layer_index + 1}",
+                    "family": "city_detail",
+                    "color": DAY_COLORS[layer_index % len(DAY_COLORS)],
+                    "pane": ROUTE_TOP_PANE,
+                    "layer_var": layer.get_name(),
+                    "offset_index": 0,
+                    "default_checked": False,
+                    "default_visible": False,
+                    "quick_groups": ["city_detail"],
+                    "distance_km": round(float(_route_distance_km(_dedupe_route_points(layer_points))), 3),
+                    "unique_points": len(_dedupe_route_points(layer_points)),
+                    "bounds": bounds,
+                }
+            )
+    return layers
+
+
 def _full_route_points_from_plan(plan_df):
     if plan_df is None or plan_df.empty:
         return []
@@ -2432,13 +2759,11 @@ def _add_full_scene_overview_layer(
     scenic_path,
     profile_day_plans,
     route_debug_rows=None,
+    route_debug_registry=None,
 ):
-    """Always-visible foreground layer for the routes the report compares."""
-    layer = folium.FeatureGroup(name="Full Scene · Always Visible Route Overview", show=True)
-    route_specs = [
-        ("Fastest", "intercity", fastest_path, FASTEST_ROUTE_COLOR, "8 10", 7, 0.92),
-        ("Scenic CA-1/PCH", "intercity", scenic_path, SCENIC_CA1_COLOR, None, 7, 0.92),
-    ]
+    """Create individually selectable full-route overview layers."""
+    route_layers = []
+    route_specs = []
 
     comparison_files = [
         Path(output_dir) / "production_trip_length_route_stops.csv",
@@ -2450,87 +2775,148 @@ def _add_full_scene_overview_layer(
         for group_values, group in comparison_df.groupby(["comparison_type", "comparison_label", "method", "trip_days"], dropna=False):
             comparison_type, comparison_label, method, trip_days = group_values
             if str(comparison_type) == "trip_length":
-                color = {7: "#2563EB", 9: "#F4A261", 12: "#7A5195"}.get(int(trip_days), "#2563EB")
-                label = f"{int(trip_days)}-day"
+                trip_day_value = int(trip_days)
+                color = {7: "#0057FF", 9: "#FF6B00", 12: "#7C2DFF"}.get(trip_day_value, "#0057FF")
+                offset_index = {7: -1.2, 9: 0.0, 12: 1.2}.get(trip_day_value, 0.0)
+                label = f"{trip_day_value}-day"
                 dash_array = None
+                control_label = f"Trip Length · {trip_day_value}-Day Hierarchical Route"
+                control_id = f"trip_length_{trip_day_value}"
             elif str(method) == "hierarchical_gurobi_pipeline":
-                color = "#1D4ED8"
+                color = "#0096C7"
                 label = "Method: Gurobi"
+                offset_index = -0.8
                 dash_array = None
+                control_label = "Method · Hierarchical Gurobi Pipeline"
+                control_id = "method_gurobi"
             elif str(method) == "hierarchical_greedy_baseline":
-                color = "#4B5563"
+                color = "#111827"
                 label = "Method: Greedy"
+                offset_index = 0
                 dash_array = "7 11"
+                control_label = "Method · Hierarchical Greedy Baseline"
+                control_id = "method_greedy"
             else:
-                color = "#16A34A"
+                color = "#00A63E"
                 label = "Method: Bandit repair"
+                offset_index = 0.8
                 dash_array = None
+                control_label = "Method · Hierarchical + Bandit + Small Gurobi Repair"
+                control_id = "method_bandit_repair"
             route_specs.append(
-                (
-                    label,
-                    str(comparison_type),
-                    _full_route_points_from_plan(group),
-                    color,
-                    dash_array,
-                    5,
-                    0.72 if str(comparison_type) == "trip_length" else 0.64,
-                )
+                {
+                    "label": label,
+                    "control_label": control_label,
+                    "control_id": control_id,
+                    "comparison_type": str(comparison_type),
+                    "points": _full_route_points_from_plan(group),
+                    "color": color,
+                    "dash_array": dash_array,
+                    "weight": 6 if str(comparison_type) == "trip_length" else 5,
+                    "opacity": 0.90,
+                    "offset_index": offset_index,
+                    "pane": ROUTE_TOP_PANE,
+                    "default_visible": False,
+                    "quick_groups": ["trip_length"] if str(comparison_type) == "trip_length" else ["method"],
+                }
             )
 
     traveler_styles = {
-        "relaxed": ("Traveler: Relaxed", "#0F766E", "8 12"),
-        "balanced": ("Traveler: Balanced", "#2563EB", None),
-        "explorer": ("Traveler: Explorer", "#7A5195", "2 9"),
+        "relaxed": ("Traveler: Relaxed", "#00897B", "8 12", -0.7, False),
+        "balanced": ("Balanced full route", "#E91E63", None, 0.0, True),
+        "explorer": ("Traveler: Explorer", "#A020F0", "2 9", 0.7, False),
     }
     for profile_name, plan_df in profile_day_plans.items():
-        label, color, dash_array = traveler_styles.get(profile_name, (f"Traveler: {profile_name}", "#2563EB", None))
-        route_specs.append((label, "traveler_profile", _full_route_points_from_plan(plan_df), color, dash_array, 4, 0.70))
+        label, color, dash_array, offset_index, default_visible = traveler_styles.get(
+            profile_name,
+            (f"Traveler: {profile_name}", "#2563EB", None, 0.0, False),
+        )
+        route_specs.append(
+            {
+                "label": label,
+                "control_label": label,
+                "control_id": f"traveler_{profile_name}",
+                "comparison_type": "traveler_profile",
+                "points": _full_route_points_from_plan(plan_df),
+                "color": color,
+                "dash_array": dash_array,
+                "weight": 7 if default_visible else 5,
+                "opacity": 0.94 if default_visible else 0.88,
+                "offset_index": offset_index,
+                "pane": ROUTE_TOP_PANE,
+                "default_visible": default_visible,
+                "quick_groups": ["traveler"],
+            }
+        )
 
-    drawn = 0
-    all_points = []
-    for label, comparison_type, points, color, dash_array, weight, opacity in route_specs:
+    for spec in route_specs:
+        label = spec["label"]
+        comparison_type = spec["comparison_type"]
+        points = spec["points"]
         if not points or len(points) < 2:
             continue
-        geometry_mode = _add_static_result_line(
+        offset_index = float(spec["offset_index"])
+        draw_points = _offset_route_points_for_visibility(points, offset_index)
+        layer_name = f"Full Route · {spec['control_label']}"
+        default_visible = bool(spec.get("default_visible", False))
+        layer = folium.FeatureGroup(name=layer_name, show=default_visible)
+        geometry_mode = _add_full_scene_route_band(
             layer,
-            points,
-            color=color,
-            dash_array=dash_array,
-            tooltip=f"Full scene overview · {label}",
-            popup_html=f"<b>Full scene overview</b><br/>{_escape(label)}",
-            weight=weight,
-            opacity=opacity,
-            pane=ROUTE_TOP_PANE,
+            draw_points,
+            color=spec["color"],
+            dash_array=spec["dash_array"],
+            tooltip=f"Full route · {label}",
+            popup_html=(
+                f"<b>Full route overview</b><br/>"
+                f"{_escape(label)}<br/>"
+                f"Checkbox default: {_escape('checked' if default_visible else 'unchecked')}<br/>"
+                f"Diagnostic offset band: {offset_index:.1f}"
+            ),
+            label=label,
+            weight=spec["weight"],
+            opacity=spec["opacity"],
+            pane=spec["pane"],
+            start_label="Start: San Francisco",
+            end_label="End: Los Angeles",
         )
-        all_points.extend(points)
-        drawn += 1
-        _append_route_debug_row(
-            route_debug_rows,
-            layer_group="Full Scene Overview",
-            layer_name=f"Full Scene · {label}",
-            comparison_type=comparison_type,
-            points=points,
-            geometry_mode=geometry_mode,
-            show_by_default=True,
-            source_rows=len(points),
-            route_type="full_scene_overview",
-        )
-
-    if all_points:
         layer.add_to(map_object)
+        bounds = _route_bounds(draw_points)
+        layer_var = layer.get_name()
+        if route_debug_registry is not None:
+            route_debug_registry.append(
+                {
+                    "label": label,
+                    "control_label": spec["control_label"],
+                    "control_id": spec["control_id"],
+                    "family": comparison_type,
+                    "color": spec["color"],
+                    "pane": spec["pane"],
+                    "layer_var": layer_var,
+                    "offset_index": offset_index,
+                    "default_checked": default_visible,
+                    "default_visible": default_visible,
+                    "quick_groups": spec["quick_groups"],
+                    "distance_km": round(float(_route_distance_km(_dedupe_route_points(draw_points))), 3),
+                    "unique_points": len(_dedupe_route_points(draw_points)),
+                    "bounds": bounds,
+                }
+            )
         _append_route_debug_row(
             route_debug_rows,
-            layer_group="Full Scene Overview",
-            layer_name="Full Scene · Always Visible Route Overview",
-            comparison_type="full_scene",
-            points=all_points,
-            geometry_mode=f"full-scene-layer; {drawn} routes",
-            show_by_default=True,
-            source_rows=drawn,
-            route_type="always_visible_route_overview",
+            layer_group="Full Route Overview",
+            layer_name=layer_name,
+            comparison_type=comparison_type,
+            points=draw_points,
+            geometry_mode=f"{geometry_mode}; selectable-full-route",
+            show_by_default=default_visible,
+            source_rows=len(draw_points),
+            route_type="selectable_full_route_overview",
+            layer_var=layer_var,
+            notes=f"offset_index={offset_index:.1f}; original_points={len(_dedupe_route_points(points))}; pane={spec['pane']}; direction_arrows=True; no_white_casing=True",
         )
-        return layer
-    return None
+        route_layers.append(layer)
+
+    return route_layers
 
 
 def _build_html_data_source_summary(output_dir):
@@ -2575,26 +2961,13 @@ def _add_layer_control_overlap_guard(map_object):
         max-width: 340px;
     }
     #blueprint-map-legend {
-        position: fixed;
-        bottom: 46px;
-        left: 14px;
-        width: 290px;
-        height: auto;
-        background: rgba(255,255,255,0.95);
-        border: 1px solid #CFCFCF;
-        border-radius: 8px;
-        box-shadow: 0 2px 10px rgba(0,0,0,0.15);
-        z-index: 9997;
-        font-size: 12px;
-        padding: 12px 14px;
-        line-height: 1.45;
         transition: left 160ms ease, opacity 160ms ease, transform 160ms ease;
     }
-    body.blueprint-layer-control-open #blueprint-map-legend {
+    body.blueprint-layer-control-open #blueprint-map-legend:not(.blueprint-collapsed) {
         left: 376px;
     }
     @media (max-width: 900px), (max-height: 720px) {
-        body.blueprint-layer-control-open #blueprint-map-legend {
+        body.blueprint-layer-control-open #blueprint-map-legend:not(.blueprint-collapsed) {
             opacity: 0;
             pointer-events: none;
             transform: translateY(8px);
@@ -2642,6 +3015,604 @@ def _add_layer_control_overlap_guard(map_object):
     """
     map_object.get_root().html.add_child(folium.Element(guard_html))
     map_object.get_root().script.add_child(folium.Element(guard_js))
+
+
+def _add_full_scene_persistence_guard(map_object, full_scene_layer):
+    """Re-add the diagnostic overview after grouped-layer control initialization."""
+    if full_scene_layer is None:
+        return
+    map_var = map_object.get_name()
+    layer_var = full_scene_layer.get_name()
+    guard_js = f"""
+    (function() {{
+        function keepFullSceneVisible() {{
+            if (typeof {map_var} === "undefined" || typeof {layer_var} === "undefined") {{
+                return;
+            }}
+            if (!{map_var}.hasLayer({layer_var})) {{
+                {layer_var}.addTo({map_var});
+            }}
+            {layer_var}.eachLayer(function(routeLayer) {{
+                if (routeLayer && routeLayer.bringToFront) {{
+                    routeLayer.bringToFront();
+                }}
+            }});
+        }}
+        window.keepFullSceneVisible = keepFullSceneVisible;
+        [60, 250, 900, 1600].forEach(function(delay) {{
+            window.setTimeout(keepFullSceneVisible, delay);
+        }});
+        window.setTimeout(function() {{
+            if (typeof {map_var} !== "undefined") {{
+                {map_var}.on("overlayadd layeradd overlayremove layerremove", keepFullSceneVisible);
+            }}
+        }}, 1000);
+    }})();
+    """
+    map_object.get_root().script.add_child(folium.Element(guard_js))
+
+
+def _add_route_debug_controls(map_object, route_registry, hidden_default_layers=None):
+    if not route_registry:
+        return
+
+    map_var = map_object.get_name()
+    hidden_default_layers = hidden_default_layers or []
+    hidden_vars = [layer.get_name() for layer in hidden_default_layers if layer is not None and hasattr(layer, "get_name")]
+    bounds_points = []
+    for route in route_registry:
+        bounds = route.get("bounds") or []
+        if len(bounds) == 2:
+            bounds_points.extend(bounds)
+    registry_json = json.dumps(route_registry).replace("</", "<\\/")
+    hidden_json = json.dumps(hidden_vars)
+    bounds_json = json.dumps(bounds_points)
+    families = sorted({str(route.get("family", "")) for route in route_registry})
+    checked_count = sum(1 for route in route_registry if bool(route.get("default_checked", route.get("default_visible", False))))
+    checkbox_rows = []
+    for route in route_registry:
+        color = _escape(str(route.get("color", "#2563EB")))
+        control_id = _escape(str(route.get("control_id", route.get("label", "route"))))
+        control_label = _escape(str(route.get("control_label", route.get("label", "route"))))
+        family = _escape(str(route.get("family", "route")))
+        checked = " checked" if bool(route.get("default_checked", route.get("default_visible", False))) else ""
+        checkbox_rows.append(
+            f"""
+            <label class="blueprint-route-check" data-route-family="{family}">
+                <input type="checkbox" data-route-checkbox="{control_id}" data-route-family="{family}"{checked}>
+                <span class="blueprint-route-swatch" style="background:{color};"></span>
+                <span class="blueprint-route-check-text">{control_label}</span>
+            </label>
+            """
+        )
+    checkbox_html = "".join(checkbox_rows)
+
+    controls_html = f"""
+    <style>
+    #blueprint-route-selector {{
+        position: fixed;
+        left: 74px;
+        top: 82px;
+        z-index: 9996;
+        width: 320px;
+    }}
+    #blueprint-route-selector.blueprint-collapsed {{
+        width: 230px;
+    }}
+    #blueprint-route-selector .blueprint-panel-body {{
+        max-height: 420px;
+    }}
+    .blueprint-route-actions {{
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 6px;
+        margin-bottom: 10px;
+    }}
+    .blueprint-route-action {{
+        background: #F8FAFC;
+        border: 1px solid #CBD5E1;
+        border-radius: 6px;
+        color: #1F2937;
+        cursor: pointer;
+        font: inherit;
+        font-weight: 800;
+        padding: 5px 7px;
+    }}
+    .blueprint-route-action:hover {{
+        background: #EEF2F7;
+    }}
+    .blueprint-route-check {{
+        align-items: center;
+        border-top: 1px solid #EDF0F3;
+        cursor: pointer;
+        display: grid;
+        gap: 7px;
+        grid-template-columns: 16px 18px 1fr;
+        padding: 6px 0;
+    }}
+    .blueprint-route-check input {{
+        margin: 0;
+    }}
+    .blueprint-route-swatch {{
+        border: 1px solid rgba(17,24,39,0.24);
+        border-radius: 999px;
+        display: inline-block;
+        height: 12px;
+        width: 12px;
+    }}
+    .blueprint-route-check-text {{
+        overflow-wrap: anywhere;
+    }}
+    #blueprint-route-debug-tab {{
+        align-items: center;
+        background: #0F172A;
+        border: 1px solid rgba(255,255,255,0.55);
+        border-left: 0;
+        border-radius: 0 8px 8px 0;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.22);
+        color: #FFFFFF;
+        cursor: pointer;
+        display: flex;
+        font-size: 11px;
+        font-weight: 900;
+        height: 88px;
+        justify-content: center;
+        left: 0;
+        letter-spacing: 0;
+        padding: 6px 4px;
+        position: fixed;
+        text-orientation: mixed;
+        top: 44%;
+        transform: translateY(-50%);
+        writing-mode: vertical-rl;
+        width: 21px;
+        z-index: 10001;
+    }}
+    #blueprint-route-debug-tab:hover {{
+        background: #1E293B;
+    }}
+    #blueprint-route-debug-panel {{
+        left: -326px;
+        top: 250px;
+        width: 310px;
+        z-index: 10000;
+        transition: left 180ms ease, opacity 180ms ease;
+        opacity: 0.0;
+        pointer-events: none;
+    }}
+    #blueprint-route-debug-panel.blueprint-debug-open {{
+        left: 24px;
+        opacity: 1.0;
+        pointer-events: auto;
+    }}
+    #blueprint-route-debug-panel .blueprint-panel-body {{
+        max-height: 300px;
+    }}
+    </style>
+    <script id="blueprint-route-debug-registry" type="application/json">{registry_json}</script>
+    <div id="blueprint-route-selector" class="blueprint-floating-panel blueprint-draggable" data-panel-id="route-selector">
+        <button class="blueprint-panel-header" type="button" aria-expanded="true">
+            <span>Route Selector</span>
+            <span class="blueprint-panel-chevron">-</span>
+        </button>
+        <div class="blueprint-panel-body">
+            <div class="blueprint-route-actions">
+                <button type="button" class="blueprint-route-action" data-route-action="clear">Clear</button>
+                <button type="button" class="blueprint-route-action" data-route-action="balanced">Balanced only</button>
+                <button type="button" class="blueprint-route-action" data-route-action="trip_length">Show trip lengths</button>
+                <button type="button" class="blueprint-route-action" data-route-action="method">Show methods</button>
+                <button type="button" class="blueprint-route-action" data-route-action="traveler">Show travelers</button>
+                <button type="button" class="blueprint-route-action" data-route-action="city_detail">Show city details</button>
+            </div>
+            <button type="button" class="blueprint-route-action" data-route-action="zoom" style="width:100%; margin-bottom:8px;">Zoom to checked routes</button>
+            <div class="blueprint-route-checkboxes">{checkbox_html}</div>
+        </div>
+    </div>
+    <button id="blueprint-route-debug-tab" type="button" aria-controls="blueprint-route-debug-panel" aria-expanded="false">Debug</button>
+    <div id="blueprint-route-debug-panel" class="blueprint-floating-panel blueprint-collapsed" data-panel-id="route-debug">
+        <button class="blueprint-panel-header" type="button" aria-expanded="false">
+            <span>Route Debug</span>
+            <span class="blueprint-panel-chevron">+</span>
+        </button>
+        <div class="blueprint-panel-body">
+            <div class="summary-line"><b>Default checked routes:</b> {checked_count}</div>
+            <div class="summary-line"><b>Registered checkbox routes:</b> {len(route_registry)}</div>
+            <div class="summary-line"><b>Unchecked on load:</b> {len(hidden_vars)}</div>
+            <div class="summary-line"><b>Families:</b> {_escape(', '.join(families))}</div>
+            <div class="summary-line muted-note">Browser registry: blueprint-route-debug-registry. The Route Selector owns route visibility on first open.</div>
+        </div>
+    </div>
+    """
+
+    controls_js = f"""
+    (function() {{
+        var registry = {registry_json};
+        var hiddenLayerVars = {hidden_json};
+        var routeBounds = {bounds_json};
+        var mapVarName = "{map_var}";
+        var mapObject = null;
+        var listenersAttached = false;
+        var lastDiagnostics = {{
+            map_ready: false,
+            registry_count: registry.length,
+            missing_layers: [],
+            checked_routes: [],
+            visible_checked_routes: [],
+            unchecked_routes: [],
+            last_sync: null
+        }};
+
+        function getMapObject() {{
+            if (mapObject && mapObject.fitBounds && mapObject.hasLayer) {{
+                return mapObject;
+            }}
+            mapObject = window[mapVarName] || (typeof globalThis !== "undefined" ? globalThis[mapVarName] : null) || null;
+            return mapObject;
+        }}
+
+        function getLayerByName(name) {{
+            if (!name) {{
+                return null;
+            }}
+            return window[name] || (typeof globalThis !== "undefined" ? globalThis[name] : null) || null;
+        }}
+
+        function addLayer(layer) {{
+            var map = getMapObject();
+            if (map && layer && !map.hasLayer(layer)) {{
+                layer.addTo(map);
+            }}
+        }}
+
+        function removeLayer(layer) {{
+            var map = getMapObject();
+            if (map && layer && map.hasLayer(layer)) {{
+                map.removeLayer(layer);
+            }}
+        }}
+
+        function routeById(controlId) {{
+            return registry.find(function(route) {{
+                return String(route.control_id) === String(controlId);
+            }});
+        }}
+
+        function checkboxForRoute(route) {{
+            return document.querySelector('[data-route-checkbox="' + route.control_id + '"]');
+        }}
+
+        function checkedRoutes() {{
+            return registry.filter(function(route) {{
+                var checkbox = checkboxForRoute(route);
+                return checkbox && checkbox.checked;
+            }});
+        }}
+
+        function syncCheckboxState() {{
+            var map = getMapObject();
+            var missingLayers = [];
+            var checkedIds = [];
+            var visibleCheckedIds = [];
+            var uncheckedIds = [];
+            registry.forEach(function(route) {{
+                var checkbox = checkboxForRoute(route);
+                var layer = getLayerByName(route.layer_var);
+                var checked = Boolean(checkbox && checkbox.checked);
+                route.runtime_checked = checked;
+                route.runtime_layer_found = Boolean(layer);
+                if (!layer) {{
+                    missingLayers.push(route.layer_var || route.control_id);
+                }}
+                if (checked) {{
+                    checkedIds.push(route.control_id);
+                    addLayer(layer);
+                    if (layer && layer.bringToFront) {{
+                        layer.bringToFront();
+                    }}
+                    if (map && layer && map.hasLayer(layer)) {{
+                        visibleCheckedIds.push(route.control_id);
+                        route.runtime_visible = true;
+                    }} else {{
+                        route.runtime_visible = false;
+                    }}
+                }} else {{
+                    uncheckedIds.push(route.control_id);
+                    removeLayer(layer);
+                    route.runtime_visible = false;
+                }}
+            }});
+            lastDiagnostics = {{
+                map_ready: Boolean(map),
+                registry_count: registry.length,
+                missing_layers: missingLayers,
+                checked_routes: checkedIds,
+                visible_checked_routes: visibleCheckedIds,
+                unchecked_routes: uncheckedIds,
+                last_sync: new Date().toISOString()
+            }};
+            window.blueprintCheckedRoutes = checkedIds;
+            window.blueprintRouteRuntimeDiagnostics = lastDiagnostics;
+            return Boolean(map) && missingLayers.length === 0;
+        }}
+
+        function setAllChecked(value) {{
+            registry.forEach(function(route) {{
+                var checkbox = checkboxForRoute(route);
+                if (checkbox) {{
+                    checkbox.checked = Boolean(value);
+                }}
+            }});
+        }}
+
+        function setOnly(predicate) {{
+            registry.forEach(function(route) {{
+                var checkbox = checkboxForRoute(route);
+                if (checkbox) {{
+                    checkbox.checked = Boolean(predicate(route));
+                }}
+            }});
+        }}
+
+        function routeHasQuickGroup(route, groupName) {{
+            return Array.isArray(route.quick_groups) && route.quick_groups.indexOf(groupName) !== -1;
+        }}
+
+        function zoomToCheckedRoutes() {{
+            var checked = checkedRoutes();
+            var points = [];
+            checked.forEach(function(route) {{
+                if (Array.isArray(route.bounds) && route.bounds.length === 2) {{
+                    points.push(route.bounds[0]);
+                    points.push(route.bounds[1]);
+                }}
+            }});
+            if (!points.length) {{
+                points = routeBounds || [];
+            }}
+            var map = getMapObject();
+            if (map && points && points.length >= 2) {{
+                map.fitBounds(points, {{ padding: [70, 70] }});
+            }}
+        }}
+
+        function attachRouteControlListeners() {{
+            if (listenersAttached) {{
+                return;
+            }}
+            listenersAttached = true;
+            var selector = document.getElementById("blueprint-route-selector");
+            var debugPanel = document.getElementById("blueprint-route-debug-panel");
+            var debugTab = document.getElementById("blueprint-route-debug-tab");
+            [selector, debugPanel, debugTab].forEach(function(node) {{
+                if (node && window.L && L.DomEvent) {{
+                    L.DomEvent.disableClickPropagation(node);
+                    L.DomEvent.disableScrollPropagation(node);
+                }}
+            }});
+            function setDebugDrawerOpen(open) {{
+                if (!debugPanel || !debugTab) {{
+                    return;
+                }}
+                debugPanel.classList.toggle("blueprint-debug-open", Boolean(open));
+                debugTab.setAttribute("aria-expanded", open ? "true" : "false");
+                if (open) {{
+                    debugPanel.classList.remove("blueprint-collapsed");
+                    var debugHeader = debugPanel.querySelector(".blueprint-panel-header");
+                    var chevron = debugPanel.querySelector(".blueprint-panel-chevron");
+                    if (debugHeader) {{
+                        debugHeader.setAttribute("aria-expanded", "true");
+                    }}
+                    if (chevron) {{
+                        chevron.textContent = "-";
+                    }}
+                }}
+            }}
+            window.blueprintSetDebugDrawerOpen = setDebugDrawerOpen;
+            if (debugTab) {{
+                debugTab.addEventListener("click", function(event) {{
+                    event.preventDefault();
+                    setDebugDrawerOpen(!debugPanel.classList.contains("blueprint-debug-open"));
+                }});
+            }}
+            if (debugPanel) {{
+                var debugHeader = debugPanel.querySelector(".blueprint-panel-header");
+                if (debugHeader) {{
+                    debugHeader.addEventListener("click", function() {{
+                        window.setTimeout(function() {{
+                            if (debugPanel.classList.contains("blueprint-collapsed")) {{
+                                setDebugDrawerOpen(false);
+                            }}
+                        }}, 0);
+                    }});
+                }}
+            }}
+            document.querySelectorAll("[data-route-checkbox]").forEach(function(checkbox) {{
+                checkbox.addEventListener("change", function() {{
+                    syncCheckboxState();
+                }});
+            }});
+            document.querySelectorAll("[data-route-action]").forEach(function(button) {{
+                button.addEventListener("click", function(event) {{
+                    var action = event.currentTarget.getAttribute("data-route-action");
+                    if (action === "clear") {{
+                        setAllChecked(false);
+                    }} else if (action === "balanced") {{
+                        setOnly(function(route) {{ return route.control_id === "traveler_balanced"; }});
+                    }} else if (action === "trip_length") {{
+                        setOnly(function(route) {{ return routeHasQuickGroup(route, "trip_length"); }});
+                    }} else if (action === "method") {{
+                        setOnly(function(route) {{ return routeHasQuickGroup(route, "method"); }});
+                    }} else if (action === "traveler") {{
+                        setOnly(function(route) {{ return routeHasQuickGroup(route, "traveler"); }});
+                    }} else if (action === "city_detail") {{
+                        setOnly(function(route) {{
+                            return route.control_id === "traveler_balanced" || routeHasQuickGroup(route, "city_detail");
+                        }});
+                    }}
+                    syncCheckboxState();
+                    if (action === "zoom" || action !== "clear") {{
+                        zoomToCheckedRoutes();
+                    }}
+                }});
+            }});
+        }}
+
+        function bootstrapRouteSelector(attempt) {{
+            attachRouteControlListeners();
+            hiddenLayerVars.forEach(function(layerVar) {{
+                removeLayer(getLayerByName(layerVar));
+            }});
+            var ready = syncCheckboxState();
+            if (ready) {{
+                zoomToCheckedRoutes();
+                return;
+            }}
+            if (attempt < 60) {{
+                window.setTimeout(function() {{
+                    bootstrapRouteSelector(attempt + 1);
+                }}, 120);
+            }}
+        }}
+
+        window.blueprintMapDebug = {{
+            registry: registry,
+            hiddenLayerVars: hiddenLayerVars,
+            syncCheckboxState: syncCheckboxState,
+            zoomToCheckedRoutes: zoomToCheckedRoutes,
+            routeById: routeById
+        }};
+
+        if (document.readyState === "loading") {{
+            document.addEventListener("DOMContentLoaded", function() {{
+                bootstrapRouteSelector(0);
+            }});
+        }} else {{
+            bootstrapRouteSelector(0);
+        }}
+        window.addEventListener("load", function() {{
+            bootstrapRouteSelector(0);
+        }});
+    }})();
+    """
+    map_object.get_root().html.add_child(folium.Element(controls_html))
+    map_object.get_root().script.add_child(folium.Element(controls_js))
+
+
+def _add_blueprint_panel_behavior(map_object):
+    behavior_js = """
+    (function() {
+        function clamp(value, minValue, maxValue) {
+            return Math.max(minValue, Math.min(maxValue, value));
+        }
+
+        function setCollapsed(panel, collapsed) {
+            var header = panel.querySelector('.blueprint-panel-header');
+            var chevron = panel.querySelector('.blueprint-panel-chevron');
+            panel.classList.toggle('blueprint-collapsed', collapsed);
+            if (header) {
+                header.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
+            }
+            if (chevron) {
+                chevron.textContent = collapsed ? '+' : '-';
+            }
+        }
+
+        function initPanel(panel) {
+            if (!panel || panel.dataset.blueprintPanelReady) {
+                return;
+            }
+            panel.dataset.blueprintPanelReady = '1';
+            var header = panel.querySelector('.blueprint-panel-header');
+            if (!header) {
+                return;
+            }
+            if (window.L && L.DomEvent) {
+                L.DomEvent.disableClickPropagation(panel);
+                L.DomEvent.disableScrollPropagation(panel);
+            }
+            header.addEventListener('click', function(event) {
+                if (panel.dataset.dragSuppressClick === '1') {
+                    panel.dataset.dragSuppressClick = '0';
+                    event.preventDefault();
+                    return;
+                }
+                setCollapsed(panel, !panel.classList.contains('blueprint-collapsed'));
+            });
+            if (!panel.classList.contains('blueprint-draggable')) {
+                return;
+            }
+            var dragging = false;
+            var moved = false;
+            var startX = 0;
+            var startY = 0;
+            var startLeft = 0;
+            var startTop = 0;
+            header.addEventListener('pointerdown', function(event) {
+                if (event.button !== 0) {
+                    return;
+                }
+                dragging = true;
+                moved = false;
+                startX = event.clientX;
+                startY = event.clientY;
+                var rect = panel.getBoundingClientRect();
+                startLeft = rect.left;
+                startTop = rect.top;
+                panel.classList.add('blueprint-dragging');
+                header.setPointerCapture(event.pointerId);
+            });
+            header.addEventListener('pointermove', function(event) {
+                if (!dragging) {
+                    return;
+                }
+                var dx = event.clientX - startX;
+                var dy = event.clientY - startY;
+                if (Math.abs(dx) + Math.abs(dy) > 4) {
+                    moved = true;
+                }
+                var maxLeft = Math.max(8, window.innerWidth - panel.offsetWidth - 8);
+                var maxTop = Math.max(8, window.innerHeight - panel.offsetHeight - 8);
+                panel.style.left = clamp(startLeft + dx, 8, maxLeft) + 'px';
+                panel.style.top = clamp(startTop + dy, 8, maxTop) + 'px';
+                panel.style.right = 'auto';
+                panel.style.bottom = 'auto';
+            });
+            function stopDrag(event) {
+                if (!dragging) {
+                    return;
+                }
+                dragging = false;
+                panel.classList.remove('blueprint-dragging');
+                panel.dataset.dragSuppressClick = moved ? '1' : '0';
+                try {
+                    header.releasePointerCapture(event.pointerId);
+                } catch (err) {}
+            }
+            header.addEventListener('pointerup', stopDrag);
+            header.addEventListener('pointercancel', stopDrag);
+        }
+
+        function initBlueprintPanels() {
+            document.querySelectorAll('.blueprint-floating-panel').forEach(initPanel);
+        }
+
+        window.initBlueprintPanels = initBlueprintPanels;
+        window.setTimeout(initBlueprintPanels, 50);
+        window.setTimeout(initBlueprintPanels, 500);
+        window.addEventListener('resize', function() {
+            document.querySelectorAll('.blueprint-floating-panel').forEach(function(panel) {
+                var rect = panel.getBoundingClientRect();
+                if (rect.right > window.innerWidth || rect.bottom > window.innerHeight) {
+                    panel.style.left = clamp(rect.left, 8, Math.max(8, window.innerWidth - panel.offsetWidth - 8)) + 'px';
+                    panel.style.top = clamp(rect.top, 8, Math.max(8, window.innerHeight - panel.offsetHeight - 8)) + 'px';
+                    panel.style.right = 'auto';
+                    panel.style.bottom = 'auto';
+                }
+            });
+        });
+    })();
+    """
+    map_object.get_root().script.add_child(folium.Element(behavior_js))
 
 
 def _build_day_panel(day_plan_df):
@@ -2808,6 +3779,7 @@ def build_production_trip_map(context, output_path=None, run_live_routing=None):
 
     run_live = bool(context.get("RUN_LIVE_APIS", False) if run_live_routing is None else run_live_routing)
     route_debug_rows = []
+    route_debug_registry = []
 
     trip = context["best_hierarchical_trip"]
     city_sequence = _trip_sequence_with_pass_through(trip)
@@ -2858,8 +3830,10 @@ def build_production_trip_map(context, output_path=None, run_live_routing=None):
     _add_route_panes(trip_map)
     plugins.Fullscreen(position="topleft", title="Expand map", title_cancel="Exit full screen").add_to(trip_map)
 
-    show_full_scene_default = bool(context.get("SHOW_FULL_SCENE_DEFAULT", True))
-    show_context_routes = show_full_scene_default or bool(context.get("SHOW_CONTEXT_ROUTES_BY_DEFAULT", True))
+    route_only_debug_view = bool(context.get("MAP_ROUTE_ONLY_DEBUG_VIEW", False))
+    balanced_only_default_view = bool(context.get("MAP_BALANCED_ONLY_DEFAULT_VIEW", True))
+    hide_detail_layers_on_load = route_only_debug_view or balanced_only_default_view
+    show_context_routes = bool(context.get("SHOW_CONTEXT_ROUTES_BY_DEFAULT", False)) and not hide_detail_layers_on_load
     fastest_rows, fastest_path, fastest_layer = _add_intercity_route_layer(
         trip_map,
         "Fastest inter-city route",
@@ -2906,6 +3880,29 @@ def build_production_trip_map(context, output_path=None, run_live_routing=None):
         route_start_city=scenic_sequence[0] if scenic_sequence else "",
         route_end_city=scenic_sequence[-1] if scenic_sequence else "",
     )
+    for control_id, label, layer, path, color in [
+        ("context_fastest", "Fastest inter-city route", fastest_layer, fastest_path, FASTEST_ROUTE_COLOR),
+        ("context_scenic", "Scenic CA-1 / PCH route", scenic_layer, scenic_path, SCENIC_CA1_COLOR),
+    ]:
+        if layer is not None and path:
+            route_debug_registry.append(
+                {
+                    "label": label,
+                    "control_label": label,
+                    "control_id": control_id,
+                    "family": "context",
+                    "color": color,
+                    "pane": ROUTE_CONTEXT_PANE,
+                    "layer_var": layer.get_name(),
+                    "offset_index": 0,
+                    "default_checked": False,
+                    "default_visible": False,
+                    "quick_groups": ["context"],
+                    "distance_km": round(float(_route_distance_km(_dedupe_route_points(path))), 3),
+                    "unique_points": len(_dedupe_route_points(path)),
+                    "bounds": _route_bounds(path),
+                }
+            )
     intercity_legs_df = pd.DataFrame(fastest_rows + scenic_rows)
     intercity_legs_df.to_csv(output_dir / "production_intercity_legs.csv", index=False)
     all_points.extend(fastest_path + scenic_path)
@@ -3011,7 +4008,8 @@ def build_production_trip_map(context, output_path=None, run_live_routing=None):
             else:
                 day_label_city = overnight_city
             layer_name = f"{config['label']} · Day {int(day)} · {day_label_city}"
-            day_layer = folium.FeatureGroup(name=layer_name, show=bool(config["show"]))
+            show_profile_day_layer = bool(config["show"]) and not hide_detail_layers_on_load
+            day_layer = folium.FeatureGroup(name=layer_name, show=show_profile_day_layer)
             hotel_point = [float(first["hotel_latitude"]), float(first["hotel_longitude"])]
             route_start_point = [
                 float(first.get("route_start_latitude", first["hotel_latitude"])),
@@ -3060,7 +4058,7 @@ def build_production_trip_map(context, output_path=None, run_live_routing=None):
                 available_visit_minutes=first.get("available_visit_minutes", np.nan),
                 points=day_points,
                 geometry_mode=day_route_mode,
-                show_by_default=bool(config["show"]),
+                show_by_default=show_profile_day_layer,
                 source_rows=len(group),
             )
 
@@ -3156,23 +4154,37 @@ def build_production_trip_map(context, output_path=None, run_live_routing=None):
         output_dir,
         route_cache,
         run_live,
-        show_by_default=show_full_scene_default or bool(context.get("SHOW_COMPARISON_LAYERS_BY_DEFAULT", False)),
+        show_by_default=bool(context.get("SHOW_COMPARISON_LAYERS_BY_DEFAULT", False)) and not hide_detail_layers_on_load,
         route_debug_rows=route_debug_rows,
     )
-    selected_result_layer = _add_selected_result_layer(trip_map, day_plan_df, route_debug_rows=route_debug_rows)
+    selected_result_layer = _add_selected_result_layer(
+        trip_map,
+        day_plan_df,
+        route_debug_rows=route_debug_rows,
+        show_by_default=bool(context.get("SHOW_SELECTED_RESULT_BY_DEFAULT", False)) and not hide_detail_layers_on_load,
+    )
     traveler_overview_layers = _add_traveler_overview_layers(
         trip_map,
         profile_day_plans,
         route_debug_rows=route_debug_rows,
-        show_by_default=show_full_scene_default or bool(context.get("SHOW_TRAVELER_OVERVIEWS_BY_DEFAULT", True)),
+        show_by_default=bool(context.get("SHOW_TRAVELER_OVERVIEWS_BY_DEFAULT", False)) and not hide_detail_layers_on_load,
     )
-    full_scene_layer = _add_full_scene_overview_layer(
+    full_route_layers = _add_full_scene_overview_layer(
         trip_map,
         output_dir=output_dir,
         fastest_path=fastest_path,
         scenic_path=scenic_path,
         profile_day_plans=profile_day_plans,
         route_debug_rows=route_debug_rows,
+        route_debug_registry=route_debug_registry,
+    )
+    city_detail_layers = _add_city_detail_layers(
+        trip_map,
+        day_plan_df,
+        route_cache,
+        run_live,
+        route_debug_rows=route_debug_rows,
+        route_debug_registry=route_debug_registry,
     )
     for comparison_path in [
         output_dir / "production_trip_length_route_stops.csv",
@@ -3192,10 +4204,72 @@ def build_production_trip_map(context, output_path=None, run_live_routing=None):
 
     panel_html = f"""
     <style>
-    #blueprint-result-panel {{
-        position: fixed; top: 82px; right: 18px; width: 520px; max-height: calc(100vh - 36px); overflow-y: auto;
+    .blueprint-floating-panel {{
+        position: fixed;
         background: rgba(255,255,255,0.97); border: 1px solid #CFCFCF; border-radius: 8px;
-        box-shadow: 0 2px 10px rgba(0,0,0,0.16); z-index: 9998; font-size: 11px; padding: 12px 14px; line-height: 1.38;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.16); font-size: 11px; line-height: 1.38;
+        overflow: hidden;
+    }}
+    .blueprint-panel-header {{
+        align-items: center;
+        background: rgba(248,250,252,0.98);
+        border: 0;
+        border-bottom: 1px solid #E5E7EB;
+        color: #2E2E2E;
+        cursor: pointer;
+        display: flex;
+        font: inherit;
+        font-size: 13px;
+        font-weight: 800;
+        justify-content: space-between;
+        padding: 9px 12px;
+        text-align: left;
+        width: 100%;
+    }}
+    .blueprint-panel-header:hover {{
+        background: #F1F5F9;
+    }}
+    .blueprint-panel-chevron {{
+        border: 1px solid #CBD5E1;
+        border-radius: 999px;
+        display: inline-flex;
+        height: 19px;
+        align-items: center;
+        justify-content: center;
+        margin-left: 10px;
+        width: 19px;
+    }}
+    .blueprint-panel-body {{
+        max-height: calc(100vh - 126px);
+        overflow-y: auto;
+        padding: 12px 14px;
+    }}
+    .blueprint-collapsed {{
+        max-height: 42px;
+    }}
+    .blueprint-collapsed .blueprint-panel-body {{
+        display: none;
+    }}
+    .blueprint-draggable .blueprint-panel-header {{
+        cursor: grab;
+    }}
+    .blueprint-dragging .blueprint-panel-header {{
+        cursor: grabbing;
+    }}
+    #blueprint-result-panel {{
+        top: 82px; right: 18px; width: 520px; z-index: 9998;
+    }}
+    #blueprint-result-panel.blueprint-collapsed {{
+        width: 265px;
+    }}
+    #blueprint-map-legend {{
+        bottom: 46px;
+        left: 14px;
+        width: 310px;
+        z-index: 9997;
+    }}
+    #blueprint-map-legend.blueprint-collapsed {{
+        width: 230px;
     }}
     #blueprint-result-panel .panel-title {{ font-weight: 700; font-size: 14px; margin-bottom: 3px; }}
     #blueprint-result-panel .panel-subtitle {{ color:#5c5c5c; margin-bottom: 10px; }}
@@ -3213,8 +4287,12 @@ def build_production_trip_map(context, output_path=None, run_live_routing=None):
     #blueprint-result-panel ol {{ margin: 6px 0 0 18px; padding: 0; }}
     #blueprint-result-panel li {{ margin: 2px 0; overflow-wrap: anywhere; }}
     </style>
-    <div id="blueprint-result-panel">
-        <div class="panel-title">California Itinerary Dashboard</div>
+    <div id="blueprint-result-panel" class="blueprint-floating-panel blueprint-draggable blueprint-collapsed" data-panel-id="dashboard">
+        <button class="blueprint-panel-header" type="button" aria-expanded="false">
+            <span>California Itinerary Dashboard</span>
+            <span class="blueprint-panel-chevron">+</span>
+        </button>
+        <div class="blueprint-panel-body">
         <div class="panel-subtitle">Hierarchical day allocation + hybrid bandit/optimization route search</div>
         <div class="summary-line"><b>Default displayed plan:</b> {main_trip_days}-day Balanced route</div>
         <div class="summary-line"><b>Gateway:</b> {_escape(trip['gateway_start'])} → {_escape(trip['gateway_end'])}</div>
@@ -3224,7 +4302,7 @@ def build_production_trip_map(context, output_path=None, run_live_routing=None):
         <div class="summary-line"><b>CA-1 note:</b> San Francisco → Stanford → Santa Cruz is a Silicon Valley detour / connector, not CA-1. Coastal legs after Santa Cruz use CA-1 / PCH where available, with US-101/local connectors where necessary.</div>
         <div class="summary-line"><b>Bandit strategy:</b> <span class="strategy-pill">{_escape(bandit_strategy)}</span></div>
         <div class="summary-line"><b>Posterior reward:</b> {_escape(f"{bandit_reward:.3f}" if np.isfinite(bandit_reward) else "n/a")}</div>
-        <div class="summary-line"><b>Layer toggles:</b> open the left layer control to switch among 7/9/12-day routes, hierarchical/greedy/bandit comparison routes, traveler profiles, candidate hotels, and social must-go markers.</div>
+        <div class="summary-line"><b>Route selector:</b> use the draggable checkbox panel to show 7/9/12-day routes, hierarchical/greedy/bandit routes, traveler profiles, detailed city/day routes, and context layers only when needed.</div>
         {route_debug_summary_html}
         {_build_html_data_source_summary(output_dir)}
         {_build_method_comparison_html(method_comparison_df)}
@@ -3236,14 +4314,19 @@ def build_production_trip_map(context, output_path=None, run_live_routing=None):
             <tbody>{_build_profile_comparison(profile_day_plans)}</tbody>
         </table>
         {_build_day_panel(day_plan_df)}
+        </div>
     </div>
     """
     trip_map.get_root().html.add_child(folium.Element(panel_html))
 
     legend_html = """
-    <div id="blueprint-map-legend">
-    <div style="font-weight:700; margin-bottom:8px;">Blueprint Map Layers</div>
-    <div><span style="display:inline-block;width:16px;border-top:6px solid #111827;margin-right:8px;vertical-align:middle;"></span>Full Scene · Always Visible Route Overview</div>
+    <div id="blueprint-map-legend" class="blueprint-floating-panel blueprint-collapsed" data-panel-id="legend">
+    <button class="blueprint-panel-header" type="button" aria-expanded="false">
+        <span>Blueprint Map Layers</span>
+        <span class="blueprint-panel-chevron">+</span>
+    </button>
+    <div class="blueprint-panel-body">
+    <div><span style="display:inline-block;width:16px;border-top:5px solid #DB2777;margin-right:8px;vertical-align:middle;"></span>Balanced full route (default)</div>
     <div><span style="display:inline-block;width:16px;border-top:5px solid #2563EB;margin-right:8px;vertical-align:middle;"></span>Selected Result · Default Hierarchical Route</div>
     <div><span style="display:inline-block;width:16px;border-top:4px solid #2A9D8F;margin-right:8px;vertical-align:middle;"></span>Scenic CA-1 / PCH route</div>
     <div><span style="display:inline-block;width:16px;border-top:4px dashed #6C757D;margin-right:8px;vertical-align:middle;"></span>Fastest inter-city route</div>
@@ -3253,21 +4336,23 @@ def build_production_trip_map(context, output_path=None, run_live_routing=None):
     <div><span style="display:inline-block;width:12px;height:12px;border-radius:50%;background:#F4A261;margin-right:8px;"></span>Social must-go candidate</div>
     <div><span style="display:inline-block;width:12px;height:12px;border-radius:50%;background:#4C78A8;margin-right:8px;"></span>Daily attraction stop</div>
     <div><span style="display:inline-block;width:16px;border-top:4px solid #2563EB;margin-right:8px;vertical-align:middle;"></span>Trip Length · 7-Day Hierarchical Route</div>
-    <div><span style="display:inline-block;width:16px;border-top:4px solid #F4A261;margin-right:8px;vertical-align:middle;"></span>Trip Length · 9-Day Hierarchical Route</div>
-    <div><span style="display:inline-block;width:16px;border-top:4px solid #7A5195;margin-right:8px;vertical-align:middle;"></span>Trip Length · 12-Day Hierarchical Route</div>
-    <div><span style="display:inline-block;width:16px;border-top:4px solid #2563EB;margin-right:8px;vertical-align:middle;"></span>Method · Hierarchical Gurobi Pipeline</div>
-    <div><span style="display:inline-block;width:16px;border-top:4px dashed #6C757D;margin-right:8px;vertical-align:middle;"></span>Method · Hierarchical Greedy Baseline</div>
-    <div><span style="display:inline-block;width:16px;border-top:4px solid #5FAD56;margin-right:8px;vertical-align:middle;"></span>Method · Hierarchical + Bandit + Small Gurobi Repair</div>
+    <div><span style="display:inline-block;width:16px;border-top:4px solid #F97316;margin-right:8px;vertical-align:middle;"></span>Trip Length · 9-Day Hierarchical Route</div>
+    <div><span style="display:inline-block;width:16px;border-top:4px solid #7C3AED;margin-right:8px;vertical-align:middle;"></span>Trip Length · 12-Day Hierarchical Route</div>
+    <div><span style="display:inline-block;width:16px;border-top:4px solid #0284C7;margin-right:8px;vertical-align:middle;"></span>Method · Hierarchical Gurobi Pipeline</div>
+    <div><span style="display:inline-block;width:16px;border-top:4px dashed #111827;margin-right:8px;vertical-align:middle;"></span>Method · Hierarchical Greedy Baseline</div>
+    <div><span style="display:inline-block;width:16px;border-top:4px solid #16A34A;margin-right:8px;vertical-align:middle;"></span>Method · Hierarchical + Bandit + Small Gurobi Repair</div>
     <div><span style="display:inline-block;width:16px;border-top:4px dashed #2A9D8F;margin-right:8px;vertical-align:middle;"></span>Traveler · Relaxed Full Route</div>
-    <div><span style="display:inline-block;width:16px;border-top:4px solid #2563EB;margin-right:8px;vertical-align:middle;"></span>Traveler · Balanced Full Route</div>
-    <div><span style="display:inline-block;width:16px;border-top:4px dotted #7A5195;margin-right:8px;vertical-align:middle;"></span>Traveler · Explorer Full Route</div>
-    <div style="margin-top:8px; color:#555;">The full-scene overview is always visible above the basemap; detailed comparison layers can still be toggled in the layer control.</div>
+    <div><span style="display:inline-block;width:16px;border-top:4px solid #DB2777;margin-right:8px;vertical-align:middle;"></span>Traveler · Balanced Full Route</div>
+    <div><span style="display:inline-block;width:16px;border-top:4px dotted #A855F7;margin-right:8px;vertical-align:middle;"></span>Traveler · Explorer Full Route</div>
+    <div style="margin-top:8px; color:#555;">Use the Route Selector checkboxes to show comparison families or detailed city/day routes only when needed.</div>
+    </div>
     </div>
     """
     trip_map.get_root().html.add_child(folium.Element(legend_html))
 
     grouped_layers = {
-        "Full Scene": [full_scene_layer] if full_scene_layer is not None else [],
+        "Full Routes": full_route_layers,
+        "City Details": city_detail_layers,
         "Selected Result": [selected_result_layer] if selected_result_layer is not None else [],
         "Routes": [scenic_layer, fastest_layer],
         "Map Context": [social_layer, candidate_hotel_layer],
@@ -3278,6 +4363,20 @@ def build_production_trip_map(context, output_path=None, run_live_routing=None):
     }
     grouped_layers.update(comparison_layers)
     grouped_layers = {name: layers for name, layers in grouped_layers.items() if layers}
+    unchecked_default_layers = [
+        fastest_layer,
+        scenic_layer,
+        selected_result_layer,
+        social_layer,
+        candidate_hotel_layer,
+        *traveler_overview_layers,
+        *city_detail_layers,
+    ]
+    unchecked_default_layers.extend([layer for layer in full_route_layers if layer is not None and not getattr(layer, "show", False)])
+    for layers in comparison_layers.values():
+        unchecked_default_layers.extend(layers)
+    for layers in profile_layer_groups.values():
+        unchecked_default_layers.extend(layers)
     plugins.GroupedLayerControl(
         grouped_layers,
         exclusive_groups=False,
@@ -3286,6 +4385,8 @@ def build_production_trip_map(context, output_path=None, run_live_routing=None):
         collapsed=True,
     ).add_to(trip_map)
     _add_layer_control_overlap_guard(trip_map)
+    _add_route_debug_controls(trip_map, route_debug_registry, unchecked_default_layers)
+    _add_blueprint_panel_behavior(trip_map)
     bounds_points = fit_points or all_points
     if bounds_points:
         trip_map.fit_bounds(bounds_points, padding=(40, 40))

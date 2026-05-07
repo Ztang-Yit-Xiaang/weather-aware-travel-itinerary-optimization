@@ -62,7 +62,6 @@ DEFAULT_CONFIG = {
         "pass_through_city_bonus_weight": 0.18,
         "base_switch_penalty": 0.07,
         "max_pois_per_day": 4,
-        "run_original_yelp_only_baseline": True,
     },
     "bandit": {
         "enabled": True,

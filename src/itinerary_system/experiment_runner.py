@@ -16,7 +16,7 @@ from .budget import estimate_budget_range
 from .config import TripConfig, save_resolved_config
 from .data_enrichment import build_enriched_catalog
 from .diversity import diversity_audit_row
-from .hierarchical_gurobi import solve_hierarchical_trip_with_gurobi
+from .hierarchical_gurobi import solve_hierarchical_trip_with_gurobi, solve_hierarchical_trip_with_greedy
 from .route_gurobi_oracle import solve_enriched_route_with_gurobi
 
 
@@ -337,6 +337,66 @@ def _route_metrics_from_stops(frame: pd.DataFrame) -> dict:
     }
 
 
+def _minmax_component(series: pd.Series, *, higher_is_better: bool) -> pd.Series:
+    values = pd.to_numeric(series, errors="coerce")
+    finite = values.dropna()
+    if finite.empty:
+        return pd.Series(np.nan, index=series.index)
+    min_value = float(finite.min())
+    max_value = float(finite.max())
+    if abs(max_value - min_value) < 1e-9:
+        return pd.Series(np.where(values.notna(), 1.0, np.nan), index=series.index)
+    normalized = (values - min_value) / (max_value - min_value)
+    if not higher_is_better:
+        normalized = 1.0 - normalized
+    return normalized.clip(lower=0.0, upper=1.0)
+
+
+def _add_method_comparison_scores(method_df: pd.DataFrame) -> pd.DataFrame:
+    """Add mathematically explained normalized comparison metrics.
+
+    Score = 0.40 U' + 0.15 M' + 0.15 H + 0.15 T' + 0.10 C' + 0.05 W'.
+    Lower-is-better metrics are inverted during min-max normalization. If all
+    waiting values are missing, the waiting weight is omitted and the remaining
+    weights are renormalized.
+    """
+    if method_df.empty:
+        return method_df
+    output = method_df.copy()
+    output["utility_norm"] = _minmax_component(output.get("total_utility", pd.Series(index=output.index)), higher_is_better=True)
+    output["must_go_norm"] = _minmax_component(output.get("must_go_count", pd.Series(index=output.index)), higher_is_better=True)
+    output["diversity_norm"] = pd.to_numeric(output.get("diversity_score", pd.Series(index=output.index)), errors="coerce").clip(lower=0.0, upper=1.0)
+    output["travel_efficiency_norm"] = _minmax_component(output.get("total_travel_time", pd.Series(index=output.index)), higher_is_better=False)
+    output["cost_efficiency_norm"] = _minmax_component(output.get("total_cost", output.get("budget_used", pd.Series(index=output.index))), higher_is_better=False)
+    output["waiting_efficiency_norm"] = _minmax_component(output.get("total_waiting_time", pd.Series(index=output.index)), higher_is_better=False)
+    components = {
+        "utility_norm": 0.40,
+        "must_go_norm": 0.15,
+        "diversity_norm": 0.15,
+        "travel_efficiency_norm": 0.15,
+        "cost_efficiency_norm": 0.10,
+        "waiting_efficiency_norm": 0.05,
+    }
+    scores = []
+    for idx, row in output.iterrows():
+        used_weight = 0.0
+        score_value = 0.0
+        for column, weight in components.items():
+            value = row.get(column, np.nan)
+            if pd.isna(value):
+                continue
+            used_weight += float(weight)
+            score_value += float(weight) * float(value)
+        scores.append(score_value / used_weight if used_weight > 0 else np.nan)
+    output["comparison_score"] = scores
+    output["comparison_score_formula"] = (
+        "0.40*utility_norm + 0.15*must_go_norm + 0.15*diversity_norm + "
+        "0.15*travel_efficiency_norm + 0.10*cost_efficiency_norm + 0.05*waiting_efficiency_norm; "
+        "available components are renormalized if a metric is missing"
+    )
+    return output
+
+
 def _buffered_budget_value(budget_df: pd.DataFrame) -> float:
     if budget_df.empty or "component" not in budget_df.columns:
         return np.nan
@@ -452,9 +512,19 @@ METHOD_DISPLAY_NAMES = {
     "hierarchical_bandit_gurobi_repair": "Hierarchical + Bandit + Small Gurobi Repair",
 }
 
+METHOD_SOLVER_ROLES = {
+    "hierarchical_gurobi_pipeline": ("gurobi_master", "legacy_local_gurobi"),
+    "hierarchical_greedy_baseline": ("greedy_master", "greedy_local_route"),
+    "hierarchical_bandit_gurobi_repair": ("bandit_master", "small_gurobi_repair"),
+}
+
 
 def _method_display_name(method: str) -> str:
     return METHOD_DISPLAY_NAMES.get(str(method), str(method))
+
+
+def _method_solver_roles(method: str) -> tuple[str, str]:
+    return METHOD_SOLVER_ROLES.get(str(method), ("unknown_allocation", "unknown_local_route"))
 
 
 def _comparison_route_stop_columns() -> list[str]:
@@ -1262,6 +1332,8 @@ def _bandit_route_stop_rows(
     summary_row = {
         "method": method,
         "method_display_name": method_display_name,
+        "allocation_solver": "bandit_master",
+        "local_route_solver": "small_gurobi_repair",
         "trip_days": get_canonical_trip_days(config, best_trip),
         "gateway_start": best_trip.get("gateway_start"),
         "gateway_end": best_trip.get("gateway_end"),
@@ -1278,6 +1350,7 @@ def _bandit_route_stop_rows(
         "selected_attractions": 0,
         "must_go_count": 0,
         "diversity_score": np.nan,
+        "comparison_score": np.nan,
         "objective": np.nan,
         "posterior_reward": np.nan,
         "solve_seconds": np.nan,
@@ -1333,6 +1406,8 @@ def _bandit_route_stop_rows(
     summary_row.update(
         {
             **_trip_summary_fields(bandit_trip),
+            "allocation_solver": "bandit_master",
+            "local_route_solver": "small_gurobi_repair",
             "trip_days": get_canonical_trip_days(config, bandit_trip),
             "total_budget": route_info.get("total_budget", canonical_budget["total_budget"]),
             "budget_used": float(repaired_total_cost),
@@ -1628,6 +1703,8 @@ def build_production_method_comparison(
     summary_columns = [
         "method",
         "method_display_name",
+        "allocation_solver",
+        "local_route_solver",
         "trip_days",
         "gateway_start",
         "gateway_end",
@@ -1644,6 +1721,14 @@ def build_production_method_comparison(
         "selected_attractions",
         "must_go_count",
         "diversity_score",
+        "utility_norm",
+        "must_go_norm",
+        "diversity_norm",
+        "travel_efficiency_norm",
+        "cost_efficiency_norm",
+        "waiting_efficiency_norm",
+        "comparison_score",
+        "comparison_score_formula",
         "objective",
         "posterior_reward",
         "solve_seconds",
@@ -1678,16 +1763,28 @@ def build_production_method_comparison(
     method_rows = []
     route_frames = []
 
-    def _finalize_method_row(method: str, route_stops: pd.DataFrame, route_info: dict, *, objective_value: float, posterior_reward: float, notes: str) -> dict:
+    def _finalize_method_row(
+        method: str,
+        route_stops: pd.DataFrame,
+        route_info: dict,
+        *,
+        trip_for_method: dict,
+        objective_value: float,
+        posterior_reward: float,
+        notes: str,
+    ) -> dict:
         metrics = _route_metrics_from_stops(route_stops)
-        intercity_minutes, intercity_distance = _intercity_route_metrics(best_trip)
+        intercity_minutes, intercity_distance = _intercity_route_metrics(trip_for_method)
         attraction_cost = _estimated_route_stop_cost(route_stops)
         total_cost = float(route_info.get("reserved_food_transport", 0.0)) + float(route_info.get("committed_hotel_cost", 0.0)) + float(attraction_cost)
+        allocation_solver, local_route_solver = _method_solver_roles(method)
         return {
             "method": method,
             "method_display_name": _method_display_name(method),
-            "trip_days": trip_days,
-            **_trip_summary_fields(best_trip),
+            "allocation_solver": allocation_solver,
+            "local_route_solver": local_route_solver,
+            "trip_days": get_canonical_trip_days(config, trip_for_method),
+            **_trip_summary_fields(trip_for_method),
             "total_budget": float(route_info.get("total_budget", get_canonical_trip_budget(config, budget_df))),
             "budget_used": float(total_cost),
             "budget_source": str(route_info.get("budget_source", _canonical_budget_value_and_source(config, budget_df)[1])),
@@ -1724,6 +1821,7 @@ def build_production_method_comparison(
             "hierarchical_gurobi_pipeline",
             hierarchical_route_stops,
             hierarchical_route_info,
+            trip_for_method=best_trip,
             objective_value=float(best_trip.get("objective", np.nan)),
             posterior_reward=np.nan,
             notes=(
@@ -1734,10 +1832,14 @@ def build_production_method_comparison(
     )
 
     try:
+        greedy_trip, _greedy_plan_df = solve_hierarchical_trip_with_greedy(config, city_summary_df)
+        greedy_context = dict(context)
+        greedy_context["OUTPUT_DIR"] = output_dir
+        greedy_context["best_hierarchical_trip"] = greedy_trip
         greedy_route_stops, greedy_route_info = _hierarchical_method_route_outputs(
-            context=hierarchical_context,
+            context=greedy_context,
             blueprint_trip_map=blueprint_trip_map,
-            trip=best_trip,
+            trip=greedy_trip,
             config=config,
             method="hierarchical_greedy_baseline",
             strategy_name="balanced",
@@ -1751,19 +1853,23 @@ def build_production_method_comparison(
                 "hierarchical_greedy_baseline",
                 greedy_route_stops,
                 greedy_route_info,
-                objective_value=float(greedy_route_info.get("objective", np.nan)),
+                trip_for_method=greedy_trip,
+                objective_value=float(greedy_trip.get("objective", greedy_route_info.get("objective", np.nan))),
                 posterior_reward=np.nan,
                 notes=(
-                    "Same hierarchical city/base/day structure as the main trip, with greedy local attraction "
-                    "selection and compact route ordering."
+                    "Greedy hierarchical baseline: greedy city/base/day allocation followed by greedy local "
+                    "attraction selection and compact route ordering."
                 ),
             )
         )
     except Exception as exc:
+        allocation_solver, local_route_solver = _method_solver_roles("hierarchical_greedy_baseline")
         method_rows.append(
             {
                 "method": "hierarchical_greedy_baseline",
                 "method_display_name": _method_display_name("hierarchical_greedy_baseline"),
+                "allocation_solver": allocation_solver,
+                "local_route_solver": local_route_solver,
                 "trip_days": trip_days,
                 **_trip_summary_fields(best_trip),
                 "total_budget": get_canonical_trip_budget(config, budget_df),
@@ -1801,7 +1907,26 @@ def build_production_method_comparison(
     method_df = pd.DataFrame(method_rows)
     for column in summary_columns:
         if column not in method_df.columns:
-            method_df[column] = np.nan if column not in {"method", "method_display_name", "gateway_start", "gateway_end", "city_sequence", "days_by_city", "budget_source", "status", "notes"} else ""
+            method_df[column] = (
+                ""
+                if column
+                in {
+                    "method",
+                    "method_display_name",
+                    "allocation_solver",
+                    "local_route_solver",
+                    "gateway_start",
+                    "gateway_end",
+                    "city_sequence",
+                    "days_by_city",
+                    "budget_source",
+                    "status",
+                    "notes",
+                    "comparison_score_formula",
+                }
+                else np.nan
+            )
+    method_df = _add_method_comparison_scores(method_df)
     preferred_order = {
         "hierarchical_gurobi_pipeline": 0,
         "hierarchical_greedy_baseline": 1,

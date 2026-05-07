@@ -165,6 +165,158 @@ def candidate_plans(config: TripConfig, city_catalog_summary_df: pd.DataFrame) -
     return plans
 
 
+def _score_hierarchical_plan(
+    config: TripConfig,
+    city_catalog_summary_df: pd.DataFrame,
+    *,
+    start_city: str,
+    end_city: str,
+    sequence: list[str],
+    allocation: dict[str, int],
+) -> dict:
+    value_exponent = float(config.get("optimization", "city_day_value_exponent", 0.82))
+    pass_through_weight = float(config.get("optimization", "pass_through_city_bonus_weight", 0.18))
+    base_switch_penalty = float(config.get("optimization", "base_switch_penalty", 0.07))
+    sequence_cities = unique_in_order(sequence)
+    base_cities = [city for city in sequence_cities if int(allocation.get(city, 0)) > 0]
+    pass_through_cities = [city for city in sequence_cities if city not in set(base_cities)]
+    leg_minutes = [drive_minutes_between_cities(sequence[i], sequence[i + 1]) for i in range(len(sequence) - 1)]
+    total_drive_minutes = float(sum(leg_minutes))
+    city_value = sum(
+        city_score(city, city_catalog_summary_df) * (float(days) ** value_exponent)
+        for city, days in allocation.items()
+    )
+    pass_through_value = pass_through_weight * sum(
+        city_score(city, city_catalog_summary_df)
+        for city in pass_through_cities
+    )
+    switch_penalty = base_switch_penalty * max(0, len(base_cities) - 2)
+    uncertainty_bonus = 0.03 * sum(data_uncertainty(city, city_catalog_summary_df) for city in allocation)
+    drive_penalty = 0.018 * total_drive_minutes / 60.0
+    endpoint_penalty = 0.10 if start_city == end_city else 0.0
+    objective = city_value + pass_through_value + uncertainty_bonus - drive_penalty - endpoint_penalty - switch_penalty
+    return {
+        "gateway_start": start_city,
+        "gateway_end": end_city,
+        "city_sequence": sequence,
+        "days_by_city": allocation,
+        "intercity_drive_minutes": total_drive_minutes,
+        "objective": float(objective),
+        "city_value_component": float(city_value),
+        "pass_through_value_component": float(pass_through_value),
+        "data_uncertainty_exploration_bonus": float(uncertainty_bonus),
+        "base_switch_penalty": float(switch_penalty),
+        "overnight_bases": list(allocation.keys()),
+        "pass_through_cities": pass_through_cities,
+        "pass_through_pois": pass_through_cities,
+        "problem_layer": "hierarchical_multicity_day_allocation",
+    }
+
+
+def solve_hierarchical_trip_with_greedy(config: TripConfig, city_catalog_summary_df: pd.DataFrame) -> tuple[dict, pd.DataFrame]:
+    """Greedily choose gateways/base cities/day counts for a method baseline.
+
+    This mirrors the hierarchical Gurobi pipeline shape without using the
+    Gurobi master decision. It first chooses base cities from each gateway
+    corridor by marginal city value, then allocates remaining days one at a
+    time to the base city with the highest diminishing-return gain.
+    """
+    total_days = int(config.get("trip", "trip_days", 7))
+    min_days = int(config.get("optimization", "min_days_per_base_city", 1))
+    max_days = int(config.get("optimization", "max_days_per_base_city", 3))
+    max_config_cities = int(config.get("optimization", "max_cities", 6))
+    value_exponent = float(config.get("optimization", "city_day_value_exponent", 0.82))
+    base_switch_penalty = float(config.get("optimization", "base_switch_penalty", 0.07))
+
+    greedy_plans = []
+    for start_city, end_city in build_gateway_scenarios(config):
+        sequence = DEFAULT_SCENARIO_ROUTES[(start_city, end_city)]
+        candidate_cities = unique_in_order(sequence)
+        mandatory = [start_city]
+        if end_city != start_city:
+            mandatory.append(end_city)
+        mandatory = [city for city in unique_in_order(mandatory) if city in candidate_cities]
+        min_base_count = max(len(mandatory), math.ceil(total_days / max(1, max_days)))
+        max_base_count = min(len(candidate_cities), max_config_cities, max(1, total_days // max(1, min_days)))
+        if min_base_count > max_base_count:
+            continue
+
+        selected = list(mandatory)
+        optional = [city for city in candidate_cities if city not in set(selected)]
+
+        def city_pick_score(city: str) -> float:
+            return (
+                city_score(city, city_catalog_summary_df)
+                + 0.03 * data_uncertainty(city, city_catalog_summary_df)
+                - base_switch_penalty
+            )
+
+        while len(selected) < min_base_count and optional:
+            next_city = max(optional, key=city_pick_score)
+            selected.append(next_city)
+            optional.remove(next_city)
+
+        while optional and len(selected) < max_base_count:
+            next_city = max(optional, key=city_pick_score)
+            if city_pick_score(next_city) <= 0.0:
+                break
+            selected.append(next_city)
+            optional.remove(next_city)
+
+        base_cities = [city for city in candidate_cities if city in set(selected)]
+        if total_days < len(base_cities) * min_days or total_days > len(base_cities) * max_days:
+            continue
+
+        allocation = {city: min_days for city in base_cities}
+        remaining_days = total_days - len(base_cities) * min_days
+        while remaining_days > 0:
+            feasible_cities = [city for city in base_cities if allocation[city] < max_days]
+            if not feasible_cities:
+                break
+            next_city = max(
+                feasible_cities,
+                key=lambda city: (
+                    city_score(city, city_catalog_summary_df)
+                    * ((allocation[city] + 1) ** value_exponent - allocation[city] ** value_exponent)
+                    + 0.01 * data_uncertainty(city, city_catalog_summary_df)
+                ),
+            )
+            allocation[next_city] += 1
+            remaining_days -= 1
+
+        if sum(allocation.values()) != total_days:
+            continue
+
+        plan = _score_hierarchical_plan(
+            config,
+            city_catalog_summary_df,
+            start_city=start_city,
+            end_city=end_city,
+            sequence=sequence,
+            allocation=allocation,
+        )
+        plan["optimizer_role"] = "hierarchical_greedy_master"
+        plan["solver_status"] = "greedy_heuristic"
+        greedy_plans.append(plan)
+
+    if not greedy_plans:
+        fallback_plans = candidate_plans(config, city_catalog_summary_df)
+        if not fallback_plans:
+            raise ValueError("No feasible hierarchical greedy candidate plans generated")
+        fallback = max(fallback_plans, key=lambda item: float(item["objective"]))
+        result = dict(fallback)
+        result["optimizer_role"] = "hierarchical_greedy_master"
+        result["solver_status"] = "greedy_fallback_to_enumeration"
+        plan_df = pd.DataFrame(fallback_plans).sort_values("objective", ascending=False).reset_index(drop=True)
+        plan_df["solver_status"] = result["solver_status"]
+        return result, plan_df
+
+    result = max(greedy_plans, key=lambda item: float(item["objective"]))
+    plan_df = pd.DataFrame(greedy_plans).sort_values("objective", ascending=False).reset_index(drop=True)
+    plan_df["solver_status"] = "greedy_heuristic"
+    return dict(result), plan_df
+
+
 def solve_hierarchical_trip_with_gurobi(config: TripConfig, city_catalog_summary_df: pd.DataFrame) -> tuple[dict, pd.DataFrame]:
     """Use Gurobi to choose the best pre-generated hierarchical plan.
 

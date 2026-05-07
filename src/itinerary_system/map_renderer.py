@@ -172,13 +172,16 @@ def _sanitize_production_map_context(
     merged_context["RUN_LIVE_APIS"] = bool(
         _config_get(config, "enrichment", "run_live_apis", default=False)
     )
-    # The notebook may carry an older "minimal default view" flag in memory.
-    # Force the production map to open with the full comparison scene visible;
-    # detailed layers can still be toggled off by the user in the layer control.
-    merged_context["SHOW_FULL_SCENE_DEFAULT"] = True
-    merged_context["SHOW_CONTEXT_ROUTES_BY_DEFAULT"] = True
-    merged_context["SHOW_COMPARISON_LAYERS_BY_DEFAULT"] = True
-    merged_context["SHOW_TRAVELER_OVERVIEWS_BY_DEFAULT"] = True
+    # The notebook may carry older "debug all routes" flags in memory.
+    # Force the clean first-open contract: only the Balanced full route is
+    # checked, with every comparison/detail route available in Route Selector.
+    merged_context["MAP_ROUTE_ONLY_DEBUG_VIEW"] = False
+    merged_context["MAP_BALANCED_ONLY_DEFAULT_VIEW"] = True
+    merged_context["SHOW_FULL_SCENE_DEFAULT"] = False
+    merged_context["SHOW_CONTEXT_ROUTES_BY_DEFAULT"] = False
+    merged_context["SHOW_COMPARISON_LAYERS_BY_DEFAULT"] = False
+    merged_context["SHOW_TRAVELER_OVERVIEWS_BY_DEFAULT"] = False
+    merged_context["SHOW_SELECTED_RESULT_BY_DEFAULT"] = False
 
     merged_context["MODEL_SETTINGS"] = {
         **merged_context.get("MODEL_SETTINGS", {}),
@@ -538,7 +541,10 @@ def build_map(
         trip_map.save(str(output_path))
         html_path = Path(output_path)
 
-    if html_path is not None and focus_points:
+    selector_owns_focus = bool(merged_context.get("MAP_ROUTE_ONLY_DEBUG_VIEW", False)) or bool(
+        merged_context.get("MAP_BALANCED_ONLY_DEFAULT_VIEW", False)
+    )
+    if html_path is not None and focus_points and not selector_owns_focus:
         _inject_final_focus_script(Path(html_path), focus_points)
 
     return trip_map, day_plan_df, html_path

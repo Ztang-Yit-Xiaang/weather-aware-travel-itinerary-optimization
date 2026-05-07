@@ -988,11 +988,16 @@ def solve_legacy_local_day_route(
     visit_raw = candidate_df.apply(estimate_local_route_visit_minutes, axis=1).astype(float).to_numpy()
     cost_raw = candidate_df.apply(estimate_local_route_cost, axis=1).astype(float).to_numpy()
     social_bonus = pd.to_numeric(candidate_df.get("social_score", 0.0), errors="coerce").fillna(0.0).to_numpy()
-    must_go_bonus = pd.to_numeric(candidate_df.get("social_must_go", False), errors="coerce").fillna(0.0).to_numpy()
+    must_go_flag = pd.to_numeric(candidate_df.get("social_must_go", False), errors="coerce").fillna(0.0).to_numpy()
+    must_go_weight_raw = pd.to_numeric(candidate_df.get("must_go_weight", 0.0), errors="coerce").fillna(0.0).to_numpy()
     detour_penalty = pd.to_numeric(candidate_df.get("detour_minutes", 0.0), errors="coerce").fillna(0.0).to_numpy()
     theme_series = candidate_df.apply(infer_content_theme, axis=1)
 
-    utility_signal = utility_raw + 0.45 * social_bonus + 0.20 * must_go_bonus - 0.005 * detour_penalty
+    solver_overrides = solver_overrides or {}
+    social_weight = float(solver_overrides.get("social_score_weight", 0.45))
+    must_go_weight = float(solver_overrides.get("must_go_bonus_weight", 0.85))
+    must_go_signal = np.maximum(must_go_weight_raw, must_go_flag) * np.maximum(social_bonus, must_go_flag)
+    utility_signal = utility_raw + social_weight * social_bonus + must_go_weight * must_go_signal - 0.005 * detour_penalty
     utility_norm = safe_minmax(utility_signal)
     waiting_norm = safe_minmax(waiting_raw)
     cost_penalty = safe_minmax(cost_raw) ** 0.7
@@ -1165,6 +1170,19 @@ def solve_legacy_local_day_route(
             gp.quicksum(waiting_raw[i] * x[i] for i in range(n_local)) <= max_wait * total_selected,
             name="max_wait",
         )
+        if bool(solver_overrides.get("must_go_is_mandatory", False)):
+            mandatory_indices = [
+                i
+                for i in range(n_local)
+                if bool(must_go_flag[i] > 0.5)
+                and float(visit_raw[i] + waiting_raw[i] + local_start[i] + local_return[i]) <= float(remaining_time)
+                and float(cost_raw[i]) <= float(remaining_budget)
+            ]
+            if mandatory_indices:
+                model.addConstr(
+                    gp.quicksum(x[i] for i in mandatory_indices) >= min(len(mandatory_indices), int(max_pois)),
+                    name="mandatory_must_go_coverage",
+                )
 
         for i in range(n_local):
             outgoing = gp.quicksum(y[i, j] for j in out_neighbors[i])

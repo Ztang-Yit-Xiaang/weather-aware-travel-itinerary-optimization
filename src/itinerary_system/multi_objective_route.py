@@ -13,8 +13,19 @@ from .config import TripConfig
 from .diversity import category_labels, submodular_diversity
 
 
-def poi_value(row: pd.Series) -> float:
-    return float(row.get("final_poi_value", row.get("utility_bayesian_ucb", row.get("source_score", 0.0))) or 0.0)
+def poi_value(row: pd.Series, config: TripConfig | None = None) -> float:
+    base_value = float(row.get("final_poi_value", row.get("utility_bayesian_ucb", row.get("source_score", 0.0))) or 0.0)
+    if config is None:
+        social_weight = 1.10
+        must_go_weight = 0.85
+    else:
+        social_weight = float(config.get("social", "social_score_weight", 1.10))
+        must_go_weight = float(config.get("social", "must_go_bonus_weight", 0.85))
+    social_score = float(row.get("social_score", 0.0) or 0.0)
+    row_must_go_weight = float(row.get("must_go_weight", 0.0) or 0.0)
+    is_must_go = 1.0 if bool(row.get("social_must_go", False)) else 0.0
+    must_go_signal = max(row_must_go_weight, is_must_go) * max(social_score, is_must_go)
+    return float(base_value + 0.08 * social_weight * social_score + 0.22 * must_go_weight * must_go_signal)
 
 
 def visit_minutes(row: pd.Series) -> float:
@@ -73,7 +84,7 @@ def route_stats(selected: list[int], pois: pd.DataFrame, depot: tuple[float, flo
     visit = sum(visit_minutes(pois.loc[idx]) for idx in selected)
     selected_frame = pois.loc[selected].copy()
     return {
-        "total_value": float(sum(poi_value(pois.loc[idx]) for idx in selected)),
+        "total_value": float(sum(poi_value(pois.loc[idx], config) for idx in selected)),
         "total_travel_minutes": float(travel),
         "total_visit_minutes": float(visit),
         "total_time_minutes": float(travel + visit),
@@ -115,7 +126,7 @@ def _greedy_epsilon_repair(candidate_df: pd.DataFrame, config: TripConfig, depot
             **stats,
         }
     pois["repair_score"] = pois.apply(
-        lambda row: poi_value(row)
+        lambda row: poi_value(row, config)
         + float(config.get("multi_objective", "diversity_bonus_weight", 0.12))
         - 0.004 * float(row.get("detour_minutes", 0.0) or 0.0)
         - 0.08 * _weather_risk(row),
@@ -182,7 +193,7 @@ def solve_multi_objective_route(
         depot = (float(pois["latitude"].mean()), float(pois["longitude"].mean()))
     max_pois = min(int(config.get("optimization", "max_pois_per_day", 4)), len(pois))
     constraints = _constraints(config, max_pois)
-    values = [poi_value(pois.loc[i]) for i in range(len(pois))]
+    values = [poi_value(pois.loc[i], config) for i in range(len(pois))]
     visit = [visit_minutes(pois.loc[i]) for i in range(len(pois))]
     costs = [_poi_cost(pois.loc[i], config) for i in range(len(pois))]
     detours = [float(pois.loc[i].get("detour_minutes", 0.0) or 0.0) for i in range(len(pois))]

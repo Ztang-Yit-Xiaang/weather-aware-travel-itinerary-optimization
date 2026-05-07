@@ -176,7 +176,15 @@ def _sanitize_production_map_context(
     # Force the clean first-open contract: only the Balanced full route is
     # checked, with every comparison/detail route available in Route Selector.
     merged_context["MAP_ROUTE_ONLY_DEBUG_VIEW"] = False
-    merged_context["MAP_BALANCED_ONLY_DEFAULT_VIEW"] = True
+    merged_context["MAP_BALANCED_ONLY_DEFAULT_VIEW"] = bool(
+        _config_get(config, "map", "balanced_only_default_view", default=True)
+    )
+    merged_context["MAP_REFRESH_ROAD_GEOMETRY"] = bool(
+        _config_get(config, "map", "refresh_road_geometry", default=False)
+    )
+    merged_context["MAP_SHOW_DEBUG_ON_LOAD"] = bool(
+        _config_get(config, "map", "show_debug_on_load", default=False)
+    )
     merged_context["SHOW_FULL_SCENE_DEFAULT"] = False
     merged_context["SHOW_CONTEXT_ROUTES_BY_DEFAULT"] = False
     merged_context["SHOW_COMPARISON_LAYERS_BY_DEFAULT"] = False

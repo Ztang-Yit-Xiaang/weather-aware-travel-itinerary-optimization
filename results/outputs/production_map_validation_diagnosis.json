@@ -1,10 +1,10 @@
 {
   "summary": {
-    "PASS": 96
+    "PASS": 110
   },
   "failed_checks": [],
   "warning_checks": [],
-  "conclusion": "PASS: route data, checkbox registry, balanced-only first-open state, directional arrows, city-detail layers, collapsible/draggable panels, and route panes all validate. The map is now controlled by selectable route layers rather than one always-on diagnostic bundle.",
+  "conclusion": "PASS: route data, checkbox registry, balanced-only first-open state, canvas-safe direction arrows, road-geometry diagnostics, must-go/hotel artifacts, city-detail layers, collapsible/draggable panels, and route panes all validate. The map is now controlled by selectable route layers without PolyLineTextPath under canvas rendering.",
   "root_cause_if_failures": "If route CSV checks pass but checkbox/default/arrow/city-detail checks fail, the issue is code/rendering sanity in the map notebook or renderer, not the optimization math.",
   "required_rendering_contract": {
     "default_route": "Only traveler_balanced / Balanced full route is checked and visible on first open.",

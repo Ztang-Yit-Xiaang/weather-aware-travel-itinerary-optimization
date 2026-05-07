@@ -231,6 +231,16 @@ def _load_frame_from_context_or_csv(context: dict, keys: list[str], path: str | 
     return pd.DataFrame()
 
 
+def _load_csv(path: str | Path) -> pd.DataFrame:
+    csv_path = Path(path)
+    if not csv_path.exists():
+        return pd.DataFrame()
+    try:
+        return pd.read_csv(csv_path)
+    except Exception:
+        return pd.DataFrame()
+
+
 def _parse_name_list(value) -> list[str]:
     if isinstance(value, list):
         return [str(item) for item in value if str(item).strip()]
@@ -337,6 +347,69 @@ def _route_metrics_from_stops(frame: pd.DataFrame) -> dict:
     }
 
 
+def _must_go_candidates_from_output(output_dir: Path, enriched_df: pd.DataFrame | None = None) -> pd.DataFrame:
+    candidates = _load_csv(output_dir / "production_social_must_go_candidates.csv")
+    if candidates.empty and enriched_df is not None and not enriched_df.empty:
+        candidates = enriched_df.copy()
+    if candidates.empty:
+        candidates = _load_csv(output_dir / "production_enriched_poi_catalog.csv")
+    if candidates.empty:
+        return pd.DataFrame()
+    candidates = candidates.copy()
+    if "social_must_go" not in candidates.columns:
+        candidates["social_must_go"] = False
+    candidates["social_must_go"] = candidates["social_must_go"].fillna(False).astype(bool)
+    candidates["social_score"] = pd.to_numeric(candidates.get("social_score", 0.0), errors="coerce").fillna(0.0)
+    candidates["must_go_weight"] = pd.to_numeric(candidates.get("must_go_weight", 0.0), errors="coerce").fillna(0.0)
+    candidates = candidates[candidates["social_must_go"] | candidates["social_score"].ge(0.70)].copy()
+    keep_columns = [
+        "name",
+        "city",
+        "latitude",
+        "longitude",
+        "category",
+        "source_list",
+        "social_score",
+        "social_must_go",
+        "must_go_weight",
+        "social_reason",
+    ]
+    for column in keep_columns:
+        if column not in candidates.columns:
+            candidates[column] = ""
+    return candidates[keep_columns].drop_duplicates("name").reset_index(drop=True)
+
+
+def _route_must_go_summary(route_stops: pd.DataFrame, must_go_candidates: pd.DataFrame, config: TripConfig) -> dict:
+    policy = "mandatory" if bool(config.get("social", "must_go_is_mandatory", False)) else "soft_reward_not_mandatory"
+    if must_go_candidates.empty:
+        return {
+            "must_go_total": 0,
+            "must_go_selected_count": 0,
+            "must_go_skipped_count": 0,
+            "must_go_coverage_ratio": np.nan,
+            "must_go_skipped_names": "",
+            "must_go_policy": policy,
+        }
+    selected_names = (
+        set(route_stops.get("attraction_name", pd.Series(dtype=str)).dropna().astype(str).tolist())
+        if not route_stops.empty
+        else set()
+    )
+    must_go_names = must_go_candidates["name"].dropna().astype(str).tolist()
+    selected = sorted(name for name in must_go_names if name in selected_names)
+    skipped = sorted(name for name in must_go_names if name not in selected_names)
+    total = len(must_go_names)
+    return {
+        "must_go_total": int(total),
+        "must_go_selected_count": int(len(selected)),
+        "must_go_skipped_count": int(len(skipped)),
+        "must_go_coverage_ratio": float(len(selected) / total) if total else np.nan,
+        "must_go_skipped_names": "; ".join(skipped),
+        "must_go_policy": policy,
+    }
+
+
 def _minmax_component(series: pd.Series, *, higher_is_better: bool) -> pd.Series:
     values = pd.to_numeric(series, errors="coerce")
     finite = values.dropna()
@@ -364,7 +437,8 @@ def _add_method_comparison_scores(method_df: pd.DataFrame) -> pd.DataFrame:
         return method_df
     output = method_df.copy()
     output["utility_norm"] = _minmax_component(output.get("total_utility", pd.Series(index=output.index)), higher_is_better=True)
-    output["must_go_norm"] = _minmax_component(output.get("must_go_count", pd.Series(index=output.index)), higher_is_better=True)
+    must_go_metric = output.get("must_go_selected_count", output.get("must_go_count", pd.Series(index=output.index)))
+    output["must_go_norm"] = _minmax_component(must_go_metric, higher_is_better=True)
     output["diversity_norm"] = pd.to_numeric(output.get("diversity_score", pd.Series(index=output.index)), errors="coerce").clip(lower=0.0, upper=1.0)
     output["travel_efficiency_norm"] = _minmax_component(output.get("total_travel_time", pd.Series(index=output.index)), higher_is_better=False)
     output["cost_efficiency_norm"] = _minmax_component(output.get("total_cost", output.get("budget_used", pd.Series(index=output.index))), higher_is_better=False)
@@ -550,6 +624,8 @@ def _comparison_route_stop_columns() -> list[str]:
         "source_list",
         "social_must_go",
         "social_score",
+        "must_go_weight",
+        "social_reason",
         "final_poi_value",
         "route_start_city",
         "route_start_name",
@@ -605,6 +681,8 @@ def _day_plan_to_comparison_route_stops(
         "source_list": output.get("attraction_source", output.get("source", "unknown")),
         "social_must_go": False,
         "social_score": 0.0,
+        "must_go_weight": 0.0,
+        "social_reason": "",
         "final_poi_value": source_score_default,
         "route_start_city": output.get("route_start_city", output.get("city", "")),
         "route_start_name": output.get("hotel_name", ""),
@@ -820,6 +898,8 @@ def _score_daily_candidate_pool(
         + weights["review"] * scored["review_norm"]
         + weights["social"] * scored["social_score"]
         + weights["must_go"] * scored["must_go_weight"]
+        + 0.18 * scored["social_must_go"].astype(float)
+        + 0.12 * scored["must_go_weight"] * scored["social_score"]
         + weights["corridor"] * scored["corridor_fit"]
         + weights["view"] * scored["view_signal"]
         + weights["local_city_bonus"] * scored["local_city_match"]
@@ -971,6 +1051,9 @@ def _solve_legacy_local_gurobi_day_route(
             "mip_gap_target": float(config.get("optimization", "gurobi_mip_gap", 0.05)),
             "max_travel": float(config.get("optimization", "max_travel_minutes", 90)),
             "gamma": float(config.get("optimization", "cost_penalty_weight", config.get("multi_objective", "secondary_travel_penalty", 0.01))),
+            "social_score_weight": float(config.get("social", "social_score_weight", 1.10)) * 0.45,
+            "must_go_bonus_weight": float(config.get("social", "must_go_bonus_weight", 0.85)),
+            "must_go_is_mandatory": bool(config.get("social", "must_go_is_mandatory", False)),
         },
     )
     selected_positions = [int(position) for position in route_result.get("selected_positions", [])]
@@ -1073,6 +1156,8 @@ def _build_route_rows_from_selected(
     output["social_must_go"] = output.get("social_must_go", False)
     output["social_must_go"] = output["social_must_go"].fillna(False).astype(bool)
     output["social_score"] = pd.to_numeric(output.get("social_score", 0.0), errors="coerce").fillna(0.0)
+    output["must_go_weight"] = pd.to_numeric(output.get("must_go_weight", 0.0), errors="coerce").fillna(0.0)
+    output["social_reason"] = output["social_reason"].fillna("") if "social_reason" in output.columns else ""
     output["final_poi_value"] = pd.to_numeric(output.get("final_poi_value", output.get("source_score", 0.0)), errors="coerce").fillna(0.0)
     output["route_start_city"] = previous_city
     output["route_start_name"] = route_start_name
@@ -1096,6 +1181,152 @@ def _intercity_route_metrics(trip: dict) -> tuple[float, float]:
     drive_minutes = float(trip.get("intercity_drive_minutes", 0.0) or 0.0)
     drive_distance_km = drive_minutes / 60.0 * 72.0 / 1.25 if drive_minutes > 0 else 0.0
     return drive_minutes, drive_distance_km
+
+
+def _write_must_go_coverage(
+    *,
+    output_dir: Path,
+    method_df: pd.DataFrame,
+    route_stops_df: pd.DataFrame,
+    must_go_candidates: pd.DataFrame,
+    config: TripConfig,
+) -> pd.DataFrame:
+    policy = "mandatory" if bool(config.get("social", "must_go_is_mandatory", False)) else "soft_reward_not_mandatory"
+    rows = []
+    if must_go_candidates.empty or method_df.empty:
+        coverage_df = pd.DataFrame(
+            columns=[
+                "method",
+                "method_display_name",
+                "must_go_name",
+                "city",
+                "social_score",
+                "must_go_weight",
+                "selected",
+                "status",
+                "selected_day",
+                "selected_stop_order",
+                "must_go_policy",
+                "social_reason",
+            ]
+        )
+        coverage_df.to_csv(output_dir / "production_must_go_coverage.csv", index=False)
+        return coverage_df
+
+    for method_row in method_df.itertuples(index=False):
+        method = str(getattr(method_row, "method", ""))
+        display = str(getattr(method_row, "method_display_name", method))
+        method_routes = route_stops_df[route_stops_df.get("method", pd.Series(dtype=str)).astype(str).eq(method)].copy()
+        selected_lookup = {}
+        if not method_routes.empty:
+            for stop in method_routes.itertuples(index=False):
+                selected_lookup[str(getattr(stop, "attraction_name", ""))] = stop
+        for candidate in must_go_candidates.itertuples(index=False):
+            name = str(getattr(candidate, "name", ""))
+            selected_stop = selected_lookup.get(name)
+            selected = selected_stop is not None
+            rows.append(
+                {
+                    "method": method,
+                    "method_display_name": display,
+                    "must_go_name": name,
+                    "city": str(getattr(candidate, "city", "")),
+                    "social_score": float(getattr(candidate, "social_score", 0.0) or 0.0),
+                    "must_go_weight": float(getattr(candidate, "must_go_weight", 0.0) or 0.0),
+                    "selected": bool(selected),
+                    "status": "selected" if selected else "skipped_soft_reward",
+                    "selected_day": int(getattr(selected_stop, "day", 0)) if selected else np.nan,
+                    "selected_stop_order": int(getattr(selected_stop, "stop_order", 0)) if selected else np.nan,
+                    "must_go_policy": policy,
+                    "social_reason": str(getattr(candidate, "social_reason", "")),
+                }
+            )
+    coverage_df = pd.DataFrame(rows)
+    coverage_df.to_csv(output_dir / "production_must_go_coverage.csv", index=False)
+    return coverage_df
+
+
+def _write_hotel_selection_debug(
+    *,
+    output_dir: Path,
+    route_stops_df: pd.DataFrame,
+    must_go_candidates: pd.DataFrame,
+) -> pd.DataFrame:
+    hotel_catalog = _load_csv(output_dir / "production_city_hotel_catalog.csv")
+    if hotel_catalog.empty:
+        hotel_catalog = _load_csv(output_dir / "osm_city_hotel_catalog.csv")
+    if hotel_catalog.empty:
+        debug_df = pd.DataFrame()
+        debug_df.to_csv(output_dir / "production_hotel_selection_debug.csv", index=False)
+        return debug_df
+
+    selected_pairs = set()
+    selected_by_city: dict[str, str] = {}
+    if not route_stops_df.empty:
+        for row in route_stops_df[["overnight_city", "hotel_name"]].dropna().drop_duplicates().itertuples(index=False):
+            city = str(getattr(row, "overnight_city", ""))
+            hotel = str(getattr(row, "hotel_name", ""))
+            selected_pairs.add((city, hotel))
+            selected_by_city.setdefault(city, hotel)
+
+    rows = []
+    for city, city_hotels in hotel_catalog.groupby("city", dropna=False):
+        city_name = str(city)
+        stop_points = route_stops_df[route_stops_df.get("overnight_city", pd.Series(dtype=str)).astype(str).eq(city_name)]
+        must_go_points = must_go_candidates[must_go_candidates.get("city", pd.Series(dtype=str)).astype(str).eq(city_name)]
+        for rank, hotel in enumerate(city_hotels.head(12).itertuples(index=False), start=1):
+            hotel_name = str(getattr(hotel, "name", f"{city_name} hotel"))
+            hotel_lat = float(getattr(hotel, "latitude", np.nan))
+            hotel_lon = float(getattr(hotel, "longitude", np.nan))
+            if not np.isfinite(hotel_lat) or not np.isfinite(hotel_lon):
+                continue
+            if not stop_points.empty:
+                stop_distance = float(
+                    stop_points.apply(
+                        lambda row: geodesic((hotel_lat, hotel_lon), (float(row["latitude"]), float(row["longitude"]))).km,
+                        axis=1,
+                    ).mean()
+                )
+            else:
+                stop_distance = np.nan
+            if not must_go_points.empty:
+                must_go_distance = float(
+                    must_go_points.apply(
+                        lambda row: geodesic((hotel_lat, hotel_lon), (float(row["latitude"]), float(row["longitude"]))).km,
+                        axis=1,
+                    ).mean()
+                )
+            else:
+                must_go_distance = np.nan
+            rating = float(getattr(hotel, "stars", getattr(hotel, "rating_score", 0.0)) or 0.0)
+            selected = (city_name, hotel_name) in selected_pairs
+            hotel_score = (
+                0.35 * rating
+                - 0.10 * (0.0 if pd.isna(stop_distance) else stop_distance)
+                - 0.08 * (0.0 if pd.isna(must_go_distance) else must_go_distance)
+                + (1.50 if selected else 0.0)
+                - 0.03 * rank
+            )
+            rows.append(
+                {
+                    "city": city_name,
+                    "hotel_name": hotel_name,
+                    "candidate_rank": int(rank),
+                    "selected": bool(selected),
+                    "selected_for_city": selected_by_city.get(city_name, ""),
+                    "latitude": hotel_lat,
+                    "longitude": hotel_lon,
+                    "source": str(getattr(hotel, "source", "unknown")),
+                    "rating_component": rating,
+                    "mean_distance_to_selected_stops_km": stop_distance,
+                    "mean_distance_to_must_go_km": must_go_distance,
+                    "hotel_score": float(hotel_score),
+                    "selected_hotel_reason": "selected route base" if selected else "candidate alternative",
+                }
+            )
+    debug_df = pd.DataFrame(rows).sort_values(["city", "selected", "hotel_score"], ascending=[True, False, False]).reset_index(drop=True)
+    debug_df.to_csv(output_dir / "production_hotel_selection_debug.csv", index=False)
+    return debug_df
 
 
 def _hierarchical_method_route_outputs(
@@ -1720,6 +1951,12 @@ def build_production_method_comparison(
         "total_cost",
         "selected_attractions",
         "must_go_count",
+        "must_go_total",
+        "must_go_selected_count",
+        "must_go_skipped_count",
+        "must_go_coverage_ratio",
+        "must_go_skipped_names",
+        "must_go_policy",
         "diversity_score",
         "utility_norm",
         "must_go_norm",
@@ -1760,6 +1997,7 @@ def build_production_method_comparison(
     hierarchical_context = dict(context)
     hierarchical_context["OUTPUT_DIR"] = output_dir
     hierarchical_context["best_hierarchical_trip"] = best_trip
+    must_go_candidates = _must_go_candidates_from_output(output_dir, enriched_df)
     method_rows = []
     route_frames = []
 
@@ -1774,6 +2012,7 @@ def build_production_method_comparison(
         notes: str,
     ) -> dict:
         metrics = _route_metrics_from_stops(route_stops)
+        must_go_summary = _route_must_go_summary(route_stops, must_go_candidates, config)
         intercity_minutes, intercity_distance = _intercity_route_metrics(trip_for_method)
         attraction_cost = _estimated_route_stop_cost(route_stops)
         total_cost = float(route_info.get("reserved_food_transport", 0.0)) + float(route_info.get("committed_hotel_cost", 0.0)) + float(attraction_cost)
@@ -1795,6 +2034,7 @@ def build_production_method_comparison(
             "total_cost": float(total_cost),
             "selected_attractions": metrics["selected_attractions"],
             "must_go_count": int(route_stops["social_must_go"].astype(bool).sum()) if not route_stops.empty and "social_must_go" in route_stops.columns else 0,
+            **must_go_summary,
             "diversity_score": metrics["diversity_score"],
             "objective": float(objective_value) if pd.notna(objective_value) else np.nan,
             "posterior_reward": float(posterior_reward) if pd.notna(posterior_reward) else np.nan,
@@ -1902,6 +2142,7 @@ def build_production_method_comparison(
     )
     if not bandit_route_stops.empty:
         route_frames.append(bandit_route_stops)
+    bandit_summary_row.update(_route_must_go_summary(bandit_route_stops, must_go_candidates, config))
     method_rows.append(bandit_summary_row)
 
     method_df = pd.DataFrame(method_rows)
@@ -1923,6 +2164,8 @@ def build_production_method_comparison(
                     "status",
                     "notes",
                     "comparison_score_formula",
+                    "must_go_skipped_names",
+                    "must_go_policy",
                 }
                 else np.nan
             )
@@ -1943,6 +2186,18 @@ def build_production_method_comparison(
 
     method_df.to_csv(output_dir / "production_method_comparison.csv", index=False)
     route_stops_df.to_csv(output_dir / "production_method_route_stops.csv", index=False)
+    _write_must_go_coverage(
+        output_dir=output_dir,
+        method_df=method_df,
+        route_stops_df=route_stops_df,
+        must_go_candidates=must_go_candidates,
+        config=config,
+    )
+    _write_hotel_selection_debug(
+        output_dir=output_dir,
+        route_stops_df=route_stops_df,
+        must_go_candidates=must_go_candidates,
+    )
     return method_df, route_stops_df
 
 

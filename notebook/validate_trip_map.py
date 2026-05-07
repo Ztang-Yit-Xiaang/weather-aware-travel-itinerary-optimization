@@ -48,6 +48,10 @@ REQUIRED_ROUTE_COLUMNS = {
     "available_visit_minutes",
     "drive_time_source",
     "route_type",
+    "social_must_go",
+    "social_score",
+    "must_go_weight",
+    "social_reason",
 }
 
 REQUIRED_METHOD_SUMMARY_COLUMNS = {
@@ -61,6 +65,12 @@ REQUIRED_METHOD_SUMMARY_COLUMNS = {
     "travel_efficiency_norm",
     "cost_efficiency_norm",
     "comparison_score_formula",
+    "must_go_total",
+    "must_go_selected_count",
+    "must_go_skipped_count",
+    "must_go_coverage_ratio",
+    "must_go_skipped_names",
+    "must_go_policy",
 }
 
 FORBIDDEN_OLD_NOTEBOOK_MARKERS = [
@@ -286,9 +296,9 @@ def _check_full_route_arrows(map_debug: pd.DataFrame) -> dict:
     if map_debug.empty or "geometry_mode" not in map_debug.columns:
         return _status_row("production_map_route_debug.csv", "full-route arrows/no casing", "FAIL", "missing geometry mode rows")
     full_route_rows = map_debug[map_debug["layer_group"].astype(str).eq("Full Route Overview")].copy()
-    geometry_ok = full_route_rows["geometry_mode"].fillna("").astype(str).str.contains("full-route-polyline-with-arrows").all()
+    geometry_ok = full_route_rows["geometry_mode"].fillna("").astype(str).str.contains("full-route-polyline-with-canvas-arrows").all()
     notes = full_route_rows.get("notes", pd.Series("", index=full_route_rows.index)).fillna("").astype(str)
-    notes_ok = notes.str.contains("direction_arrows=True").all() and notes.str.contains("no_white_casing=True").all()
+    notes_ok = notes.str.contains("direction_arrows=canvas").all() and notes.str.contains("no_white_casing=True").all()
     status = "PASS" if not full_route_rows.empty and geometry_ok and notes_ok else "FAIL"
     return _status_row(
         "production_map_route_debug.csv",
@@ -296,6 +306,90 @@ def _check_full_route_arrows(map_debug: pd.DataFrame) -> dict:
         status,
         f"rows={len(full_route_rows)}; geometry_ok={bool(geometry_ok)}; notes_ok={bool(notes_ok)}",
     )
+
+
+def _check_road_geometry_report(map_debug: pd.DataFrame) -> list[dict]:
+    rows = []
+    required = {"geometry_source", "straight_line_fallback_count", "road_geometry_percent"}
+    missing = sorted(required - set(map_debug.columns))
+    rows.append(
+        _status_row(
+            "production_map_route_debug.csv",
+            "road geometry report columns",
+            "PASS" if not missing else "FAIL",
+            "present" if not missing else f"missing={missing}",
+        )
+    )
+    if missing or map_debug.empty:
+        return rows
+    sources = set(map_debug["geometry_source"].fillna("").astype(str).tolist())
+    road_percent = pd.to_numeric(map_debug["road_geometry_percent"], errors="coerce")
+    fallback_count = int(pd.to_numeric(map_debug["straight_line_fallback_count"], errors="coerce").fillna(0).sum())
+    rows.append(
+        _status_row(
+            "production_map_route_debug.csv",
+            "road geometry source coverage",
+            "PASS" if any(source for source in sources if source and source != "unknown") else "FAIL",
+            f"sources={sorted(sources)}; fallback_flags={fallback_count}; avg_road_percent={road_percent.dropna().mean() if not road_percent.dropna().empty else 'n/a'}",
+        )
+    )
+    return rows
+
+
+def _check_must_go_coverage_file(df: pd.DataFrame) -> list[dict]:
+    required = {"method", "must_go_name", "selected", "status", "must_go_policy", "must_go_weight", "social_score"}
+    if df.empty:
+        return [_status_row("production_must_go_coverage.csv", "must-go coverage artifact", "FAIL", "missing or empty")]
+    missing = sorted(required - set(df.columns))
+    rows = [
+        _status_row(
+            "production_must_go_coverage.csv",
+            "must-go coverage columns",
+            "PASS" if not missing else "FAIL",
+            "present" if not missing else f"missing={missing}",
+        )
+    ]
+    methods = set(df.get("method", pd.Series(dtype=str)).dropna().astype(str).tolist())
+    rows.append(
+        _status_row(
+            "production_must_go_coverage.csv",
+            "must-go coverage methods",
+            "PASS" if EXPECTED_METHODS.issubset(methods) else "FAIL",
+            f"methods={sorted(methods)}",
+        )
+    )
+    selected_count = int(df.get("selected", pd.Series(dtype=bool)).astype(bool).sum()) if "selected" in df.columns else 0
+    rows.append(
+        _status_row(
+            "production_must_go_coverage.csv",
+            "must-go selected/skipped states",
+            "PASS" if selected_count > 0 and "skipped_soft_reward" in set(df.get("status", pd.Series(dtype=str)).astype(str)) else "FAIL",
+            f"selected_rows={selected_count}; statuses={sorted(set(df.get('status', pd.Series(dtype=str)).astype(str)))}",
+        )
+    )
+    return rows
+
+
+def _check_hotel_debug_file(df: pd.DataFrame) -> list[dict]:
+    required = {"city", "hotel_name", "candidate_rank", "selected", "hotel_score", "selected_hotel_reason"}
+    if df.empty:
+        return [_status_row("production_hotel_selection_debug.csv", "hotel debug artifact", "FAIL", "missing or empty")]
+    missing = sorted(required - set(df.columns))
+    selected_count = int(df.get("selected", pd.Series(dtype=bool)).astype(bool).sum()) if "selected" in df.columns else 0
+    return [
+        _status_row(
+            "production_hotel_selection_debug.csv",
+            "hotel debug columns",
+            "PASS" if not missing else "FAIL",
+            "present" if not missing else f"missing={missing}",
+        ),
+        _status_row(
+            "production_hotel_selection_debug.csv",
+            "selected hotel rows",
+            "PASS" if selected_count > 0 else "FAIL",
+            f"selected_rows={selected_count}; rows={len(df)}",
+        ),
+    ]
 
 
 def _check_balanced_only_defaults(map_debug: pd.DataFrame) -> list[dict]:
@@ -486,6 +580,8 @@ def validate(output_dir: Path, figure_dir: Path) -> pd.DataFrame:
     method_summary = _load_csv(output_dir / "production_method_comparison.csv")
     profile_routes = _load_csv(output_dir / "production_day_plan_profiles.csv")
     map_debug = _load_csv(output_dir / "production_map_route_debug.csv")
+    must_go_coverage = _load_csv(output_dir / "production_must_go_coverage.csv")
+    hotel_debug = _load_csv(output_dir / "production_hotel_selection_debug.csv")
 
     rows.extend(_check_route_file(trip_routes, "production_trip_length_route_stops.csv"))
     rows.extend(_check_expected_values(trip_routes, "production_trip_length_route_stops.csv", "trip_days", EXPECTED_TRIP_DAYS))
@@ -493,6 +589,8 @@ def validate(output_dir: Path, figure_dir: Path) -> pd.DataFrame:
     rows.extend(_check_route_file(method_routes, "production_method_route_stops.csv"))
     rows.extend(_check_expected_values(method_routes, "production_method_route_stops.csv", "method", EXPECTED_METHODS))
     rows.extend(_check_method_summary_file(method_summary))
+    rows.extend(_check_must_go_coverage_file(must_go_coverage))
+    rows.extend(_check_hotel_debug_file(hotel_debug))
 
     rows.extend(_check_expected_values(profile_routes, "production_day_plan_profiles.csv", "profile", EXPECTED_PROFILES))
     rows.extend(_check_notebook_old_three_day_removed(Path.cwd()))
@@ -530,6 +628,7 @@ def validate(output_dir: Path, figure_dir: Path) -> pd.DataFrame:
         rows.append(_check_full_route_offsets(map_debug))
         rows.append(_check_full_route_families(map_debug))
         rows.append(_check_full_route_arrows(map_debug))
+        rows.extend(_check_road_geometry_report(map_debug))
         rows.extend(_check_balanced_only_defaults(map_debug))
 
     html_path = figure_dir / "production_hierarchical_trip_map.html"
@@ -562,6 +661,9 @@ def validate(output_dir: Path, figure_dir: Path) -> pd.DataFrame:
         "Traveler · Relaxed Full Route",
         "Traveler · Balanced Full Route",
         "Traveler · Explorer Full Route",
+        "Selected hotel/base pins",
+        "Hotel candidates",
+        "Must-go candidates",
     ]:
         rows.append(
             _status_row(
@@ -591,6 +693,18 @@ def validate(output_dir: Path, figure_dir: Path) -> pd.DataFrame:
             f"feature_group={feature_group or 'missing'}; addTo={added}; remove_call={removed}",
         )
     )
+    hotel_label = "Selected hotel/base pins"
+    hotel_feature_group = _feature_group_for_label(html, hotel_label)
+    hotel_added = _feature_group_added_to_map(html, hotel_feature_group)
+    hotel_removed = _feature_group_removed_from_map(html, hotel_feature_group)
+    rows.append(
+        _status_row(
+            "production_hierarchical_trip_map.html",
+            f"html selected hotels visible: {hotel_label}",
+            "PASS" if hotel_added and not hotel_removed else "FAIL",
+            f"feature_group={hotel_feature_group or 'missing'}; addTo={hotel_added}; remove_call={hotel_removed}",
+        )
+    )
     for label in [
         "Fastest inter-city route",
         "Scenic CA-1 / PCH route with Stanford detour",
@@ -611,6 +725,8 @@ def validate(output_dir: Path, figure_dir: Path) -> pd.DataFrame:
         "Method · Hierarchical Greedy Baseline",
         "Method · Hierarchical + Bandit + Small Gurobi Repair",
         "Traveler · Balanced Full Route",
+        "Hotel candidates",
+        "Must-go candidates",
     ]:
         rows.append(_check_hidden_by_default_html(html, label))
     rows.append(
@@ -627,6 +743,14 @@ def validate(output_dir: Path, figure_dir: Path) -> pd.DataFrame:
             "html route selector controls",
             "PASS" if all(token in html for token in ["blueprint-route-selector", "data-route-checkbox", "syncCheckboxState", "Balanced only"]) else "FAIL",
             "route selector checkbox controls present" if "blueprint-route-selector" in html else "missing route selector",
+        )
+    )
+    rows.append(
+        _status_row(
+            "production_hierarchical_trip_map.html",
+            "html no PolyLineTextPath under canvas",
+            "PASS" if "PolyLineTextPath(" not in html and ".setText(" not in html else "FAIL",
+            f"PolyLineTextPath={html.count('PolyLineTextPath(')}; setText={html.count('.setText(')}; preferCanvas={'preferCanvas' in html}",
         )
     )
     rows.append(
@@ -676,7 +800,7 @@ def validate(output_dir: Path, figure_dir: Path) -> pd.DataFrame:
         _status_row(
             "production_hierarchical_trip_map.html",
             "html route selector registry",
-            "PASS" if len(route_registry) >= 14 and {"trip_length", "method", "traveler_profile", "city_detail", "context"}.issubset(registry_families) else "FAIL",
+            "PASS" if len(route_registry) >= 16 and {"trip_length", "method", "traveler_profile", "city_detail", "context", "must_go", "hotel"}.issubset(registry_families) else "FAIL",
             f"routes={len(route_registry)}; families={sorted(registry_families)}",
         )
     )
@@ -684,7 +808,7 @@ def validate(output_dir: Path, figure_dir: Path) -> pd.DataFrame:
         _status_row(
             "production_hierarchical_trip_map.html",
             "html balanced-only default checked",
-            "PASS" if default_checked == ["traveler_balanced"] else "FAIL",
+            "PASS" if default_checked == ["hotel_selected", "traveler_balanced"] or default_checked == ["traveler_balanced", "hotel_selected"] else "FAIL",
             f"default_checked={default_checked}",
         )
     )
@@ -692,8 +816,8 @@ def validate(output_dir: Path, figure_dir: Path) -> pd.DataFrame:
         _status_row(
             "production_hierarchical_trip_map.html",
             "html route arrows",
-            "PASS" if html.count(".setText(") >= 10 and html.count("\\u003e") >= 10 else "FAIL",
-            f"setText={html.count('.setText(')}; escaped_arrow={html.count('\\u003e')}",
+            "PASS" if html.count("blueprint-route-arrow") >= 10 and "canvas-arrow-markers" in html else "FAIL",
+            f"canvas_arrow_class={html.count('blueprint-route-arrow')}; setText={html.count('.setText(')}",
         )
     )
     route_badge_count = html.count("blueprint-route-badge")
@@ -748,8 +872,8 @@ def main() -> int:
         "failed_checks": failed_checks,
         "warning_checks": warning_checks,
         "conclusion": (
-            "PASS: route data, checkbox registry, balanced-only first-open state, directional arrows, city-detail layers, collapsible/draggable panels, and route panes all validate. "
-            "The map is now controlled by selectable route layers rather than one always-on diagnostic bundle."
+            "PASS: route data, checkbox registry, balanced-only first-open state, canvas-safe direction arrows, road-geometry diagnostics, must-go/hotel artifacts, city-detail layers, collapsible/draggable panels, and route panes all validate. "
+            "The map is now controlled by selectable route layers without PolyLineTextPath under canvas rendering."
             if not failed_checks
             else "FAIL: inspect failed_checks; CSV failures suggest upstream data/export issues, while HTML/registry/default-state failures suggest renderer or notebook-state issues."
         ),

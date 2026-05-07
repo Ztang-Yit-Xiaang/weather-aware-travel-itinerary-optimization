@@ -43,6 +43,30 @@ def data_uncertainty(city: str, city_catalog_summary_df: pd.DataFrame) -> float:
     return float(row.iloc[0].get("data_uncertainty", 1.0))
 
 
+def city_must_go_score(city: str, city_catalog_summary_df: pd.DataFrame) -> float:
+    row = city_catalog_summary_df[city_catalog_summary_df["city"].astype(str).eq(city)]
+    if row.empty:
+        return 0.0
+    record = row.iloc[0]
+    explicit_score = float(record.get("city_must_go_score", 0.0) or 0.0)
+    if explicit_score > 0:
+        return explicit_score
+    count = float(record.get("city_must_go_count", 0.0) or 0.0)
+    social = float(record.get("city_social_score", record.get("social_signal_score", 0.0)) or 0.0)
+    return count * max(0.0, social)
+
+
+def city_social_score(city: str, city_catalog_summary_df: pd.DataFrame) -> float:
+    row = city_catalog_summary_df[city_catalog_summary_df["city"].astype(str).eq(city)]
+    if row.empty:
+        return 0.0
+    return float(row.iloc[0].get("city_social_score", row.iloc[0].get("social_signal_score", 0.0)) or 0.0)
+
+
+def must_go_city_weight(config: TripConfig) -> float:
+    return float(config.get("social", "must_go_bonus_weight", 0.85)) * 0.18
+
+
 def assert_sparse_data_is_not_penalized(city_catalog_summary_df: pd.DataFrame) -> None:
     required = {"city_value_score", "data_uncertainty", "data_confidence"}
     missing = required - set(city_catalog_summary_df.columns)
@@ -122,6 +146,7 @@ def candidate_plans(config: TripConfig, city_catalog_summary_df: pd.DataFrame) -
     value_exponent = float(config.get("optimization", "city_day_value_exponent", 0.82))
     pass_through_weight = float(config.get("optimization", "pass_through_city_bonus_weight", 0.18))
     base_switch_penalty = float(config.get("optimization", "base_switch_penalty", 0.07))
+    must_go_weight = must_go_city_weight(config)
     for start_city, end_city in build_gateway_scenarios(config):
         sequence = DEFAULT_SCENARIO_ROUTES[(start_city, end_city)]
         sequence_cities = unique_in_order(sequence)
@@ -134,15 +159,22 @@ def candidate_plans(config: TripConfig, city_catalog_summary_df: pd.DataFrame) -
                     city_score(city, city_catalog_summary_df) * (float(days) ** value_exponent)
                     for city, days in allocation.items()
                 )
+                must_go_value = sum(
+                    must_go_weight
+                    * city_must_go_score(city, city_catalog_summary_df)
+                    * (float(days) ** value_exponent)
+                    for city, days in allocation.items()
+                )
                 pass_through_value = pass_through_weight * sum(
                     city_score(city, city_catalog_summary_df)
+                    + 0.50 * must_go_weight * city_must_go_score(city, city_catalog_summary_df)
                     for city in pass_through_cities
                 )
                 switch_penalty = base_switch_penalty * max(0, len(base_cities) - 2)
                 uncertainty_bonus = 0.03 * sum(data_uncertainty(city, city_catalog_summary_df) for city in allocation)
                 drive_penalty = 0.018 * total_drive_minutes / 60.0
                 endpoint_penalty = 0.10 if start_city == end_city else 0.0
-                objective = city_value + pass_through_value + uncertainty_bonus - drive_penalty - endpoint_penalty - switch_penalty
+                objective = city_value + must_go_value + pass_through_value + uncertainty_bonus - drive_penalty - endpoint_penalty - switch_penalty
                 plans.append(
                     {
                         "gateway_start": start_city,
@@ -152,6 +184,7 @@ def candidate_plans(config: TripConfig, city_catalog_summary_df: pd.DataFrame) -
                         "intercity_drive_minutes": total_drive_minutes,
                         "objective": float(objective),
                         "city_value_component": float(city_value),
+                        "must_go_city_component": float(must_go_value),
                         "pass_through_value_component": float(pass_through_value),
                         "data_uncertainty_exploration_bonus": float(uncertainty_bonus),
                         "base_switch_penalty": float(switch_penalty),
@@ -177,6 +210,7 @@ def _score_hierarchical_plan(
     value_exponent = float(config.get("optimization", "city_day_value_exponent", 0.82))
     pass_through_weight = float(config.get("optimization", "pass_through_city_bonus_weight", 0.18))
     base_switch_penalty = float(config.get("optimization", "base_switch_penalty", 0.07))
+    must_go_weight = must_go_city_weight(config)
     sequence_cities = unique_in_order(sequence)
     base_cities = [city for city in sequence_cities if int(allocation.get(city, 0)) > 0]
     pass_through_cities = [city for city in sequence_cities if city not in set(base_cities)]
@@ -186,15 +220,22 @@ def _score_hierarchical_plan(
         city_score(city, city_catalog_summary_df) * (float(days) ** value_exponent)
         for city, days in allocation.items()
     )
+    must_go_value = sum(
+        must_go_weight
+        * city_must_go_score(city, city_catalog_summary_df)
+        * (float(days) ** value_exponent)
+        for city, days in allocation.items()
+    )
     pass_through_value = pass_through_weight * sum(
         city_score(city, city_catalog_summary_df)
+        + 0.50 * must_go_weight * city_must_go_score(city, city_catalog_summary_df)
         for city in pass_through_cities
     )
     switch_penalty = base_switch_penalty * max(0, len(base_cities) - 2)
     uncertainty_bonus = 0.03 * sum(data_uncertainty(city, city_catalog_summary_df) for city in allocation)
     drive_penalty = 0.018 * total_drive_minutes / 60.0
     endpoint_penalty = 0.10 if start_city == end_city else 0.0
-    objective = city_value + pass_through_value + uncertainty_bonus - drive_penalty - endpoint_penalty - switch_penalty
+    objective = city_value + must_go_value + pass_through_value + uncertainty_bonus - drive_penalty - endpoint_penalty - switch_penalty
     return {
         "gateway_start": start_city,
         "gateway_end": end_city,
@@ -203,6 +244,7 @@ def _score_hierarchical_plan(
         "intercity_drive_minutes": total_drive_minutes,
         "objective": float(objective),
         "city_value_component": float(city_value),
+        "must_go_city_component": float(must_go_value),
         "pass_through_value_component": float(pass_through_value),
         "data_uncertainty_exploration_bonus": float(uncertainty_bonus),
         "base_switch_penalty": float(switch_penalty),
@@ -227,6 +269,7 @@ def solve_hierarchical_trip_with_greedy(config: TripConfig, city_catalog_summary
     max_config_cities = int(config.get("optimization", "max_cities", 6))
     value_exponent = float(config.get("optimization", "city_day_value_exponent", 0.82))
     base_switch_penalty = float(config.get("optimization", "base_switch_penalty", 0.07))
+    must_go_weight = must_go_city_weight(config)
 
     greedy_plans = []
     for start_city, end_city in build_gateway_scenarios(config):
@@ -247,6 +290,8 @@ def solve_hierarchical_trip_with_greedy(config: TripConfig, city_catalog_summary
         def city_pick_score(city: str) -> float:
             return (
                 city_score(city, city_catalog_summary_df)
+                + must_go_weight * city_must_go_score(city, city_catalog_summary_df)
+                + 0.04 * city_social_score(city, city_catalog_summary_df)
                 + 0.03 * data_uncertainty(city, city_catalog_summary_df)
                 - base_switch_penalty
             )
@@ -276,7 +321,10 @@ def solve_hierarchical_trip_with_greedy(config: TripConfig, city_catalog_summary
             next_city = max(
                 feasible_cities,
                 key=lambda city: (
-                    city_score(city, city_catalog_summary_df)
+                    (
+                        city_score(city, city_catalog_summary_df)
+                        + must_go_weight * city_must_go_score(city, city_catalog_summary_df)
+                    )
                     * ((allocation[city] + 1) ** value_exponent - allocation[city] ** value_exponent)
                     + 0.01 * data_uncertainty(city, city_catalog_summary_df)
                 ),

@@ -80,6 +80,11 @@ DEFAULT_CONFIG = {
         "corridor_fit_weight": 0.30,
         "detour_penalty_weight": 0.01,
     },
+    "map": {
+        "balanced_only_default_view": True,
+        "refresh_road_geometry": False,
+        "show_debug_on_load": False,
+    },
     "utility": {
         "method": "bayesian_ucb",
         "uncertainty_bonus_kappa": 0.25,

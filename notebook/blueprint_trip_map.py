@@ -1,6 +1,7 @@
 import ast
 import html
 import json
+import math
 from pathlib import Path
 
 import folium
@@ -1271,6 +1272,45 @@ def _route_cache_key(points):
     return "|".join(f"{lat:.5f},{lon:.5f}" for lat, lon in points)
 
 
+def _nearest_corridor_anchor(point, max_distance_km=55.0):
+    if point is None or len(point) < 2:
+        return None
+    best_name = None
+    best_distance = float("inf")
+    for name, lat, lon in CALIFORNIA_ROAD_CORRIDOR:
+        distance = _point_distance_km(float(point[0]), float(point[1]), float(lat), float(lon))
+        if distance < best_distance:
+            best_name = name
+            best_distance = distance
+    return best_name if best_name is not None and best_distance <= float(max_distance_km) else None
+
+
+def _curated_corridor_fallback(left, right):
+    """Prefer a reproducible California corridor shape over long straight lines.
+
+    Cached OSRM remains the first choice. This helper only handles long missing
+    legs whose endpoints are near known corridor anchors; short local city hops
+    still fall through to explicit straight-line fallback warnings.
+    """
+    leg_distance = _point_distance_km(float(left[0]), float(left[1]), float(right[0]), float(right[1]))
+    if leg_distance < 65.0:
+        return [], ""
+    left_anchor = _nearest_corridor_anchor(left)
+    right_anchor = _nearest_corridor_anchor(right)
+    if not left_anchor or not right_anchor or left_anchor == right_anchor:
+        return [], ""
+    corridor_points = _corridor_segment_points(left_anchor, right_anchor)
+    if len(corridor_points) < 2:
+        return [], ""
+    path = [left]
+    for point in corridor_points:
+        if _point_distance_km(path[-1][0], path[-1][1], point[0], point[1]) > 1.0:
+            path.append(point)
+    if _point_distance_km(path[-1][0], path[-1][1], right[0], right[1]) > 1.0:
+        path.append(right)
+    return path, f"curated-corridor:{left_anchor}->{right_anchor}"
+
+
 def _fetch_osrm_route(points, cache, run_live=False):
     if len(points) < 2:
         return points, "single-point"
@@ -1284,6 +1324,7 @@ def _fetch_osrm_route(points, cache, run_live=False):
     def stitch_cached_or_fallback(route_points):
         stitched_path = []
         used_cached_leg = False
+        used_corridor_leg = False
         used_fallback_leg = False
         for left, right in zip(route_points[:-1], route_points[1:]):
             leg_key = _route_cache_key([left, right])
@@ -1292,18 +1333,28 @@ def _fetch_osrm_route(points, cache, run_live=False):
                 leg_path = cache[leg_key]["path"]
                 used_cached_leg = True
             else:
-                leg_path = [left, right]
-                used_fallback_leg = True
+                leg_path, leg_mode = _curated_corridor_fallback(left, right)
+                if leg_path:
+                    used_corridor_leg = True
+                else:
+                    leg_path = [left, right]
+                    used_fallback_leg = True
             if stitched_path and leg_path:
                 stitched_path.extend(leg_path[1:])
             else:
                 stitched_path.extend(leg_path)
         if not stitched_path:
             return route_points, "straight-line-fallback"
-        if used_cached_leg and used_fallback_leg:
-            return stitched_path, "cached-stitched-with-fallback"
+        if used_fallback_leg and (used_cached_leg or used_corridor_leg):
+            return stitched_path, "cached-curated-stitched-with-straight-line-fallback"
+        if used_fallback_leg:
+            return stitched_path, "straight-line-fallback"
+        if used_cached_leg and used_corridor_leg:
+            return stitched_path, "cached-curated-corridor-stitched"
         if used_cached_leg:
             return stitched_path, "cached-stitched"
+        if used_corridor_leg:
+            return stitched_path, "curated-corridor-stitched"
         return route_points, "straight-line-fallback"
 
     if not run_live:
@@ -1401,10 +1452,17 @@ def _fetch_stitched_route(points, cache, run_live=False):
             stitched_path.extend(leg_path[1:])
         else:
             stitched_path.extend(leg_path)
-    if any("fallback" in mode for mode in modes):
+    has_fallback = any("fallback" in mode for mode in modes)
+    has_osrm = any("osrm" in mode or "cached" in mode for mode in modes)
+    has_curated = any("curated" in mode or "corridor" in mode for mode in modes)
+    if has_fallback and has_curated:
+        mode = "stitched-leg-curated-corridor-with-local-straight-line-fallback"
+    elif has_fallback:
         mode = "stitched-leg-mixed-fallback"
-    elif any("osrm" in mode for mode in modes):
+    elif has_osrm:
         mode = "stitched-leg-osrm-driving"
+    elif has_curated:
+        mode = "stitched-leg-curated-corridor"
     else:
         mode = "stitched-leg-cache"
     return stitched_path, mode
@@ -1504,7 +1562,18 @@ def _add_flow_route(
             dash_array=[8, 16] if dash_array else [10, 16],
             pane=pane,
         ).add_to(layer)
-    return full_path, f"{mode}; {line_count} connected legs"
+        arrow_count = _add_canvas_direction_arrows(
+            layer,
+            full_path,
+            color=color,
+            pane=pane,
+            interval_km=36.0 if _route_distance_km(full_path) < 180 else 95.0,
+            max_arrows=8,
+            class_name="blueprint-route-arrow blueprint-route-arrow-day",
+        )
+    else:
+        arrow_count = 0
+    return full_path, f"{mode}; {line_count} connected legs; canvas-arrow-markers={arrow_count}"
 
 
 def _california_corridor_path(city_sequence):
@@ -1705,6 +1774,15 @@ def _add_intercity_route_layer(map_object, route_name, sequence, color, route_ca
             dash_array=[14, 18] if scenic else [8, 14],
             pane=route_pane,
         ).add_to(layer)
+        _add_canvas_direction_arrows(
+            layer,
+            all_path_points,
+            color=color,
+            pane=route_pane,
+            interval_km=120.0,
+            max_arrows=7,
+            class_name="blueprint-route-arrow blueprint-route-arrow-context",
+        )
 
     layer.add_to(map_object)
     return leg_rows, all_path_points, layer
@@ -1950,6 +2028,7 @@ def _add_static_result_line(
     weight=6,
     opacity=0.95,
     pane=ROUTE_CORE_PANE,
+    geometry_mode_prefix="static-polyline",
 ):
     clean_points = _dedupe_route_points(points)
     if len(clean_points) < 2:
@@ -1974,8 +2053,17 @@ def _add_static_result_line(
         popup=folium.Popup(popup_html, max_width=320) if popup_html else None,
         pane=pane,
     ).add_to(layer)
+    arrow_count = _add_canvas_direction_arrows(
+        layer,
+        clean_points,
+        color=color,
+        pane=pane,
+        interval_km=95.0,
+        max_arrows=5,
+        class_name="blueprint-route-arrow blueprint-route-arrow-static",
+    )
 
-    return "static-polyline"
+    return f"{geometry_mode_prefix}; static-polyline; canvas-arrow-markers={arrow_count}"
 
 
 def _route_bounds(points):
@@ -2011,6 +2099,63 @@ def _route_midpoint(points):
             ]
         walked += segment_distance
     return clean_points[-1]
+
+
+def _bearing_degrees(left, right):
+    lat1 = math.radians(float(left[0]))
+    lat2 = math.radians(float(right[0]))
+    delta_lon = math.radians(float(right[1]) - float(left[1]))
+    y = math.sin(delta_lon) * math.cos(lat2)
+    x = math.cos(lat1) * math.sin(lat2) - math.sin(lat1) * math.cos(lat2) * math.cos(delta_lon)
+    return (math.degrees(math.atan2(y, x)) + 360.0) % 360.0
+
+
+def _route_arrow_samples(points, interval_km=95.0, max_arrows=9):
+    clean_points = _dedupe_route_points(points)
+    if len(clean_points) < 2:
+        return []
+    total_distance = _route_distance_km(clean_points)
+    if total_distance <= 0:
+        return []
+    target_count = max(1, min(int(max_arrows), int(total_distance // float(interval_km)) + 1))
+    target_distances = np.linspace(total_distance / (target_count + 1), total_distance * target_count / (target_count + 1), target_count)
+    samples = []
+    walked = 0.0
+    target_index = 0
+    for left, right in zip(clean_points[:-1], clean_points[1:]):
+        segment_distance = _point_distance_km(left[0], left[1], right[0], right[1])
+        if segment_distance <= 0:
+            continue
+        while target_index < len(target_distances) and walked + segment_distance >= target_distances[target_index]:
+            ratio = (target_distances[target_index] - walked) / segment_distance
+            point = [
+                float(left[0] + (right[0] - left[0]) * ratio),
+                float(left[1] + (right[1] - left[1]) * ratio),
+            ]
+            samples.append((point, _bearing_degrees(left, right)))
+            target_index += 1
+        walked += segment_distance
+    return samples
+
+
+def _add_canvas_direction_arrows(layer, points, *, color, pane=ROUTE_TOP_PANE, interval_km=95.0, max_arrows=9, class_name="blueprint-route-arrow"):
+    samples = _route_arrow_samples(points, interval_km=interval_km, max_arrows=max_arrows)
+    for index, (point, bearing) in enumerate(samples, start=1):
+        folium.Marker(
+            location=point,
+            icon=folium.DivIcon(
+                icon_size=(18, 18),
+                icon_anchor=(9, 9),
+                html=f"""
+                <div class="{class_name}" style="--route-arrow-color:{color}; transform: rotate({bearing:.1f}deg);">
+                    <span></span>
+                </div>
+                """,
+            ),
+            tooltip=f"Route direction arrow {index}",
+            pane=pane,
+        ).add_to(layer)
+    return len(samples)
 
 
 def _add_full_scene_route_band(
@@ -2052,6 +2197,15 @@ def _add_full_scene_route_band(
     #     offset=arrow_offset,
     #     attributes={"fill": color, "font-weight": "800", "font-size": "13"},
     # ).add_to(layer)
+    arrow_count = _add_canvas_direction_arrows(
+        layer,
+        clean_points,
+        color=color,
+        pane=pane,
+        interval_km=95.0,
+        max_arrows=9,
+        class_name="blueprint-route-arrow blueprint-route-arrow-full",
+    )
 
     endpoint_specs = [
         (clean_points[0], start_label, "blueprint-route-endpoint-start"),
@@ -2092,7 +2246,7 @@ def _add_full_scene_route_band(
             tooltip=tooltip or label,
         ).add_to(layer)
 
-    return "full-route-polyline-with-arrows"
+    return f"full-route-polyline-with-canvas-arrows; canvas-arrow-markers={arrow_count}"
 
 
 def _route_debug_value(value, default=""):
@@ -2155,6 +2309,17 @@ def _append_route_debug_row(
         return
     clean_points = _dedupe_route_points(points)
     distance_km = _route_distance_km(clean_points)
+    geometry_source = str(geometry_mode).split(";")[0].strip()
+    geometry_lower = str(geometry_mode).lower()
+    fallback_count = int("fallback" in geometry_lower)
+    if "straight-line-fallback" in geometry_lower and "cached" not in geometry_lower and "osrm" not in geometry_lower:
+        road_geometry_percent = 0.0
+    elif "fallback" in geometry_lower:
+        road_geometry_percent = 50.0
+    elif any(token in geometry_lower for token in ["osrm", "cached", "corridor"]):
+        road_geometry_percent = 100.0
+    else:
+        road_geometry_percent = np.nan
     issue = ""
     status = "OK"
     if len(clean_points) < 2:
@@ -2166,6 +2331,9 @@ def _append_route_debug_row(
     elif str(route_type).startswith("relocation") and distance_km < 50.0:
         status = "WARN"
         issue = "relocation day has unexpectedly short geometry"
+    elif fallback_count and str(comparison_type) in {"intercity", "traveler_day", "city_detail", "trip_length", "method", "traveler_profile"}:
+        status = "WARN"
+        issue = "route contains straight-line fallback geometry"
     elif (
         str(comparison_type) in {"selected_result", "traveler_day", "trip_length", "method"}
         and str(route_start_city) != str(route_end_city)
@@ -2193,6 +2361,9 @@ def _append_route_debug_row(
             "drive_minutes_to_next_base": _finite_float(drive_minutes),
             "available_visit_minutes": _finite_float(available_visit_minutes),
             "geometry_mode": geometry_mode,
+            "geometry_source": geometry_source,
+            "straight_line_fallback_count": fallback_count,
+            "road_geometry_percent": road_geometry_percent,
             "layer_var": layer_var,
             "show_by_default": bool(show_by_default),
             "draw_status": status,
@@ -2213,6 +2384,17 @@ def _build_route_debug_summary_html(route_debug_df):
     warn_count = int(status_counts.get("WARN", 0))
     failed_count = int(status_counts.get("FAILED", 0))
     visible_count = int(route_debug_df["show_by_default"].astype(bool).sum())
+    geometry_counts = (
+        route_debug_df.get("geometry_source", pd.Series(dtype=str))
+        .fillna("unknown")
+        .astype(str)
+        .value_counts()
+        .head(5)
+        .to_dict()
+    )
+    fallback_count = int(pd.to_numeric(route_debug_df.get("straight_line_fallback_count", pd.Series(dtype=float)), errors="coerce").fillna(0).sum())
+    road_percent = pd.to_numeric(route_debug_df.get("road_geometry_percent", pd.Series(dtype=float)), errors="coerce")
+    road_percent_text = f"{float(road_percent.dropna().mean()):.1f}%" if not road_percent.dropna().empty else "n/a"
     groups = ", ".join(
         f"{group}: {count}"
         for group, count in route_debug_df["layer_group"].astype(str).value_counts().sort_index().items()
@@ -2263,13 +2445,14 @@ def _build_route_debug_summary_html(route_debug_df):
     <div class="panel-section-title">Map Route Validation</div>
     <div class="summary-line"><b>Audited routes:</b> {len(route_debug_df)} ({ok_count} OK, {warn_count} warnings, {failed_count} failed)</div>
     <div class="summary-line"><b>Visible by default:</b> {visible_count} route layers</div>
+    <div class="summary-line"><b>Road geometry:</b> avg road/cached coverage {road_percent_text}; fallback flags {fallback_count}; sources {_escape(', '.join(f'{k}: {v}' for k, v in geometry_counts.items()))}</div>
     <div class="summary-line muted-note">Debug rows saved to production_map_route_debug.csv. Layer groups: {_escape(groups)}</div>
     {family_table_html}
     {problem_html}
     """
 
 
-def _add_selected_result_layer(map_object, day_plan_df, route_debug_rows=None, show_by_default=True):
+def _add_selected_result_layer(map_object, day_plan_df, route_cache=None, run_live=False, route_debug_rows=None, show_by_default=True):
     if day_plan_df is None or day_plan_df.empty:
         return None
 
@@ -2287,15 +2470,17 @@ def _add_selected_result_layer(map_object, day_plan_df, route_debug_rows=None, s
         color = DAY_COLORS[(int(day) - 1) % len(DAY_COLORS)]
         first = group.iloc[0]
         day_points = _route_points_from_day_group(group)
+        draw_points, route_mode = _fetch_stitched_route(day_points, route_cache, run_live=run_live) if route_cache is not None else (day_points, "static-polyline")
 
         geometry_mode = _add_static_result_line(
             layer,
-            day_points,
+            draw_points,
             color=color,
             tooltip=f"Selected result day {int(day)}",
             popup_html=f"<b>Selected result route</b><br/>Day {int(day)}",
             weight=7,
             opacity=0.98,
+            geometry_mode_prefix=route_mode,
         )
         _append_route_debug_row(
             route_debug_rows,
@@ -2312,7 +2497,7 @@ def _add_selected_result_layer(map_object, day_plan_df, route_debug_rows=None, s
             pass_through_cities=str(first.get("pass_through_cities", "")),
             drive_minutes=first.get("drive_minutes_to_next_base", np.nan),
             available_visit_minutes=first.get("available_visit_minutes", np.nan),
-            points=day_points,
+            points=draw_points,
             geometry_mode=geometry_mode,
             show_by_default=bool(show_by_default),
             source_rows=len(group),
@@ -2431,6 +2616,7 @@ def _add_model_comparison_layers(map_object, output_dir, route_cache, run_live, 
             hotel_lat = _finite_float(first.get("hotel_latitude"))
             hotel_lon = _finite_float(first.get("hotel_longitude"))
             day_points = _route_points_from_day_group(group)
+            draw_points, route_mode = _fetch_stitched_route(day_points, route_cache, run_live=run_live)
             popup_html = (
                 f"<b>{_escape(layer_name)}</b><br/>"
                 f"Day {int(day)}<br/>"
@@ -2438,12 +2624,13 @@ def _add_model_comparison_layers(map_object, output_dir, route_cache, run_live, 
             )
             geometry_mode = _add_static_result_line(
                 layer,
-                day_points,
+                draw_points,
                 color=color,
                 dash_array=dash_array,
                 tooltip=f"{layer_name} day {int(day)}",
                 popup_html=popup_html,
                 opacity=0.95,
+                geometry_mode_prefix=route_mode,
             )   
             _append_route_debug_row(
                 route_debug_rows,
@@ -2460,7 +2647,7 @@ def _add_model_comparison_layers(map_object, output_dir, route_cache, run_live, 
                 pass_through_cities=str(first.get("pass_through_cities", "")),
                 drive_minutes=first.get("drive_minutes_to_next_base", np.nan),
                 available_visit_minutes=first.get("available_visit_minutes", np.nan),
-                points=day_points,
+                points=draw_points,
                 geometry_mode=geometry_mode,
                 show_by_default=show_layer,
                 source_rows=len(group),
@@ -2527,7 +2714,7 @@ def _add_model_comparison_layers(map_object, output_dir, route_cache, run_live, 
     return {name: layers for name, layers in grouped_layers.items() if layers}
 
 
-def _add_traveler_overview_layers(map_object, profile_day_plans, route_debug_rows=None, show_by_default=True):
+def _add_traveler_overview_layers(map_object, profile_day_plans, route_cache=None, run_live=False, route_debug_rows=None, show_by_default=True):
     layers = []
     styles = {
         "relaxed": ("#2A9D8F", "8 10"),
@@ -2555,9 +2742,10 @@ def _add_traveler_overview_layers(map_object, profile_day_plans, route_debug_row
             else:
                 full_points.extend(day_points)
 
+        draw_points, route_mode = _fetch_stitched_route(full_points, route_cache, run_live=run_live) if route_cache is not None else (full_points, "static-polyline")
         geometry_mode = _add_static_result_line(
             layer,
-            full_points,
+            draw_points,
             color=color,
             dash_array=dash_array,
             tooltip=layer_name,
@@ -2568,6 +2756,7 @@ def _add_traveler_overview_layers(map_object, profile_day_plans, route_debug_row
             ),
             weight=5,
             opacity=0.82,
+            geometry_mode_prefix=route_mode,
         )
         _append_route_debug_row(
             route_debug_rows,
@@ -2581,7 +2770,7 @@ def _add_traveler_overview_layers(map_object, profile_day_plans, route_debug_row
             route_type="full_profile_route",
             route_start_city=str(sorted_plan.iloc[0].get("route_start_city", sorted_plan.iloc[0].get("city", ""))),
             route_end_city=str(sorted_plan.iloc[-1].get("route_end_city", sorted_plan.iloc[-1].get("overnight_city", ""))),
-            points=full_points,
+            points=draw_points,
             geometry_mode=geometry_mode,
             show_by_default=bool(show_by_default),
             source_rows=len(sorted_plan),
@@ -2771,6 +2960,8 @@ def _add_full_scene_overview_layer(
     fastest_path,
     scenic_path,
     profile_day_plans,
+    route_cache,
+    run_live,
     route_debug_rows=None,
     route_debug_registry=None,
 ):
@@ -2868,8 +3059,9 @@ def _add_full_scene_overview_layer(
         points = spec["points"]
         if not points or len(points) < 2:
             continue
+        road_points, route_mode = _fetch_stitched_route(points, route_cache, run_live=run_live)
         offset_index = float(spec["offset_index"])
-        draw_points = _offset_route_points_for_visibility(points, offset_index)
+        draw_points = _offset_route_points_for_visibility(road_points, offset_index)
         layer_name = f"Full Route · {spec['control_label']}"
         default_visible = bool(spec.get("default_visible", False))
         layer = folium.FeatureGroup(name=layer_name, show=default_visible)
@@ -2912,6 +3104,7 @@ def _add_full_scene_overview_layer(
                     "distance_km": round(float(_route_distance_km(_dedupe_route_points(draw_points))), 3),
                     "unique_points": len(_dedupe_route_points(draw_points)),
                     "bounds": bounds,
+                    "geometry_source": route_mode,
                 }
             )
         _append_route_debug_row(
@@ -2920,12 +3113,12 @@ def _add_full_scene_overview_layer(
             layer_name=layer_name,
             comparison_type=comparison_type,
             points=draw_points,
-            geometry_mode=f"{geometry_mode}; selectable-full-route",
+            geometry_mode=f"{route_mode}; {geometry_mode}; selectable-full-route",
             show_by_default=default_visible,
             source_rows=len(draw_points),
             route_type="selectable_full_route_overview",
             layer_var=layer_var,
-            notes=f"offset_index={offset_index:.1f}; original_points={len(_dedupe_route_points(points))}; pane={spec['pane']}; direction_arrows=True; no_white_casing=True",
+            notes=f"offset_index={offset_index:.1f}; original_points={len(_dedupe_route_points(points))}; road_points={len(_dedupe_route_points(road_points))}; pane={spec['pane']}; direction_arrows=canvas; no_white_casing=True; geometry_source={route_mode}",
         )
         route_layers.append(layer)
 
@@ -2962,6 +3155,68 @@ def _build_html_data_source_summary(output_dir):
     <div class="summary-line"><b>Day plan:</b> {len(day_plan)} displayed stops from production_day_plan.csv.</div>
     <div class="summary-line"><b>Roads:</b> production_intercity_legs.csv + OSRM/cache geometry ({_escape(route_source)}).</div>
     <div class="summary-line"><b>Bandit/Gurobi:</b> production_hybrid_bandit_optimization_summary.csv and production_bandit_stress_summary.csv.</div>
+    """
+
+
+def _build_must_go_summary_html(output_dir):
+    coverage = _load_csv(Path(output_dir) / "production_must_go_coverage.csv")
+    candidates = _load_csv(Path(output_dir) / "production_social_must_go_candidates.csv")
+    if coverage.empty and candidates.empty:
+        return """
+        <div class="panel-section-title">Must-Go Coverage</div>
+        <div class="summary-line muted-note">Must-go coverage artifact not generated yet.</div>
+        """
+    if not coverage.empty:
+        balanced = coverage[coverage["method"].astype(str).eq("hierarchical_gurobi_pipeline")].copy()
+        if balanced.empty:
+            balanced = coverage.copy()
+        total = int(balanced["must_go_name"].nunique())
+        selected = int(balanced[balanced["selected"].astype(bool)]["must_go_name"].nunique())
+        skipped_names = sorted(balanced.loc[~balanced["selected"].astype(bool), "must_go_name"].dropna().astype(str).unique().tolist())
+        policy = str(balanced.get("must_go_policy", pd.Series(["soft_reward_not_mandatory"])).dropna().iloc[0])
+    else:
+        total = int(candidates["name"].nunique())
+        selected = 0
+        skipped_names = sorted(candidates["name"].dropna().astype(str).unique().tolist())
+        policy = "soft_reward_not_mandatory"
+    skipped_text = "; ".join(skipped_names[:6]) if skipped_names else "none"
+    if len(skipped_names) > 6:
+        skipped_text += f"; +{len(skipped_names) - 6} more"
+    return f"""
+    <div class="panel-section-title">Must-Go Coverage</div>
+    <div class="summary-line"><b>Policy:</b> {_escape(policy)}</div>
+    <div class="summary-line"><b>Selected:</b> {selected} of {total}</div>
+    <div class="summary-line"><b>Skipped:</b> {_escape(skipped_text)}</div>
+    """
+
+
+def _build_hotel_summary_html(output_dir):
+    hotel_debug = _load_csv(Path(output_dir) / "production_hotel_selection_debug.csv")
+    if hotel_debug.empty:
+        return """
+        <div class="panel-section-title">Hotel Choices</div>
+        <div class="summary-line muted-note">Hotel selection debug artifact not generated yet.</div>
+        """
+    selected = hotel_debug[hotel_debug["selected"].astype(bool)].copy()
+    rows = []
+    for row in selected.head(8).itertuples(index=False):
+        score = _finite_float(getattr(row, "hotel_score", np.nan))
+        rows.append(
+            f"""
+            <tr>
+                <td>{_escape(getattr(row, "city", ""))}</td>
+                <td>{_escape(getattr(row, "hotel_name", ""))}</td>
+                <td>{_escape(f"{score:.2f}" if np.isfinite(score) else "n/a")}</td>
+            </tr>
+            """
+        )
+    body = "".join(rows) if rows else "<tr><td colspan=\"3\">No selected hotel rows found.</td></tr>"
+    return f"""
+    <div class="panel-section-title">Hotel Choices</div>
+    <table>
+        <thead><tr><th>City</th><th>Selected hotel/base</th><th>Score</th></tr></thead>
+        <tbody>{body}</tbody>
+    </table>
     """
 
 
@@ -3216,6 +3471,8 @@ def _add_route_debug_controls(map_object, route_registry, hidden_default_layers=
                 <button type="button" class="blueprint-route-action" data-route-action="method">Show methods</button>
                 <button type="button" class="blueprint-route-action" data-route-action="traveler">Show travelers</button>
                 <button type="button" class="blueprint-route-action" data-route-action="city_detail">Show city details</button>
+                <button type="button" class="blueprint-route-action" data-route-action="must_go">Must-go places</button>
+                <button type="button" class="blueprint-route-action" data-route-action="hotel">Hotels</button>
             </div>
             <button type="button" class="blueprint-route-action" data-route-action="zoom" style="width:100%; margin-bottom:8px;">Zoom to checked routes</button>
             <div class="blueprint-route-checkboxes">{checkbox_html}</div>
@@ -3460,6 +3717,14 @@ def _add_route_debug_controls(map_object, route_registry, hidden_default_layers=
                     }} else if (action === "city_detail") {{
                         setOnly(function(route) {{
                             return route.control_id === "traveler_balanced" || routeHasQuickGroup(route, "city_detail");
+                        }});
+                    }} else if (action === "must_go") {{
+                        setOnly(function(route) {{
+                            return route.control_id === "traveler_balanced" || routeHasQuickGroup(route, "must_go");
+                        }});
+                    }} else if (action === "hotel") {{
+                        setOnly(function(route) {{
+                            return route.control_id === "traveler_balanced" || routeHasQuickGroup(route, "hotel");
                         }});
                     }}
                     syncCheckboxState();
@@ -3791,6 +4056,7 @@ def build_production_trip_map(context, output_path=None, run_live_routing=None):
         route_cache = {}
 
     run_live = bool(context.get("RUN_LIVE_APIS", False) if run_live_routing is None else run_live_routing)
+    run_live = bool(run_live or context.get("MAP_REFRESH_ROAD_GEOMETRY", False))
     route_debug_rows = []
     route_debug_registry = []
 
@@ -3920,46 +4186,106 @@ def build_production_trip_map(context, output_path=None, run_live_routing=None):
     intercity_legs_df.to_csv(output_dir / "production_intercity_legs.csv", index=False)
     all_points.extend(fastest_path + scenic_path)
 
+    selected_hotel_layer = folium.FeatureGroup(
+        name="Selected hotel/base pins",
+        show=bool(context.get("SHOW_SELECTED_HOTELS_BY_DEFAULT", True)),
+    )
     candidate_hotel_layer = folium.FeatureGroup(
-        name="Candidate hotels",
+        name="Hotel candidates",
         show=bool(context.get("SHOW_CANDIDATE_HOTELS_BY_DEFAULT", False)),
     )
     selected_hotels = {
         (str(getattr(row, "overnight_city", row.city)), str(row.hotel_name))
         for row in profile_day_plan_df[["city", "overnight_city", "hotel_name"]].drop_duplicates().itertuples(index=False)
     }
+    hotel_debug_df = _load_csv(output_dir / "production_hotel_selection_debug.csv")
     for city in city_sequence:
-        hotel_candidates = _city_hotel_catalog(context, city).head(10).copy()
+        if not hotel_debug_df.empty:
+            hotel_candidates = hotel_debug_df[hotel_debug_df["city"].astype(str).eq(city)].head(12).copy()
+        else:
+            hotel_candidates = _city_hotel_catalog(context, city).head(10).copy()
         for rank, hotel in enumerate(hotel_candidates.itertuples(index=False), start=1):
-            hotel_name = str(getattr(hotel, "name", f"{city} hotel"))
+            hotel_name = str(getattr(hotel, "hotel_name", getattr(hotel, "name", f"{city} hotel")))
             hotel_point = [
                 float(getattr(hotel, "latitude", CITY_COORDS[city][0])),
                 float(getattr(hotel, "longitude", CITY_COORDS[city][1])),
             ]
-            is_selected = (city, hotel_name) in selected_hotels
+            is_selected = bool(getattr(hotel, "selected", False)) or (city, hotel_name) in selected_hotels
             marker_color = "#C1121F" if is_selected else "#6A4C93"
+            score = _finite_float(getattr(hotel, "hotel_score", np.nan))
+            stop_distance = _finite_float(getattr(hotel, "mean_distance_to_selected_stops_km", np.nan))
+            must_go_distance = _finite_float(getattr(hotel, "mean_distance_to_must_go_km", np.nan))
             popup = f"""
             <b>{_escape(hotel_name)}</b><br/>
             City: {_escape(city)}<br/>
-            Candidate rank: {rank}<br/>
+            Candidate rank: {int(getattr(hotel, "candidate_rank", rank) or rank)}<br/>
             Selected base: {"yes" if is_selected else "no"}<br/>
+            Hotel score: {_escape(f"{score:.3f}" if np.isfinite(score) else "n/a")}<br/>
+            Mean distance to selected stops: {_escape(f"{stop_distance:.1f} km" if np.isfinite(stop_distance) else "n/a")}<br/>
+            Mean distance to must-go: {_escape(f"{must_go_distance:.1f} km" if np.isfinite(must_go_distance) else "n/a")}<br/>
+            Reason: {_escape(getattr(hotel, "selected_hotel_reason", ""))}<br/>
             Source: {_escape(getattr(hotel, "source", "unknown"))}
             """
+            target_layer = selected_hotel_layer if is_selected else candidate_hotel_layer
             folium.CircleMarker(
                 location=hotel_point,
-                radius=8 if is_selected else 5,
+                radius=9 if is_selected else 5,
                 color=marker_color,
                 fill=True,
                 fillColor=marker_color,
-                fillOpacity=0.78,
-                weight=2,
-                popup=folium.Popup(popup, max_width=260, min_width=180),
-                tooltip=f"{city} hotel candidate {rank}: {hotel_name}",
-            ).add_to(candidate_hotel_layer)
+                fillOpacity=0.84 if is_selected else 0.72,
+                weight=3 if is_selected else 2,
+                popup=folium.Popup(popup, max_width=280, min_width=190),
+                tooltip=f"{city} {'selected hotel/base' if is_selected else 'hotel candidate'} {rank}: {hotel_name}",
+            ).add_to(target_layer)
+            if is_selected:
+                folium.Marker(
+                    location=hotel_point,
+                    icon=folium.Icon(color="darkred", icon="hotel", prefix="fa"),
+                    tooltip=f"Selected hotel/base: {hotel_name}",
+                    popup=folium.Popup(popup, max_width=280, min_width=190),
+                ).add_to(selected_hotel_layer)
+    selected_hotel_layer.add_to(trip_map)
     candidate_hotel_layer.add_to(trip_map)
+    route_debug_registry.append(
+        {
+            "label": "Selected hotel/base pins",
+            "control_label": "Selected hotel/base pins",
+            "control_id": "hotel_selected",
+            "family": "hotel",
+            "color": "#C1121F",
+            "pane": "markerPane",
+            "layer_var": selected_hotel_layer.get_name(),
+            "offset_index": 0,
+            "default_checked": True,
+            "default_visible": True,
+            "quick_groups": ["hotel"],
+            "distance_km": 0.0,
+            "unique_points": len(selected_hotels),
+            "bounds": _route_bounds(profile_day_plan_df[["hotel_latitude", "hotel_longitude"]].dropna().astype(float).values.tolist()),
+        }
+    )
+    route_debug_registry.append(
+        {
+            "label": "Hotel candidates",
+            "control_label": "Hotel candidates",
+            "control_id": "hotel_candidates",
+            "family": "hotel",
+            "color": "#6A4C93",
+            "pane": "markerPane",
+            "layer_var": candidate_hotel_layer.get_name(),
+            "offset_index": 0,
+            "default_checked": False,
+            "default_visible": False,
+            "quick_groups": ["hotel"],
+            "distance_km": 0.0,
+            "unique_points": int(len(hotel_debug_df)) if not hotel_debug_df.empty else 0,
+            "bounds": _route_bounds(hotel_debug_df[["latitude", "longitude"]].dropna().astype(float).values.tolist()) if not hotel_debug_df.empty else [],
+        }
+    )
 
     social_layer = folium.FeatureGroup(
-        name="Social must-go candidates",
+        name="Must-go candidates",
         show=bool(context.get("SHOW_SOCIAL_CANDIDATES_BY_DEFAULT", False)),
     )
     enriched_catalog = _load_csv(output_dir / "production_enriched_poi_catalog.csv")
@@ -3976,13 +4302,27 @@ def build_production_trip_map(context, output_path=None, run_live_routing=None):
         | social_catalog.get("corridor_fit", pd.Series(0.0, index=social_catalog.index)).astype(float).gt(0.70)
     ].copy()
     social_catalog.to_csv(output_dir / "production_social_must_go_candidates.csv", index=False)
+    selected_must_go_names = set(
+        day_plan_df.loc[
+            day_plan_df.get("social_must_go", pd.Series(False, index=day_plan_df.index)).astype(bool),
+            "attraction_name",
+        ]
+        .dropna()
+        .astype(str)
+        .tolist()
+    )
     for row in social_catalog.itertuples(index=False):
         final_value = float(getattr(row, "final_poi_value", getattr(row, "source_score", 0.0)) or 0.0)
         corridor_fit = float(getattr(row, "corridor_fit", 0.0) or 0.0)
         detour_minutes = float(getattr(row, "detour_minutes", 0.0) or 0.0)
+        is_selected_must_go = str(row.name) in selected_must_go_names
+        has_coordinates = np.isfinite(float(row.latitude)) and np.isfinite(float(row.longitude))
+        state = "selected" if is_selected_must_go else "skipped" if has_coordinates else "unavailable"
+        marker_color = "#16A34A" if state == "selected" else "#F4A261" if state == "skipped" else "#9CA3AF"
         popup = f"""
         <b>{_escape(row.name)}</b><br/>
         City bucket: {_escape(row.city)}<br/>
+        Must-go state: {_escape(state)}<br/>
         Category: {_escape(row.category)}<br/>
         Source list: {_escape(getattr(row, "source_list", getattr(row, "source", "unknown")))}<br/>
         Final POI value: {final_value:.3f}<br/>
@@ -3995,10 +4335,39 @@ def build_production_trip_map(context, output_path=None, run_live_routing=None):
         folium.Marker(
             location=[float(row.latitude), float(row.longitude)],
             popup=folium.Popup(popup, max_width=300, min_width=200),
-            tooltip=f"Social must-go: {row.name}",
-            icon=folium.Icon(color="orange", icon="star", prefix="fa"),
+            tooltip=f"Must-go {state}: {row.name}",
+            icon=folium.Icon(color="green" if state == "selected" else "orange" if state == "skipped" else "gray", icon="star", prefix="fa"),
+        ).add_to(social_layer)
+        folium.CircleMarker(
+            location=[float(row.latitude), float(row.longitude)],
+            radius=9 if state == "selected" else 7,
+            color=marker_color,
+            fill=True,
+            fillColor=marker_color,
+            fillOpacity=0.78,
+            weight=3 if state == "selected" else 2,
+            popup=folium.Popup(popup, max_width=300, min_width=200),
+            tooltip=f"Must-go {state}: {row.name}",
         ).add_to(social_layer)
     social_layer.add_to(trip_map)
+    route_debug_registry.append(
+        {
+            "label": "Must-go candidates",
+            "control_label": "Must-go candidates",
+            "control_id": "must_go_candidates",
+            "family": "must_go",
+            "color": "#F4A261",
+            "pane": "markerPane",
+            "layer_var": social_layer.get_name(),
+            "offset_index": 0,
+            "default_checked": False,
+            "default_visible": False,
+            "quick_groups": ["must_go"],
+            "distance_km": 0.0,
+            "unique_points": int(len(social_catalog)),
+            "bounds": _route_bounds(social_catalog[["latitude", "longitude"]].dropna().astype(float).values.tolist()) if not social_catalog.empty else [],
+        }
+    )
 
     profile_layer_groups = {
         PROFILE_CONFIGS[profile_name]["label"]: []
@@ -4173,12 +4542,16 @@ def build_production_trip_map(context, output_path=None, run_live_routing=None):
     selected_result_layer = _add_selected_result_layer(
         trip_map,
         day_plan_df,
+        route_cache=route_cache,
+        run_live=run_live,
         route_debug_rows=route_debug_rows,
         show_by_default=bool(context.get("SHOW_SELECTED_RESULT_BY_DEFAULT", False)) and not hide_detail_layers_on_load,
     )
     traveler_overview_layers = _add_traveler_overview_layers(
         trip_map,
         profile_day_plans,
+        route_cache=route_cache,
+        run_live=run_live,
         route_debug_rows=route_debug_rows,
         show_by_default=bool(context.get("SHOW_TRAVELER_OVERVIEWS_BY_DEFAULT", False)) and not hide_detail_layers_on_load,
     )
@@ -4188,6 +4561,8 @@ def build_production_trip_map(context, output_path=None, run_live_routing=None):
         fastest_path=fastest_path,
         scenic_path=scenic_path,
         profile_day_plans=profile_day_plans,
+        route_cache=route_cache,
+        run_live=run_live,
         route_debug_rows=route_debug_rows,
         route_debug_registry=route_debug_registry,
     )
@@ -4269,6 +4644,26 @@ def build_production_trip_map(context, output_path=None, run_live_routing=None):
     .blueprint-dragging .blueprint-panel-header {{
         cursor: grabbing;
     }}
+    .blueprint-route-arrow {{
+        align-items: center;
+        background: rgba(255,255,255,0.82);
+        border: 2px solid var(--route-arrow-color);
+        border-radius: 999px;
+        box-shadow: 0 1px 5px rgba(0,0,0,0.25);
+        display: flex;
+        height: 16px;
+        justify-content: center;
+        width: 16px;
+    }}
+    .blueprint-route-arrow span {{
+        border-bottom: 4px solid transparent;
+        border-left: 7px solid var(--route-arrow-color);
+        border-top: 4px solid transparent;
+        display: block;
+        height: 0;
+        margin-left: 2px;
+        width: 0;
+    }}
     #blueprint-result-panel {{
         top: 82px; right: 18px; width: 520px; z-index: 9998;
     }}
@@ -4317,6 +4712,8 @@ def build_production_trip_map(context, output_path=None, run_live_routing=None):
         <div class="summary-line"><b>Posterior reward:</b> {_escape(f"{bandit_reward:.3f}" if np.isfinite(bandit_reward) else "n/a")}</div>
         <div class="summary-line"><b>Route selector:</b> use the draggable checkbox panel to show 7/9/12-day routes, hierarchical/greedy/bandit routes, traveler profiles, detailed city/day routes, and context layers only when needed.</div>
         {route_debug_summary_html}
+        {_build_must_go_summary_html(output_dir)}
+        {_build_hotel_summary_html(output_dir)}
         {_build_html_data_source_summary(output_dir)}
         {_build_method_comparison_html(method_comparison_df)}
         {_build_trip_length_comparison_html(output_dir)}
@@ -4346,7 +4743,9 @@ def build_production_trip_map(context, output_path=None, run_live_routing=None):
     <div><span style="display:inline-block;width:16px;border-top:4px solid #2563EB;margin-right:8px;vertical-align:middle;"></span>Day 1 San Francisco route</div>
     <div><span style="display:inline-block;width:12px;height:12px;border-radius:50%;background:#C1121F;margin-right:8px;"></span>Selected hotel/base</div>
     <div><span style="display:inline-block;width:12px;height:12px;border-radius:50%;background:#6A4C93;margin-right:8px;"></span>Candidate hotel</div>
-    <div><span style="display:inline-block;width:12px;height:12px;border-radius:50%;background:#F4A261;margin-right:8px;"></span>Social must-go candidate</div>
+    <div><span style="display:inline-block;width:12px;height:12px;border-radius:50%;background:#16A34A;margin-right:8px;"></span>Selected must-go</div>
+    <div><span style="display:inline-block;width:12px;height:12px;border-radius:50%;background:#F4A261;margin-right:8px;"></span>Skipped must-go candidate</div>
+    <div><span style="display:inline-block;width:16px;border-top:4px solid #111827;margin-right:8px;vertical-align:middle;"></span>Canvas-safe direction arrows</div>
     <div><span style="display:inline-block;width:12px;height:12px;border-radius:50%;background:#4C78A8;margin-right:8px;"></span>Daily attraction stop</div>
     <div><span style="display:inline-block;width:16px;border-top:4px solid #2563EB;margin-right:8px;vertical-align:middle;"></span>Trip Length · 7-Day Hierarchical Route</div>
     <div><span style="display:inline-block;width:16px;border-top:4px solid #F97316;margin-right:8px;vertical-align:middle;"></span>Trip Length · 9-Day Hierarchical Route</div>
@@ -4368,7 +4767,7 @@ def build_production_trip_map(context, output_path=None, run_live_routing=None):
         "City Details": city_detail_layers,
         "Selected Result": [selected_result_layer] if selected_result_layer is not None else [],
         "Routes": [scenic_layer, fastest_layer],
-        "Map Context": [social_layer, candidate_hotel_layer],
+        "Map Context": [social_layer, selected_hotel_layer, candidate_hotel_layer],
         "Traveler Comparison": traveler_overview_layers,
         "Relaxed Traveler": profile_layer_groups["Relaxed"],
         "Balanced Traveler": profile_layer_groups["Balanced"],

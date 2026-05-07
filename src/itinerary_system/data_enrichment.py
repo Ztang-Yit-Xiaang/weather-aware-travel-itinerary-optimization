@@ -538,6 +538,31 @@ def build_enriched_catalog(
     enriched_df[OPEN_ENRICHED_POI_COLUMNS].to_csv(output_dir / "production_enriched_poi_catalog.csv", index=False)
 
     city_summary_df = production_enrichment.build_city_catalog_summary(city_names, local_yelp_df, enriched_df)
+    if not city_summary_df.empty and "city" in city_summary_df.columns:
+        must_go_frame = enriched_df.copy()
+        if "social_must_go" not in must_go_frame.columns:
+            must_go_frame["social_must_go"] = False
+        must_go_frame["social_must_go"] = must_go_frame["social_must_go"].fillna(False).astype(bool)
+        must_go_frame["social_score"] = _numeric_series(must_go_frame, "social_score")
+        must_go_frame["must_go_weight"] = _numeric_series(must_go_frame, "must_go_weight")
+        must_go_frame["must_go_signal"] = (
+            must_go_frame["social_must_go"].astype(float)
+            * must_go_frame["social_score"]
+            * must_go_frame["must_go_weight"].clip(lower=0.0)
+        )
+        must_go_by_city = (
+            must_go_frame[must_go_frame["social_must_go"]]
+            .groupby("city", dropna=False)
+            .agg(
+                city_must_go_count=("name", "nunique"),
+                city_must_go_score=("must_go_signal", "sum"),
+                city_social_score=("social_score", "max"),
+            )
+            .reset_index()
+        )
+        city_summary_df = city_summary_df.merge(must_go_by_city, on="city", how="left")
+        for column in ["city_must_go_count", "city_must_go_score", "city_social_score"]:
+            city_summary_df[column] = pd.to_numeric(city_summary_df.get(column, 0.0), errors="coerce").fillna(0.0)
     city_summary_df.to_csv(output_dir / "production_city_catalog_summary.csv", index=False)
     weather_df = build_open_meteo_context(city_names, output_dir, config)
 

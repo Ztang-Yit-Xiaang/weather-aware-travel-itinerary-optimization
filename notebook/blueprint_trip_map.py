@@ -1474,13 +1474,22 @@ def _add_flow_route(
             popup=folium.Popup(leg_popup, max_width=320) if leg_popup else None,
             pane=pane,
         ).add_to(layer)
-        plugins.PolyLineTextPath(
-            route_line,
-            "   >   ",
-            repeat=True,
-            offset=arrow_offset,
-            attributes={"fill": color, "font-weight": "700", "font-size": "14"},
-        ).add_to(layer)
+        # PolyLineTextPath inserts a <textPath> child of the polyline's SVG
+        # <path>. The map is created with prefer_canvas=True (see
+        # build_production_trip_map), so polylines render to canvas and
+        # polyline._path is undefined; leaflet.textpath.js then throws
+        # "Cannot read properties of undefined (reading 'setAttribute')"
+        # which terminates the enclosing <script> block and prevents
+        # GroupedLayerControl from initializing. Direction is already
+        # conveyed by dash_array and color; switching to
+        # prefer_canvas=False is not viable at ~343 polylines.
+        # plugins.PolyLineTextPath(
+        #     route_line,
+        #     "   >   ",
+        #     repeat=True,
+        #     offset=arrow_offset,
+        #     attributes={"fill": color, "font-weight": "700", "font-size": "14"},
+        # ).add_to(layer)
         line_count += 1
 
     mode = _route_mode_label(modes)
@@ -1659,13 +1668,15 @@ def _add_intercity_route_layer(map_object, route_name, sequence, color, route_ca
             popup=folium.Popup(popup, max_width=330, min_width=220),
             pane=route_pane,
         ).add_to(layer)
-        plugins.PolyLineTextPath(
-            route_line,
-            "   >   ",
-            repeat=True,
-            offset=7,
-            attributes={"fill": color, "font-weight": "700", "font-size": "13"},
-        ).add_to(layer)
+        # Disabled for the same reason as in _add_intercity_route_layer
+        # (incompatible with prefer_canvas=True; see comment there).
+        # plugins.PolyLineTextPath(
+        #     route_line,
+        #     "   >   ",
+        #     repeat=True,
+        #     offset=7,
+        #     attributes={"fill": color, "font-weight": "700", "font-size": "13"},
+        # ).add_to(layer)
 
         leg_rows.append(
             {
@@ -2032,13 +2043,15 @@ def _add_full_scene_route_band(
         popup=folium.Popup(popup_html, max_width=320) if popup_html else None,
         pane=pane,
     ).add_to(layer)
-    plugins.PolyLineTextPath(
-        route_line,
-        "   >   ",
-        repeat=True,
-        offset=arrow_offset,
-        attributes={"fill": color, "font-weight": "800", "font-size": "13"},
-    ).add_to(layer)
+    # Disabled for the same reason as in _add_intercity_route_layer
+    # (incompatible with prefer_canvas=True; see comment there).
+    # plugins.PolyLineTextPath(
+    #     route_line,
+    #     "   >   ",
+    #     repeat=True,
+    #     offset=arrow_offset,
+    #     attributes={"fill": color, "font-weight": "800", "font-size": "13"},
+    # ).add_to(layer)
 
     endpoint_specs = [
         (clean_points[0], start_label, "blueprint-route-endpoint-start"),

@@ -592,6 +592,32 @@ METHOD_SOLVER_ROLES = {
     "hierarchical_bandit_gurobi_repair": ("bandit_master", "small_gurobi_repair"),
 }
 
+MATRIX_METHOD_ORDER = [
+    "hierarchical_gurobi_pipeline",
+    "hierarchical_greedy_baseline",
+    "hierarchical_bandit_gurobi_repair",
+]
+
+MATRIX_PROFILE_ORDER = ["relaxed", "balanced", "explorer"]
+
+METHOD_ROUTE_KEY_SLUG = {
+    "hierarchical_gurobi_pipeline": "gurobi",
+    "hierarchical_greedy_baseline": "greedy",
+    "hierarchical_bandit_gurobi_repair": "bandit_repair",
+}
+
+METHOD_SHORT_LABELS = {
+    "hierarchical_gurobi_pipeline": "Gurobi",
+    "hierarchical_greedy_baseline": "Greedy",
+    "hierarchical_bandit_gurobi_repair": "Bandit + Small Gurobi",
+}
+
+PROFILE_STRATEGY_DEFAULTS = {
+    "relaxed": "fastest_low_cost",
+    "balanced": "balanced",
+    "explorer": "scenic_social",
+}
+
 
 def _method_display_name(method: str) -> str:
     return METHOD_DISPLAY_NAMES.get(str(method), str(method))
@@ -599,6 +625,27 @@ def _method_display_name(method: str) -> str:
 
 def _method_solver_roles(method: str) -> tuple[str, str]:
     return METHOD_SOLVER_ROLES.get(str(method), ("unknown_allocation", "unknown_local_route"))
+
+
+def _method_short_label(method: str) -> str:
+    return METHOD_SHORT_LABELS.get(str(method), _method_display_name(method))
+
+
+def _route_key(trip_days: int, method: str, profile: str) -> str:
+    method_slug = METHOD_ROUTE_KEY_SLUG.get(str(method), str(method).lower().replace(" ", "_"))
+    profile_slug = str(profile).lower().replace(" ", "_")
+    return f"d{int(trip_days)}__{method_slug}__{profile_slug}"
+
+
+def _profile_label(blueprint_trip_map, profile: str) -> str:
+    try:
+        return str(blueprint_trip_map._profile_config(profile).get("label", str(profile).title()))
+    except Exception:
+        return str(profile).title()
+
+
+def _profile_strategy(profile: str, fallback: str = "balanced") -> str:
+    return PROFILE_STRATEGY_DEFAULTS.get(str(profile).lower(), fallback)
 
 
 def _comparison_route_stop_columns() -> list[str]:
@@ -1339,9 +1386,11 @@ def _hierarchical_method_route_outputs(
     strategy_name: str,
     local_solver: str,
     budget_df: pd.DataFrame | None = None,
+    profile_name: str = "balanced",
 ) -> tuple[pd.DataFrame, dict]:
     method_display_name = _method_display_name(method)
-    profile_config = blueprint_trip_map._profile_config("balanced")
+    profile_name = str(profile_name or "balanced").lower()
+    profile_config = blueprint_trip_map._profile_config(profile_name)
     stops_per_day = min(int(profile_config["stops_per_day"]), int(config.get("optimization", "max_pois_per_day", 4)))
     candidate_size = max(12, stops_per_day * 4)
     sequence = blueprint_trip_map._trip_sequence_with_pass_through(trip)
@@ -1438,7 +1487,7 @@ def _hierarchical_method_route_outputs(
                     max_stops=stops_per_day,
                     route_start=(route_start_latitude, route_start_longitude),
                     route_end=(route_end_latitude, route_end_longitude),
-                    profile_name="balanced",
+                    profile_name=profile_name,
                 )
                 route_type_label = f"{route_type}_legacy_local_gurobi"
             elif local_solver == "small_gurobi":
@@ -1668,6 +1717,599 @@ def _bandit_route_stop_rows(
     return route_stops, summary_row
 
 
+ROUTE_MATRIX_SUMMARY_COLUMNS = [
+    "route_key",
+    "comparison_type",
+    "comparison_label",
+    "trip_days",
+    "method",
+    "method_display_name",
+    "method_short_label",
+    "profile",
+    "profile_label",
+    "allocation_solver",
+    "local_route_solver",
+    "gateway_start",
+    "gateway_end",
+    "city_sequence",
+    "days_by_city",
+    "total_budget",
+    "budget_used",
+    "budget_source",
+    "total_utility",
+    "total_waiting_time",
+    "total_travel_time",
+    "total_travel_distance_km",
+    "total_cost",
+    "selected_attractions",
+    "must_go_count",
+    "must_go_total",
+    "must_go_selected_count",
+    "must_go_skipped_count",
+    "must_go_coverage_ratio",
+    "must_go_skipped_names",
+    "must_go_policy",
+    "diversity_score",
+    "utility_norm",
+    "must_go_norm",
+    "diversity_norm",
+    "travel_efficiency_norm",
+    "cost_efficiency_norm",
+    "waiting_efficiency_norm",
+    "comparison_score",
+    "comparison_score_formula",
+    "objective",
+    "posterior_reward",
+    "solve_seconds",
+    "mip_gap",
+    "status",
+    "selected_strategy",
+    "hotel_showcase_group",
+    "selector_parent",
+    "route_layer_var",
+    "hotel_layer_var",
+    "city_detail_layer_vars",
+    "transition_layer_vars",
+    "notes",
+]
+
+
+def _route_matrix_stop_columns() -> list[str]:
+    return [
+        "route_key",
+        "profile",
+        "profile_label",
+        "selector_parent",
+        "hotel_showcase_group",
+        *_comparison_route_stop_columns(),
+    ]
+
+
+def _annotate_route_matrix_stops(
+    route_stops: pd.DataFrame,
+    *,
+    route_key: str,
+    trip_days: int,
+    method: str,
+    profile: str,
+    profile_label: str,
+    comparison_label: str,
+    selector_parent: str,
+) -> pd.DataFrame:
+    if route_stops.empty:
+        return pd.DataFrame(columns=_route_matrix_stop_columns())
+    output = route_stops.copy()
+    output["route_key"] = route_key
+    output["profile"] = profile
+    output["profile_label"] = profile_label
+    output["selector_parent"] = selector_parent
+    output["hotel_showcase_group"] = route_key
+    output["comparison_type"] = "route_matrix"
+    output["comparison_label"] = comparison_label
+    output["method"] = method
+    output["method_display_name"] = _method_display_name(method)
+    output["trip_days"] = int(trip_days)
+    for column in _route_matrix_stop_columns():
+        if column not in output.columns:
+            output[column] = np.nan if column.endswith(("latitude", "longitude")) else ""
+    return output[_route_matrix_stop_columns()]
+
+
+def _route_matrix_summary_row(
+    *,
+    route_key: str,
+    trip_days: int,
+    method: str,
+    profile: str,
+    profile_label: str,
+    comparison_label: str,
+    trip_for_method: dict,
+    route_stops: pd.DataFrame,
+    route_info: dict,
+    budget_df: pd.DataFrame,
+    must_go_candidates: pd.DataFrame,
+    config: TripConfig,
+    objective_value: float,
+    posterior_reward: float,
+    selected_strategy: str,
+    notes: str,
+) -> dict:
+    metrics = _route_metrics_from_stops(route_stops)
+    must_go_summary = _route_must_go_summary(route_stops, must_go_candidates, config)
+    intercity_minutes, intercity_distance = _intercity_route_metrics(trip_for_method)
+    attraction_cost = _estimated_route_stop_cost(route_stops)
+    total_cost = (
+        float(route_info.get("reserved_food_transport", 0.0))
+        + float(route_info.get("committed_hotel_cost", 0.0))
+        + float(attraction_cost)
+    )
+    allocation_solver, local_route_solver = _method_solver_roles(method)
+    return {
+        "route_key": route_key,
+        "comparison_type": "route_matrix",
+        "comparison_label": comparison_label,
+        "trip_days": int(trip_days),
+        "method": method,
+        "method_display_name": _method_display_name(method),
+        "method_short_label": _method_short_label(method),
+        "profile": profile,
+        "profile_label": profile_label,
+        "allocation_solver": allocation_solver,
+        "local_route_solver": local_route_solver,
+        **_trip_summary_fields(trip_for_method),
+        "total_budget": float(route_info.get("total_budget", get_canonical_trip_budget(config, budget_df))),
+        "budget_used": float(total_cost),
+        "budget_source": str(route_info.get("budget_source", _canonical_budget_value_and_source(config, budget_df)[1])),
+        "total_utility": metrics["total_utility"],
+        "total_waiting_time": metrics["total_waiting_time"],
+        "total_travel_time": metrics["total_travel_time"] + intercity_minutes,
+        "total_travel_distance_km": metrics["total_travel_distance_km"] + intercity_distance,
+        "total_cost": float(total_cost),
+        "selected_attractions": metrics["selected_attractions"],
+        "must_go_count": int(route_stops["social_must_go"].astype(bool).sum()) if not route_stops.empty and "social_must_go" in route_stops.columns else 0,
+        **must_go_summary,
+        "diversity_score": metrics["diversity_score"],
+        "objective": float(objective_value) if pd.notna(objective_value) else np.nan,
+        "posterior_reward": float(posterior_reward) if pd.notna(posterior_reward) else np.nan,
+        "solve_seconds": float(route_info.get("solve_seconds", np.nan) or 0.0),
+        "mip_gap": route_info.get("mip_gap", np.nan),
+        "status": str(route_info.get("status", "FAILED")),
+        "selected_strategy": selected_strategy,
+        "hotel_showcase_group": route_key,
+        "selector_parent": f"d{int(trip_days)}__{METHOD_ROUTE_KEY_SLUG.get(method, method)}",
+        "route_layer_var": "",
+        "hotel_layer_var": "",
+        "city_detail_layer_vars": "",
+        "transition_layer_vars": "",
+        "notes": notes,
+    }
+
+
+def _write_route_matrix_hotel_debug(
+    *,
+    output_dir: Path,
+    route_stops_df: pd.DataFrame,
+    must_go_candidates: pd.DataFrame,
+) -> pd.DataFrame:
+    hotel_catalog = _load_csv(output_dir / "production_city_hotel_catalog.csv")
+    if hotel_catalog.empty:
+        hotel_catalog = _load_csv(output_dir / "osm_city_hotel_catalog.csv")
+    if hotel_catalog.empty or route_stops_df.empty:
+        debug_df = pd.DataFrame()
+        debug_df.to_csv(output_dir / "production_route_matrix_hotel_selection_debug.csv", index=False)
+        return debug_df
+
+    rows = []
+    for route_key, route_rows in route_stops_df.groupby("route_key", dropna=False):
+        route_key = str(route_key)
+        selected_pairs = {
+            (str(row.overnight_city), str(row.hotel_name))
+            for row in route_rows[["overnight_city", "hotel_name"]].dropna().drop_duplicates().itertuples(index=False)
+        }
+        route_meta = route_rows.iloc[0]
+        for city, city_hotels in hotel_catalog.groupby("city", dropna=False):
+            city_name = str(city)
+            if not route_rows["overnight_city"].astype(str).eq(city_name).any():
+                continue
+            stop_points = route_rows[route_rows["overnight_city"].astype(str).eq(city_name)]
+            must_go_points = must_go_candidates[must_go_candidates.get("city", pd.Series(dtype=str)).astype(str).eq(city_name)]
+            for rank, hotel in enumerate(city_hotels.head(10).itertuples(index=False), start=1):
+                hotel_name = str(getattr(hotel, "name", f"{city_name} hotel"))
+                hotel_lat = float(getattr(hotel, "latitude", np.nan))
+                hotel_lon = float(getattr(hotel, "longitude", np.nan))
+                if not np.isfinite(hotel_lat) or not np.isfinite(hotel_lon):
+                    continue
+                if not stop_points.empty:
+                    stop_distance = float(
+                        stop_points.apply(
+                            lambda row: geodesic((hotel_lat, hotel_lon), (float(row["latitude"]), float(row["longitude"]))).km,
+                            axis=1,
+                        ).mean()
+                    )
+                else:
+                    stop_distance = np.nan
+                if not must_go_points.empty:
+                    must_go_distance = float(
+                        must_go_points.apply(
+                            lambda row: geodesic((hotel_lat, hotel_lon), (float(row["latitude"]), float(row["longitude"]))).km,
+                            axis=1,
+                        ).mean()
+                    )
+                else:
+                    must_go_distance = np.nan
+                rating = float(getattr(hotel, "stars", getattr(hotel, "rating_score", 0.0)) or 0.0)
+                selected = (city_name, hotel_name) in selected_pairs
+                hotel_score = (
+                    0.35 * rating
+                    - 0.10 * (0.0 if pd.isna(stop_distance) else stop_distance)
+                    - 0.08 * (0.0 if pd.isna(must_go_distance) else must_go_distance)
+                    + (1.50 if selected else 0.0)
+                    - 0.03 * rank
+                )
+                rows.append(
+                    {
+                        "route_key": route_key,
+                        "trip_days": int(route_meta.get("trip_days", 0) or 0),
+                        "method": str(route_meta.get("method", "")),
+                        "profile": str(route_meta.get("profile", "")),
+                        "comparison_label": str(route_meta.get("comparison_label", "")),
+                        "city": city_name,
+                        "hotel_name": hotel_name,
+                        "candidate_rank": int(rank),
+                        "selected": bool(selected),
+                        "latitude": hotel_lat,
+                        "longitude": hotel_lon,
+                        "source": str(getattr(hotel, "source", "unknown")),
+                        "rating_component": rating,
+                        "mean_distance_to_selected_stops_km": stop_distance,
+                        "mean_distance_to_must_go_km": must_go_distance,
+                        "hotel_score": float(hotel_score),
+                        "selected_hotel_reason": "selected route base" if selected else "candidate alternative",
+                    }
+                )
+    debug_df = pd.DataFrame(rows)
+    if not debug_df.empty:
+        debug_df = debug_df.sort_values(
+            ["route_key", "city", "selected", "hotel_score"],
+            ascending=[True, True, False, False],
+        ).reset_index(drop=True)
+    debug_df.to_csv(output_dir / "production_route_matrix_hotel_selection_debug.csv", index=False)
+    return debug_df
+
+
+def _write_route_matrix_compatibility_artifacts(
+    *,
+    output_dir: Path,
+    matrix_df: pd.DataFrame,
+    matrix_route_stops_df: pd.DataFrame,
+    config: TripConfig,
+    must_go_candidates: pd.DataFrame,
+) -> None:
+    canonical_days = int(config.get("trip", "trip_days", 7))
+    trip_subset = matrix_route_stops_df[
+        matrix_route_stops_df["method"].astype(str).eq("hierarchical_bandit_gurobi_repair")
+        & matrix_route_stops_df["profile"].astype(str).eq("balanced")
+    ].copy()
+    if not trip_subset.empty:
+        trip_subset["comparison_type"] = "trip_length"
+        trip_subset["comparison_label"] = trip_subset["trip_days"].astype(int).map(
+            lambda days: f"Trip Length · {days}-Day Hybrid Bandit + Small Gurobi"
+        )
+        trip_subset = trip_subset[_comparison_route_stop_columns()]
+    trip_subset.to_csv(output_dir / "production_trip_length_route_stops.csv", index=False)
+
+    trip_summary = matrix_df[
+        matrix_df["method"].astype(str).eq("hierarchical_bandit_gurobi_repair")
+        & matrix_df["profile"].astype(str).eq("balanced")
+    ].copy()
+    if not trip_summary.empty:
+        trip_summary["comparison_type"] = "trip_length"
+        trip_summary["comparison_label"] = trip_summary["trip_days"].astype(int).map(
+            lambda days: f"Trip Length · {days}-Day Hybrid Bandit + Small Gurobi"
+        )
+        trip_summary["estimated_budget"] = trip_summary["total_budget"]
+        trip_summary["intercity_drive_minutes"] = pd.to_numeric(trip_summary["total_travel_time"], errors="coerce").fillna(0.0)
+        trip_summary["intercity_drive_hours"] = trip_summary["intercity_drive_minutes"] / 60.0
+        trip_summary["solver_status"] = trip_summary["status"]
+        trip_summary = trip_summary[
+            [
+                "comparison_type",
+                "comparison_label",
+                "trip_days",
+                "gateway_start",
+                "gateway_end",
+                "city_sequence",
+                "days_by_city",
+                "intercity_drive_minutes",
+                "intercity_drive_hours",
+                "estimated_budget",
+                "budget_source",
+                "objective",
+                "posterior_reward",
+                "selected_strategy",
+                "solver_status",
+                "status",
+                "notes",
+            ]
+        ]
+    trip_summary.to_csv(output_dir / "production_trip_length_comparison.csv", index=False)
+
+    method_subset = matrix_route_stops_df[
+        pd.to_numeric(matrix_route_stops_df["trip_days"], errors="coerce").fillna(0).astype(int).eq(canonical_days)
+        & matrix_route_stops_df["profile"].astype(str).eq("balanced")
+    ].copy()
+    if not method_subset.empty:
+        method_subset["comparison_type"] = "method"
+        method_subset["comparison_label"] = "Method · " + method_subset["method_display_name"].astype(str)
+        method_subset = method_subset[_comparison_route_stop_columns()]
+    method_subset.to_csv(output_dir / "production_method_route_stops.csv", index=False)
+
+    method_summary = matrix_df[
+        pd.to_numeric(matrix_df["trip_days"], errors="coerce").fillna(0).astype(int).eq(canonical_days)
+        & matrix_df["profile"].astype(str).eq("balanced")
+    ].copy()
+    if not method_summary.empty:
+        method_summary = method_summary[
+            [
+                "method",
+                "method_display_name",
+                "allocation_solver",
+                "local_route_solver",
+                "trip_days",
+                "gateway_start",
+                "gateway_end",
+                "city_sequence",
+                "days_by_city",
+                "total_budget",
+                "budget_used",
+                "budget_source",
+                "total_utility",
+                "total_waiting_time",
+                "total_travel_time",
+                "total_travel_distance_km",
+                "total_cost",
+                "selected_attractions",
+                "must_go_count",
+                "must_go_total",
+                "must_go_selected_count",
+                "must_go_skipped_count",
+                "must_go_coverage_ratio",
+                "must_go_skipped_names",
+                "must_go_policy",
+                "diversity_score",
+                "utility_norm",
+                "must_go_norm",
+                "diversity_norm",
+                "travel_efficiency_norm",
+                "cost_efficiency_norm",
+                "waiting_efficiency_norm",
+                "comparison_score",
+                "comparison_score_formula",
+                "objective",
+                "posterior_reward",
+                "solve_seconds",
+                "mip_gap",
+                "status",
+                "notes",
+            ]
+        ]
+    method_summary.to_csv(output_dir / "production_method_comparison.csv", index=False)
+    _write_must_go_coverage(
+        output_dir=output_dir,
+        method_df=method_summary if not method_summary.empty else pd.DataFrame(),
+        route_stops_df=method_subset if not method_subset.empty else pd.DataFrame(),
+        must_go_candidates=must_go_candidates,
+        config=config,
+    )
+    _write_hotel_selection_debug(
+        output_dir=output_dir,
+        route_stops_df=method_subset if not method_subset.empty else pd.DataFrame(),
+        must_go_candidates=must_go_candidates,
+    )
+
+
+def build_route_matrix_comparison(
+    *,
+    context: dict,
+    config: TripConfig,
+    output_dir: str | Path | None = None,
+    trip_days_grid: list[int] | None = None,
+    primary_city: str | None = None,
+) -> tuple[pd.DataFrame, pd.DataFrame]:
+    blueprint_trip_map = import_legacy_module("blueprint_trip_map")
+    output_dir = Path(output_dir or _first_context_value(context, "OUTPUT_DIR", default="results/outputs"))
+    output_dir.mkdir(parents=True, exist_ok=True)
+    city_summary_df = _load_frame_from_context_or_csv(
+        context,
+        ["city_catalog_summary_df"],
+        output_dir / "production_city_catalog_summary.csv",
+    )
+    enriched_df = _load_frame_from_context_or_csv(
+        context,
+        ["production_enriched_poi_catalog_df"],
+        output_dir / "production_enriched_poi_catalog.csv",
+    )
+    hotels_df = _load_frame_from_context_or_csv(context, ["hotels_df"], output_dir / "hotel_dataset.csv")
+    osm_city_hotel_catalog_df = _load_frame_from_context_or_csv(
+        context,
+        ["osm_city_hotel_catalog_df"],
+        output_dir / "production_city_hotel_catalog.csv",
+    )
+    if city_summary_df.empty:
+        empty_summary = pd.DataFrame(columns=ROUTE_MATRIX_SUMMARY_COLUMNS)
+        empty_stops = pd.DataFrame(columns=_route_matrix_stop_columns())
+        empty_summary.to_csv(output_dir / "production_route_matrix_comparison.csv", index=False)
+        empty_stops.to_csv(output_dir / "production_route_matrix_route_stops.csv", index=False)
+        return empty_summary, empty_stops
+
+    raw_days = trip_days_grid or config.get("trip_duration_comparison", "days", [7, 9, 12])
+    day_options = sorted({int(value) for value in raw_days if int(value) > 0}) or [7, 9, 12]
+    base_days = max(1, int(config.get("trip", "trip_days", 7)))
+    base_budget = float(config.get("budget", "user_budget", 2000.0))
+    scale_budget = bool(config.get("trip_duration_comparison", "scale_budget_with_days", True))
+    city_name = str(primary_city or _first_context_value(context, "CITY", default="Santa Barbara"))
+    bandit_summary_df = _load_frame_from_context_or_csv(
+        context,
+        ["hybrid_bandit_summary_df"],
+        output_dir / "production_hybrid_bandit_optimization_summary.csv",
+    )
+    if not bandit_summary_df.empty and "posterior_mean_reward" in bandit_summary_df.columns:
+        best_bandit_row = bandit_summary_df.sort_values("posterior_mean_reward", ascending=False).iloc[0]
+        default_bandit_strategy = str(best_bandit_row.get("route_search_strategy", "scenic_social"))
+        posterior_reward = float(best_bandit_row.get("posterior_mean_reward", np.nan))
+    else:
+        default_bandit_strategy = "scenic_social"
+        posterior_reward = np.nan
+    must_go_candidates = _must_go_candidates_from_output(output_dir, enriched_df)
+
+    trip_cache: dict[tuple[int, str], tuple[dict, pd.DataFrame, TripConfig]] = {}
+    summary_rows = []
+    route_frames = []
+    for trip_days in day_options:
+        scaled_budget = base_budget * trip_days / base_days if scale_budget else base_budget
+        duration_config = TripConfig(
+            data=_merge_config_data(
+                config.to_dict(),
+                {
+                    "trip": {"trip_days": trip_days},
+                    "budget": {"user_budget": scaled_budget},
+                },
+            ),
+            source_path=config.source_path,
+        )
+        for method in MATRIX_METHOD_ORDER:
+            try:
+                if method == "hierarchical_greedy_baseline":
+                    trip_for_method, plan_df = solve_hierarchical_trip_with_greedy(duration_config, city_summary_df)
+                else:
+                    trip_for_method, plan_df = solve_hierarchical_trip_with_gurobi(duration_config, city_summary_df)
+            except Exception:
+                trip_for_method, plan_df = solve_hierarchical_trip_with_gurobi(duration_config, city_summary_df)
+            trip_cache[(trip_days, method)] = (trip_for_method, plan_df, duration_config)
+            budget_df = estimate_budget_range(
+                trip=trip_for_method,
+                hotels_df=hotels_df,
+                osm_city_hotel_catalog_df=osm_city_hotel_catalog_df,
+                output_dir=output_dir,
+                config=duration_config,
+                primary_city=city_name,
+                write_output=False,
+            )
+            for profile in MATRIX_PROFILE_ORDER:
+                profile_label = _profile_label(blueprint_trip_map, profile)
+                route_key = _route_key(trip_days, method, profile)
+                selector_parent = f"d{int(trip_days)}__{METHOD_ROUTE_KEY_SLUG.get(method, method)}"
+                comparison_label = f"{int(trip_days)}-Day · {_method_short_label(method)} · {profile_label}"
+                if method == "hierarchical_bandit_gurobi_repair":
+                    local_solver = "small_gurobi"
+                    strategy_name = default_bandit_strategy if profile == "balanced" else _profile_strategy(profile, default_bandit_strategy)
+                    selected_strategy = f"bandit_repair:{strategy_name}"
+                elif method == "hierarchical_greedy_baseline":
+                    local_solver = "greedy"
+                    strategy_name = _profile_strategy(profile)
+                    selected_strategy = f"greedy:{strategy_name}"
+                    solver_note = "greedy city/base/day allocation and greedy local route"
+                else:
+                    local_solver = "legacy_gurobi"
+                    strategy_name = _profile_strategy(profile)
+                    selected_strategy = f"gurobi:{strategy_name}"
+                    solver_note = "gurobi city/base/day allocation and legacy local gurobi route"
+                if method == "hierarchical_bandit_gurobi_repair":
+                    solver_note = "bandit strategy selection with small gurobi repair"
+                route_context = dict(context)
+                route_context["OUTPUT_DIR"] = output_dir
+                route_context["best_hierarchical_trip"] = trip_for_method
+                route_stops, route_info = _hierarchical_method_route_outputs(
+                    context=route_context,
+                    blueprint_trip_map=blueprint_trip_map,
+                    trip=trip_for_method,
+                    config=duration_config,
+                    method=method,
+                    strategy_name=strategy_name,
+                    local_solver=local_solver,
+                    budget_df=budget_df,
+                    profile_name=profile,
+                )
+                route_stops = _annotate_route_matrix_stops(
+                    route_stops,
+                    route_key=route_key,
+                    trip_days=trip_days,
+                    method=method,
+                    profile=profile,
+                    profile_label=profile_label,
+                    comparison_label=comparison_label,
+                    selector_parent=selector_parent,
+                )
+                if not route_stops.empty:
+                    route_frames.append(route_stops)
+                objective_value = float(trip_for_method.get("objective", route_info.get("objective", np.nan)))
+                route_posterior = posterior_reward if method == "hierarchical_bandit_gurobi_repair" else np.nan
+                summary_rows.append(
+                    _route_matrix_summary_row(
+                        route_key=route_key,
+                        trip_days=trip_days,
+                        method=method,
+                        profile=profile,
+                        profile_label=profile_label,
+                        comparison_label=comparison_label,
+                        trip_for_method=trip_for_method,
+                        route_stops=route_stops,
+                        route_info=route_info,
+                        budget_df=budget_df,
+                        must_go_candidates=must_go_candidates,
+                        config=duration_config,
+                        objective_value=objective_value,
+                        posterior_reward=route_posterior,
+                        selected_strategy=selected_strategy,
+                        notes=(
+                            f"Canonical route matrix row for {comparison_label}; "
+                            f"{solver_note}; profile controls stops/day and hotel scoring; strategy={strategy_name}."
+                        ),
+                    )
+                )
+
+    matrix_df = pd.DataFrame(summary_rows)
+    for column in ROUTE_MATRIX_SUMMARY_COLUMNS:
+        if column not in matrix_df.columns:
+            matrix_df[column] = "" if column in {"route_key", "method", "profile", "status", "notes"} else np.nan
+    matrix_df = _add_method_comparison_scores(matrix_df)
+    matrix_df["method_sort"] = matrix_df["method"].map({method: i for i, method in enumerate(MATRIX_METHOD_ORDER)}).fillna(99)
+    matrix_df["profile_sort"] = matrix_df["profile"].map({profile: i for i, profile in enumerate(MATRIX_PROFILE_ORDER)}).fillna(99)
+    matrix_df = matrix_df.sort_values(["trip_days", "method_sort", "profile_sort"]).drop(columns=["method_sort", "profile_sort"]).reset_index(drop=True)
+    matrix_df = matrix_df[ROUTE_MATRIX_SUMMARY_COLUMNS]
+
+    matrix_route_stops_df = (
+        pd.concat(route_frames, ignore_index=True, sort=False)
+        if route_frames
+        else pd.DataFrame(columns=_route_matrix_stop_columns())
+    )
+    if not matrix_route_stops_df.empty:
+        matrix_route_stops_df["method_sort"] = matrix_route_stops_df["method"].map({method: i for i, method in enumerate(MATRIX_METHOD_ORDER)}).fillna(99)
+        matrix_route_stops_df["profile_sort"] = matrix_route_stops_df["profile"].map({profile: i for i, profile in enumerate(MATRIX_PROFILE_ORDER)}).fillna(99)
+        matrix_route_stops_df = (
+            matrix_route_stops_df.sort_values(["trip_days", "method_sort", "profile_sort", "day", "stop_order"])
+            .drop(columns=["method_sort", "profile_sort"])
+            .reset_index(drop=True)
+        )
+        matrix_route_stops_df = matrix_route_stops_df[_route_matrix_stop_columns()]
+
+    matrix_df.to_csv(output_dir / "production_route_matrix_comparison.csv", index=False)
+    matrix_route_stops_df.to_csv(output_dir / "production_route_matrix_route_stops.csv", index=False)
+    _write_route_matrix_hotel_debug(
+        output_dir=output_dir,
+        route_stops_df=matrix_route_stops_df,
+        must_go_candidates=must_go_candidates,
+    )
+    _write_route_matrix_compatibility_artifacts(
+        output_dir=output_dir,
+        matrix_df=matrix_df,
+        matrix_route_stops_df=matrix_route_stops_df,
+        config=config,
+        must_go_candidates=must_go_candidates,
+    )
+    return matrix_df, matrix_route_stops_df
+
+
 def compare_trip_lengths(
     *,
     config: TripConfig,
@@ -1802,6 +2444,20 @@ def build_trip_length_comparison(
     base_budget = float(config.get("budget", "user_budget", 2000.0))
     scale_budget = bool(config.get("trip_duration_comparison", "scale_budget_with_days", True))
     city_name = str(primary_city or _first_context_value(context, "CITY", default="Santa Barbara"))
+    bandit_summary_df = _load_frame_from_context_or_csv(
+        context,
+        ["hybrid_bandit_summary_df"],
+        output_dir / "production_hybrid_bandit_optimization_summary.csv",
+    )
+    if not bandit_summary_df.empty and "posterior_mean_reward" in bandit_summary_df.columns:
+        duration_strategy = str(
+            bandit_summary_df.sort_values("posterior_mean_reward", ascending=False).iloc[0].get(
+                "route_search_strategy",
+                "scenic_social",
+            )
+        )
+    else:
+        duration_strategy = "scenic_social"
 
     comparison_rows = []
     route_frames = []
@@ -1835,18 +2491,18 @@ def build_trip_length_comparison(
             blueprint_trip_map=blueprint_trip_map,
             trip=best_trip,
             config=duration_config,
-            method="hierarchical_gurobi_pipeline",
-            strategy_name="balanced",
-            local_solver="legacy_gurobi",
+            method="hierarchical_bandit_gurobi_repair",
+            strategy_name=duration_strategy,
+            local_solver="small_gurobi",
             budget_df=budget_df,
         )
-        comparison_label = f"Trip Length · {int(trip_days)}-Day Hierarchical Route"
+        comparison_label = f"Trip Length · {int(trip_days)}-Day Hybrid Bandit + Small Gurobi"
         if not route_stops.empty:
             route_stops = route_stops.copy()
             route_stops["comparison_type"] = "trip_length"
             route_stops["comparison_label"] = comparison_label
-            route_stops["method"] = "hierarchical_gurobi_pipeline"
-            route_stops["method_display_name"] = _method_display_name("hierarchical_gurobi_pipeline")
+            route_stops["method"] = "hierarchical_bandit_gurobi_repair"
+            route_stops["method_display_name"] = _method_display_name("hierarchical_bandit_gurobi_repair")
             route_stops["trip_days"] = int(trip_days)
             route_frames.append(route_stops)
 
@@ -1865,10 +2521,14 @@ def build_trip_length_comparison(
                 "budget_source": str(route_info.get("budget_source", _canonical_budget_value_and_source(duration_config, budget_df)[1])),
                 "objective": float(best_trip.get("objective", np.nan)),
                 "posterior_reward": np.nan,
-                "selected_strategy": "hierarchical_gurobi_pipeline",
+                "selected_strategy": f"hierarchical_bandit_gurobi_repair:{duration_strategy}",
                 "solver_status": str(best_trip.get("solver_status", "UNKNOWN")),
                 "status": str(route_info.get("status", "FAILED")),
-                "notes": str(route_info.get("notes", "")),
+                "notes": (
+                    "Trip-length comparison uses top-level hierarchical day/city allocation "
+                    f"with bandit strategy `{duration_strategy}` and small-Gurobi local repair. "
+                    + str(route_info.get("notes", ""))
+                ),
             }
         )
 
@@ -2225,20 +2885,20 @@ def prepare_comparison_dashboard_outputs(
 ) -> dict:
     output_dir = Path(output_dir or _first_context_value(context, "OUTPUT_DIR", default="results/outputs"))
     primary_city = str(_first_context_value(context, "CITY", default="Santa Barbara"))
-    trip_length_df, trip_length_route_stops_df = build_trip_length_comparison(
+    route_matrix_df, route_matrix_route_stops_df = build_route_matrix_comparison(
         context=context,
         config=config,
         output_dir=output_dir,
         trip_days_grid=trip_days_grid,
         primary_city=primary_city,
     )
-    method_df, method_route_stops_df = build_production_method_comparison(
-        context=context,
-        config=config,
-        output_dir=output_dir,
-        primary_city=primary_city,
-    )
+    trip_length_df = _load_csv(output_dir / "production_trip_length_comparison.csv")
+    trip_length_route_stops_df = _load_csv(output_dir / "production_trip_length_route_stops.csv")
+    method_df = _load_csv(output_dir / "production_method_comparison.csv")
+    method_route_stops_df = _load_csv(output_dir / "production_method_route_stops.csv")
     return {
+        "production_route_matrix_comparison_df": route_matrix_df,
+        "production_route_matrix_route_stops_df": route_matrix_route_stops_df,
         "production_trip_length_comparison_df": trip_length_df,
         "production_trip_length_route_stops_df": trip_length_route_stops_df,
         "production_method_comparison_df": method_df,
@@ -2363,23 +3023,23 @@ def run_configurable_blueprint_pipeline(
         "bandit_stress_summary_df": bandit_stress_summary_df,
         "production_experiment_summary_df": experiment_summary_df,
     }
-    trip_length_comparison_df, trip_length_route_stops_df = build_trip_length_comparison(
+    route_matrix_comparison_df, route_matrix_route_stops_df = build_route_matrix_comparison(
         context=comparison_context,
         config=config,
         output_dir=output_dir,
         primary_city=primary_city,
     )
-    method_comparison_df, method_route_stops_df = build_production_method_comparison(
-        context=comparison_context,
-        config=config,
-        output_dir=output_dir,
-        primary_city=primary_city,
-    )
+    trip_length_comparison_df = _load_csv(output_dir / "production_trip_length_comparison.csv")
+    trip_length_route_stops_df = _load_csv(output_dir / "production_trip_length_route_stops.csv")
+    method_comparison_df = _load_csv(output_dir / "production_method_comparison.csv")
+    method_route_stops_df = _load_csv(output_dir / "production_method_route_stops.csv")
     return {
         **enrichment,
         "best_hierarchical_trip": best_trip,
         "hierarchical_trip_df": hierarchical_df,
         "budget_estimate_df": budget_df,
+        "route_matrix_comparison_df": route_matrix_comparison_df,
+        "route_matrix_route_stops_df": route_matrix_route_stops_df,
         "trip_length_comparison_df": trip_length_comparison_df,
         "trip_length_route_stops_df": trip_length_route_stops_df,
         "hybrid_bandit_arms_df": arms_df,

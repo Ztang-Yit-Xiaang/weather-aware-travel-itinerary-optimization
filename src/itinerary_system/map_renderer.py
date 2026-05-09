@@ -180,7 +180,10 @@ def _sanitize_production_map_context(
         _config_get(config, "map", "balanced_only_default_view", default=True)
     )
     merged_context["MAP_REFRESH_ROAD_GEOMETRY"] = bool(
-        _config_get(config, "map", "refresh_road_geometry", default=False)
+        merged_context.get(
+            "MAP_REFRESH_ROAD_GEOMETRY",
+            _config_get(config, "map", "refresh_road_geometry", default=False),
+        )
     )
     merged_context["MAP_SHOW_DEBUG_ON_LOAD"] = bool(
         _config_get(config, "map", "show_debug_on_load", default=False)
@@ -361,6 +364,29 @@ def _valid_trip_length_summary_file(path: str | Path, required_days=None) -> boo
     return True
 
 
+def _valid_route_matrix_file(path: str | Path) -> bool:
+    path = Path(path)
+    if not path.exists():
+        return False
+    try:
+        df = pd.read_csv(path)
+    except Exception:
+        return False
+    required_columns = {"route_key", "trip_days", "method", "profile"}
+    if df.empty or not required_columns.issubset(df.columns):
+        return False
+    found_days = set(pd.to_numeric(df["trip_days"], errors="coerce").dropna().astype(int).unique())
+    found_methods = set(df["method"].dropna().astype(str).unique())
+    found_profiles = set(df["profile"].dropna().astype(str).unique())
+    combos = df[["trip_days", "method", "profile"]].drop_duplicates()
+    return (
+        REQUIRED_TRIP_LENGTHS.issubset(found_days)
+        and REQUIRED_METHODS.issubset(found_methods)
+        and {"relaxed", "balanced", "explorer"}.issubset(found_profiles)
+        and len(combos) >= 27
+    )
+
+
 def _dashboard_artifacts_ready(
     output_dir: str | Path,
     canonical_days: int | None = None,
@@ -369,6 +395,10 @@ def _dashboard_artifacts_ready(
     output_dir = Path(output_dir)
 
     return (
+        _valid_route_matrix_file(output_dir / "production_route_matrix_comparison.csv")
+        and _valid_route_matrix_file(output_dir / "production_route_matrix_route_stops.csv")
+        and (output_dir / "production_route_matrix_hotel_selection_debug.csv").exists()
+        and
         _valid_route_stop_file(
             output_dir / "production_method_route_stops.csv",
             required_methods=REQUIRED_METHODS,

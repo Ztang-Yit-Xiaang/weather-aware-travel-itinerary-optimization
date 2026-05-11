@@ -21,6 +21,15 @@ import requests
 
 from ._legacy import import_legacy_module
 from .config import TripConfig
+from .nature_catalog import (
+    NATURE_POI_COLUMNS,
+    compute_interest_adjusted_values,
+    ensure_nature_columns,
+    interest_enabled,
+    load_nps_or_curated_nature_pois,
+    write_interest_catalog_artifacts,
+)
+from .region_scenarios import all_scenario_coordinates
 from .utility_model import apply_utility_models, learning_to_rank_audit
 
 
@@ -48,6 +57,7 @@ OPEN_ENRICHED_POI_COLUMNS = [
     "data_uncertainty",
     "final_poi_value",
     "social_reason",
+    *NATURE_POI_COLUMNS,
 ]
 
 HOTEL_TYPE_PRICE_PRIOR = {
@@ -113,6 +123,9 @@ def _request_json(url: str, *, params: dict | None = None, timeout: int = 30) ->
 
 
 def _city_coordinates(city: str) -> tuple[float, float]:
+    scenario_coords = all_scenario_coordinates()
+    if city in scenario_coords:
+        return float(scenario_coords[city][0]), float(scenario_coords[city][1])
     production_enrichment = import_legacy_module("production_enrichment")
     coords = production_enrichment.CALIFORNIA_CITY_COORDS
     if city not in coords:
@@ -153,15 +166,22 @@ def _overpass_query(city: str, radius_m: int, kind: str) -> str:
         """
     else:
         body = f"""
-        node["tourism"~"attraction|museum|gallery|zoo|aquarium|viewpoint|theme_park"](around:{radius_m},{lat},{lon});
-        way["tourism"~"attraction|museum|gallery|zoo|aquarium|viewpoint|theme_park"](around:{radius_m},{lat},{lon});
-        relation["tourism"~"attraction|museum|gallery|zoo|aquarium|viewpoint|theme_park"](around:{radius_m},{lat},{lon});
+        node["tourism"~"attraction|museum|gallery|zoo|aquarium|viewpoint|theme_park|camp_site|picnic_site|wilderness_hut"](around:{radius_m},{lat},{lon});
+        way["tourism"~"attraction|museum|gallery|zoo|aquarium|viewpoint|theme_park|camp_site|picnic_site|wilderness_hut"](around:{radius_m},{lat},{lon});
+        relation["tourism"~"attraction|museum|gallery|zoo|aquarium|viewpoint|theme_park|camp_site|picnic_site|wilderness_hut"](around:{radius_m},{lat},{lon});
         node["historic"](around:{radius_m},{lat},{lon});
         way["historic"](around:{radius_m},{lat},{lon});
-        node["leisure"~"park|garden"](around:{radius_m},{lat},{lon});
-        way["leisure"~"park|garden"](around:{radius_m},{lat},{lon});
-        node["natural"="viewpoint"](around:{radius_m},{lat},{lon});
-        way["natural"="viewpoint"](around:{radius_m},{lat},{lon});
+        node["leisure"~"park|garden|nature_reserve"](around:{radius_m},{lat},{lon});
+        way["leisure"~"park|garden|nature_reserve"](around:{radius_m},{lat},{lon});
+        relation["leisure"~"park|garden|nature_reserve"](around:{radius_m},{lat},{lon});
+        node["boundary"~"national_park|protected_area"](around:{radius_m},{lat},{lon});
+        way["boundary"~"national_park|protected_area"](around:{radius_m},{lat},{lon});
+        relation["boundary"~"national_park|protected_area"](around:{radius_m},{lat},{lon});
+        node["natural"~"viewpoint|beach|peak|waterfall|wood|scrub|cliff"](around:{radius_m},{lat},{lon});
+        way["natural"~"viewpoint|beach|peak|waterfall|wood|scrub|cliff"](around:{radius_m},{lat},{lon});
+        node["highway"~"trailhead|path"](around:{radius_m},{lat},{lon});
+        way["highway"~"path|footway|track"](around:{radius_m},{lat},{lon});
+        relation["route"~"hiking|foot"](around:{radius_m},{lat},{lon});
         node["amenity"~"theatre|arts_centre"](around:{radius_m},{lat},{lon});
         way["amenity"~"theatre|arts_centre"](around:{radius_m},{lat},{lon});
         """
@@ -203,7 +223,17 @@ def _overpass_elements_to_pois(city: str, elements: list[dict], source_status: s
         lon = element.get("lon", element.get("center", {}).get("lon"))
         if not name or lat is None or lon is None:
             continue
-        category = tags.get("tourism") or tags.get("historic") or tags.get("leisure") or tags.get("amenity") or tags.get("natural") or "osm_attraction"
+        category = (
+            tags.get("tourism")
+            or tags.get("historic")
+            or tags.get("leisure")
+            or tags.get("amenity")
+            or tags.get("natural")
+            or tags.get("boundary")
+            or tags.get("route")
+            or tags.get("highway")
+            or "osm_attraction"
+        )
         rows.append(
             {
                 "name": name,
@@ -218,8 +248,12 @@ def _overpass_elements_to_pois(city: str, elements: list[dict], source_status: s
                 "leisure": tags.get("leisure"),
                 "amenity": tags.get("amenity"),
                 "natural": tags.get("natural"),
+                "boundary": tags.get("boundary"),
+                "route": tags.get("route"),
+                "highway": tags.get("highway"),
                 "wikidata": tags.get("wikidata", ""),
                 "wikipedia": tags.get("wikipedia", ""),
+                "osm_tags": json.dumps(tags, sort_keys=True),
                 "source_score": _source_score_from_tags(tags),
             }
         )
@@ -459,8 +493,8 @@ def _ensure_open_columns(enriched_df: pd.DataFrame) -> pd.DataFrame:
         output["data_uncertainty"] = 1.0 - pd.to_numeric(output.get("data_confidence", 0.15), errors="coerce").fillna(0.15)
     for column in OPEN_ENRICHED_POI_COLUMNS:
         if column not in output.columns:
-            output[column] = "" if column in {"name", "city", "category", "source_list", "osm_tags", "wikidata_id", "wikipedia_title", "social_reason"} else 0.0
-    return output
+            output[column] = "" if column in {"name", "city", "category", "source_list", "osm_tags", "wikidata_id", "wikipedia_title", "social_reason", "park_type", "nature_region", "reason_selected"} else 0.0
+    return ensure_nature_columns(output)
 
 
 def _numeric_series(frame: pd.DataFrame, column: str, default: float = 0.0) -> pd.Series:
@@ -531,11 +565,17 @@ def build_enriched_catalog(
     )
 
     enriched_df = _ensure_open_columns(outputs["production_enriched_poi_catalog_df"])
+    nature_seed_df, nps_audit_df = load_nps_or_curated_nature_pois(output_dir, config)
+    if interest_enabled(config) and not nature_seed_df.empty:
+        enriched_df = pd.concat([enriched_df, _ensure_open_columns(nature_seed_df)], ignore_index=True, sort=False)
+        enriched_df = enriched_df.drop_duplicates(subset=["name", "latitude", "longitude"]).reset_index(drop=True)
     enriched_df, wiki_audit_df = enrich_with_wikidata_wikipedia(enriched_df, output_dir, config)
     enriched_df = _ensure_open_columns(_recompute_value_columns(enriched_df, config))
     enriched_df, utility_scores_df, utility_audit_df = apply_utility_models(enriched_df, output_dir, config)
+    enriched_df = compute_interest_adjusted_values(enriched_df, config)
     ltr_audit_df = learning_to_rank_audit(enriched_df, config)
     enriched_df[OPEN_ENRICHED_POI_COLUMNS].to_csv(output_dir / "production_enriched_poi_catalog.csv", index=False)
+    write_interest_catalog_artifacts(enriched_df, output_dir, config)
 
     city_summary_df = production_enrichment.build_city_catalog_summary(city_names, local_yelp_df, enriched_df)
     if not city_summary_df.empty and "city" in city_summary_df.columns:
@@ -562,13 +602,15 @@ def build_enriched_catalog(
         )
         city_summary_df = city_summary_df.merge(must_go_by_city, on="city", how="left")
         for column in ["city_must_go_count", "city_must_go_score", "city_social_score"]:
-            city_summary_df[column] = pd.to_numeric(city_summary_df.get(column, 0.0), errors="coerce").fillna(0.0)
+            raw_column = city_summary_df[column] if column in city_summary_df.columns else pd.Series(0.0, index=city_summary_df.index)
+            city_summary_df[column] = pd.to_numeric(raw_column, errors="coerce").fillna(0.0)
     city_summary_df.to_csv(output_dir / "production_city_catalog_summary.csv", index=False)
     weather_df = build_open_meteo_context(city_names, output_dir, config)
 
     audit_parts = [
         outputs.get("production_enrichment_audit_df", pd.DataFrame()).assign(audit_source="legacy_local_yelp_osm_social"),
         osm_audit_df.assign(audit_source="open_osm"),
+        nps_audit_df.assign(audit_source="open_nps_or_curated_nature") if not nps_audit_df.empty else pd.DataFrame(),
         wiki_audit_df.assign(audit_source="open_wikidata_wikipedia") if not wiki_audit_df.empty else pd.DataFrame(),
         weather_df.assign(audit_type="open_meteo", audit_source="open_meteo"),
         utility_audit_df.assign(audit_source="utility_model") if not utility_audit_df.empty else pd.DataFrame(),

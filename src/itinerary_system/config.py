@@ -18,6 +18,7 @@ DEFAULT_CONFIG = {
         "start_city_options": ["San Francisco", "Los Angeles"],
         "end_city_options": ["Los Angeles", "San Francisco"],
         "traveler_profile": "balanced",
+        "scenario": "california_coast",
     },
     "budget": {
         "user_budget": 2000,
@@ -70,8 +71,41 @@ DEFAULT_CONFIG = {
         "episode_grid": [20, 40, 80],
         "candidate_size_grid": [8, 12, 16],
         "arms": ["scenic_social", "fastest_low_cost", "balanced", "high_must_go", "low_detour"],
+        "available_nature_arms": [
+            "nature_heavy",
+            "scenic_parks",
+            "national_park_priority",
+            "city_nature_balanced",
+            "weather_safe_indoor_backup",
+        ],
         "exploration_scale": 0.25,
         "top_k_gurobi_repairs": 3,
+    },
+    "interest": {
+        "enabled": False,
+        "mode": "custom",
+        "axes": ["nature", "city", "culture", "history"],
+        "weights": {
+            "nature": 0.25,
+            "city": 0.25,
+            "culture": 0.25,
+            "history": 0.25,
+        },
+        "presets": {
+            "balanced_interest": {"nature": 0.25, "city": 0.25, "culture": 0.25, "history": 0.25},
+            "nature_heavy": {"nature": 0.55, "city": 0.20, "culture": 0.15, "history": 0.10},
+            "city_heavy": {"nature": 0.15, "city": 0.55, "culture": 0.20, "history": 0.10},
+            "culture_heavy": {"nature": 0.15, "city": 0.20, "culture": 0.55, "history": 0.10},
+            "history_heavy": {"nature": 0.15, "city": 0.20, "culture": 0.15, "history": 0.50},
+        },
+        "lambda_fit": 0.65,
+        "lambda_park": 0.35,
+        "lambda_weather": 0.30,
+        "lambda_season": 0.20,
+        "lambda_detour": 0.006,
+        "lambda_balance": 0.20,
+        "use_balance_objective": False,
+        "preview_top_n": 12,
     },
     "social": {
         "must_go_is_mandatory": False,
@@ -157,22 +191,32 @@ def _parse_scalar(value: str) -> Any:
 
 
 def _minimal_yaml_load(text: str) -> dict[str, Any]:
-    """Parse the small YAML subset used by configs/default_trip_config.yaml."""
+    """Parse the small YAML subset used by configs/default_trip_config.yaml.
+
+    The fallback intentionally handles only nested mappings and inline scalar
+    lists, which is enough for the project config when PyYAML is unavailable.
+    """
     root: dict[str, Any] = {}
-    current_section: str | None = None
+    stack: list[tuple[int, dict[str, Any]]] = [(-1, root)]
     for raw_line in text.splitlines():
         line = raw_line.split("#", 1)[0].rstrip()
         if not line.strip():
             continue
-        if not line.startswith(" "):
-            key, _, value = line.partition(":")
-            current_section = key.strip()
-            root[current_section] = _parse_scalar(value) if value.strip() else {}
-            continue
-        if current_section is None:
-            raise ValueError(f"Invalid config line before section: {raw_line}")
-        key, _, value = line.strip().partition(":")
-        root[current_section][key.strip()] = _parse_scalar(value)
+        indent = len(line) - len(line.lstrip(" "))
+        key, separator, value = line.strip().partition(":")
+        if not separator:
+            raise ValueError(f"Invalid config line: {raw_line}")
+        while stack and indent <= stack[-1][0]:
+            stack.pop()
+        if not stack:
+            raise ValueError(f"Invalid config indentation: {raw_line}")
+        parent = stack[-1][1]
+        if value.strip():
+            parent[key.strip()] = _parse_scalar(value)
+        else:
+            child: dict[str, Any] = {}
+            parent[key.strip()] = child
+            stack.append((indent, child))
     return root
 
 

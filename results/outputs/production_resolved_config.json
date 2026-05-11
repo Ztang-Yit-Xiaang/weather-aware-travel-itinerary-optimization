@@ -10,7 +10,8 @@
       "Los Angeles",
       "San Francisco"
     ],
-    "traveler_profile": "balanced"
+    "traveler_profile": "balanced",
+    "scenario": "california_coast"
   },
   "budget": {
     "user_budget": 2000,
@@ -79,10 +80,78 @@
       "fastest_low_cost",
       "balanced",
       "high_must_go",
-      "low_detour"
+      "low_detour",
+      "nature_heavy",
+      "scenic_parks",
+      "national_park_priority",
+      "city_nature_balanced",
+      "weather_safe_indoor_backup"
+    ],
+    "available_nature_arms": [
+      "nature_heavy",
+      "scenic_parks",
+      "national_park_priority",
+      "city_nature_balanced",
+      "weather_safe_indoor_backup"
     ],
     "exploration_scale": 0.25,
     "top_k_gurobi_repairs": 3
+  },
+  "interest": {
+    "enabled": true,
+    "mode": "custom",
+    "axes": [
+      "nature",
+      "city",
+      "culture",
+      "history"
+    ],
+    "weights": {
+      "nature": 0.45,
+      "city": 0.2,
+      "culture": 0.2,
+      "history": 0.15
+    },
+    "presets": {
+      "balanced_interest": {
+        "nature": 0.25,
+        "city": 0.25,
+        "culture": 0.25,
+        "history": 0.25
+      },
+      "nature_heavy": {
+        "nature": 0.55,
+        "city": 0.2,
+        "culture": 0.15,
+        "history": 0.1
+      },
+      "city_heavy": {
+        "nature": 0.15,
+        "city": 0.55,
+        "culture": 0.2,
+        "history": 0.1
+      },
+      "culture_heavy": {
+        "nature": 0.15,
+        "city": 0.2,
+        "culture": 0.55,
+        "history": 0.1
+      },
+      "history_heavy": {
+        "nature": 0.15,
+        "city": 0.2,
+        "culture": 0.15,
+        "history": 0.5
+      }
+    },
+    "lambda_fit": 0.65,
+    "lambda_park": 0.35,
+    "lambda_weather": 0.3,
+    "lambda_season": 0.2,
+    "lambda_detour": 0.006,
+    "lambda_balance": 0.2,
+    "use_balance_objective": false,
+    "preview_top_n": 12
   },
   "social": {
     "must_go_is_mandatory": false,
@@ -136,5 +205,5 @@
     ],
     "scale_budget_with_days": true
   },
-  "_source_path": "/Users/chenyixin/Documents/IE 5533/Project/weather-aware-travel-itinerary-optimization/configs/default_trip_config.yaml"
+  "_source_path": "/Users/chenyixin/Documents/IE 5533/Project/weather-aware-travel-itinerary-optimization/configs/nature_trip_config.yaml"
 }

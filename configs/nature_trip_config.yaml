@@ -1,0 +1,27 @@
+trip:
+  scenario: california_coast
+  traveler_profile: balanced
+
+interest:
+  enabled: true
+  mode: custom
+  weights:
+    nature: 0.45
+    city: 0.20
+    culture: 0.20
+    history: 0.15
+  use_balance_objective: false
+  preview_top_n: 12
+
+bandit:
+  arms:
+    - scenic_social
+    - fastest_low_cost
+    - balanced
+    - high_must_go
+    - low_detour
+    - nature_heavy
+    - scenic_parks
+    - national_park_priority
+    - city_nature_balanced
+    - weather_safe_indoor_backup

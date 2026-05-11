@@ -5069,6 +5069,252 @@ def _add_browser_road_routing(map_object, route_specs):
     map_object.get_root().script.add_child(folium.Element(control_js))
 
 
+def _add_interest_bar_preview_panel(map_object, output_dir):
+    output_dir = Path(output_dir)
+    preview_path = output_dir / "production_interest_bar_preview.json"
+    if preview_path.exists():
+        try:
+            preview_payload = json.loads(preview_path.read_text(encoding="utf-8"))
+        except Exception:
+            preview_payload = {}
+    else:
+        preview_payload = {}
+    if not preview_payload:
+        preview_payload = {
+            "enabled": False,
+            "weights": {"nature": 0.25, "city": 0.25, "culture": 0.25, "history": 0.25},
+            "lambdas": {"lambda_fit": 0.65, "lambda_park": 0.35, "lambda_weather": 0.30, "lambda_season": 0.20, "lambda_detour": 0.006},
+            "top_boosted_pois": [],
+            "route_mix": {},
+        }
+    preview_json = json.dumps(preview_payload).replace("</", "<\\/")
+    panel_html = """
+    <style>
+    #blueprint-interest-panel {
+        bottom: 46px;
+        right: 18px;
+        width: 360px;
+        z-index: 9999;
+    }
+    #blueprint-interest-panel.blueprint-collapsed {
+        width: 230px;
+    }
+    #blueprint-interest-panel .blueprint-panel-body {
+        max-height: 420px;
+    }
+    .interest-axis-row {
+        align-items: center;
+        display: grid;
+        gap: 8px;
+        grid-template-columns: 58px minmax(0, 1fr) 42px;
+        margin: 7px 0;
+    }
+    .interest-axis-row label {
+        font-weight: 800;
+    }
+    .interest-axis-row input[type="range"] {
+        accent-color: #2A9D8F;
+        width: 100%;
+    }
+    .interest-percent {
+        color: #334155;
+        font-weight: 800;
+        text-align: right;
+    }
+    .interest-preview-list {
+        border-top: 1px solid #E5E7EB;
+        margin-top: 9px;
+        padding-top: 8px;
+    }
+    .interest-preview-row {
+        border-top: 1px solid #EEF2F7;
+        display: grid;
+        gap: 8px;
+        grid-template-columns: minmax(0, 1fr) auto;
+        padding: 5px 0;
+    }
+    .interest-preview-name {
+        font-weight: 800;
+        overflow-wrap: anywhere;
+    }
+    .interest-preview-meta {
+        color: #64748B;
+        font-size: 10px;
+    }
+    .interest-preview-score {
+        color: #166534;
+        font-weight: 900;
+        white-space: nowrap;
+    }
+    .interest-mix-row {
+        align-items: center;
+        display: grid;
+        gap: 8px;
+        grid-template-columns: 58px minmax(0, 1fr) 42px;
+        margin-top: 5px;
+    }
+    .interest-mix-bar {
+        background: #E5E7EB;
+        border-radius: 999px;
+        height: 8px;
+        overflow: hidden;
+    }
+    .interest-mix-fill {
+        background: #2A9D8F;
+        display: block;
+        height: 100%;
+    }
+    .interest-preview-note {
+        color: #64748B;
+        font-size: 10px;
+        line-height: 1.35;
+        margin-top: 8px;
+    }
+    </style>
+    <script id="blueprint-interest-preview-data" type="application/json">""" + preview_json + """</script>
+    <div id="blueprint-interest-panel" class="blueprint-floating-panel blueprint-draggable blueprint-collapsed" data-panel-id="interest-preview">
+        <button class="blueprint-panel-header" type="button" aria-expanded="false">
+            <span>Interest Mix</span>
+            <span class="blueprint-panel-chevron">+</span>
+        </button>
+        <div class="blueprint-panel-body">
+            <div class="interest-axis-row"><label for="interest-axis-nature">Nature</label><input id="interest-axis-nature" type="range" min="0" max="100" step="1" data-interest-axis="nature"><span class="interest-percent" data-interest-percent="nature">25%</span></div>
+            <div class="interest-axis-row"><label for="interest-axis-city">City</label><input id="interest-axis-city" type="range" min="0" max="100" step="1" data-interest-axis="city"><span class="interest-percent" data-interest-percent="city">25%</span></div>
+            <div class="interest-axis-row"><label for="interest-axis-culture">Culture</label><input id="interest-axis-culture" type="range" min="0" max="100" step="1" data-interest-axis="culture"><span class="interest-percent" data-interest-percent="culture">25%</span></div>
+            <div class="interest-axis-row"><label for="interest-axis-history">History</label><input id="interest-axis-history" type="range" min="0" max="100" step="1" data-interest-axis="history"><span class="interest-percent" data-interest-percent="history">25%</span></div>
+            <div class="interest-preview-list">
+                <div class="panel-section-title">Top Boosted Places</div>
+                <div id="interest-preview-rows"></div>
+            </div>
+            <div class="interest-preview-list">
+                <div class="panel-section-title">Route Mix Preview</div>
+                <div id="interest-route-mix"></div>
+                <div class="summary-line"><b>Selected-route match:</b> <span id="interest-match-score">n/a</span></div>
+            </div>
+            <div class="interest-preview-note">Preview ranking updates instantly. Full optimized routes use these weights when the Python pipeline is rerun.</div>
+        </div>
+    </div>
+    """
+    panel_js = """
+    (function() {
+        var axes = ["nature", "city", "culture", "history"];
+        var payloadNode = document.getElementById("blueprint-interest-preview-data");
+        var payload = {};
+        try {
+            payload = JSON.parse(payloadNode ? payloadNode.textContent : "{}");
+        } catch (err) {
+            payload = {};
+        }
+        var weights = Object.assign({nature: 0.25, city: 0.25, culture: 0.25, history: 0.25}, payload.weights || {});
+        var lambdas = Object.assign({lambda_fit: 0.65, lambda_park: 0.35, lambda_weather: 0.30, lambda_season: 0.20, lambda_detour: 0.006}, payload.lambdas || {});
+        var pois = payload.top_boosted_pois || [];
+
+        function normalizedWeights() {
+            var raw = {};
+            var total = 0;
+            axes.forEach(function(axis) {
+                var slider = document.querySelector('[data-interest-axis="' + axis + '"]');
+                var value = slider ? Number(slider.value || 0) : Number(weights[axis] || 0) * 100;
+                raw[axis] = Math.max(0, value);
+                total += raw[axis];
+            });
+            if (!total) {
+                total = axes.length;
+                axes.forEach(function(axis) { raw[axis] = 1; });
+            }
+            var normalized = {};
+            axes.forEach(function(axis) { normalized[axis] = raw[axis] / total; });
+            return normalized;
+        }
+
+        function scorePoi(poi, w) {
+            var fit = w.nature * Number(poi.nature || 0)
+                + w.city * Number(poi.city_axis || 0)
+                + w.culture * Number(poi.culture || 0)
+                + w.history * Number(poi.history || 0);
+            return Number(poi.final_poi_value || 0)
+                + lambdas.lambda_fit * fit
+                + lambdas.lambda_park * Number(poi.park_bonus || 0)
+                - lambdas.lambda_weather * Number(poi.weather_sensitivity || 0) * Number(poi.weather_risk || 0.15)
+                - lambdas.lambda_season * Number(poi.seasonality_risk || 0)
+                - lambdas.lambda_detour * Number(poi.detour_minutes || 0);
+        }
+
+        function updatePreview() {
+            var w = normalizedWeights();
+            axes.forEach(function(axis) {
+                var percent = Math.round(w[axis] * 100);
+                var label = document.querySelector('[data-interest-percent="' + axis + '"]');
+                if (label) { label.textContent = percent + "%"; }
+            });
+            var scored = pois.map(function(poi) {
+                var score = scorePoi(poi, w);
+                return Object.assign({}, poi, {preview_score: score, preview_delta: score - Number(poi.final_poi_value || 0)});
+            }).sort(function(a, b) {
+                return b.preview_delta - a.preview_delta || b.preview_score - a.preview_score;
+            }).slice(0, 8);
+            var rowsNode = document.getElementById("interest-preview-rows");
+            if (rowsNode) {
+                rowsNode.innerHTML = scored.length ? scored.map(function(poi, index) {
+                    return '<div class="interest-preview-row"><div><div class="interest-preview-name">' +
+                        (index + 1) + '. ' + escapeHtml(poi.name || "Unnamed") +
+                        '</div><div class="interest-preview-meta">' + escapeHtml(poi.city || "") +
+                        (poi.park_type ? ' · ' + escapeHtml(poi.park_type) : '') +
+                        '</div></div><div class="interest-preview-score">+' + poi.preview_delta.toFixed(2) + '</div></div>';
+                }).join("") : '<div class="summary-line">Interest preview data not generated yet.</div>';
+            }
+            renderMix(scored, w);
+        }
+
+        function renderMix(scored, w) {
+            var mix = {nature: 0, city: 0, culture: 0, history: 0};
+            if (scored.length) {
+                scored.forEach(function(poi) {
+                    mix.nature += Number(poi.nature || 0);
+                    mix.city += Number(poi.city_axis || 0);
+                    mix.culture += Number(poi.culture || 0);
+                    mix.history += Number(poi.history || 0);
+                });
+                axes.forEach(function(axis) { mix[axis] = mix[axis] / scored.length; });
+            }
+            var error = axes.reduce(function(acc, axis) { return acc + Math.abs(mix[axis] - w[axis]); }, 0);
+            var match = Math.max(0, 1 - error);
+            var mixNode = document.getElementById("interest-route-mix");
+            if (mixNode) {
+                mixNode.innerHTML = axes.map(function(axis) {
+                    var pct = Math.round(mix[axis] * 100);
+                    return '<div class="interest-mix-row"><span>' + axis.charAt(0).toUpperCase() + axis.slice(1) +
+                        '</span><span class="interest-mix-bar"><span class="interest-mix-fill" style="width:' + Math.max(0, Math.min(100, pct)) +
+                        '%"></span></span><span class="interest-percent">' + pct + '%</span></div>';
+                }).join("");
+            }
+            var scoreNode = document.getElementById("interest-match-score");
+            if (scoreNode) { scoreNode.textContent = match.toFixed(2); }
+        }
+
+        function escapeHtml(value) {
+            return String(value).replace(/[&<>"']/g, function(ch) {
+                return {"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"}[ch];
+            });
+        }
+
+        function initInterestPreview() {
+            axes.forEach(function(axis) {
+                var slider = document.querySelector('[data-interest-axis="' + axis + '"]');
+                if (!slider) { return; }
+                slider.value = Math.round(Number(weights[axis] || 0.25) * 100);
+                slider.addEventListener("input", updatePreview);
+            });
+            updatePreview();
+        }
+        window.setTimeout(initInterestPreview, 80);
+        window.setTimeout(initInterestPreview, 600);
+    })();
+    """
+    map_object.get_root().html.add_child(folium.Element(panel_html))
+    map_object.get_root().script.add_child(folium.Element(panel_js))
+
+
 def _load_default_hierarchical_gurobi_day_plan(output_dir, fallback_df):
     route_stops = _load_csv(Path(output_dir) / "production_method_route_stops.csv")
     if route_stops.empty or "method" not in route_stops.columns:
@@ -5449,6 +5695,84 @@ def build_production_trip_map(context, output_path=None, run_live_routing=None):
         }
     )
 
+    nature_layer = folium.FeatureGroup(
+        name="Nature / park candidates",
+        show=bool(context.get("SHOW_NATURE_CANDIDATES_BY_DEFAULT", False)),
+    )
+    if not enriched_catalog.empty:
+        nature_catalog = enriched_catalog[
+            enriched_catalog.get("is_nature", pd.Series(False, index=enriched_catalog.index)).astype(bool)
+            | enriched_catalog.get("is_national_park", pd.Series(False, index=enriched_catalog.index)).astype(bool)
+            | enriched_catalog.get("is_protected_area", pd.Series(False, index=enriched_catalog.index)).astype(bool)
+            | pd.to_numeric(enriched_catalog.get("nature_score", pd.Series(0.0, index=enriched_catalog.index)), errors="coerce").fillna(0.0).ge(0.45)
+        ].copy()
+    else:
+        nature_catalog = pd.DataFrame()
+    selected_stop_names = set(day_plan_df.get("attraction_name", pd.Series(dtype=str)).dropna().astype(str).tolist())
+    for row in nature_catalog.head(120).itertuples(index=False):
+        try:
+            point = [float(row.latitude), float(row.longitude)]
+        except Exception:
+            continue
+        is_np = bool(getattr(row, "is_national_park", False))
+        is_state_or_protected = bool(getattr(row, "is_state_park", False)) or bool(getattr(row, "is_protected_area", False))
+        is_viewpoint = bool(getattr(row, "is_scenic_viewpoint", False))
+        marker_color = "#15803D" if is_np else "#22C55E" if is_state_or_protected else "#0F766E" if is_viewpoint else "#65A30D"
+        icon_name = "star" if is_np else "tree" if is_state_or_protected else "binoculars" if is_viewpoint else "leaf"
+        selected_state = "selected" if str(row.name) in selected_stop_names else "candidate"
+        popup = f"""
+        <b>{_escape(row.name)}</b><br/>
+        State: {_escape(selected_state)}<br/>
+        City/region: {_escape(getattr(row, "city", ""))} / {_escape(getattr(row, "nature_region", ""))}<br/>
+        Park type: {_escape(getattr(row, "park_type", ""))}<br/>
+        Nature score: {float(getattr(row, "nature_score", 0.0) or 0.0):.2f}<br/>
+        Scenic score: {float(getattr(row, "scenic_score", 0.0) or 0.0):.2f}<br/>
+        Interest fit: {float(getattr(row, "interest_fit", 0.0) or 0.0):.2f}<br/>
+        Interest adjusted value: {float(getattr(row, "interest_adjusted_value", getattr(row, "final_poi_value", 0.0)) or 0.0):.3f}<br/>
+        Interest delta: {float(getattr(row, "interest_delta", 0.0) or 0.0):.3f}<br/>
+        Weather sensitivity: {float(getattr(row, "weather_sensitivity", 0.0) or 0.0):.2f}<br/>
+        Seasonality risk: {float(getattr(row, "seasonality_risk", 0.0) or 0.0):.2f}<br/>
+        Source list: {_escape(getattr(row, "source_list", getattr(row, "source", "unknown")))}<br/>
+        Reason: {_escape(getattr(row, "reason_selected", ""))}
+        """
+        folium.Marker(
+            location=point,
+            popup=folium.Popup(popup, max_width=320, min_width=210),
+            tooltip=f"Nature {selected_state}: {row.name}",
+            icon=folium.Icon(color="green", icon=icon_name, prefix="fa"),
+        ).add_to(nature_layer)
+        folium.CircleMarker(
+            location=point,
+            radius=9 if is_np else 7,
+            color=marker_color,
+            fill=True,
+            fillColor=marker_color,
+            fillOpacity=0.72,
+            weight=3 if is_np else 2,
+            popup=folium.Popup(popup, max_width=320, min_width=210),
+            tooltip=f"Nature {selected_state}: {row.name}",
+        ).add_to(nature_layer)
+    nature_layer.add_to(trip_map)
+    route_debug_registry.append(
+        {
+            "label": "Nature / park candidates",
+            "control_label": "Nature / park candidates",
+            "control_id": "nature_candidates",
+            "family": "nature",
+            "selector_group": "nature",
+            "color": "#15803D",
+            "pane": "markerPane",
+            "layer_var": nature_layer.get_name(),
+            "offset_index": 0,
+            "default_checked": False,
+            "default_visible": False,
+            "quick_groups": ["nature"],
+            "distance_km": 0.0,
+            "unique_points": int(len(nature_catalog)) if not nature_catalog.empty else 0,
+            "bounds": _route_bounds(nature_catalog[["latitude", "longitude"]].dropna().astype(float).values.tolist()) if not nature_catalog.empty else [],
+        }
+    )
+
     profile_layer_groups = {
         PROFILE_CONFIGS[profile_name]["label"]: []
         for profile_name in PROFILE_CONFIGS
@@ -5563,12 +5887,21 @@ def build_production_trip_map(context, output_path=None, run_live_routing=None):
                 Source: {_escape(row.attraction_source)}<br/>
                 Source list: {_escape(getattr(row, "source_list", getattr(row, "attraction_source", "unknown")))}<br/>
                 Final POI value: {float(getattr(row, "final_poi_value", 0.0) or 0.0):.3f}<br/>
+                Interest fit: {float(getattr(row, "interest_fit", 0.0) or 0.0):.2f}<br/>
+                Interest adjusted value: {float(getattr(row, "interest_adjusted_value", getattr(row, "final_poi_value", 0.0)) or 0.0):.3f}<br/>
+                Interest delta: {float(getattr(row, "interest_delta", 0.0) or 0.0):.3f}<br/>
+                Nature/city/culture/history: {float(getattr(row, "nature_score", 0.0) or 0.0):.2f} / {float(getattr(row, "city_score", 0.0) or 0.0):.2f} / {float(getattr(row, "culture_score", 0.0) or 0.0):.2f} / {float(getattr(row, "history_score", 0.0) or 0.0):.2f}<br/>
+                Park type: {_escape(getattr(row, "park_type", ""))}<br/>
+                Nature region: {_escape(getattr(row, "nature_region", ""))}<br/>
+                Weather sensitivity: {float(getattr(row, "weather_sensitivity", 0.0) or 0.0):.2f}<br/>
+                Seasonality risk: {float(getattr(row, "seasonality_risk", 0.0) or 0.0):.2f}<br/>
                 Social must-go: {"yes" if bool(getattr(row, "social_must_go", False)) else "no"}<br/>
                 Social score: {float(getattr(row, "social_score", 0.0)):.2f}<br/>
                 Must-go weight: {float(getattr(row, "must_go_weight", 0.0) or 0.0):.2f}<br/>
                 Corridor fit: {float(getattr(row, "corridor_fit", 0.0) or 0.0):.2f}<br/>
                 Detour estimate: {float(getattr(row, "detour_minutes", 0.0) or 0.0):.1f} min<br/>
                 Data confidence: {float(getattr(row, "data_confidence", 0.0) or 0.0):.2f}<br/>
+                Reason selected: {_escape(getattr(row, "reason_selected", ""))}<br/>
                 {_escape(getattr(row, "social_reason", ""))}
                 """
                 marker_radius = 9 if bool(getattr(row, "social_must_go", False)) else 7
@@ -5827,6 +6160,7 @@ def build_production_trip_map(context, output_path=None, run_live_routing=None):
     </div>
     """
     trip_map.get_root().html.add_child(folium.Element(panel_html))
+    _add_interest_bar_preview_panel(trip_map, output_dir)
 
     grouped_layers = {
         "Route Matrix": route_matrix_layers,
@@ -5835,7 +6169,7 @@ def build_production_trip_map(context, output_path=None, run_live_routing=None):
         "Transitions": transition_layers,
         "Selected Result": [selected_result_layer] if selected_result_layer is not None else [],
         "Routes": [scenic_layer, fastest_layer],
-        "Map Context": [social_layer, selected_hotel_layer, candidate_hotel_layer],
+        "Map Context": [social_layer, nature_layer, selected_hotel_layer, candidate_hotel_layer],
         "Traveler Comparison": traveler_overview_layers,
         "Relaxed Traveler": profile_layer_groups["Relaxed"],
         "Balanced Traveler": profile_layer_groups["Balanced"],
@@ -5848,6 +6182,7 @@ def build_production_trip_map(context, output_path=None, run_live_routing=None):
         scenic_layer,
         selected_result_layer,
         social_layer,
+        nature_layer,
         candidate_hotel_layer,
         *route_matrix_hidden_layers,
         *traveler_overview_layers,

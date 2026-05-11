@@ -4,6 +4,7 @@ trip:
   start_city_options: [San Francisco, Los Angeles]
   end_city_options: [Los Angeles, San Francisco]
   traveler_profile: balanced
+  scenario: california_coast
 
 budget:
   user_budget: 2000
@@ -56,8 +57,53 @@ bandit:
   episode_grid: [20, 40, 80]
   candidate_size_grid: [8, 12, 16]
   arms: [scenic_social, fastest_low_cost, balanced, high_must_go, low_detour]
+  available_nature_arms: [nature_heavy, scenic_parks, national_park_priority, city_nature_balanced, weather_safe_indoor_backup]
   exploration_scale: 0.25
   top_k_gurobi_repairs: 3
+
+interest:
+  enabled: false
+  mode: custom
+  axes: [nature, city, culture, history]
+  weights:
+    nature: 0.25
+    city: 0.25
+    culture: 0.25
+    history: 0.25
+  presets:
+    balanced_interest:
+      nature: 0.25
+      city: 0.25
+      culture: 0.25
+      history: 0.25
+    nature_heavy:
+      nature: 0.55
+      city: 0.20
+      culture: 0.15
+      history: 0.10
+    city_heavy:
+      nature: 0.15
+      city: 0.55
+      culture: 0.20
+      history: 0.10
+    culture_heavy:
+      nature: 0.15
+      city: 0.20
+      culture: 0.55
+      history: 0.10
+    history_heavy:
+      nature: 0.15
+      city: 0.20
+      culture: 0.15
+      history: 0.50
+  lambda_fit: 0.65
+  lambda_park: 0.35
+  lambda_weather: 0.30
+  lambda_season: 0.20
+  lambda_detour: 0.006
+  lambda_balance: 0.20
+  use_balance_objective: false
+  preview_top_n: 12
 
 social:
   must_go_is_mandatory: false

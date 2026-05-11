@@ -11,10 +11,12 @@ from geopy.distance import geodesic
 
 from .config import TripConfig
 from .diversity import category_labels, submodular_diversity
+from .nature_catalog import interest_value_column, route_interest_metrics
 
 
 def poi_value(row: pd.Series, config: TripConfig | None = None) -> float:
-    base_value = float(row.get("final_poi_value", row.get("utility_bayesian_ucb", row.get("source_score", 0.0))) or 0.0)
+    value_column = interest_value_column(config) if config is not None else "final_poi_value"
+    base_value = float(row.get(value_column, row.get("final_poi_value", row.get("utility_bayesian_ucb", row.get("source_score", 0.0)))) or 0.0)
     if config is None:
         social_weight = 1.10
         must_go_weight = 0.85
@@ -83,6 +85,7 @@ def route_stats(selected: list[int], pois: pd.DataFrame, depot: tuple[float, flo
     travel = sum(travel_minutes(left, right) for left, right in zip(points[:-1], points[1:]))
     visit = sum(visit_minutes(pois.loc[idx]) for idx in selected)
     selected_frame = pois.loc[selected].copy()
+    interest_metrics = route_interest_metrics(selected_frame, config)
     return {
         "total_value": float(sum(poi_value(pois.loc[idx], config) for idx in selected)),
         "total_travel_minutes": float(travel),
@@ -92,6 +95,7 @@ def route_stats(selected: list[int], pois: pd.DataFrame, depot: tuple[float, flo
         "total_detour_minutes": float(sum(float(pois.loc[idx].get("detour_minutes", 0.0) or 0.0) for idx in selected)),
         "total_weather_risk": float(sum(_weather_risk(pois.loc[idx]) for idx in selected)),
         "diversity_score": float(submodular_diversity(selected_frame)),
+        **interest_metrics,
     }
 
 
@@ -188,7 +192,10 @@ def solve_multi_objective_route(
         return result
 
     max_candidates = int(candidate_size or int(config.get("optimization", "max_pois_per_day", 4)) * 3)
-    pois = candidate_df.sort_values(["final_poi_value", "social_score"], ascending=False).head(max_candidates).reset_index(drop=True)
+    value_column = interest_value_column(config)
+    if value_column not in candidate_df.columns:
+        value_column = "final_poi_value"
+    pois = candidate_df.sort_values([value_column, "social_score"], ascending=False).head(max_candidates).reset_index(drop=True)
     if depot is None:
         depot = (float(pois["latitude"].mean()), float(pois["longitude"].mean()))
     max_pois = min(int(config.get("optimization", "max_pois_per_day", 4)), len(pois))
@@ -260,6 +267,12 @@ def solve_multi_objective_route(
 
         lambda_div = float(config.get("multi_objective", "diversity_bonus_weight", 0.12))
         travel_penalty = float(config.get("multi_objective", "secondary_travel_penalty", 0.005))
+        # Interest-aware objective:
+        # maximize sum_i value_i x_i + lambda_div*Diversity(x)
+        #          - lambda_travel*sum_ij travel_ij y_ij
+        # where value_i = interest_adjusted_value_i when interest.enabled,
+        # otherwise the legacy final_poi_value_i. Route balance
+        # Balance(S,p)=1-||mean_i(a_i)-p||_1 is reported in route_stats.
         model.setObjective(
             gp.quicksum(float(values[i]) * x[i] for i in range(n))
             + lambda_div * diversity_expr

@@ -9,6 +9,7 @@ import pandas as pd
 from geopy.distance import geodesic
 
 from .config import TripConfig
+from .region_scenarios import all_scenario_coordinates, get_scenario_definition
 
 
 CITY_COORDS = {
@@ -20,6 +21,7 @@ CITY_COORDS = {
     "Santa Cruz": (36.9741, -122.0308),
     "San Francisco": (37.7749, -122.4194),
 }
+CITY_COORDS.update(all_scenario_coordinates())
 
 DEFAULT_SCENARIO_ROUTES = {
     ("Los Angeles", "Los Angeles"): ["Los Angeles", "Santa Barbara", "San Luis Obispo", "Monterey", "Los Angeles"],
@@ -92,10 +94,16 @@ def drive_minutes_between_cities(city_a: str, city_b: str) -> float:
     return geodesic(coord_a, coord_b).km * 1.25 / 72.0 * 60.0
 
 
+def scenario_routes(config: TripConfig) -> dict[tuple[str, str], list[str]]:
+    scenario = get_scenario_definition(config.get("trip", "scenario", "california_coast"))
+    return scenario.gateway_routes or DEFAULT_SCENARIO_ROUTES
+
+
 def build_gateway_scenarios(config: TripConfig) -> list[tuple[str, str]]:
     starts = list(config.get("trip", "start_city_options", ["San Francisco", "Los Angeles"]))
     ends = list(config.get("trip", "end_city_options", ["Los Angeles", "San Francisco"]))
-    return [(start, end) for start in starts for end in ends if (start, end) in DEFAULT_SCENARIO_ROUTES]
+    routes = scenario_routes(config)
+    return [(start, end) for start in starts for end in ends if (start, end) in routes]
 
 
 def generate_day_allocations(config: TripConfig, cities: list[str]) -> list[dict[str, int]]:
@@ -147,8 +155,9 @@ def candidate_plans(config: TripConfig, city_catalog_summary_df: pd.DataFrame) -
     pass_through_weight = float(config.get("optimization", "pass_through_city_bonus_weight", 0.18))
     base_switch_penalty = float(config.get("optimization", "base_switch_penalty", 0.07))
     must_go_weight = must_go_city_weight(config)
+    routes = scenario_routes(config)
     for start_city, end_city in build_gateway_scenarios(config):
-        sequence = DEFAULT_SCENARIO_ROUTES[(start_city, end_city)]
+        sequence = routes[(start_city, end_city)]
         sequence_cities = unique_in_order(sequence)
         leg_minutes = [drive_minutes_between_cities(sequence[i], sequence[i + 1]) for i in range(len(sequence) - 1)]
         total_drive_minutes = float(sum(leg_minutes))
@@ -272,8 +281,9 @@ def solve_hierarchical_trip_with_greedy(config: TripConfig, city_catalog_summary
     must_go_weight = must_go_city_weight(config)
 
     greedy_plans = []
+    routes = scenario_routes(config)
     for start_city, end_city in build_gateway_scenarios(config):
-        sequence = DEFAULT_SCENARIO_ROUTES[(start_city, end_city)]
+        sequence = routes[(start_city, end_city)]
         candidate_cities = unique_in_order(sequence)
         mandatory = [start_city]
         if end_city != start_city:

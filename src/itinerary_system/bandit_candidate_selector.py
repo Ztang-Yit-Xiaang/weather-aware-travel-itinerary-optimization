@@ -9,18 +9,79 @@ import pandas as pd
 from ._legacy import import_legacy_module
 from .config import TripConfig
 from .diversity import mmr_select_candidates, submodular_diversity
+from .nature_catalog import interest_value_column
 from .route_gurobi_oracle import solve_enriched_route_with_gurobi
+
+
+NATURE_ROUTE_SEARCH_STRATEGIES = {
+    "nature_heavy": {
+        "reward_bias": 0.08,
+        "runtime_minutes_per_city": 2.4,
+        "poi_value_weight": 0.28,
+        "social_weight": 0.16,
+        "must_go_weight": 0.12,
+        "corridor_weight": 0.12,
+        "detour_penalty": 0.012,
+        "cost_multiplier": 1.02,
+        "optimizer_backend": "fast_local_route_oracle_with_nature_scoring",
+    },
+    "scenic_parks": {
+        "reward_bias": 0.07,
+        "runtime_minutes_per_city": 2.3,
+        "poi_value_weight": 0.24,
+        "social_weight": 0.12,
+        "must_go_weight": 0.10,
+        "corridor_weight": 0.18,
+        "detour_penalty": 0.010,
+        "cost_multiplier": 1.00,
+        "optimizer_backend": "fast_local_route_oracle_with_scenic_park_scoring",
+    },
+    "national_park_priority": {
+        "reward_bias": 0.10,
+        "runtime_minutes_per_city": 2.8,
+        "poi_value_weight": 0.26,
+        "social_weight": 0.10,
+        "must_go_weight": 0.12,
+        "corridor_weight": 0.10,
+        "detour_penalty": 0.009,
+        "cost_multiplier": 1.04,
+        "optimizer_backend": "fast_local_route_oracle_with_park_priority",
+    },
+    "city_nature_balanced": {
+        "reward_bias": 0.06,
+        "runtime_minutes_per_city": 2.1,
+        "poi_value_weight": 0.27,
+        "social_weight": 0.18,
+        "must_go_weight": 0.14,
+        "corridor_weight": 0.14,
+        "detour_penalty": 0.012,
+        "cost_multiplier": 1.00,
+        "optimizer_backend": "fast_local_route_oracle_city_nature_balanced",
+    },
+    "weather_safe_indoor_backup": {
+        "reward_bias": 0.04,
+        "runtime_minutes_per_city": 1.8,
+        "poi_value_weight": 0.22,
+        "social_weight": 0.14,
+        "must_go_weight": 0.12,
+        "corridor_weight": 0.10,
+        "detour_penalty": 0.016,
+        "cost_multiplier": 0.96,
+        "optimizer_backend": "fast_local_route_oracle_weather_safe_backup",
+    },
+}
 
 
 def route_search_strategies_from_config(config: TripConfig) -> dict:
     production_enrichment = import_legacy_module("production_enrichment")
+    base_strategies = {**production_enrichment.ROUTE_SEARCH_STRATEGIES, **NATURE_ROUTE_SEARCH_STRATEGIES}
     allowed = set(config.get("bandit", "arms", production_enrichment.ROUTE_SEARCH_STRATEGIES.keys()))
     social_weight = float(config.get("social", "social_score_weight", 1.10))
     must_go_weight = float(config.get("social", "must_go_bonus_weight", 0.85))
     corridor_weight = float(config.get("social", "corridor_fit_weight", 0.30))
     detour_penalty = float(config.get("social", "detour_penalty_weight", 0.01))
     strategies = {}
-    for name, strategy in production_enrichment.ROUTE_SEARCH_STRATEGIES.items():
+    for name, strategy in base_strategies.items():
         if name not in allowed:
             continue
         configured = dict(strategy)
@@ -101,7 +162,16 @@ def _candidate_bundle_for_arm(arm_row: pd.Series, enriched_df: pd.DataFrame, can
         pool = pool[mask].copy()
     if pool.empty:
         pool = enriched_df.copy()
-    pool["bundle_score"] = _numeric_column(pool, "final_poi_value")
+    base_score_column = interest_value_column(config)
+    if base_score_column not in pool.columns:
+        base_score_column = "final_poi_value"
+    # Nature-arm scoring math:
+    # bundle_score_i(a) = base_score_i + phi_n(a)*nature_score_i
+    #   + phi_s(a)*scenic_score_i + phi_h(a)*hiking_score_i
+    #   + phi_p(a)*park_bonus_i
+    #   + phi_safe(a)*(1 - weather_sensitivity_i*weather_risk_i)
+    #   - phi_d(a)*detour_minutes_i
+    pool["bundle_score"] = _numeric_column(pool, base_score_column)
     if strategy in {"scenic_social", "high_must_go"}:
         pool["bundle_score"] += 1.25 * _numeric_column(pool, "social_score")
         pool["bundle_score"] += 0.75 * _numeric_column(pool, "must_go_weight")
@@ -110,6 +180,28 @@ def _candidate_bundle_for_arm(arm_row: pd.Series, enriched_df: pd.DataFrame, can
         pool["bundle_score"] -= 0.01 * _numeric_column(pool, "detour_minutes")
     if strategy == "fastest_low_cost":
         pool["bundle_score"] -= 0.02 * _numeric_column(pool, "detour_minutes")
+    if strategy == "nature_heavy":
+        pool["bundle_score"] += 0.90 * _numeric_column(pool, "nature_score")
+        pool["bundle_score"] += 0.35 * _numeric_column(pool, "scenic_score")
+        pool["bundle_score"] += 0.25 * _numeric_column(pool, "hiking_score")
+        pool["bundle_score"] += 0.30 * _numeric_column(pool, "park_bonus")
+        pool["bundle_score"] -= 0.010 * _numeric_column(pool, "detour_minutes")
+    elif strategy == "scenic_parks":
+        pool["bundle_score"] += 0.75 * _numeric_column(pool, "scenic_score")
+        pool["bundle_score"] += 0.45 * _numeric_column(pool, "park_bonus")
+        pool["bundle_score"] -= 0.008 * _numeric_column(pool, "detour_minutes")
+    elif strategy == "national_park_priority":
+        pool["bundle_score"] += 1.10 * _numeric_column(pool, "is_national_park")
+        pool["bundle_score"] += 0.55 * _numeric_column(pool, "park_bonus")
+        pool["bundle_score"] += 0.20 * _numeric_column(pool, "nature_score")
+    elif strategy == "city_nature_balanced":
+        pool["bundle_score"] += 0.35 * _numeric_column(pool, "nature_score")
+        pool["bundle_score"] += 0.25 * _numeric_column(pool, "city_score")
+        pool["bundle_score"] += 0.20 * _numeric_column(pool, "culture_score")
+    elif strategy == "weather_safe_indoor_backup":
+        weather_exposure = _numeric_column(pool, "weather_sensitivity") * _numeric_column(pool, "weather_risk", 0.15)
+        pool["bundle_score"] += 0.45 * (1.0 - weather_exposure.clip(0.0, 1.0))
+        pool["bundle_score"] -= 0.20 * _numeric_column(pool, "outdoor_intensity")
     selected, mmr_log = mmr_select_candidates(pool, config, candidate_size=int(candidate_size), score_column="bundle_score")
     output = selected.reset_index(drop=True)
     output.attrs["mmr_log"] = mmr_log.assign(
@@ -184,6 +276,15 @@ def run_bandit_gurobi_stress_benchmark(
                             "total_detour_minutes": float(route_result.get("total_detour_minutes", 0.0) or 0.0),
                             "total_cost": float(route_result.get("total_cost", 0.0) or 0.0),
                             "total_weather_risk": float(route_result.get("total_weather_risk", 0.0) or 0.0),
+                            "interest_adjusted_utility": float(route_result.get("interest_adjusted_utility", route_result.get("total_value", 0.0)) or 0.0),
+                            "interest_delta": float(route_result.get("interest_delta", 0.0) or 0.0),
+                            "nature_score": float(route_result.get("nature_score", 0.0) or 0.0),
+                            "scenic_score": float(route_result.get("scenic_score", 0.0) or 0.0),
+                            "national_parks_selected": int(route_result.get("national_parks_selected", 0) or 0),
+                            "protected_parks_selected": int(route_result.get("protected_parks_selected", 0) or 0),
+                            "outdoor_weather_risk": float(route_result.get("outdoor_weather_risk", 0.0) or 0.0),
+                            "seasonality_risk": float(route_result.get("seasonality_risk", 0.0) or 0.0),
+                            "balance_score": float(route_result.get("balance_score", 0.0) or 0.0),
                             "epsilon_time_budget": route_result.get("epsilon_time_budget"),
                             "epsilon_cost_budget": route_result.get("epsilon_cost_budget"),
                             "epsilon_detour_minutes": route_result.get("epsilon_detour_minutes"),

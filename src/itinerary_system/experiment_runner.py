@@ -17,6 +17,7 @@ from .config import TripConfig, save_resolved_config
 from .data_enrichment import build_enriched_catalog
 from .diversity import diversity_audit_row
 from .hierarchical_gurobi import solve_hierarchical_trip_with_gurobi, solve_hierarchical_trip_with_greedy
+from .nature_catalog import NATURE_POI_COLUMNS, write_nature_route_artifacts
 from .route_gurobi_oracle import solve_enriched_route_with_gurobi
 
 
@@ -42,6 +43,17 @@ def _approximate_route_minutes(frame: pd.DataFrame) -> float:
     )
 
 
+def _numeric_column(frame: pd.DataFrame, column: str, default: float = 0.0, fallback_column: str | None = None) -> pd.Series:
+    """Return a numeric Series even when optional artifact columns are absent."""
+    if column in frame.columns:
+        raw = frame[column]
+    elif fallback_column and fallback_column in frame.columns:
+        raw = frame[fallback_column]
+    else:
+        raw = pd.Series(default, index=frame.index)
+    return pd.to_numeric(raw, errors="coerce").fillna(default)
+
+
 def _enriched_metric_row(strategy: str, frame: pd.DataFrame, budget_df: pd.DataFrame) -> dict:
     attraction_budget = (
         float(budget_df.loc[budget_df["component"].eq("attractions"), "expected"].iloc[0])
@@ -53,6 +65,13 @@ def _enriched_metric_row(strategy: str, frame: pd.DataFrame, budget_df: pd.DataF
         "profile": "balanced",
         "data_source_scope": "open_enriched_catalog",
         "total_utility": float(pd.to_numeric(frame.get("final_poi_value", pd.Series(dtype=float)), errors="coerce").fillna(0).sum()),
+        "interest_adjusted_utility": float(pd.to_numeric(frame.get("interest_adjusted_value", frame.get("final_poi_value", pd.Series(dtype=float))), errors="coerce").fillna(0).sum()),
+        "nature_score": float(pd.to_numeric(frame.get("nature_score", pd.Series(dtype=float)), errors="coerce").fillna(0).sum()),
+        "scenic_score": float(pd.to_numeric(frame.get("scenic_score", pd.Series(dtype=float)), errors="coerce").fillna(0).sum()),
+        "national_parks_selected": int(pd.to_numeric(frame.get("is_national_park", pd.Series(dtype=float)), errors="coerce").fillna(0).astype(bool).sum()) if not frame.empty else 0,
+        "protected_parks_selected": int((pd.to_numeric(frame.get("is_state_park", pd.Series(dtype=float)), errors="coerce").fillna(0).astype(bool) | pd.to_numeric(frame.get("is_protected_area", pd.Series(dtype=float)), errors="coerce").fillna(0).astype(bool)).sum()) if not frame.empty else 0,
+        "outdoor_weather_risk": float((pd.to_numeric(frame.get("weather_sensitivity", pd.Series(dtype=float)), errors="coerce").fillna(0) * pd.to_numeric(frame.get("weather_risk", pd.Series(0.15, index=frame.index)), errors="coerce").fillna(0.15)).sum()) if not frame.empty else 0.0,
+        "seasonality_risk": float(pd.to_numeric(frame.get("seasonality_risk", pd.Series(dtype=float)), errors="coerce").fillna(0).sum()) if not frame.empty else 0.0,
         "number_attractions": int(len(frame)),
         "total_waiting_time": np.nan,
         "within_city_travel_time": _approximate_route_minutes(frame),
@@ -359,8 +378,8 @@ def _must_go_candidates_from_output(output_dir: Path, enriched_df: pd.DataFrame 
     if "social_must_go" not in candidates.columns:
         candidates["social_must_go"] = False
     candidates["social_must_go"] = candidates["social_must_go"].fillna(False).astype(bool)
-    candidates["social_score"] = pd.to_numeric(candidates.get("social_score", 0.0), errors="coerce").fillna(0.0)
-    candidates["must_go_weight"] = pd.to_numeric(candidates.get("must_go_weight", 0.0), errors="coerce").fillna(0.0)
+    candidates["social_score"] = _numeric_column(candidates, "social_score")
+    candidates["must_go_weight"] = _numeric_column(candidates, "must_go_weight")
     candidates = candidates[candidates["social_must_go"] | candidates["social_score"].ge(0.70)].copy()
     keep_columns = [
         "name",
@@ -689,6 +708,7 @@ def _comparison_route_stop_columns() -> list[str]:
         "route_type",
         "status",
         "notes",
+        *NATURE_POI_COLUMNS,
     ]
 
 
@@ -879,6 +899,16 @@ def _strategy_weights(strategy_name: str) -> dict:
         base.update({"social": 0.60, "must_go": 0.55, "corridor": 0.20, "view": 0.18, "distance": 0.050})
     elif strategy == "low_detour":
         base.update({"social": 0.24, "must_go": 0.14, "corridor": 0.12, "distance": 0.070, "detour": 0.020})
+    elif strategy == "nature_heavy":
+        base.update({"view": 0.32, "corridor": 0.18, "distance": 0.045, "detour": 0.010})
+    elif strategy == "scenic_parks":
+        base.update({"view": 0.44, "corridor": 0.22, "distance": 0.040, "detour": 0.009})
+    elif strategy == "national_park_priority":
+        base.update({"view": 0.35, "corridor": 0.14, "distance": 0.038, "detour": 0.008})
+    elif strategy == "city_nature_balanced":
+        base.update({"view": 0.22, "social": 0.32, "corridor": 0.16, "distance": 0.052})
+    elif strategy == "weather_safe_indoor_backup":
+        base.update({"view": 0.04, "social": 0.24, "distance": 0.075, "detour": 0.018})
     return base
 
 
@@ -908,12 +938,21 @@ def _score_daily_candidate_pool(
         if "review_count" in scored.columns
         else pd.Series(0.0, index=scored.index)
     )
-    scored["final_poi_value"] = pd.to_numeric(scored.get("final_poi_value", scored.get("source_score", 0.0)), errors="coerce").fillna(0.0)
-    scored["source_score"] = pd.to_numeric(scored.get("source_score", 0.0), errors="coerce").fillna(0.0)
-    scored["social_score"] = pd.to_numeric(scored.get("social_score", 0.0), errors="coerce").fillna(0.0)
-    scored["must_go_weight"] = pd.to_numeric(scored.get("must_go_weight", 0.0), errors="coerce").fillna(0.0)
-    scored["corridor_fit"] = pd.to_numeric(scored.get("corridor_fit", 0.0), errors="coerce").fillna(0.0)
-    scored["detour_minutes"] = pd.to_numeric(scored.get("detour_minutes", 0.0), errors="coerce").fillna(0.0)
+    value_source = "interest_adjusted_value" if str(strategy_name).lower() in {
+        "nature_heavy",
+        "scenic_parks",
+        "national_park_priority",
+        "city_nature_balanced",
+        "weather_safe_indoor_backup",
+    } and "interest_adjusted_value" in scored.columns else "final_poi_value"
+    scored["final_poi_value"] = _numeric_column(scored, value_source, fallback_column="source_score")
+    scored["source_score"] = _numeric_column(scored, "source_score")
+    scored["social_score"] = _numeric_column(scored, "social_score")
+    scored["must_go_weight"] = _numeric_column(scored, "must_go_weight")
+    scored["corridor_fit"] = _numeric_column(scored, "corridor_fit")
+    scored["detour_minutes"] = _numeric_column(scored, "detour_minutes")
+    for interest_column in ["nature_score", "city_score", "culture_score", "history_score", "scenic_score", "hiking_score", "park_bonus", "weather_sensitivity", "weather_risk", "outdoor_intensity"]:
+        scored[interest_column] = _numeric_column(scored, interest_column)
     scored["yelp_rating"] = yelp_rating_series
     scored["yelp_review_count"] = review_count_series
     scored["social_must_go"] = scored.get("social_must_go", False)
@@ -954,6 +993,18 @@ def _score_daily_candidate_pool(
         - weights["distance"] * scored["distance_to_hotel_km"]
         - weights["detour"] * scored["detour_minutes"]
     )
+    strategy = str(strategy_name or "balanced").lower()
+    if strategy == "nature_heavy":
+        scored["route_candidate_score"] += 0.80 * scored["nature_score"] + 0.30 * scored["scenic_score"] + 0.25 * scored["hiking_score"]
+    elif strategy == "scenic_parks":
+        scored["route_candidate_score"] += 0.75 * scored["scenic_score"] + 0.35 * scored["park_bonus"]
+    elif strategy == "national_park_priority":
+        scored["route_candidate_score"] += 0.90 * scored["park_bonus"] + 0.25 * scored["nature_score"]
+    elif strategy == "city_nature_balanced":
+        scored["route_candidate_score"] += 0.28 * scored["nature_score"] + 0.22 * scored["city_score"] + 0.14 * scored["culture_score"]
+    elif strategy == "weather_safe_indoor_backup":
+        weather_exposure = (scored["weather_sensitivity"] * scored["weather_risk"]).clip(0.0, 1.0)
+        scored["route_candidate_score"] += 0.38 * (1.0 - weather_exposure) - 0.18 * scored["outdoor_intensity"]
     return scored.sort_values(["route_candidate_score", "final_poi_value", "name"], ascending=[False, False, True]).reset_index(drop=True)
 
 
@@ -1038,7 +1089,7 @@ def _solve_greedy_day_route(
         )
         remaining["visit_minutes_est"] = remaining.apply(_estimate_visit_minutes_from_row, axis=1)
         remaining["greedy_step_score"] = (
-            pd.to_numeric(remaining.get("route_candidate_score", 0.0), errors="coerce").fillna(0.0)
+            _numeric_column(remaining, "route_candidate_score")
             - 0.015 * remaining["travel_from_current"]
             - 0.008 * remaining["travel_to_end"]
         )
@@ -1055,7 +1106,7 @@ def _solve_greedy_day_route(
         current_lon = float(next_row["longitude"])
         remaining = remaining[remaining["name"].astype(str) != str(next_row["name"])].reset_index(drop=True)
     selected_df = pd.DataFrame(selected_rows).reset_index(drop=True) if selected_rows else pd.DataFrame()
-    objective_value = float(pd.to_numeric(selected_df.get("route_candidate_score", 0.0), errors="coerce").fillna(0.0).sum()) if not selected_df.empty else np.nan
+    objective_value = float(_numeric_column(selected_df, "route_candidate_score").sum()) if not selected_df.empty else np.nan
     return selected_df, {
         "solver_status": "HEURISTIC",
         "objective_value": objective_value,
@@ -1202,10 +1253,10 @@ def _build_route_rows_from_selected(
     output["source_list"] = output.get("source_list", output.get("source", "unknown"))
     output["social_must_go"] = output.get("social_must_go", False)
     output["social_must_go"] = output["social_must_go"].fillna(False).astype(bool)
-    output["social_score"] = pd.to_numeric(output.get("social_score", 0.0), errors="coerce").fillna(0.0)
-    output["must_go_weight"] = pd.to_numeric(output.get("must_go_weight", 0.0), errors="coerce").fillna(0.0)
+    output["social_score"] = _numeric_column(output, "social_score")
+    output["must_go_weight"] = _numeric_column(output, "must_go_weight")
     output["social_reason"] = output["social_reason"].fillna("") if "social_reason" in output.columns else ""
-    output["final_poi_value"] = pd.to_numeric(output.get("final_poi_value", output.get("source_score", 0.0)), errors="coerce").fillna(0.0)
+    output["final_poi_value"] = _numeric_column(output, "final_poi_value", fallback_column="source_score")
     output["route_start_city"] = previous_city
     output["route_start_name"] = route_start_name
     output["route_start_latitude"] = route_start_latitude
@@ -1221,6 +1272,9 @@ def _build_route_rows_from_selected(
     output["route_type"] = route_type
     output["status"] = status
     output["notes"] = notes
+    for column in _comparison_route_stop_columns():
+        if column not in output.columns:
+            output[column] = np.nan if column.endswith(("latitude", "longitude")) else ""
     return output[_comparison_route_stop_columns()]
 
 
@@ -2295,6 +2349,7 @@ def build_route_matrix_comparison(
 
     matrix_df.to_csv(output_dir / "production_route_matrix_comparison.csv", index=False)
     matrix_route_stops_df.to_csv(output_dir / "production_route_matrix_route_stops.csv", index=False)
+    write_nature_route_artifacts(matrix_route_stops_df, output_dir, config)
     _write_route_matrix_hotel_debug(
         output_dir=output_dir,
         route_stops_df=matrix_route_stops_df,
@@ -2846,6 +2901,7 @@ def build_production_method_comparison(
 
     method_df.to_csv(output_dir / "production_method_comparison.csv", index=False)
     route_stops_df.to_csv(output_dir / "production_method_route_stops.csv", index=False)
+    write_nature_route_artifacts(route_stops_df, output_dir, config)
     _write_must_go_coverage(
         output_dir=output_dir,
         method_df=method_df,
@@ -2973,6 +3029,15 @@ def run_configurable_blueprint_pipeline(
         "total_detour_minutes",
         "total_cost",
         "total_weather_risk",
+        "interest_adjusted_utility",
+        "interest_delta",
+        "nature_score",
+        "scenic_score",
+        "national_parks_selected",
+        "protected_parks_selected",
+        "outdoor_weather_risk",
+        "seasonality_risk",
+        "balance_score",
         "epsilon_time_budget",
         "epsilon_cost_budget",
         "epsilon_detour_minutes",

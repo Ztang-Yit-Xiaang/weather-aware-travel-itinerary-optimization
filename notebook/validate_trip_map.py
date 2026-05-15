@@ -18,7 +18,6 @@ from pathlib import Path
 
 import pandas as pd
 
-
 EXPECTED_TRIP_DAYS = {7, 9, 12}
 EXPECTED_METHODS = {
     "hierarchical_gurobi_pipeline",
@@ -207,7 +206,14 @@ def _check_expected_values(df: pd.DataFrame, artifact: str, column: str, expecte
 
 def _check_trip_length_uses_hybrid_bandit(df: pd.DataFrame) -> list[dict]:
     if df.empty or "method" not in df.columns:
-        return [_status_row("production_trip_length_route_stops.csv", "trip-length hybrid method", "FAIL", "missing trip-length route stops")]
+        return [
+            _status_row(
+                "production_trip_length_route_stops.csv",
+                "trip-length hybrid method",
+                "FAIL",
+                "missing trip-length route stops",
+            )
+        ]
     methods = sorted(set(df["method"].dropna().astype(str).tolist()))
     labels = sorted(set(df.get("comparison_label", pd.Series(dtype=str)).dropna().astype(str).tolist()))
     ok_methods = methods == ["hierarchical_bandit_gurobi_repair"]
@@ -285,15 +291,14 @@ def _visible_summary_detail(map_debug: pd.DataFrame) -> str:
         .agg(visible=lambda col: int(col.astype(bool).sum()), total="count")
         .reset_index()
     )
-    return "; ".join(
-        f"{row.layer_group}: {row.visible}/{row.total}"
-        for row in group_counts.itertuples(index=False)
-    )
+    return "; ".join(f"{row.layer_group}: {row.visible}/{row.total}" for row in group_counts.itertuples(index=False))
 
 
 def _check_visible_group(map_debug: pd.DataFrame, group: str, minimum_visible: int) -> dict:
     if map_debug.empty or "layer_group" not in map_debug.columns:
-        return _status_row("production_map_route_debug.csv", f"{group} visible by default", "FAIL", "missing route debug rows")
+        return _status_row(
+            "production_map_route_debug.csv", f"{group} visible by default", "FAIL", "missing route debug rows"
+        )
     group_rows = map_debug[map_debug["layer_group"].astype(str).eq(group)].copy()
     visible_count = int(group_rows.get("show_by_default", pd.Series(dtype=bool)).astype(bool).sum())
     status = "PASS" if visible_count >= minimum_visible else "FAIL"
@@ -307,9 +312,13 @@ def _check_visible_group(map_debug: pd.DataFrame, group: str, minimum_visible: i
 
 def _check_distance_coverage(map_debug: pd.DataFrame, group: str, minimum_km: float) -> dict:
     if map_debug.empty or "distance_km" not in map_debug.columns:
-        return _status_row("production_map_route_debug.csv", f"{group} distance coverage", "FAIL", "missing route debug rows")
+        return _status_row(
+            "production_map_route_debug.csv", f"{group} distance coverage", "FAIL", "missing route debug rows"
+        )
     group_rows = map_debug[map_debug["layer_group"].astype(str).eq(group)].copy()
-    max_distance = float(pd.to_numeric(group_rows.get("distance_km", pd.Series(dtype=float)), errors="coerce").max() or 0.0)
+    max_distance = float(
+        pd.to_numeric(group_rows.get("distance_km", pd.Series(dtype=float)), errors="coerce").max() or 0.0
+    )
     status = "PASS" if max_distance >= float(minimum_km) else "FAIL"
     return _status_row(
         "production_map_route_debug.csv",
@@ -339,7 +348,9 @@ def _feature_group_removed_from_map(html: str, feature_group: str | None) -> boo
 
 def _check_full_route_offsets(map_debug: pd.DataFrame) -> dict:
     if map_debug.empty or "notes" not in map_debug.columns:
-        return _status_row("production_map_route_debug.csv", "full-route selectable offsets", "FAIL", "missing route debug notes")
+        return _status_row(
+            "production_map_route_debug.csv", "full-route selectable offsets", "FAIL", "missing route debug notes"
+        )
     full_route_rows = map_debug[map_debug["layer_group"].astype(str).eq("Full Route Overview")].copy()
     offsets: set[float] = set()
     panes: set[str] = set()
@@ -351,7 +362,11 @@ def _check_full_route_offsets(map_debug: pd.DataFrame) -> dict:
         if pane_match:
             panes.add(pane_match.group(1))
     max_abs_offset = max((abs(offset) for offset in offsets), default=0.0)
-    status = "PASS" if len(full_route_rows) >= 9 and len(offsets) >= 5 and max_abs_offset <= 1.3 and panes == {"routeTopPane"} else "FAIL"
+    status = (
+        "PASS"
+        if len(full_route_rows) >= 9 and len(offsets) >= 5 and max_abs_offset <= 1.3 and panes == {"routeTopPane"}
+        else "FAIL"
+    )
     return _status_row(
         "production_map_route_debug.csv",
         "full-route selectable offsets",
@@ -362,7 +377,9 @@ def _check_full_route_offsets(map_debug: pd.DataFrame) -> dict:
 
 def _check_full_route_families(map_debug: pd.DataFrame) -> dict:
     if map_debug.empty or "layer_name" not in map_debug.columns:
-        return _status_row("production_map_route_debug.csv", "full-route required families", "FAIL", "missing route debug rows")
+        return _status_row(
+            "production_map_route_debug.csv", "full-route required families", "FAIL", "missing route debug rows"
+        )
     full_route_names = (
         map_debug[map_debug["layer_group"].astype(str).eq("Full Route Overview")]["layer_name"]
         .fillna("")
@@ -392,9 +409,17 @@ def _check_full_route_families(map_debug: pd.DataFrame) -> dict:
 
 def _check_full_route_arrows(map_debug: pd.DataFrame) -> dict:
     if map_debug.empty or "geometry_mode" not in map_debug.columns:
-        return _status_row("production_map_route_debug.csv", "full-route arrows/no casing", "FAIL", "missing geometry mode rows")
+        return _status_row(
+            "production_map_route_debug.csv", "full-route arrows/no casing", "FAIL", "missing geometry mode rows"
+        )
     full_route_rows = map_debug[map_debug["layer_group"].astype(str).eq("Full Route Overview")].copy()
-    geometry_ok = full_route_rows["geometry_mode"].fillna("").astype(str).str.contains("full-route-polyline-with-canvas-arrows").all()
+    geometry_ok = (
+        full_route_rows["geometry_mode"]
+        .fillna("")
+        .astype(str)
+        .str.contains("full-route-polyline-with-canvas-arrows")
+        .all()
+    )
     notes = full_route_rows.get("notes", pd.Series("", index=full_route_rows.index)).fillna("").astype(str)
     notes_ok = notes.str.contains("direction_arrows=canvas").all() and notes.str.contains("no_white_casing=True").all()
     status = "PASS" if not full_route_rows.empty and geometry_ok and notes_ok else "FAIL"
@@ -408,9 +433,15 @@ def _check_full_route_arrows(map_debug: pd.DataFrame) -> dict:
 
 def _check_city_loop_semantics(map_debug: pd.DataFrame) -> list[dict]:
     rows = []
-    city_rows = map_debug[map_debug["comparison_type"].astype(str).eq("city_detail")].copy() if not map_debug.empty else pd.DataFrame()
+    city_rows = (
+        map_debug[map_debug["comparison_type"].astype(str).eq("city_detail")].copy()
+        if not map_debug.empty
+        else pd.DataFrame()
+    )
     if city_rows.empty:
-        rows.append(_status_row("production_map_route_debug.csv", "city detail hotel loops", "FAIL", "missing city detail rows"))
+        rows.append(
+            _status_row("production_map_route_debug.csv", "city detail hotel loops", "FAIL", "missing city detail rows")
+        )
     else:
         same_city = bool(city_rows["route_start_city"].astype(str).eq(city_rows["route_end_city"].astype(str)).all())
         notes = city_rows.get("notes", pd.Series("", index=city_rows.index)).fillna("").astype(str)
@@ -426,11 +457,21 @@ def _check_city_loop_semantics(map_debug: pd.DataFrame) -> list[dict]:
             )
         )
 
-    transition_rows = map_debug[map_debug["comparison_type"].astype(str).eq("transition")].copy() if not map_debug.empty else pd.DataFrame()
+    transition_rows = (
+        map_debug[map_debug["comparison_type"].astype(str).eq("transition")].copy()
+        if not map_debug.empty
+        else pd.DataFrame()
+    )
     if transition_rows.empty:
-        rows.append(_status_row("production_map_route_debug.csv", "transition routes separated", "FAIL", "missing transition route rows"))
+        rows.append(
+            _status_row(
+                "production_map_route_debug.csv", "transition routes separated", "FAIL", "missing transition route rows"
+            )
+        )
     else:
-        separate = bool(transition_rows["route_start_city"].astype(str).ne(transition_rows["route_end_city"].astype(str)).any())
+        separate = bool(
+            transition_rows["route_start_city"].astype(str).ne(transition_rows["route_end_city"].astype(str)).any()
+        )
         notes = transition_rows.get("notes", pd.Series("", index=transition_rows.index)).fillna("").astype(str)
         notes_ok = bool(notes.str.contains("transition_route_separate_from_city_loop=true").all())
         rows.append(
@@ -494,12 +535,16 @@ def _check_must_go_coverage_file(df: pd.DataFrame) -> list[dict]:
             f"methods={sorted(methods)}",
         )
     )
-    selected_count = int(df.get("selected", pd.Series(dtype=bool)).astype(bool).sum()) if "selected" in df.columns else 0
+    selected_count = (
+        int(df.get("selected", pd.Series(dtype=bool)).astype(bool).sum()) if "selected" in df.columns else 0
+    )
     rows.append(
         _status_row(
             "production_must_go_coverage.csv",
             "must-go selected/skipped states",
-            "PASS" if selected_count > 0 and "skipped_soft_reward" in set(df.get("status", pd.Series(dtype=str)).astype(str)) else "FAIL",
+            "PASS"
+            if selected_count > 0 and "skipped_soft_reward" in set(df.get("status", pd.Series(dtype=str)).astype(str))
+            else "FAIL",
             f"selected_rows={selected_count}; statuses={sorted(set(df.get('status', pd.Series(dtype=str)).astype(str)))}",
         )
     )
@@ -511,7 +556,9 @@ def _check_hotel_debug_file(df: pd.DataFrame) -> list[dict]:
     if df.empty:
         return [_status_row("production_hotel_selection_debug.csv", "hotel debug artifact", "FAIL", "missing or empty")]
     missing = sorted(required - set(df.columns))
-    selected_count = int(df.get("selected", pd.Series(dtype=bool)).astype(bool).sum()) if "selected" in df.columns else 0
+    selected_count = (
+        int(df.get("selected", pd.Series(dtype=bool)).astype(bool).sum()) if "selected" in df.columns else 0
+    )
     return [
         _status_row(
             "production_hotel_selection_debug.csv",
@@ -584,7 +631,8 @@ def _check_route_matrix_artifacts(
                 )
             )
             route_key_format_ok = all(
-                str(row.route_key) == f"d{int(row.trip_days)}__{METHOD_ROUTE_KEY_SLUG.get(str(row.method), str(row.method))}__{row.profile}"
+                str(row.route_key)
+                == f"d{int(row.trip_days)}__{METHOD_ROUTE_KEY_SLUG.get(str(row.method), str(row.method))}__{row.profile}"
                 for row in combos.itertuples(index=False)
             )
             rows.append(
@@ -592,7 +640,9 @@ def _check_route_matrix_artifacts(
                     artifact,
                     "stable route_key format",
                     "PASS" if route_key_format_ok else "FAIL",
-                    "route keys match d{days}__{method_slug}__{profile}" if route_key_format_ok else "one or more route keys do not match their method/day/profile",
+                    "route keys match d{days}__{method_slug}__{profile}"
+                    if route_key_format_ok
+                    else "one or more route keys do not match their method/day/profile",
                 )
             )
         layer_columns = ["route_layer_var", "hotel_layer_var", "city_detail_layer_vars", "transition_layer_vars"]
@@ -656,7 +706,11 @@ def _check_route_matrix_artifacts(
                 f"selected_route_keys={len(selected_keys)}; missing={sorted(EXPECTED_ROUTE_MATRIX_KEYS - selected_keys)[:8]}",
             )
         )
-        if not matrix_stops.empty and {"route_key", "overnight_city"}.issubset(matrix_stops.columns) and {"route_key", "city"}.issubset(selected_hotels.columns):
+        if (
+            not matrix_stops.empty
+            and {"route_key", "overnight_city"}.issubset(matrix_stops.columns)
+            and {"route_key", "city"}.issubset(selected_hotels.columns)
+        ):
             overnight_by_key = {
                 key: set(group["overnight_city"].dropna().astype(str).tolist())
                 for key, group in matrix_stops.groupby("route_key", dropna=False)
@@ -672,7 +726,9 @@ def _check_route_matrix_artifacts(
                     hotel_artifact,
                     "selected hotel city binding",
                     "PASS" if not mismatches else "FAIL",
-                    "selected hotels belong only to their route overnight cities" if not mismatches else f"mismatches={mismatches[:10]}",
+                    "selected hotels belong only to their route overnight cities"
+                    if not mismatches
+                    else f"mismatches={mismatches[:10]}",
                 )
             )
     return rows
@@ -681,10 +737,21 @@ def _check_route_matrix_artifacts(
 def _check_route_matrix_debug(map_debug: pd.DataFrame) -> list[dict]:
     rows: list[dict] = []
     if map_debug.empty:
-        return [_status_row("production_map_route_debug.csv", "route matrix renderer rows", "FAIL", "missing route debug rows")]
+        return [
+            _status_row(
+                "production_map_route_debug.csv", "route matrix renderer rows", "FAIL", "missing route debug rows"
+            )
+        ]
 
-    group_counts = map_debug["layer_group"].astype(str).value_counts().to_dict() if "layer_group" in map_debug.columns else {}
-    for group in ["Route Matrix Full Route", "Route Matrix Hotels", "Route Matrix City Loop", "Route Matrix Transition"]:
+    group_counts = (
+        map_debug["layer_group"].astype(str).value_counts().to_dict() if "layer_group" in map_debug.columns else {}
+    )
+    for group in [
+        "Route Matrix Full Route",
+        "Route Matrix Hotels",
+        "Route Matrix City Loop",
+        "Route Matrix Transition",
+    ]:
         count = int(group_counts.get(group, 0))
         rows.append(
             _status_row(
@@ -696,7 +763,11 @@ def _check_route_matrix_debug(map_debug: pd.DataFrame) -> list[dict]:
         )
 
     if "notes" not in map_debug.columns:
-        rows.append(_status_row("production_map_route_debug.csv", "route matrix route_key notes", "FAIL", "missing notes column"))
+        rows.append(
+            _status_row(
+                "production_map_route_debug.csv", "route matrix route_key notes", "FAIL", "missing notes column"
+            )
+        )
         return rows
 
     debug_with_keys = map_debug.copy()
@@ -726,7 +797,17 @@ def _check_route_matrix_debug(map_debug: pd.DataFrame) -> list[dict]:
     hotel_rows = debug_with_keys[debug_with_keys["layer_group"].astype(str).eq("Route Matrix Hotels")].copy()
     hotel_keys = set(hotel_rows["debug_route_key"].dropna().astype(str).tolist())
     visible_hotels = int(hotel_rows.get("show_by_default", pd.Series(dtype=bool)).astype(bool).sum())
-    hotel_notes_ok = bool(hotel_rows.get("notes", pd.Series("", index=hotel_rows.index)).fillna("").astype(str).str.contains("hotel_showcase_controlled=true").all()) if not hotel_rows.empty else False
+    hotel_notes_ok = (
+        bool(
+            hotel_rows.get("notes", pd.Series("", index=hotel_rows.index))
+            .fillna("")
+            .astype(str)
+            .str.contains("hotel_showcase_controlled=true")
+            .all()
+        )
+        if not hotel_rows.empty
+        else False
+    )
     rows.append(
         _status_row(
             "production_map_route_debug.csv",
@@ -738,9 +819,27 @@ def _check_route_matrix_debug(map_debug: pd.DataFrame) -> list[dict]:
 
     city_rows = debug_with_keys[debug_with_keys["layer_group"].astype(str).eq("Route Matrix City Loop")].copy()
     city_keys = set(city_rows["debug_route_key"].dropna().astype(str).tolist())
-    same_city = bool(city_rows["route_start_city"].astype(str).eq(city_rows["route_end_city"].astype(str)).all()) if not city_rows.empty and {"route_start_city", "route_end_city"}.issubset(city_rows.columns) else False
-    notes_ok = bool(city_rows.get("notes", pd.Series("", index=city_rows.index)).fillna("").astype(str).str.contains("hotel_loop_start_end_same=true").all()) if not city_rows.empty else False
-    route_type_ok = bool(city_rows.get("route_type", pd.Series("", index=city_rows.index)).astype(str).eq("hotel_loop").all()) if not city_rows.empty else False
+    same_city = (
+        bool(city_rows["route_start_city"].astype(str).eq(city_rows["route_end_city"].astype(str)).all())
+        if not city_rows.empty and {"route_start_city", "route_end_city"}.issubset(city_rows.columns)
+        else False
+    )
+    notes_ok = (
+        bool(
+            city_rows.get("notes", pd.Series("", index=city_rows.index))
+            .fillna("")
+            .astype(str)
+            .str.contains("hotel_loop_start_end_same=true")
+            .all()
+        )
+        if not city_rows.empty
+        else False
+    )
+    route_type_ok = (
+        bool(city_rows.get("route_type", pd.Series("", index=city_rows.index)).astype(str).eq("hotel_loop").all())
+        if not city_rows.empty
+        else False
+    )
     rows.append(
         _status_row(
             "production_map_route_debug.csv",
@@ -752,27 +851,52 @@ def _check_route_matrix_debug(map_debug: pd.DataFrame) -> list[dict]:
 
     transition_rows = debug_with_keys[debug_with_keys["layer_group"].astype(str).eq("Route Matrix Transition")].copy()
     transition_keys = set(transition_rows["debug_route_key"].dropna().astype(str).tolist())
-    transition_notes_ok = bool(transition_rows.get("notes", pd.Series("", index=transition_rows.index)).fillna("").astype(str).str.contains("transition_route_separate_from_city_loop=true").all()) if not transition_rows.empty else False
-    has_intercity = bool(transition_rows["route_start_city"].astype(str).ne(transition_rows["route_end_city"].astype(str)).any()) if not transition_rows.empty and {"route_start_city", "route_end_city"}.issubset(transition_rows.columns) else False
+    transition_notes_ok = (
+        bool(
+            transition_rows.get("notes", pd.Series("", index=transition_rows.index))
+            .fillna("")
+            .astype(str)
+            .str.contains("transition_route_separate_from_city_loop=true")
+            .all()
+        )
+        if not transition_rows.empty
+        else False
+    )
+    has_intercity = (
+        bool(transition_rows["route_start_city"].astype(str).ne(transition_rows["route_end_city"].astype(str)).any())
+        if not transition_rows.empty and {"route_start_city", "route_end_city"}.issubset(transition_rows.columns)
+        else False
+    )
     rows.append(
         _status_row(
             "production_map_route_debug.csv",
             "route matrix transitions separated",
-            "PASS" if transition_keys == EXPECTED_ROUTE_MATRIX_KEYS and transition_notes_ok and has_intercity else "FAIL",
+            "PASS"
+            if transition_keys == EXPECTED_ROUTE_MATRIX_KEYS and transition_notes_ok and has_intercity
+            else "FAIL",
             f"transition_keys={len(transition_keys)}; has_intercity={has_intercity}; notes_ok={transition_notes_ok}; missing={sorted(EXPECTED_ROUTE_MATRIX_KEYS - transition_keys)[:8]}",
         )
     )
 
     road_rows = debug_with_keys[
-        debug_with_keys["layer_group"].astype(str).isin(
-            ["Route Matrix Full Route", "Route Matrix City Loop", "Route Matrix Transition"]
-        )
+        debug_with_keys["layer_group"]
+        .astype(str)
+        .isin(["Route Matrix Full Route", "Route Matrix City Loop", "Route Matrix Transition"])
     ].copy()
-    fallback_sum = int(pd.to_numeric(road_rows.get("straight_line_fallback_count", pd.Series(dtype=float)), errors="coerce").fillna(0).sum())
-    road_percent = pd.to_numeric(road_rows.get("road_geometry_percent", pd.Series(dtype=float)), errors="coerce").dropna()
+    fallback_sum = int(
+        pd.to_numeric(road_rows.get("straight_line_fallback_count", pd.Series(dtype=float)), errors="coerce")
+        .fillna(0)
+        .sum()
+    )
+    road_percent = pd.to_numeric(
+        road_rows.get("road_geometry_percent", pd.Series(dtype=float)), errors="coerce"
+    ).dropna()
     geometry_sources = set(road_rows.get("geometry_source", pd.Series(dtype=str)).fillna("").astype(str).tolist())
-    road_ok = fallback_sum == 0 and not road_percent.empty and float(road_percent.min()) >= 99.0 and any(
-        "osrm" in source or "cached" in source for source in geometry_sources
+    road_ok = (
+        fallback_sum == 0
+        and not road_percent.empty
+        and float(road_percent.min()) >= 99.0
+        and any("osrm" in source or "cached" in source for source in geometry_sources)
     )
     rows.append(
         _status_row(
@@ -787,7 +911,9 @@ def _check_route_matrix_debug(map_debug: pd.DataFrame) -> list[dict]:
 
 def _check_balanced_only_defaults(map_debug: pd.DataFrame) -> list[dict]:
     if map_debug.empty or "layer_group" not in map_debug.columns:
-        return [_status_row("production_map_route_debug.csv", "balanced-only default", "FAIL", "missing route debug rows")]
+        return [
+            _status_row("production_map_route_debug.csv", "balanced-only default", "FAIL", "missing route debug rows")
+        ]
     rows = []
     expected_hidden_groups = [
         "Routes",
@@ -819,7 +945,9 @@ def _check_balanced_only_defaults(map_debug: pd.DataFrame) -> list[dict]:
         _status_row(
             "production_map_route_debug.csv",
             "balanced-only visible default: Balanced full route",
-            "PASS" if len(visible_rows) == 1 and any("Balanced full route" in name for name in visible_names) else "FAIL",
+            "PASS"
+            if len(visible_rows) == 1 and any("Balanced full route" in name for name in visible_names)
+            else "FAIL",
             f"visible={len(visible_rows)}; visible_names={visible_names}",
         )
     )
@@ -843,11 +971,25 @@ def _extract_route_registry(html: str) -> list[dict]:
 def _check_greedy_registry_endpoints(route_registry: list[dict], method_routes: pd.DataFrame) -> dict:
     greedy_routes = [route for route in route_registry if str(route.get("control_id")) == "method_greedy"]
     if not greedy_routes:
-        return _status_row("production_hierarchical_trip_map.html", "greedy route endpoint labels", "FAIL", "method_greedy registry row missing")
+        return _status_row(
+            "production_hierarchical_trip_map.html",
+            "greedy route endpoint labels",
+            "FAIL",
+            "method_greedy registry row missing",
+        )
     greedy_route = greedy_routes[0]
-    greedy_rows = method_routes[method_routes["method"].astype(str).eq("hierarchical_greedy_baseline")].copy() if not method_routes.empty and "method" in method_routes.columns else pd.DataFrame()
+    greedy_rows = (
+        method_routes[method_routes["method"].astype(str).eq("hierarchical_greedy_baseline")].copy()
+        if not method_routes.empty and "method" in method_routes.columns
+        else pd.DataFrame()
+    )
     if greedy_rows.empty:
-        return _status_row("production_hierarchical_trip_map.html", "greedy route endpoint labels", "FAIL", "greedy route-stop rows missing")
+        return _status_row(
+            "production_hierarchical_trip_map.html",
+            "greedy route endpoint labels",
+            "FAIL",
+            "greedy route-stop rows missing",
+        )
     greedy_rows["day"] = pd.to_numeric(greedy_rows.get("day", 1), errors="coerce").fillna(1).astype(int)
     greedy_rows["stop_order"] = pd.to_numeric(greedy_rows.get("stop_order", 1), errors="coerce").fillna(1).astype(int)
     greedy_rows = greedy_rows.sort_values(["day", "stop_order"]).reset_index(drop=True)
@@ -895,7 +1037,11 @@ def _check_route_matrix_registry(route_registry: list[dict], html: str) -> list[
     hotel_keys = {str(route.get("route_key")) for route in hotel_routes}
     city_keys = {str(route.get("route_key")) for route in city_routes}
     transition_keys = {str(route.get("route_key")) for route in transition_routes}
-    default_checked = [str(route.get("control_id", "")) for route in route_registry if bool(route.get("default_checked", route.get("default_visible", False)))]
+    default_checked = [
+        str(route.get("control_id", ""))
+        for route in route_registry
+        if bool(route.get("default_checked", route.get("default_visible", False)))
+    ]
     rows.append(
         _status_row(
             "production_hierarchical_trip_map.html",
@@ -908,7 +1054,10 @@ def _check_route_matrix_registry(route_registry: list[dict], html: str) -> list[
         _status_row(
             "production_hierarchical_trip_map.html",
             "route-specific hotel registry",
-            "PASS" if hotel_keys == EXPECTED_ROUTE_MATRIX_KEYS and all(bool(route.get("hotel_showcase_controlled")) for route in hotel_routes) else "FAIL",
+            "PASS"
+            if hotel_keys == EXPECTED_ROUTE_MATRIX_KEYS
+            and all(bool(route.get("hotel_showcase_controlled")) for route in hotel_routes)
+            else "FAIL",
             f"hotel_routes={len(hotel_routes)}; hotel_keys={len(hotel_keys)}; missing={sorted(EXPECTED_ROUTE_MATRIX_KEYS - hotel_keys)[:8]}",
         )
     )
@@ -916,7 +1065,9 @@ def _check_route_matrix_registry(route_registry: list[dict], html: str) -> list[
         _status_row(
             "production_hierarchical_trip_map.html",
             "route-specific detail registry",
-            "PASS" if city_keys == EXPECTED_ROUTE_MATRIX_KEYS and transition_keys == EXPECTED_ROUTE_MATRIX_KEYS else "FAIL",
+            "PASS"
+            if city_keys == EXPECTED_ROUTE_MATRIX_KEYS and transition_keys == EXPECTED_ROUTE_MATRIX_KEYS
+            else "FAIL",
             f"city_keys={len(city_keys)}; transition_keys={len(transition_keys)}; missing_city={sorted(EXPECTED_ROUTE_MATRIX_KEYS - city_keys)[:8]}; missing_transition={sorted(EXPECTED_ROUTE_MATRIX_KEYS - transition_keys)[:8]}",
         )
     )
@@ -928,12 +1079,20 @@ def _check_route_matrix_registry(route_registry: list[dict], html: str) -> list[
             f"default_checked={default_checked}",
         )
     )
-    selected_hotel_checked = [str(route.get("control_id", "")) for route in hotel_routes if bool(route.get("default_checked", route.get("default_visible", False)))]
+    selected_hotel_checked = [
+        str(route.get("control_id", ""))
+        for route in hotel_routes
+        if bool(route.get("default_checked", route.get("default_visible", False)))
+    ]
     rows.append(
         _status_row(
             "production_hierarchical_trip_map.html",
             "hotel showcase off by default",
-            "PASS" if not selected_hotel_checked and "Hotel Showcase: Off" in html and "blueprintHotelShowcaseEnabled = hotelShowcaseEnabled" in html else "FAIL",
+            "PASS"
+            if not selected_hotel_checked
+            and "Hotel Showcase: Off" in html
+            and "blueprintHotelShowcaseEnabled = hotelShowcaseEnabled" in html
+            else "FAIL",
             f"default_checked_hotel_layers={selected_hotel_checked}; showcase_markup={'Hotel Showcase: Off' in html}",
         )
     )
@@ -941,7 +1100,9 @@ def _check_route_matrix_registry(route_registry: list[dict], html: str) -> list[
         _status_row(
             "production_hierarchical_trip_map.html",
             "matrix must-go route-specific registry",
-            "PASS" if {str(route.get("route_key")) for route in must_go_routes} == EXPECTED_ROUTE_MATRIX_KEYS else "FAIL",
+            "PASS"
+            if {str(route.get("route_key")) for route in must_go_routes} == EXPECTED_ROUTE_MATRIX_KEYS
+            else "FAIL",
             f"must_go_routes={len(must_go_routes)}",
         )
     )
@@ -951,7 +1112,10 @@ def _check_route_matrix_registry(route_registry: list[dict], html: str) -> list[
         _status_row(
             "production_hierarchical_trip_map.html",
             "matrix default route visible addTo",
-            "PASS" if _feature_group_added_to_map(html, default_layer) and not _feature_group_removed_from_map(html, default_layer) else "FAIL",
+            "PASS"
+            if _feature_group_added_to_map(html, default_layer)
+            and not _feature_group_removed_from_map(html, default_layer)
+            else "FAIL",
             f"feature_group={default_layer or 'missing'}; addTo={_feature_group_added_to_map(html, default_layer)}; remove_call={_feature_group_removed_from_map(html, default_layer)}",
         )
     )
@@ -1019,16 +1183,19 @@ def _check_method_summary_file(df: pd.DataFrame) -> list[dict]:
                 mismatches.append(f"{method}: missing")
                 continue
             first = method_rows.iloc[0]
-            if str(first.get("allocation_solver")) != allocation_solver or str(first.get("local_route_solver")) != local_solver:
-                mismatches.append(
-                    f"{method}: {first.get('allocation_solver')}/{first.get('local_route_solver')}"
-                )
+            if (
+                str(first.get("allocation_solver")) != allocation_solver
+                or str(first.get("local_route_solver")) != local_solver
+            ):
+                mismatches.append(f"{method}: {first.get('allocation_solver')}/{first.get('local_route_solver')}")
         rows.append(
             _status_row(
                 artifact,
                 "method solver roles",
                 "PASS" if not mismatches else "FAIL",
-                "all three methods use the intended allocation/local route solvers" if not mismatches else f"mismatches={mismatches}",
+                "all three methods use the intended allocation/local route solvers"
+                if not mismatches
+                else f"mismatches={mismatches}",
             )
         )
     if "comparison_score" in df.columns:
@@ -1044,10 +1211,7 @@ def _check_method_summary_file(df: pd.DataFrame) -> list[dict]:
         )
     if "notes" in df.columns:
         greedy_notes = " ".join(
-            df.loc[df["method"].astype(str).eq("hierarchical_greedy_baseline"), "notes"]
-            .fillna("")
-            .astype(str)
-            .tolist()
+            df.loc[df["method"].astype(str).eq("hierarchical_greedy_baseline"), "notes"].fillna("").astype(str).tolist()
         )
         rows.append(
             _status_row(
@@ -1063,7 +1227,11 @@ def _check_method_summary_file(df: pd.DataFrame) -> list[dict]:
 def _check_notebook_old_three_day_removed(project_root: Path) -> list[dict]:
     notebook_path = project_root / "notebook" / "production_system_blueprint.ipynb"
     if not notebook_path.exists():
-        return [_status_row("production_system_blueprint.ipynb", "old 3-day notebook path removed", "FAIL", "notebook missing")]
+        return [
+            _status_row(
+                "production_system_blueprint.ipynb", "old 3-day notebook path removed", "FAIL", "notebook missing"
+            )
+        ]
     text = notebook_path.read_text(encoding="utf-8", errors="ignore")
     found = [marker for marker in FORBIDDEN_OLD_NOTEBOOK_MARKERS if marker in text]
     return [
@@ -1088,7 +1256,11 @@ def _check_old_three_day_artifacts_removed(output_dir: Path) -> list[dict]:
         )
     )
     contaminated = []
-    for name in ["production_experiment_summary.csv", "production_model_comparison.csv", "production_resolved_config.json"]:
+    for name in [
+        "production_experiment_summary.csv",
+        "production_model_comparison.csv",
+        "production_resolved_config.json",
+    ]:
         path = output_dir / name
         if path.exists():
             text = path.read_text(encoding="utf-8", errors="ignore")
@@ -1099,7 +1271,9 @@ def _check_old_three_day_artifacts_removed(output_dir: Path) -> list[dict]:
             "results/outputs",
             "old 3-day markers absent from production artifacts",
             "PASS" if not contaminated else "FAIL",
-            "production summaries/config do not contain removed standalone local demo markers" if not contaminated else f"contaminated={contaminated}",
+            "production summaries/config do not contain removed standalone local demo markers"
+            if not contaminated
+            else f"contaminated={contaminated}",
         )
     )
     return rows
@@ -1124,7 +1298,9 @@ def validate(output_dir: Path, figure_dir: Path) -> pd.DataFrame:
     rows.extend(_check_route_file(route_matrix_stops, "production_route_matrix_route_stops.csv"))
 
     rows.extend(_check_route_file(trip_routes, "production_trip_length_route_stops.csv"))
-    rows.extend(_check_expected_values(trip_routes, "production_trip_length_route_stops.csv", "trip_days", EXPECTED_TRIP_DAYS))
+    rows.extend(
+        _check_expected_values(trip_routes, "production_trip_length_route_stops.csv", "trip_days", EXPECTED_TRIP_DAYS)
+    )
     rows.extend(_check_trip_length_uses_hybrid_bandit(trip_routes))
 
     rows.extend(_check_route_file(method_routes, "production_method_route_stops.csv"))
@@ -1133,12 +1309,16 @@ def validate(output_dir: Path, figure_dir: Path) -> pd.DataFrame:
     rows.extend(_check_must_go_coverage_file(must_go_coverage))
     rows.extend(_check_hotel_debug_file(hotel_debug))
 
-    rows.extend(_check_expected_values(profile_routes, "production_day_plan_profiles.csv", "profile", EXPECTED_PROFILES))
+    rows.extend(
+        _check_expected_values(profile_routes, "production_day_plan_profiles.csv", "profile", EXPECTED_PROFILES)
+    )
     rows.extend(_check_notebook_old_three_day_removed(Path.cwd()))
     rows.extend(_check_old_three_day_artifacts_removed(output_dir))
 
     if map_debug.empty:
-        rows.append(_status_row("production_map_route_debug.csv", "renderer audit", "FAIL", "missing renderer audit rows"))
+        rows.append(
+            _status_row("production_map_route_debug.csv", "renderer audit", "FAIL", "missing renderer audit rows")
+        )
     else:
         failed = map_debug[map_debug["draw_status"].astype(str).eq("FAILED")]
         warned = map_debug[map_debug["draw_status"].astype(str).eq("WARN")]
@@ -1159,7 +1339,14 @@ def validate(output_dir: Path, figure_dir: Path) -> pd.DataFrame:
             rows.append(_check_distance_coverage(map_debug, "Route Matrix Transition", 80.0))
             rows.append(_check_distance_coverage(map_debug, "Routes", 700.0))
         else:
-            for expected_group in ["Full Route Overview", "City Detail", "Transition Route", "Trip Length Comparison", "Method Comparison", "Traveler Comparison"]:
+            for expected_group in [
+                "Full Route Overview",
+                "City Detail",
+                "Transition Route",
+                "Trip Length Comparison",
+                "Method Comparison",
+                "Traveler Comparison",
+            ]:
                 found = map_debug["layer_group"].astype(str).eq(expected_group).any()
                 rows.append(
                     _status_row(
@@ -1309,22 +1496,49 @@ def validate(output_dir: Path, figure_dir: Path) -> pd.DataFrame:
             "production_hierarchical_trip_map.html",
             "html no always-on full-scene guard",
             "PASS" if "keepFullSceneVisible" not in html else "FAIL",
-            "no full-scene guard; checkbox selector owns route state" if "keepFullSceneVisible" not in html else "old keepFullSceneVisible guard still present",
+            "no full-scene guard; checkbox selector owns route state"
+            if "keepFullSceneVisible" not in html
+            else "old keepFullSceneVisible guard still present",
         )
     )
     rows.append(
         _status_row(
             "production_hierarchical_trip_map.html",
             "html route selector controls",
-            "PASS" if all(token in html for token in ["blueprint-route-selector", "data-route-checkbox", "syncCheckboxState", "Balanced default", "Show city loops", "Show transitions", "Hotel Showcase: Off"]) else "FAIL",
-            "route selector checkbox controls present" if "blueprint-route-selector" in html else "missing route selector",
+            "PASS"
+            if all(
+                token in html
+                for token in [
+                    "blueprint-route-selector",
+                    "data-route-checkbox",
+                    "syncCheckboxState",
+                    "Balanced default",
+                    "Show city loops",
+                    "Show transitions",
+                    "Hotel Showcase: Off",
+                ]
+            )
+            else "FAIL",
+            "route selector checkbox controls present"
+            if "blueprint-route-selector" in html
+            else "missing route selector",
         )
     )
     rows.append(
         _status_row(
             "production_hierarchical_trip_map.html",
             "html child-layer scoped quick actions",
-            "PASS" if all(token in html for token in ["setChildRoleForCheckedRoutes", "parentRouteChecked(route)", 'setChildRoleForCheckedRoutes("city_loop")']) and "String(route.profile) === \"balanced\" || routeHasQuickGroup(route, \"city_detail\")" not in html else "FAIL",
+            "PASS"
+            if all(
+                token in html
+                for token in [
+                    "setChildRoleForCheckedRoutes",
+                    "parentRouteChecked(route)",
+                    'setChildRoleForCheckedRoutes("city_loop")',
+                ]
+            )
+            and 'String(route.profile) === "balanced" || routeHasQuickGroup(route, "city_detail")' not in html
+            else "FAIL",
             "city loops/transitions are toggled only for currently checked parent routes",
         )
     )
@@ -1340,8 +1554,15 @@ def validate(output_dir: Path, figure_dir: Path) -> pd.DataFrame:
         _status_row(
             "production_hierarchical_trip_map.html",
             "html deferred selector bootstrap",
-            "PASS" if all(token in html for token in ["mapVarName", "bootstrapRouteSelector", "blueprintRouteRuntimeDiagnostics"]) and "var mapObject = map_" not in html else "FAIL",
-            "selector lazily resolves map/layer variables after Folium declarations" if "bootstrapRouteSelector" in html else "missing deferred selector bootstrap",
+            "PASS"
+            if all(
+                token in html for token in ["mapVarName", "bootstrapRouteSelector", "blueprintRouteRuntimeDiagnostics"]
+            )
+            and "var mapObject = map_" not in html
+            else "FAIL",
+            "selector lazily resolves map/layer variables after Folium declarations"
+            if "bootstrapRouteSelector" in html
+            else "missing deferred selector bootstrap",
         )
     )
     rows.append(
@@ -1349,14 +1570,28 @@ def validate(output_dir: Path, figure_dir: Path) -> pd.DataFrame:
             "production_hierarchical_trip_map.html",
             "html selector focus authority",
             "PASS" if "applyFinalBlueprintFocus" not in html else "FAIL",
-            "no later final-focus script overrides route zoom" if "applyFinalBlueprintFocus" not in html else "applyFinalBlueprintFocus still present",
+            "no later final-focus script overrides route zoom"
+            if "applyFinalBlueprintFocus" not in html
+            else "applyFinalBlueprintFocus still present",
         )
     )
     rows.append(
         _status_row(
             "production_hierarchical_trip_map.html",
             "html collapsible panels",
-            "PASS" if all(token in html for token in ["blueprint-panel-header", "blueprint-collapsed", 'data-panel-id="dashboard"', 'data-panel-id="route-selector"', 'data-panel-id="route-debug"']) and 'data-panel-id="legend"' not in html else "FAIL",
+            "PASS"
+            if all(
+                token in html
+                for token in [
+                    "blueprint-panel-header",
+                    "blueprint-collapsed",
+                    'data-panel-id="dashboard"',
+                    'data-panel-id="route-selector"',
+                    'data-panel-id="route-debug"',
+                ]
+            )
+            and 'data-panel-id="legend"' not in html
+            else "FAIL",
             "dashboard, selector, and route debug have collapsible panel markup; old legend panel absent",
         )
     )
@@ -1372,27 +1607,59 @@ def validate(output_dir: Path, figure_dir: Path) -> pd.DataFrame:
         _status_row(
             "production_hierarchical_trip_map.html",
             "html hidden route debug drawer",
-            "PASS" if all(token in html for token in ["blueprint-route-debug-tab", "blueprint-debug-open", "blueprintSetDebugDrawerOpen", "left: -326px"]) else "FAIL",
-            "route debug is hidden behind a left-edge reveal tab" if "blueprint-route-debug-tab" in html else "route debug reveal tab missing",
+            "PASS"
+            if all(
+                token in html
+                for token in [
+                    "blueprint-route-debug-tab",
+                    "blueprint-debug-open",
+                    "blueprintSetDebugDrawerOpen",
+                    "left: -326px",
+                ]
+            )
+            else "FAIL",
+            "route debug is hidden behind a left-edge reveal tab"
+            if "blueprint-route-debug-tab" in html
+            else "route debug reveal tab missing",
         )
     )
     rows.append(
         _status_row(
             "production_hierarchical_trip_map.html",
             "html draggable panels",
-            "PASS" if all(token in html for token in ["blueprint-draggable", "initBlueprintPanels", "pointerdown", 'id="blueprint-route-selector"']) else "FAIL",
+            "PASS"
+            if all(
+                token in html
+                for token in [
+                    "blueprint-draggable",
+                    "initBlueprintPanels",
+                    "pointerdown",
+                    'id="blueprint-route-selector"',
+                ]
+            )
+            else "FAIL",
             "dashboard and route selector drag script present",
         )
     )
     registry_families = set(str(route.get("family", "")) for route in route_registry)
     selector_groups = set(str(route.get("selector_group", route.get("family", ""))) for route in route_registry)
-    default_checked = [str(route.get("control_id", "")) for route in route_registry if bool(route.get("default_checked", route.get("default_visible", False)))]
+    default_checked = [
+        str(route.get("control_id", ""))
+        for route in route_registry
+        if bool(route.get("default_checked", route.get("default_visible", False)))
+    ]
     if matrix_mode:
         rows.append(
             _status_row(
                 "production_hierarchical_trip_map.html",
                 "html route selector registry",
-                "PASS" if len(route_registry) >= 110 and {"route_matrix", "city_detail", "transition", "context", "must_go", "hotel"}.issubset(registry_families) and {"route_matrix", "hotel", "must_go", "context"}.issubset(selector_groups) else "FAIL",
+                "PASS"
+                if len(route_registry) >= 110
+                and {"route_matrix", "city_detail", "transition", "context", "must_go", "hotel"}.issubset(
+                    registry_families
+                )
+                and {"route_matrix", "hotel", "must_go", "context"}.issubset(selector_groups)
+                else "FAIL",
                 f"routes={len(route_registry)}; families={sorted(registry_families)}; selector_groups={sorted(selector_groups)}",
             )
         )
@@ -1409,7 +1676,29 @@ def validate(output_dir: Path, figure_dir: Path) -> pd.DataFrame:
             _status_row(
                 "production_hierarchical_trip_map.html",
                 "html route selector registry",
-                "PASS" if len(route_registry) >= 16 and {"trip_length", "method", "traveler_profile", "city_detail", "transition", "context", "must_go", "hotel"}.issubset(registry_families) and {"core", "trip_length", "method", "city_detail", "transition", "must_go", "hotel", "context"}.issubset(selector_groups) else "FAIL",
+                "PASS"
+                if len(route_registry) >= 16
+                and {
+                    "trip_length",
+                    "method",
+                    "traveler_profile",
+                    "city_detail",
+                    "transition",
+                    "context",
+                    "must_go",
+                    "hotel",
+                }.issubset(registry_families)
+                and {
+                    "core",
+                    "trip_length",
+                    "method",
+                    "city_detail",
+                    "transition",
+                    "must_go",
+                    "hotel",
+                    "context",
+                }.issubset(selector_groups)
+                else "FAIL",
                 f"routes={len(route_registry)}; families={sorted(registry_families)}; selector_groups={sorted(selector_groups)}",
             )
         )
@@ -1418,7 +1707,10 @@ def validate(output_dir: Path, figure_dir: Path) -> pd.DataFrame:
             _status_row(
                 "production_hierarchical_trip_map.html",
                 "html balanced-only default checked",
-                "PASS" if default_checked == ["hotel_selected", "traveler_balanced"] or default_checked == ["traveler_balanced", "hotel_selected"] else "FAIL",
+                "PASS"
+                if default_checked == ["hotel_selected", "traveler_balanced"]
+                or default_checked == ["traveler_balanced", "hotel_selected"]
+                else "FAIL",
                 f"default_checked={default_checked}",
             )
         )
@@ -1426,7 +1718,17 @@ def validate(output_dir: Path, figure_dir: Path) -> pd.DataFrame:
         _status_row(
             "production_hierarchical_trip_map.html",
             "html route arrows",
-            "PASS" if html.count("blueprint-route-arrow") >= 10 and (not map_debug.empty and map_debug.get("geometry_mode", pd.Series(dtype=str)).fillna("").astype(str).str.contains("canvas-arrow-markers").any()) else "FAIL",
+            "PASS"
+            if html.count("blueprint-route-arrow") >= 10
+            and (
+                not map_debug.empty
+                and map_debug.get("geometry_mode", pd.Series(dtype=str))
+                .fillna("")
+                .astype(str)
+                .str.contains("canvas-arrow-markers")
+                .any()
+            )
+            else "FAIL",
             f"canvas_arrow_class={html.count('blueprint-route-arrow')}; debug_canvas_arrow_rows={int(map_debug.get('geometry_mode', pd.Series(dtype=str)).fillna('').astype(str).str.contains('canvas-arrow-markers').sum()) if not map_debug.empty else 0}; setText={html.count('.setText(')}",
         )
     )

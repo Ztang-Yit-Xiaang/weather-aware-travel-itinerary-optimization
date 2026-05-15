@@ -12,7 +12,6 @@ from .diversity import mmr_select_candidates, submodular_diversity
 from .nature_catalog import interest_value_column
 from .route_gurobi_oracle import solve_enriched_route_with_gurobi
 
-
 NATURE_ROUTE_SEARCH_STRATEGIES = {
     "nature_heavy": {
         "reward_bias": 0.08,
@@ -150,7 +149,9 @@ def _bool_column(frame: pd.DataFrame, column: str, default=False) -> pd.Series:
     return pd.Series(default, index=frame.index)
 
 
-def _candidate_bundle_for_arm(arm_row: pd.Series, enriched_df: pd.DataFrame, candidate_size: int, config: TripConfig) -> pd.DataFrame:
+def _candidate_bundle_for_arm(
+    arm_row: pd.Series, enriched_df: pd.DataFrame, candidate_size: int, config: TripConfig
+) -> pd.DataFrame:
     days_by_city = _days_by_city(arm_row.get("days_by_city"))
     cities = set(days_by_city.keys())
     strategy = str(arm_row.get("route_search_strategy", "balanced"))
@@ -202,15 +203,21 @@ def _candidate_bundle_for_arm(arm_row: pd.Series, enriched_df: pd.DataFrame, can
         weather_exposure = _numeric_column(pool, "weather_sensitivity") * _numeric_column(pool, "weather_risk", 0.15)
         pool["bundle_score"] += 0.45 * (1.0 - weather_exposure.clip(0.0, 1.0))
         pool["bundle_score"] -= 0.20 * _numeric_column(pool, "outdoor_intensity")
-    selected, mmr_log = mmr_select_candidates(pool, config, candidate_size=int(candidate_size), score_column="bundle_score")
+    selected, mmr_log = mmr_select_candidates(
+        pool, config, candidate_size=int(candidate_size), score_column="bundle_score"
+    )
     output = selected.reset_index(drop=True)
-    output.attrs["mmr_log"] = mmr_log.assign(
-        arm_id=arm_row.get("arm_id"),
-        route_search_strategy=strategy,
-        gateway_start=arm_row.get("gateway_start"),
-        gateway_end=arm_row.get("gateway_end"),
-        candidate_size=int(candidate_size),
-    ) if not mmr_log.empty else mmr_log
+    output.attrs["mmr_log"] = (
+        mmr_log.assign(
+            arm_id=arm_row.get("arm_id"),
+            route_search_strategy=strategy,
+            gateway_start=arm_row.get("gateway_start"),
+            gateway_end=arm_row.get("gateway_end"),
+            candidate_size=int(candidate_size),
+        )
+        if not mmr_log.empty
+        else mmr_log
+    )
     return output
 
 
@@ -224,7 +231,10 @@ def run_bandit_gurobi_stress_benchmark(
     """Stress-test bandit-selected bundles with small Gurobi route repairs."""
     production_enrichment = import_legacy_module("production_enrichment")
     seeds = [int(seed) for seed in _as_list(config.get("bandit", "seeds", [42]), [42])]
-    episode_grid = [int(value) for value in _as_list(config.get("bandit", "episode_grid", [config.get("bandit", "episodes", 40)]), [40])]
+    episode_grid = [
+        int(value)
+        for value in _as_list(config.get("bandit", "episode_grid", [config.get("bandit", "episodes", 40)]), [40])
+    ]
     candidate_size_grid = [int(value) for value in _as_list(config.get("bandit", "candidate_size_grid", [12]), [12])]
     repairs = int(config.get("bandit", "top_k_gurobi_repairs", 3))
     budget = production_enrichment.budget_bounds_from_df(budget_df)
@@ -243,7 +253,10 @@ def run_bandit_gurobi_stress_benchmark(
                 for repair_rank, arm_row in enumerate(selected_arms.itertuples(index=False), start=1):
                     arm_series = pd.Series(arm_row._asdict())
                     candidate_bundle = _candidate_bundle_for_arm(arm_series, enriched_df, candidate_size, config)
-                    if isinstance(candidate_bundle.attrs.get("mmr_log"), pd.DataFrame) and not candidate_bundle.attrs["mmr_log"].empty:
+                    if (
+                        isinstance(candidate_bundle.attrs.get("mmr_log"), pd.DataFrame)
+                        and not candidate_bundle.attrs["mmr_log"].empty
+                    ):
                         mmr_logs.append(
                             candidate_bundle.attrs["mmr_log"].assign(
                                 seed=seed,
@@ -251,8 +264,12 @@ def run_bandit_gurobi_stress_benchmark(
                                 repair_rank=repair_rank,
                             )
                         )
-                    route_result = solve_enriched_route_with_gurobi(candidate_bundle, config, candidate_size=candidate_size)
-                    budget_penalty = max(0.0, float(arm_series.get("estimated_total_cost", budget.expected_total)) - budget.soft_budget) / max(1.0, budget.soft_budget)
+                    route_result = solve_enriched_route_with_gurobi(
+                        candidate_bundle, config, candidate_size=candidate_size
+                    )
+                    budget_penalty = max(
+                        0.0, float(arm_series.get("estimated_total_cost", budget.expected_total)) - budget.soft_budget
+                    ) / max(1.0, budget.soft_budget)
                     combined_reward = (
                         float(arm_series.get("posterior_mean_reward", 0.0) or 0.0)
                         + 0.25 * float(route_result.get("total_value", 0.0))
@@ -272,11 +289,16 @@ def run_bandit_gurobi_stress_benchmark(
                             "candidate_bundle_rows": int(len(candidate_bundle)),
                             "selected_pois": " | ".join(route_result.get("selected_pois", [])),
                             "selected_poi_count": int(len(route_result.get("selected_pois", []))),
-                            "submodular_diversity": float(route_result.get("diversity_score", submodular_diversity(candidate_bundle))),
+                            "submodular_diversity": float(
+                                route_result.get("diversity_score", submodular_diversity(candidate_bundle))
+                            ),
                             "total_detour_minutes": float(route_result.get("total_detour_minutes", 0.0) or 0.0),
                             "total_cost": float(route_result.get("total_cost", 0.0) or 0.0),
                             "total_weather_risk": float(route_result.get("total_weather_risk", 0.0) or 0.0),
-                            "interest_adjusted_utility": float(route_result.get("interest_adjusted_utility", route_result.get("total_value", 0.0)) or 0.0),
+                            "interest_adjusted_utility": float(
+                                route_result.get("interest_adjusted_utility", route_result.get("total_value", 0.0))
+                                or 0.0
+                            ),
                             "interest_delta": float(route_result.get("interest_delta", 0.0) or 0.0),
                             "nature_score": float(route_result.get("nature_score", 0.0) or 0.0),
                             "scenic_score": float(route_result.get("scenic_score", 0.0) or 0.0),
@@ -293,7 +315,9 @@ def run_bandit_gurobi_stress_benchmark(
                             "posterior_mean_reward": float(arm_series.get("posterior_mean_reward", 0.0) or 0.0),
                             "gurobi_oracle_reward": float(route_result.get("objective_value", 0.0) or 0.0),
                             "combined_reward": float(combined_reward),
-                            "estimated_total_cost": float(arm_series.get("estimated_total_cost", budget.expected_total) or budget.expected_total),
+                            "estimated_total_cost": float(
+                                arm_series.get("estimated_total_cost", budget.expected_total) or budget.expected_total
+                            ),
                             "soft_budget": budget.soft_budget,
                             "hard_budget": budget.hard_budget,
                             "hard_budget_feasible": bool(arm_series.get("hard_budget_feasible", True)),
@@ -309,7 +333,9 @@ def run_bandit_gurobi_stress_benchmark(
                     )
 
     runs_df = pd.DataFrame(rows)
-    runs_df.attrs["mmr_candidate_log_df"] = pd.concat(mmr_logs, ignore_index=True, sort=False) if mmr_logs else pd.DataFrame()
+    runs_df.attrs["mmr_candidate_log_df"] = (
+        pd.concat(mmr_logs, ignore_index=True, sort=False) if mmr_logs else pd.DataFrame()
+    )
     if runs_df.empty:
         return runs_df, pd.DataFrame()
     summary_df = (

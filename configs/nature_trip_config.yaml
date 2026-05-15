@@ -1,17 +1,18 @@
 trip:
   scenario: california_coast
   traveler_profile: balanced
+  interest_profile: nature_heavy
 
 interest:
   enabled: true
-  mode: custom
-  weights:
-    nature: 0.45
-    city: 0.20
-    culture: 0.20
-    history: 0.15
+  mode: nature_heavy
   use_balance_objective: false
   preview_top_n: 12
+
+nature:
+  enabled: true
+  use_nps_api: false
+  use_curated_nature_fallback: true
 
 bandit:
   arms:

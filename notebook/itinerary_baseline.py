@@ -213,7 +213,9 @@ def _compute_greedy_baseline(profile_name, context):
                 )
                 return_to_hotel = float(hotel_to_attr_time[hotel_idx, cand_idx])
                 proposed_wait = day_wait + float(waiting.iloc[cand_idx])
-                proposed_core_time = day_core_time + travel_from_current + float(visit.iloc[cand_idx]) + float(waiting.iloc[cand_idx])
+                proposed_core_time = (
+                    day_core_time + travel_from_current + float(visit.iloc[cand_idx]) + float(waiting.iloc[cand_idx])
+                )
                 proposed_day_total = proposed_core_time + return_to_hotel
 
                 if proposed_day_total > daily_time_budget:
@@ -352,7 +354,9 @@ def build_route_stop_rows_from_details(context, detail_payload, profile_name, va
                     "attraction_name": attr_row.get("name", f"attraction_{attr_idx}"),
                     "latitude": attr_row.get("latitude"),
                     "longitude": attr_row.get("longitude"),
-                    "category": attr_row.get("category", attr_row.get("content_theme", attr_row.get("type", "attraction"))),
+                    "category": attr_row.get(
+                        "category", attr_row.get("content_theme", attr_row.get("type", "attraction"))
+                    ),
                     "social_must_go": False,
                     "social_score": 0.0,
                     "final_poi_value": float(attr_row.get("utility", 0.0) or 0.0),

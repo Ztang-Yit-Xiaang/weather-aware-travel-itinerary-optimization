@@ -9,9 +9,8 @@ from __future__ import annotations
 
 import hashlib
 import json
-import math
 import time
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
 
@@ -25,13 +24,11 @@ from .nature_catalog import (
     NATURE_POI_COLUMNS,
     compute_interest_adjusted_values,
     ensure_nature_columns,
-    interest_enabled,
     load_nps_or_curated_nature_pois,
     write_interest_catalog_artifacts,
 )
 from .region_scenarios import all_scenario_coordinates
 from .utility_model import apply_utility_models, learning_to_rank_audit
-
 
 USER_AGENT = "IE5533-WeatherAwareTravelPlanner/1.0 (academic project; open data cache)"
 
@@ -104,8 +101,8 @@ def _write_json(path: Path, payload: Any) -> None:
 def _cache_fresh(path: Path, ttl_days: int) -> bool:
     if not path.exists():
         return False
-    modified = datetime.fromtimestamp(path.stat().st_mtime, tz=timezone.utc)
-    return datetime.now(timezone.utc) - modified <= timedelta(days=int(ttl_days))
+    modified = datetime.fromtimestamp(path.stat().st_mtime, tz=UTC)
+    return datetime.now(UTC) - modified <= timedelta(days=int(ttl_days))
 
 
 def _safe_name(value: str) -> str:
@@ -196,14 +193,16 @@ def _load_or_fetch_overpass(city: str, *, kind: str, cache_dir: Path, config: Tr
     if cached and (not config.run_live_apis or _cache_fresh(cache_path, ttl_days)):
         return list(cached.get("elements", [])), "overpass_cache"
     if not (config.run_live_apis and bool(config.get("enrichment", "use_osm", True))):
-        return list(cached.get("elements", [])) if cached else [], "overpass_offline_missing" if not cached else "overpass_cache_stale_offline"
+        return list(
+            cached.get("elements", [])
+        ) if cached else [], "overpass_offline_missing" if not cached else "overpass_cache_stale_offline"
     try:
         payload = _request_json(
             "https://overpass-api.de/api/interpreter",
             params={"data": _overpass_query(city, radius, kind)},
             timeout=45,
         )
-        payload["_fetched_at"] = datetime.now(timezone.utc).isoformat()
+        payload["_fetched_at"] = datetime.now(UTC).isoformat()
         payload["_source"] = "overpass_live"
         _write_json(cache_path, payload)
         time.sleep(1.0)
@@ -260,7 +259,9 @@ def _overpass_elements_to_pois(city: str, elements: list[dict], source_status: s
     return pd.DataFrame(rows).drop_duplicates(subset=["name", "latitude", "longitude"]) if rows else pd.DataFrame()
 
 
-def _overpass_elements_to_hotels(city: str, elements: list[dict], source_status: str, config: TripConfig) -> pd.DataFrame:
+def _overpass_elements_to_hotels(
+    city: str, elements: list[dict], source_status: str, config: TripConfig
+) -> pd.DataFrame:
     rows = []
     for element in elements:
         tags = element.get("tags", {}) or {}
@@ -294,18 +295,32 @@ def _overpass_elements_to_hotels(city: str, elements: list[dict], source_status:
     return pd.DataFrame(rows).drop_duplicates(subset=["name", "latitude", "longitude"]) if rows else pd.DataFrame()
 
 
-def build_open_osm_catalogs(city_names: list[str], output_dir: str | Path, config: TripConfig) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
+def build_open_osm_catalogs(
+    city_names: list[str], output_dir: str | Path, config: TripConfig
+) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
     """Fetch or load OSM POI/hotel catalogs before legacy scoring."""
     output_dir = Path(output_dir)
     cache_dir = _project_cache_dir(output_dir)
     poi_frames = []
     hotel_frames = []
     audit_rows = []
-    existing_poi = pd.read_csv(output_dir / "production_city_poi_catalog.csv") if (output_dir / "production_city_poi_catalog.csv").exists() else pd.DataFrame()
-    existing_hotel = pd.read_csv(output_dir / "production_city_hotel_catalog.csv") if (output_dir / "production_city_hotel_catalog.csv").exists() else pd.DataFrame()
+    existing_poi = (
+        pd.read_csv(output_dir / "production_city_poi_catalog.csv")
+        if (output_dir / "production_city_poi_catalog.csv").exists()
+        else pd.DataFrame()
+    )
+    existing_hotel = (
+        pd.read_csv(output_dir / "production_city_hotel_catalog.csv")
+        if (output_dir / "production_city_hotel_catalog.csv").exists()
+        else pd.DataFrame()
+    )
 
     if not bool(config.get("enrichment", "use_osm", True)):
-        return existing_poi, existing_hotel, pd.DataFrame([{"audit_type": "osm", "source_status": "disabled_by_config"}])
+        return (
+            existing_poi,
+            existing_hotel,
+            pd.DataFrame([{"audit_type": "osm", "source_status": "disabled_by_config"}]),
+        )
 
     for city in city_names:
         poi_elements, poi_status = _load_or_fetch_overpass(city, kind="pois", cache_dir=cache_dir, config=config)
@@ -329,8 +344,16 @@ def build_open_osm_catalogs(city_names: list[str], output_dir: str | Path, confi
             }
         )
 
-    poi_catalog = pd.concat([frame for frame in poi_frames if not frame.empty], ignore_index=True, sort=False) if any(not frame.empty for frame in poi_frames) else existing_poi
-    hotel_catalog = pd.concat([frame for frame in hotel_frames if not frame.empty], ignore_index=True, sort=False) if any(not frame.empty for frame in hotel_frames) else existing_hotel
+    poi_catalog = (
+        pd.concat([frame for frame in poi_frames if not frame.empty], ignore_index=True, sort=False)
+        if any(not frame.empty for frame in poi_frames)
+        else existing_poi
+    )
+    hotel_catalog = (
+        pd.concat([frame for frame in hotel_frames if not frame.empty], ignore_index=True, sort=False)
+        if any(not frame.empty for frame in hotel_frames)
+        else existing_hotel
+    )
     if not poi_catalog.empty:
         poi_catalog.to_csv(output_dir / "production_city_poi_catalog.csv", index=False)
     if not hotel_catalog.empty:
@@ -371,14 +394,18 @@ def _wikipedia_summary(title: str, cache_dir: Path, config: TripConfig) -> tuple
     if not config.run_live_apis:
         return cached or {}, "wikipedia_offline_missing" if not cached else "wikipedia_cache_stale_offline"
     try:
-        payload = _request_json(f"https://en.wikipedia.org/api/rest_v1/page/summary/{requests.utils.quote(title)}", timeout=20)
+        payload = _request_json(
+            f"https://en.wikipedia.org/api/rest_v1/page/summary/{requests.utils.quote(title)}", timeout=20
+        )
         _write_json(cache_path, payload)
         return payload, "wikipedia_live"
     except Exception as exc:
         return cached or {}, f"wikipedia_live_error:{type(exc).__name__}"
 
 
-def enrich_with_wikidata_wikipedia(enriched_df: pd.DataFrame, output_dir: str | Path, config: TripConfig, max_rows: int = 80) -> tuple[pd.DataFrame, pd.DataFrame]:
+def enrich_with_wikidata_wikipedia(
+    enriched_df: pd.DataFrame, output_dir: str | Path, config: TripConfig, max_rows: int = 80
+) -> tuple[pd.DataFrame, pd.DataFrame]:
     cache_dir = _project_cache_dir(output_dir)
     output = enriched_df.copy()
     audit_rows = []
@@ -402,7 +429,9 @@ def enrich_with_wikidata_wikipedia(enriched_df: pd.DataFrame, output_dir: str | 
                 output.at[idx, "wikipedia_title"] = page_title
             # Free, deterministic popularity proxy when live pageviews are not used.
             if wiki_payload.get("pageid") or page_title:
-                output.at[idx, "wikipedia_pageview_score"] = max(float(output.at[idx, "wikipedia_pageview_score"] or 0.0), 0.55)
+                output.at[idx, "wikipedia_pageview_score"] = max(
+                    float(output.at[idx, "wikipedia_pageview_score"] or 0.0), 0.55
+                )
         audit_rows.append(
             {
                 "audit_type": "wikidata_wikipedia",
@@ -433,13 +462,21 @@ def build_open_meteo_context(city_names: list[str], output_dir: str | Path, conf
             try:
                 payload = _request_json(
                     "https://api.open-meteo.com/v1/forecast",
-                    params={"latitude": lat, "longitude": lon, "current": "temperature_2m,precipitation,wind_speed_10m"},
+                    params={
+                        "latitude": lat,
+                        "longitude": lon,
+                        "current": "temperature_2m,precipitation,wind_speed_10m",
+                    },
                     timeout=20,
                 )
                 _write_json(cache_path, payload)
                 status = "open_meteo_live"
             except Exception as exc:
-                status = f"open_meteo_live_error:{type(exc).__name__}" if not cached else f"open_meteo_cache_after_live_error:{type(exc).__name__}"
+                status = (
+                    f"open_meteo_live_error:{type(exc).__name__}"
+                    if not cached
+                    else f"open_meteo_cache_after_live_error:{type(exc).__name__}"
+                )
         current = payload.get("current", {}) if isinstance(payload, dict) else {}
         rows.append(
             {
@@ -456,7 +493,9 @@ def build_open_meteo_context(city_names: list[str], output_dir: str | Path, conf
     return weather_df
 
 
-def fetch_osrm_route_geometry(points: list[tuple[float, float]], output_dir: str | Path, config: TripConfig) -> tuple[list[list[float]], str]:
+def fetch_osrm_route_geometry(
+    points: list[tuple[float, float]], output_dir: str | Path, config: TripConfig
+) -> tuple[list[list[float]], str]:
     """Fetch or load OSRM road geometry for lat/lon points.
 
     Returned points are [[lat, lon], ...] so Folium can draw them directly.
@@ -490,10 +529,29 @@ def fetch_osrm_route_geometry(points: list[tuple[float, float]], output_dir: str
 def _ensure_open_columns(enriched_df: pd.DataFrame) -> pd.DataFrame:
     output = enriched_df.copy()
     if "data_uncertainty" not in output.columns:
-        output["data_uncertainty"] = 1.0 - pd.to_numeric(output.get("data_confidence", 0.15), errors="coerce").fillna(0.15)
+        output["data_uncertainty"] = 1.0 - pd.to_numeric(output.get("data_confidence", 0.15), errors="coerce").fillna(
+            0.15
+        )
     for column in OPEN_ENRICHED_POI_COLUMNS:
         if column not in output.columns:
-            output[column] = "" if column in {"name", "city", "category", "source_list", "osm_tags", "wikidata_id", "wikipedia_title", "social_reason", "park_type", "nature_region", "reason_selected"} else 0.0
+            output[column] = (
+                ""
+                if column
+                in {
+                    "name",
+                    "city",
+                    "category",
+                    "source_list",
+                    "osm_tags",
+                    "wikidata_id",
+                    "wikipedia_title",
+                    "social_reason",
+                    "park_type",
+                    "nature_region",
+                    "reason_selected",
+                }
+                else 0.0
+            )
     return ensure_nature_columns(output)
 
 
@@ -524,7 +582,11 @@ def _recompute_value_columns(enriched_df: pd.DataFrame, config: TripConfig) -> p
         output["social_must_go"] = False
         output["must_go_weight"] = 0.0
     output["data_confidence"] = (
-        0.35 * output["source_list"].astype(str).str.contains("osm|overpass|openstreetmap", case=False, na=False).astype(float)
+        0.35
+        * output["source_list"]
+        .astype(str)
+        .str.contains("osm|overpass|openstreetmap", case=False, na=False)
+        .astype(float)
         + 0.25 * output["source_list"].astype(str).str.contains("yelp", case=False, na=False).astype(float)
         + 0.20 * output["source_list"].astype(str).str.contains("curated", case=False, na=False).astype(float)
         + 0.10 * output["wikidata_id"].astype(str).str.len().gt(0).astype(float)
@@ -556,7 +618,9 @@ def build_enriched_catalog(
     production_enrichment = import_legacy_module("production_enrichment")
 
     osm_poi_catalog, osm_hotel_catalog, osm_audit_df = build_open_osm_catalogs(city_names, output_dir, config)
-    local_yelp_df = all_business_df if bool(config.get("enrichment", "use_local_yelp_dataset", True)) else pd.DataFrame()
+    local_yelp_df = (
+        all_business_df if bool(config.get("enrichment", "use_local_yelp_dataset", True)) else pd.DataFrame()
+    )
     outputs = production_enrichment.build_enrichment_outputs(
         all_business_df=local_yelp_df,
         city_names=city_names,
@@ -566,7 +630,7 @@ def build_enriched_catalog(
 
     enriched_df = _ensure_open_columns(outputs["production_enriched_poi_catalog_df"])
     nature_seed_df, nps_audit_df = load_nps_or_curated_nature_pois(output_dir, config)
-    if interest_enabled(config) and not nature_seed_df.empty:
+    if bool(config.get("nature", "enabled", True)) and not nature_seed_df.empty:
         enriched_df = pd.concat([enriched_df, _ensure_open_columns(nature_seed_df)], ignore_index=True, sort=False)
         enriched_df = enriched_df.drop_duplicates(subset=["name", "latitude", "longitude"]).reset_index(drop=True)
     enriched_df, wiki_audit_df = enrich_with_wikidata_wikipedia(enriched_df, output_dir, config)
@@ -602,13 +666,19 @@ def build_enriched_catalog(
         )
         city_summary_df = city_summary_df.merge(must_go_by_city, on="city", how="left")
         for column in ["city_must_go_count", "city_must_go_score", "city_social_score"]:
-            raw_column = city_summary_df[column] if column in city_summary_df.columns else pd.Series(0.0, index=city_summary_df.index)
+            raw_column = (
+                city_summary_df[column]
+                if column in city_summary_df.columns
+                else pd.Series(0.0, index=city_summary_df.index)
+            )
             city_summary_df[column] = pd.to_numeric(raw_column, errors="coerce").fillna(0.0)
     city_summary_df.to_csv(output_dir / "production_city_catalog_summary.csv", index=False)
     weather_df = build_open_meteo_context(city_names, output_dir, config)
 
     audit_parts = [
-        outputs.get("production_enrichment_audit_df", pd.DataFrame()).assign(audit_source="legacy_local_yelp_osm_social"),
+        outputs.get("production_enrichment_audit_df", pd.DataFrame()).assign(
+            audit_source="legacy_local_yelp_osm_social"
+        ),
         osm_audit_df.assign(audit_source="open_osm"),
         nps_audit_df.assign(audit_source="open_nps_or_curated_nature") if not nps_audit_df.empty else pd.DataFrame(),
         wiki_audit_df.assign(audit_source="open_wikidata_wikipedia") if not wiki_audit_df.empty else pd.DataFrame(),
@@ -622,7 +692,9 @@ def build_enriched_catalog(
     social_signal_snapshots_df = city_summary_df.copy()
     social_signal_snapshots_df["source_name"] = "aggregate_open_enriched_social_proxy"
     social_signal_snapshots_df["social_popularity_score"] = social_signal_snapshots_df["popularity_score"]
-    social_signal_snapshots_df["social_momentum_score"] = social_signal_snapshots_df[["social_signal_score", "external_poi_score"]].mean(axis=1)
+    social_signal_snapshots_df["social_momentum_score"] = social_signal_snapshots_df[
+        ["social_signal_score", "external_poi_score"]
+    ].mean(axis=1)
     social_signal_snapshots_df["crowding_risk_score"] = (
         0.55 * social_signal_snapshots_df["social_popularity_score"]
         + 0.30 * social_signal_snapshots_df["social_signal_score"]
@@ -639,7 +711,9 @@ def build_enriched_catalog(
             "production_enrichment_audit_df": audit_df,
             "city_catalog_summary_df": city_summary_df,
             "production_utility_scores_df": utility_scores_df,
-            "production_signal_matrix_df": pd.read_csv(output_dir / "production_signal_matrix.csv") if (output_dir / "production_signal_matrix.csv").exists() else pd.DataFrame(),
+            "production_signal_matrix_df": pd.read_csv(output_dir / "production_signal_matrix.csv")
+            if (output_dir / "production_signal_matrix.csv").exists()
+            else pd.DataFrame(),
             "production_utility_model_audit_df": utility_audit_df,
             "learning_to_rank_audit_df": ltr_audit_df,
             "social_signal_snapshots_df": social_signal_snapshots_df,

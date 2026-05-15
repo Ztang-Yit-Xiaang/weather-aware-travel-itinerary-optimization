@@ -3,11 +3,9 @@ from __future__ import annotations
 import copy
 from dataclasses import dataclass, field
 
+import gurobi_itinerary_solver
 import numpy as np
 import pandas as pd
-
-import gurobi_itinerary_solver
-
 
 METHOD_LABELS = {
     "static": "Static Optimization",
@@ -127,7 +125,7 @@ class LinearThompsonSamplingModel:
     def sample_theta(self, rng):
         covariance = np.linalg.inv(self.A)
         mean = covariance @ self.b
-        return rng.multivariate_normal(mean, covariance * (self.sample_scale ** 2))
+        return rng.multivariate_normal(mean, covariance * (self.sample_scale**2))
 
     def sample_scores(self, feature_matrix, rng):
         theta = self.sample_theta(rng)
@@ -212,6 +210,7 @@ def _resolve_solver_settings(notebook_context, optimizer_outputs):
     solver_settings.update(notebook_context.get("SOLVER_SETTINGS", {}))
     return solver_settings
 
+
 def _safe_optimizer_outputs_for_production_context(notebook_context):
     if not isinstance(notebook_context, dict):
         return {}
@@ -234,6 +233,7 @@ def _safe_optimizer_outputs_for_production_context(notebook_context):
 
     return optimizer_outputs
 
+
 def _build_candidate_generation_context(state):
     return {
         "top100_with_waiting_time": state.top100_with_waiting_time,
@@ -244,7 +244,6 @@ def _build_candidate_generation_context(state):
         "TOURIST_PROFILES": state.tourist_profiles,
         "SOLVER_SETTINGS": state.solver_settings,
         "MODEL_SETTINGS": state.model_settings,
-
         # Production safety flags passed into gurobi_itinerary_solver.
         "USE_LOCAL_GUROBI_DEMO_IN_PRODUCTION_MAP": False,
         "CANONICAL_TRIP_DAYS": int(state.num_days),
@@ -290,7 +289,7 @@ def build_adaptive_bandit_context(notebook_context, profile_name, seed=42, scena
         dtype=float,
     )
     cost_norm = np.asarray(gurobi_itinerary_solver.safe_minmax(cost_raw), dtype=float)
-    cost_penalty = cost_norm ** 0.7
+    cost_penalty = cost_norm**0.7
 
     optimizer_outputs = _safe_optimizer_outputs_for_production_context(notebook_context)
     tourist_profiles = copy.deepcopy(gurobi_itinerary_solver.DEFAULT_TOURIST_PROFILES)
@@ -538,7 +537,9 @@ def _simulate_stop_outcome(
     )
     realized_wait = max(
         0.0,
-        float(state.waiting_raw[attr_idx]) * weather_multiplier * max(0.2, 1.0 + float(rng.normal(0.0, scenario.wait_noise_std))),
+        float(state.waiting_raw[attr_idx])
+        * weather_multiplier
+        * max(0.2, 1.0 + float(rng.normal(0.0, scenario.wait_noise_std))),
     )
     realized_visit = float(state.visiting_raw[attr_idx])
     realized_utility_raw = _simulate_utility_raw(state.utility_raw[attr_idx], scenario.utility_noise_std, rng)
@@ -895,7 +896,9 @@ def _run_static_episode(state, scenario, episode_idx, episode_seed):
         current_attr_idx = None
         day_wait_so_far = 0.0
         day_visit_count = 0
-        planned_sequence = [idx for idx in state.static_day_sequences.get(day_idx, []) if idx not in visited_attractions]
+        planned_sequence = [
+            idx for idx in state.static_day_sequences.get(day_idx, []) if idx not in visited_attractions
+        ]
         result.planned_attractions += len(planned_sequence)
 
         for action_rank, attr_idx in enumerate(planned_sequence):
@@ -1000,7 +1003,10 @@ def _run_stepwise_policy_episode(
             unique_candidates = {}
             for candidate in candidate_pool:
                 attr_idx = int(candidate["first_attraction"])
-                if attr_idx not in unique_candidates or candidate["predicted_total_reward"] > unique_candidates[attr_idx]["predicted_total_reward"]:
+                if (
+                    attr_idx not in unique_candidates
+                    or candidate["predicted_total_reward"] > unique_candidates[attr_idx]["predicted_total_reward"]
+                ):
                     unique_candidates[attr_idx] = candidate
             candidate_rows = list(unique_candidates.values())
             if not candidate_rows:

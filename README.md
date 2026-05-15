@@ -53,6 +53,9 @@ The current notebook implements a **multi-day Tourist Trip Design Problem (TTDP)
 - [Interactive route map (CP-SAT)](results/figures/tourist_routes_map.html)
 - [Interactive route map (Gurobi)](results/figures/tourist_routes_map_gurobi.html)
 - [Static route overview (Gurobi PNG)](results/figures/tourist_routes_static_gurobi.png)
+- Nature-aware production exports:
+  - `results/figures/lightweight_share_map.html`
+  - `results/figures/full_interactive_dashboard/index.html`
 
 > GitHub may not render the HTML maps inline. If the preview is blocked, download the HTML file or open the project locally and run `python -m http.server`, then visit the generated local URL.
 
@@ -71,6 +74,74 @@ This project proposes a **three-layer decision framework**:
 3. **Multi-day route optimization** with attraction choice, hotel choice, and sequencing.
 
 The resulting system combines **predictive modeling** with **discrete optimization** to produce itineraries that are both **data-driven** and **operationally feasible**.
+
+---
+
+## Nature-Aware Planning
+
+The current system also supports a nature-aware extension for trips that mix cities, scenic drives, beaches, and national parks without replacing the original California coast workflow.
+
+The key idea is to separate **pace** from **interest**:
+
+- `traveler_profile`: controls pace with `relaxed`, `balanced`, or `explorer`.
+- `trip.interest_profile`: controls the continuous interest bar with presets such as `nature_heavy`, `city_heavy`, `culture_heavy`, `history_heavy`, and `balanced_interest`.
+
+Internally, presets resolve to:
+
+```text
+p = [p_nature, p_city, p_culture, p_history],  p_k >= 0,  sum_k p_k = 1
+```
+
+For example, a nature-heavy statewide California run can use:
+
+```yaml
+trip:
+  scenario: california_statewide_nature
+  traveler_profile: balanced
+  interest_profile: nature_heavy
+
+interest:
+  enabled: true
+  mode: nature_heavy
+
+nature:
+  enabled: true
+  use_nps_api: false
+  use_curated_nature_fallback: true
+```
+
+`interest.mode` overrides `trip.interest_profile`; `interest.mode: custom` uses explicit bar weights. The original `california_coast` scenario remains the default and stays backward compatible when interest mode is off.
+
+Supported scenarios now include:
+
+- `california_coast`
+- `california_statewide_nature`
+- `las_vegas_national_parks`
+- `new_york_city_plus_nature`
+
+In `california_statewide_nature`, Yosemite, Sequoia, Kings Canyon, Joshua Tree, Death Valley, Lake Tahoe, Point Reyes, Pinnacles, Lassen Volcanic, Redwood National and State Parks, and Big Sur are represented as **nature regions** with gateway/base cities. For example, Yosemite is modeled with gateways such as Mariposa, Oakhurst, Fresno, and Yosemite Valley rather than only as a single POI.
+
+Live NPS enrichment is optional. Set `nature.use_nps_api: true` and provide `NPS_API_KEY` to fetch and cache official NPS park data; otherwise the pipeline falls back to curated open-data seeds and writes an explicit audit status.
+
+### Opening The Dashboard
+
+The full modular dashboard supports two asset-loading modes. On localhost or GitHub Pages it loads JSON and GeoJSON with `fetch()`. When opened directly with `file://`, it uses generated JavaScript fallback assets beside the JSON files.
+
+Serving over localhost is still the recommended path:
+
+```bash
+python scripts/serve_dashboard.py
+```
+
+Then open the printed URL:
+
+```text
+http://localhost:8000/
+```
+
+If port 8000 is occupied, the helper automatically tries 8001, 8002, and so on. The lightweight share map at `results/figures/lightweight_share_map.html` is standalone and can be opened directly.
+
+For development quality checks and dashboard validation, see [docs/code_quality_workflow.md](docs/code_quality_workflow.md).
 
 ---
 
@@ -599,6 +670,21 @@ If you want to use the Gurobi notebook version, make sure a valid `gurobi.lic` i
 4. Run the optimization section.
 5. Open the generated HTML map from `results/figures/`.
 
+To run the production notebook with the nature config:
+
+```bash
+TRIP_CONFIG_PATH="configs/nature_trip_config.yaml" python -m jupyter nbconvert --to notebook --execute notebook/production_system_blueprint.ipynb --output production_system_blueprint_nature_executed.ipynb --output-dir notebook --ExecutePreprocessor.timeout=1800 --ExecutePreprocessor.kernel_name=python3
+```
+
+The executed notebook output is generated locally and is ignored by git.
+
+For tests:
+
+```bash
+python -m pytest
+python scripts/validate_dashboard_export.py
+```
+
 For local HTML viewing:
 
 ```bash
@@ -620,12 +706,17 @@ The project produces several output types:
 - hotel-aware route plans,
 - interactive HTML route maps,
 - greedy-baseline comparison tables.
+- nature-aware scenario, route, and map artifact summaries.
 
 Useful output files include:
 
 - [results/figures/tourist_routes_map.html](results/figures/tourist_routes_map.html)
 - [results/figures/tourist_routes_map_gurobi.html](results/figures/tourist_routes_map_gurobi.html)
 - [results/figures/tourist_routes_static_gurobi.png](results/figures/tourist_routes_static_gurobi.png)
+- `results/figures/lightweight_share_map.html`
+- `results/figures/full_interactive_dashboard/index.html`
+- `results/outputs/production_map_artifact_size_report.csv`
+- `results/outputs/production_nature_metric_summary.csv`
 
 ---
 
@@ -638,6 +729,7 @@ Possible next steps include:
 - learning traveler-specific preference weights,
 - improving hotel pricing with stronger external data sources,
 - supporting rolling re-optimization for real-time trip updates.
+- upgrading the documented advanced TODOs into learned preference models once labeled route feedback exists.
 
 ---
 

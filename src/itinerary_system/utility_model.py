@@ -12,13 +12,11 @@ produces three reportable utility variants:
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any
 
 import numpy as np
 import pandas as pd
 
 from .config import TripConfig
-
 
 DEFAULT_MCDA_WEIGHTS = {
     "base_score": 0.18,
@@ -50,7 +48,9 @@ def _minmax(series: pd.Series, default: float = 0.5) -> pd.Series:
 
 
 def _source_count(series: pd.Series) -> pd.Series:
-    return series.astype(str).apply(lambda value: len([part for part in value.replace(",", "|").split("|") if part.strip()]))
+    return series.astype(str).apply(
+        lambda value: len([part for part in value.replace(",", "|").split("|") if part.strip()])
+    )
 
 
 def _weights_from_config(config: TripConfig) -> dict[str, float]:
@@ -80,7 +80,9 @@ def build_signal_matrix(enriched_df: pd.DataFrame, config: TripConfig) -> pd.Dat
 
     yelp_signal = _numeric(enriched_df, "yelp_signal_norm", np.nan)
     if yelp_signal.isna().all():
-        yelp_signal = _numeric(enriched_df, "yelp_rating", 0.0) * np.log1p(_numeric(enriched_df, "yelp_review_count", 0.0))
+        yelp_signal = _numeric(enriched_df, "yelp_rating", 0.0) * np.log1p(
+            _numeric(enriched_df, "yelp_review_count", 0.0)
+        )
     output["yelp_signal"] = _minmax(yelp_signal.fillna(0.0))
     output["social_signal"] = _numeric(enriched_df, "social_score", 0.0).clip(0.0, 1.0)
     output["must_go_signal"] = (_numeric(enriched_df, "must_go_weight", 0.0) * output["social_signal"]).clip(0.0, 1.0)
@@ -164,16 +166,19 @@ def score_bayesian_ucb(signal_df: pd.DataFrame, config: TripConfig) -> pd.DataFr
     prior_mean = float(config.get("utility", "bayes_prior_mean", 0.50))
     prior_strength = float(config.get("utility", "bayes_prior_strength", 6.0))
     kappa = float(config.get("utility", "uncertainty_bonus_kappa", 0.25))
-    corridor_weight = float(config.get("utility", "corridor_fit_weight", config.get("social", "corridor_fit_weight", 0.30)))
-    detour_penalty = float(config.get("utility", "detour_penalty_weight", config.get("social", "detour_penalty_weight", 0.01)))
-    must_go_weight = float(config.get("utility", "must_go_bonus_weight", config.get("social", "must_go_bonus_weight", 0.85)))
+    corridor_weight = float(
+        config.get("utility", "corridor_fit_weight", config.get("social", "corridor_fit_weight", 0.30))
+    )
+    detour_penalty = float(
+        config.get("utility", "detour_penalty_weight", config.get("social", "detour_penalty_weight", 0.01))
+    )
+    must_go_weight = float(
+        config.get("utility", "must_go_bonus_weight", config.get("social", "must_go_bonus_weight", 0.85))
+    )
     weather_penalty = float(config.get("utility", "weather_risk_penalty_weight", 0.08))
 
     evidence_strength = (
-        1.0
-        + signal_df["review_strength"]
-        + 2.0 * signal_df["source_count"]
-        + 5.0 * signal_df["data_confidence"]
+        1.0 + signal_df["review_strength"] + 2.0 * signal_df["source_count"] + 5.0 * signal_df["data_confidence"]
     ).clip(lower=1.0)
     posterior_mean = (prior_strength * prior_mean + evidence_strength * mcda) / (prior_strength + evidence_strength)
     posterior_variance = (
@@ -283,7 +288,11 @@ def apply_utility_models(
         signal_output.to_csv(output_path / "production_signal_matrix.csv", index=False)
         utility_scores.to_csv(output_path / "production_utility_scores.csv", index=False)
         audit_df.to_csv(output_path / "production_utility_model_audit.csv", index=False)
-    return output.sort_values(["final_poi_value", "social_score"], ascending=[False, False]).reset_index(drop=True), utility_scores, audit_df
+    return (
+        output.sort_values(["final_poi_value", "social_score"], ascending=[False, False]).reset_index(drop=True),
+        utility_scores,
+        audit_df,
+    )
 
 
 def utility_score_columns() -> list[str]:

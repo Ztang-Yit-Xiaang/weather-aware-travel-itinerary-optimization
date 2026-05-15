@@ -16,7 +16,7 @@ import pandas as pd
 from ._legacy import import_legacy_module
 from .config import TripConfig
 from .experiment_runner import prepare_comparison_dashboard_outputs
-
+from .map_exporter import export_map_artifacts
 
 REQUIRED_METHODS = {
     "hierarchical_gurobi_pipeline",
@@ -169,9 +169,7 @@ def _sanitize_production_map_context(
     merged_context["CANONICAL_TRIP_DAYS"] = int(canonical_days)
     merged_context["CANONICAL_TOTAL_BUDGET"] = float(canonical_budget)
     merged_context["CANONICAL_DAILY_TIME_BUDGET"] = float(canonical_daily_budget)
-    merged_context["RUN_LIVE_APIS"] = bool(
-        _config_get(config, "enrichment", "run_live_apis", default=False)
-    )
+    merged_context["RUN_LIVE_APIS"] = bool(_config_get(config, "enrichment", "run_live_apis", default=False))
     # The notebook may carry older "debug all routes" flags in memory.
     # Force the clean first-open contract: only the Balanced full route is
     # checked, with every comparison/detail route available in Route Selector.
@@ -185,9 +183,7 @@ def _sanitize_production_map_context(
             _config_get(config, "map", "refresh_road_geometry", default=False),
         )
     )
-    merged_context["MAP_SHOW_DEBUG_ON_LOAD"] = bool(
-        _config_get(config, "map", "show_debug_on_load", default=False)
-    )
+    merged_context["MAP_SHOW_DEBUG_ON_LOAD"] = bool(_config_get(config, "map", "show_debug_on_load", default=False))
     merged_context["SHOW_FULL_SCENE_DEFAULT"] = False
     merged_context["SHOW_CONTEXT_ROUTES_BY_DEFAULT"] = False
     merged_context["SHOW_COMPARISON_LAYERS_BY_DEFAULT"] = False
@@ -210,7 +206,12 @@ def _sanitize_production_map_context(
     return merged_context
 
 
-def _valid_route_stop_file(path: str | Path, required_methods=None, required_days=None, canonical_days=None,) -> bool:
+def _valid_route_stop_file(
+    path: str | Path,
+    required_methods=None,
+    required_days=None,
+    canonical_days=None,
+) -> bool:
     """Validate route-stop CSVs before deciding to keep existing artifacts."""
     path = Path(path)
     if not path.exists():
@@ -267,21 +268,11 @@ def _valid_route_stop_file(path: str | Path, required_methods=None, required_day
     if required_days is not None:
         if "trip_days" not in df.columns:
             return False
-        found_days = set(
-            pd.to_numeric(df["trip_days"], errors="coerce")
-            .dropna()
-            .astype(int)
-            .unique()
-        )
+        found_days = set(pd.to_numeric(df["trip_days"], errors="coerce").dropna().astype(int).unique())
         if not set(required_days).issubset(found_days):
             return False
     if canonical_days is not None and "trip_days" in df.columns:
-        found_days = set(
-            pd.to_numeric(df["trip_days"], errors="coerce")
-            .dropna()
-            .astype(int)
-            .unique()
-        )
+        found_days = set(pd.to_numeric(df["trip_days"], errors="coerce").dropna().astype(int).unique())
         if found_days and found_days != {int(canonical_days)}:
             return False
     return True
@@ -314,22 +305,12 @@ def _valid_method_summary_file(
         return False
 
     if canonical_days is not None and "trip_days" in df.columns:
-        found_days = set(
-            pd.to_numeric(df["trip_days"], errors="coerce")
-            .dropna()
-            .astype(int)
-            .unique()
-        )
+        found_days = set(pd.to_numeric(df["trip_days"], errors="coerce").dropna().astype(int).unique())
         if found_days and found_days != {int(canonical_days)}:
             return False
 
     if canonical_budget is not None and "total_budget" in df.columns:
-        budgets = (
-            pd.to_numeric(df["total_budget"], errors="coerce")
-            .dropna()
-            .round(2)
-            .unique()
-        )
+        budgets = pd.to_numeric(df["total_budget"], errors="coerce").dropna().round(2).unique()
         if len(budgets) != 1:
             return False
         if abs(float(budgets[0]) - float(canonical_budget)) > 1.0:
@@ -352,12 +333,7 @@ def _valid_trip_length_summary_file(path: str | Path, required_days=None) -> boo
         return False
 
     if required_days is not None:
-        found_days = set(
-            pd.to_numeric(df["trip_days"], errors="coerce")
-            .dropna()
-            .astype(int)
-            .unique()
-        )
+        found_days = set(pd.to_numeric(df["trip_days"], errors="coerce").dropna().astype(int).unique())
         if not set(required_days).issubset(found_days):
             return False
 
@@ -398,8 +374,7 @@ def _dashboard_artifacts_ready(
         _valid_route_matrix_file(output_dir / "production_route_matrix_comparison.csv")
         and _valid_route_matrix_file(output_dir / "production_route_matrix_route_stops.csv")
         and (output_dir / "production_route_matrix_hotel_selection_debug.csv").exists()
-        and
-        _valid_route_stop_file(
+        and _valid_route_stop_file(
             output_dir / "production_method_route_stops.csv",
             required_methods=REQUIRED_METHODS,
             canonical_days=canonical_days,
@@ -473,13 +448,7 @@ def _initial_focus_points(day_plan_df: pd.DataFrame, focus_mode: str = "full_tri
         ("hotel_latitude", "hotel_longitude"),
     ]:
         if lat_col in focus_df.columns and lon_col in focus_df.columns:
-            coords = (
-                focus_df[[lat_col, lon_col]]
-                .dropna()
-                .astype(float)
-                .values
-                .tolist()
-            )
+            coords = focus_df[[lat_col, lon_col]].dropna().astype(float).values.tolist()
             points.extend(coords)
 
     deduped: list[list[float]] = []
@@ -491,6 +460,7 @@ def _initial_focus_points(day_plan_df: pd.DataFrame, focus_mode: str = "full_tri
             deduped.append([float(lat), float(lon)])
 
     return deduped
+
 
 def _inject_final_focus_script(html_path: Path, focus_points: list[list[float]]) -> None:
     """Force final browser-side map focus after all Folium/legacy scripts run."""
@@ -531,6 +501,7 @@ def _inject_final_focus_script(html_path: Path, focus_points: list[list[float]])
     if "applyFinalBlueprintFocus" not in html:
         html = html.replace("</html>", final_script + "\n</html>")
         html_path.write_text(html, encoding="utf-8")
+
 
 def build_map(
     context: dict,
@@ -584,5 +555,17 @@ def build_map(
     )
     if html_path is not None and focus_points and not selector_owns_focus:
         _inject_final_focus_script(Path(html_path), focus_points)
+
+    export_mode = str(_config_get(config, "map_export", "mode", default="both")).lower()
+    if export_mode not in {"off", "none", "legacy"}:
+        try:
+            export_map_artifacts(
+                day_plan_df,
+                output_dir=Path(merged_context["OUTPUT_DIR"]),
+                figure_dir=Path(merged_context["FIGURE_DIR"]),
+                config=config,
+            )
+        except Exception as exc:
+            print(f"Modular map artifact export skipped: {type(exc).__name__}: {exc}")
 
     return trip_map, day_plan_df, html_path

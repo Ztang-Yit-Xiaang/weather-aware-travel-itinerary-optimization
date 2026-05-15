@@ -5,6 +5,7 @@ trip:
   end_city_options: [Los Angeles, San Francisco]
   traveler_profile: balanced
   scenario: california_coast
+  interest_profile: balanced_interest
 
 budget:
   user_budget: 2000
@@ -105,6 +106,20 @@ interest:
   use_balance_objective: false
   preview_top_n: 12
 
+nature:
+  enabled: true
+  use_nps_api: false
+  use_curated_nature_fallback: true
+  nps_api_key_env: NPS_API_KEY
+  max_nature_detour_minutes: 240
+  max_single_day_drive_minutes_for_nature: 360
+  min_nature_days_for_nature_heavy: 2
+  min_nature_score_for_nature_heavy: 0.35
+  national_park_bonus: 0.80
+  state_park_bonus: 0.45
+  protected_area_bonus: 0.35
+  scenic_region_bonus: 0.30
+
 social:
   must_go_is_mandatory: false
   must_go_bonus_weight: 0.85
@@ -116,6 +131,15 @@ map:
   balanced_only_default_view: true
   refresh_road_geometry: false
   show_debug_on_load: false
+
+map_export:
+  mode: both
+  lightweight_max_routes: 1
+  externalize_layers: true
+  lazy_load_optional_layers: true
+  simplify_geometry_tolerance: 0.0008
+  include_debug_layers_in_share_map: false
+  include_candidate_layers_in_share_map: false
 
 utility:
   method: bayesian_ucb

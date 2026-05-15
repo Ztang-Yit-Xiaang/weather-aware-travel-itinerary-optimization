@@ -3,12 +3,10 @@ import importlib
 import io
 import os
 
+import gurobi_itinerary_solver
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-
-import gurobi_itinerary_solver
-
 
 PARAMETER_ORDER = ["alpha", "beta", "gamma", "lambda"]
 PARAMETER_LABELS = {
@@ -60,17 +58,11 @@ def build_default_parameter_grid(context, profile_name="balanced"):
     base_values = _baseline_parameter_values(context, profile_name)
 
     alpha_grid = _round_unique(
-        [
-            max(0.0, base_values["alpha"] * factor)
-            for factor in (0.5, 0.75, 1.0, 1.25, 1.5)
-        ],
+        [max(0.0, base_values["alpha"] * factor) for factor in (0.5, 0.75, 1.0, 1.25, 1.5)],
         decimals=4,
     )
     beta_grid = _round_unique(
-        [
-            max(0.0, base_values["beta"] * factor)
-            for factor in (0.5, 0.75, 1.0, 1.25, 1.5)
-        ],
+        [max(0.0, base_values["beta"] * factor) for factor in (0.5, 0.75, 1.0, 1.25, 1.5)],
         decimals=4,
     )
 
@@ -199,21 +191,12 @@ def _summarize_outputs(outputs, context, profile_name, parameter_name, parameter
         + sum(hotel_to_attr_time[h, i] for day_edges in end_edges_by_day.values() for i, h in day_edges)
     )
     switch_time = float(
-        sum(
-            hotel_to_hotel_time[h, g]
-            for day_edges in transitions_by_day.values()
-            for h, g in day_edges
-            if h != g
-        )
+        sum(hotel_to_hotel_time[h, g] for day_edges in transitions_by_day.values() for h, g in day_edges if h != g)
     )
     total_travel_time = travel_time_between + hotel_leg_time + switch_time
 
     total_travel_distance = np.nan
-    if (
-        distance_matrix is not None
-        and hotel_to_attr_distance is not None
-        and hotel_to_hotel_distance is not None
-    ):
+    if distance_matrix is not None and hotel_to_attr_distance is not None and hotel_to_hotel_distance is not None:
         travel_distance_between = float(
             sum(distance_matrix[i, j] for day_edges in travel_edges_by_day.values() for i, j in day_edges)
         )
@@ -236,11 +219,7 @@ def _summarize_outputs(outputs, context, profile_name, parameter_name, parameter
     if hotels_df is not None:
         hotel_prices = hotels_df["nightly_price"].astype(float)
         total_hotel_cost = float(
-            sum(
-                hotel_prices.iloc[h]
-                for h in details.get("hotels_by_day", {}).values()
-                if h is not None
-            )
+            sum(hotel_prices.iloc[h] for h in details.get("hotels_by_day", {}).values() if h is not None)
         )
 
     applied_parameters = details.get("applied_parameters", {})
@@ -305,10 +284,7 @@ def run_parameter_sweep(
 
         for parameter_value in normalized_grid[parameter_name]:
             if show_progress:
-                print(
-                    f"Running sensitivity scenario: profile={profile_name}, "
-                    f"{parameter_name}={parameter_value}"
-                )
+                print(f"Running sensitivity scenario: profile={profile_name}, {parameter_name}={parameter_value}")
 
             profile_overrides = {profile_name: {}}
             global_overrides = {}
@@ -402,7 +378,7 @@ def plot_parameter_sensitivity(
         axis.set_ylabel(METRIC_LABELS.get(metric_name, metric_name))
         axis.grid(alpha=0.3, linestyle=":")
 
-    for axis in axes[len(metrics):]:
+    for axis in axes[len(metrics) :]:
         axis.axis("off")
 
     fig.suptitle(f"Sensitivity Analysis for {profile_name}: {parameter_label}")

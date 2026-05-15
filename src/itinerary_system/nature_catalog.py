@@ -9,11 +9,11 @@ from typing import Any
 
 import numpy as np
 import pandas as pd
+import requests
 
 from .config import TripConfig
-from .region_scenarios import get_scenario_definition, scenario_summary_rows
+from .region_scenarios import get_nature_region_definitions, get_scenario_definition, scenario_summary_rows
 from .request_schema import INTEREST_AXES, normalize_interest_weights, preset_to_interest_weights
-
 
 NATURE_POI_COLUMNS = [
     "is_nature",
@@ -83,9 +83,14 @@ def interest_value_column(config: TripConfig) -> str:
 
 def interest_weights_from_config(config: TripConfig) -> dict[str, float]:
     interest_section = config.section("interest")
+    mode = str(interest_section.get("mode", "custom"))
+    presets = interest_section.get("presets")
+    if mode != "custom":
+        return preset_to_interest_weights(mode, presets)
     if isinstance(interest_section.get("weights"), dict):
         return normalize_interest_weights(interest_section["weights"])
-    return preset_to_interest_weights(str(interest_section.get("mode", "balanced_interest")), interest_section.get("presets"))
+    trip_profile = str(config.get("trip", "interest_profile", "balanced_interest"))
+    return preset_to_interest_weights(trip_profile, presets)
 
 
 def _numeric(frame: pd.DataFrame, column: str, default: float = 0.0) -> pd.Series:
@@ -127,7 +132,11 @@ def ensure_nature_columns(poi_df: pd.DataFrame) -> pd.DataFrame:
         else:
             output[column] = 0.0
     for column in BOOL_NATURE_COLUMNS:
-        output[column] = _bool_from_column(output, column) if output[column].dtype == object else output[column].fillna(False).astype(bool)
+        output[column] = (
+            _bool_from_column(output, column)
+            if output[column].dtype == object
+            else output[column].fillna(False).astype(bool)
+        )
     for column in NUMERIC_NATURE_COLUMNS:
         output[column] = pd.to_numeric(output[column], errors="coerce").fillna(0.0).astype(float)
     for column in TEXT_NATURE_COLUMNS:
@@ -154,7 +163,9 @@ def infer_interest_attributes(poi_df: pd.DataFrame, config: TripConfig | None = 
     output["is_nature"] = output["is_nature"] | nature_like
     output["is_national_park"] = output["is_national_park"] | national_like
     output["is_state_park"] = output["is_state_park"] | state_like
-    output["is_protected_area"] = output["is_protected_area"] | protected_like | output["is_national_park"] | output["is_state_park"]
+    output["is_protected_area"] = (
+        output["is_protected_area"] | protected_like | output["is_national_park"] | output["is_state_park"]
+    )
     output["is_scenic_viewpoint"] = output["is_scenic_viewpoint"] | viewpoint_like
     output["is_hiking"] = output["is_hiking"] | hiking_like
 
@@ -167,20 +178,36 @@ def infer_interest_attributes(poi_df: pd.DataFrame, config: TripConfig | None = 
             + 0.20 * output["is_hiking"].astype(float)
         ).clip(0.0, 1.0),
     )
-    output["city_score"] = np.maximum(_numeric(output, "city_score"), (0.65 * city_like.astype(float) + 0.25 * (~nature_like).astype(float)).clip(0.0, 1.0))
-    output["culture_score"] = np.maximum(_numeric(output, "culture_score"), (0.85 * culture_like.astype(float) + 0.20 * history_like.astype(float)).clip(0.0, 1.0))
-    output["history_score"] = np.maximum(_numeric(output, "history_score"), (0.90 * history_like.astype(float)).clip(0.0, 1.0))
+    output["city_score"] = np.maximum(
+        _numeric(output, "city_score"),
+        (0.65 * city_like.astype(float) + 0.25 * (~nature_like).astype(float)).clip(0.0, 1.0),
+    )
+    output["culture_score"] = np.maximum(
+        _numeric(output, "culture_score"),
+        (0.85 * culture_like.astype(float) + 0.20 * history_like.astype(float)).clip(0.0, 1.0),
+    )
+    output["history_score"] = np.maximum(
+        _numeric(output, "history_score"), (0.90 * history_like.astype(float)).clip(0.0, 1.0)
+    )
     output["scenic_score"] = np.maximum(
         _numeric(output, "scenic_score"),
         (0.70 * output["is_scenic_viewpoint"].astype(float) + 0.30 * output["nature_score"]).clip(0.0, 1.0),
     )
-    output["hiking_score"] = np.maximum(_numeric(output, "hiking_score"), (0.85 * output["is_hiking"].astype(float) + 0.15 * output["nature_score"]).clip(0.0, 1.0))
+    output["hiking_score"] = np.maximum(
+        _numeric(output, "hiking_score"),
+        (0.85 * output["is_hiking"].astype(float) + 0.15 * output["nature_score"]).clip(0.0, 1.0),
+    )
     output["outdoor_intensity"] = np.maximum(
         _numeric(output, "outdoor_intensity"),
         (0.45 * output["nature_score"] + 0.35 * output["hiking_score"] + 0.20 * output["scenic_score"]).clip(0.0, 1.0),
     )
-    output["weather_sensitivity"] = np.maximum(_numeric(output, "weather_sensitivity"), (0.25 + 0.65 * output["outdoor_intensity"]).clip(0.0, 1.0))
-    output["seasonality_risk"] = np.maximum(_numeric(output, "seasonality_risk"), (0.15 * output["is_nature"].astype(float) + 0.25 * output["is_hiking"].astype(float)).clip(0.0, 1.0))
+    output["weather_sensitivity"] = np.maximum(
+        _numeric(output, "weather_sensitivity"), (0.25 + 0.65 * output["outdoor_intensity"]).clip(0.0, 1.0)
+    )
+    output["seasonality_risk"] = np.maximum(
+        _numeric(output, "seasonality_risk"),
+        (0.15 * output["is_nature"].astype(float) + 0.25 * output["is_hiking"].astype(float)).clip(0.0, 1.0),
+    )
 
     output.loc[output["is_national_park"] & output["park_type"].eq(""), "park_type"] = "national_park"
     output.loc[output["is_state_park"] & output["park_type"].eq(""), "park_type"] = "state_park"
@@ -209,10 +236,10 @@ def compute_interest_adjusted_values(poi_df: pd.DataFrame, config: TripConfig) -
     weights = interest_weights_from_config(config)
     output["interest_fit"] = sum(float(weights[axis]) * _numeric(output, f"{axis}_score") for axis in INTEREST_AXES)
     output["park_bonus"] = (
-        1.00 * output["is_national_park"].astype(float)
-        + 0.60 * output["is_state_park"].astype(float)
-        + 0.45 * output["is_protected_area"].astype(float)
-        + 0.25 * output["is_scenic_viewpoint"].astype(float)
+        float(config.get("nature", "national_park_bonus", 0.80)) * output["is_national_park"].astype(float)
+        + float(config.get("nature", "state_park_bonus", 0.45)) * output["is_state_park"].astype(float)
+        + float(config.get("nature", "protected_area_bonus", 0.35)) * output["is_protected_area"].astype(float)
+        + float(config.get("nature", "scenic_region_bonus", 0.30)) * output["is_scenic_viewpoint"].astype(float)
     )
 
     if not interest_enabled(config):
@@ -279,6 +306,107 @@ def curated_nature_fallback_pois(scenario_id: str | None = None) -> pd.DataFrame
     return infer_interest_attributes(pd.DataFrame(rows)) if rows else pd.DataFrame()
 
 
+def _scenario_state_codes(scenario_id: str) -> str:
+    if scenario_id.startswith("california"):
+        return "CA"
+    if scenario_id == "las_vegas_national_parks":
+        return "NV,UT,AZ,CA"
+    if scenario_id == "new_york_city_plus_nature":
+        return "NY"
+    return "CA"
+
+
+def _parse_float(value: Any, default: float = np.nan) -> float:
+    try:
+        return float(value)
+    except Exception:
+        return float(default)
+
+
+def _nps_cache_path(output_dir: Path, scenario_id: str) -> Path:
+    cache_dir = output_dir.parent / "cache"
+    cache_dir.mkdir(parents=True, exist_ok=True)
+    return cache_dir / f"nps_parks_{scenario_id}.json"
+
+
+def _fetch_nps_parks(api_key: str, scenario_id: str) -> list[dict[str, Any]]:
+    response = requests.get(
+        "https://developer.nps.gov/api/v1/parks",
+        params={
+            "api_key": api_key,
+            "stateCode": _scenario_state_codes(scenario_id),
+            "limit": 500,
+            "fields": "addresses,entranceFees,operatingHours,topics,activities",
+        },
+        timeout=20,
+    )
+    response.raise_for_status()
+    payload = response.json()
+    data = payload.get("data", [])
+    return data if isinstance(data, list) else []
+
+
+def _match_region_name(park_name: str, scenario_id: str) -> str:
+    lowered = park_name.lower()
+    for region in get_nature_region_definitions(scenario_id):
+        if (
+            region.name.lower().replace(" national park", "") in lowered
+            or region.region_id.replace("_", " ") in lowered
+        ):
+            return region.name
+    return park_name
+
+
+def _nps_records_to_pois(records: list[dict[str, Any]], scenario_id: str) -> pd.DataFrame:
+    rows = []
+    for record in records:
+        lat = _parse_float(record.get("latitude"))
+        lon = _parse_float(record.get("longitude"))
+        if np.isnan(lat) or np.isnan(lon):
+            continue
+        designation = str(record.get("designation", "national park") or "national park")
+        full_name = str(record.get("fullName", record.get("name", "")) or "")
+        activities = record.get("activities") or []
+        topics = record.get("topics") or []
+        fees = record.get("entranceFees") or []
+        hours = record.get("operatingHours") or []
+        rows.append(
+            {
+                "name": full_name,
+                "city": _match_region_name(full_name, scenario_id),
+                "latitude": lat,
+                "longitude": lon,
+                "category": designation,
+                "park_type": designation.lower().replace(" ", "_"),
+                "nature_region": _match_region_name(full_name, scenario_id),
+                "source_list": "nps_api",
+                "source_score": 9.6
+                if "national park" in designation.lower() or "national park" in full_name.lower()
+                else 8.8,
+                "final_poi_value": 0.96
+                if "national park" in designation.lower() or "national park" in full_name.lower()
+                else 0.88,
+                "data_confidence": 0.85,
+                "data_uncertainty": 0.15,
+                "nps_park_code": record.get("parkCode", ""),
+                "nps_designation": designation,
+                "nps_states": record.get("states", ""),
+                "nps_activities": " | ".join(
+                    str(item.get("name", "")) for item in activities if isinstance(item, dict)
+                ),
+                "nps_topics": " | ".join(str(item.get("name", "")) for item in topics if isinstance(item, dict)),
+                "nps_entrance_fees": json.dumps(fees),
+                "nps_operating_hours": json.dumps(hours),
+                "nps_url": record.get("url", ""),
+                "nps_description": record.get("description", ""),
+                "nps_weather_info": record.get("weatherInfo", ""),
+                "weather_sensitivity": 0.70,
+                "seasonality_risk": 0.30,
+            }
+        )
+    return infer_interest_attributes(pd.DataFrame(rows)) if rows else pd.DataFrame()
+
+
 def load_nps_or_curated_nature_pois(output_dir: str | Path, config: TripConfig) -> tuple[pd.DataFrame, pd.DataFrame]:
     """Load optional NPS data when configured, otherwise return curated seeds."""
     output_dir = Path(output_dir)
@@ -287,29 +415,54 @@ def load_nps_or_curated_nature_pois(output_dir: str | Path, config: TripConfig) 
         "audit_type": "nps_or_curated_nature",
         "scenario": scenario_id,
         "used_nps_api": False,
-        "status": "curated_seed_fallback",
+        "status": "nps_disabled_curated_fallback",
     }
-    api_key = os.environ.get("NPS_API_KEY")
-    cache_path = output_dir.parent / "cache" / f"nps_{scenario_id}.json"
-    cached = None
-    if cache_path.exists():
-        try:
-            cached = json.loads(cache_path.read_text(encoding="utf-8"))
-        except Exception:
-            cached = None
-    if bool(config.get("enrichment", "use_nps", False)) and api_key and bool(config.run_live_apis):
-        audit["status"] = "nps_live_not_implemented_curated_fallback"
-        audit["used_nps_api"] = False
-    elif cached:
-        audit["status"] = "nps_cache_loaded"
-    elif bool(config.get("enrichment", "use_nps", False)) and not api_key:
-        audit["status"] = "missing_NPS_API_KEY_curated_fallback"
-    seeds = curated_nature_fallback_pois(scenario_id)
-    return seeds, pd.DataFrame([audit | {"rows": int(len(seeds))}])
+    seeds = (
+        curated_nature_fallback_pois(scenario_id)
+        if bool(config.get("nature", "use_curated_nature_fallback", True))
+        else pd.DataFrame()
+    )
+    if not bool(config.get("nature", "use_nps_api", False)):
+        return seeds, pd.DataFrame([audit | {"rows": int(len(seeds)), "cache_path": ""}])
+
+    env_name = str(config.get("nature", "nps_api_key_env", "NPS_API_KEY"))
+    api_key = os.environ.get(env_name)
+    cache_path = _nps_cache_path(output_dir, scenario_id)
+    if not api_key:
+        audit["status"] = f"missing_{env_name}_curated_fallback"
+        return seeds, pd.DataFrame([audit | {"rows": int(len(seeds)), "cache_path": str(cache_path)}])
+
+    try:
+        records = _fetch_nps_parks(api_key, scenario_id)
+        cache_path.write_text(json.dumps({"data": records}, indent=2), encoding="utf-8")
+        pois = _nps_records_to_pois(records, scenario_id)
+        if pois.empty and not seeds.empty:
+            audit["status"] = "nps_api_error_curated_fallback"
+            return seeds, pd.DataFrame([audit | {"rows": int(len(seeds)), "cache_path": str(cache_path)}])
+        audit["status"] = "nps_api_success"
+        audit["used_nps_api"] = True
+        return pois, pd.DataFrame([audit | {"rows": int(len(pois)), "cache_path": str(cache_path)}])
+    except Exception as exc:
+        if cache_path.exists():
+            try:
+                cached = json.loads(cache_path.read_text(encoding="utf-8"))
+                records = cached.get("data", []) if isinstance(cached, dict) else cached
+                pois = _nps_records_to_pois(records if isinstance(records, list) else [], scenario_id)
+                if not pois.empty:
+                    audit["status"] = "nps_api_error_cache_fallback"
+                    audit["error"] = type(exc).__name__
+                    return pois, pd.DataFrame([audit | {"rows": int(len(pois)), "cache_path": str(cache_path)}])
+            except Exception:
+                pass
+        audit["status"] = "nps_api_error_curated_fallback"
+        audit["error"] = type(exc).__name__
+        return seeds, pd.DataFrame([audit | {"rows": int(len(seeds)), "cache_path": str(cache_path)}])
 
 
 def route_interest_metrics(route_df: pd.DataFrame, config: TripConfig) -> dict[str, float]:
-    frame = compute_interest_adjusted_values(route_df, config) if not route_df.empty else ensure_nature_columns(route_df)
+    frame = (
+        compute_interest_adjusted_values(route_df, config) if not route_df.empty else ensure_nature_columns(route_df)
+    )
     if frame.empty:
         return {
             "interest_adjusted_utility": 0.0,
@@ -329,7 +482,9 @@ def route_interest_metrics(route_df: pd.DataFrame, config: TripConfig) -> dict[s
         "nature_score": float(_numeric(frame, "nature_score").sum()),
         "scenic_score": float(_numeric(frame, "scenic_score").sum()),
         "national_parks_selected": int(frame["is_national_park"].astype(bool).sum()),
-        "protected_parks_selected": int((frame["is_state_park"].astype(bool) | frame["is_protected_area"].astype(bool)).sum()),
+        "protected_parks_selected": int(
+            (frame["is_state_park"].astype(bool) | frame["is_protected_area"].astype(bool)).sum()
+        ),
         "outdoor_weather_risk": float((_numeric(frame, "weather_sensitivity") * weather_risk).sum()),
         "seasonality_risk": float(_numeric(frame, "seasonality_risk").sum()),
         "balance_error": balance_error,
@@ -346,7 +501,9 @@ def build_interest_bar_preview(enriched_df: pd.DataFrame, config: TripConfig) ->
         rows = []
         route_mix = {axis: 0.0 for axis in INTEREST_AXES}
     else:
-        preview = frame.sort_values(["interest_delta", "interest_adjusted_value"], ascending=False).head(max(1, top_n)).copy()
+        preview = (
+            frame.sort_values(["interest_delta", "interest_adjusted_value"], ascending=False).head(max(1, top_n)).copy()
+        )
         route_mix = {axis: float(_numeric(preview, f"{axis}_score").mean()) for axis in INTEREST_AXES}
         rows = []
         for row in preview.itertuples(index=False):
@@ -384,7 +541,10 @@ def build_interest_bar_preview(enriched_df: pd.DataFrame, config: TripConfig) ->
             "lambda_season": float(config.get("interest", "lambda_season", 0.20)),
             "lambda_detour": float(config.get("interest", "lambda_detour", 0.006)),
         },
-        "bar": [{"axis": axis, "weight": weights[axis], "percent": round(weights[axis] * 100.0, 1)} for axis in INTEREST_AXES],
+        "bar": [
+            {"axis": axis, "weight": weights[axis], "percent": round(weights[axis] * 100.0, 1)}
+            for axis in INTEREST_AXES
+        ],
         "top_boosted_pois": rows,
         "route_mix": route_mix,
     }
@@ -401,7 +561,9 @@ def write_interest_catalog_artifacts(enriched_df: pd.DataFrame, output_dir: str 
     metrics.update(
         {
             "metric_scope": "top_catalog_preview",
-            "total_utility": float(_numeric(frame, "final_poi_value").head(max(1, int(config.trip_days) * 3)).sum()) if not frame.empty else 0.0,
+            "total_utility": float(_numeric(frame, "final_poi_value").head(max(1, int(config.trip_days) * 3)).sum())
+            if not frame.empty
+            else 0.0,
             "candidate_rows": int(len(frame)),
             "interest_enabled": interest_enabled(config),
         }
@@ -411,15 +573,27 @@ def write_interest_catalog_artifacts(enriched_df: pd.DataFrame, output_dir: str 
     comparison_rows = []
     for preset in config.get("interest", "presets", {}).keys():
         preset_config = TripConfig(
-            data={**config.to_dict(), "interest": {**config.section("interest"), "enabled": True, "weights": preset_to_interest_weights(preset, config.get("interest", "presets", {})), "mode": preset}},
+            data={
+                **config.to_dict(),
+                "interest": {
+                    **config.section("interest"),
+                    "enabled": True,
+                    "weights": preset_to_interest_weights(preset, config.get("interest", "presets", {})),
+                    "mode": preset,
+                },
+            },
             source_path=config.source_path,
         )
         preset_frame = compute_interest_adjusted_values(enriched_df, preset_config)
-        top = preset_frame.sort_values("interest_adjusted_value", ascending=False).head(max(1, int(config.trip_days) * 3))
+        top = preset_frame.sort_values("interest_adjusted_value", ascending=False).head(
+            max(1, int(config.trip_days) * 3)
+        )
         comparison_rows.append(
             {
                 "interest_profile": preset,
-                "top_interest_adjusted_utility": float(_numeric(top, "interest_adjusted_value").sum()) if not top.empty else 0.0,
+                "top_interest_adjusted_utility": float(_numeric(top, "interest_adjusted_value").sum())
+                if not top.empty
+                else 0.0,
                 "top_interest_delta": float(_numeric(top, "interest_delta").sum()) if not top.empty else 0.0,
                 "top_nature_score": float(_numeric(top, "nature_score").sum()) if not top.empty else 0.0,
                 "top_scenic_score": float(_numeric(top, "scenic_score").sum()) if not top.empty else 0.0,
@@ -432,7 +606,9 @@ def write_interest_catalog_artifacts(enriched_df: pd.DataFrame, output_dir: str 
 def write_nature_route_artifacts(route_df: pd.DataFrame, output_dir: str | Path, config: TripConfig) -> None:
     output_dir = Path(output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
-    frame = compute_interest_adjusted_values(route_df, config) if not route_df.empty else ensure_nature_columns(route_df)
+    frame = (
+        compute_interest_adjusted_values(route_df, config) if not route_df.empty else ensure_nature_columns(route_df)
+    )
     columns = [
         "method",
         "profile",
@@ -447,9 +623,13 @@ def write_nature_route_artifacts(route_df: pd.DataFrame, output_dir: str | Path,
     for column in columns:
         if column not in frame.columns:
             frame[column] = ""
-    frame[[column for column in columns if column in frame.columns]].to_csv(output_dir / "production_nature_route_stops.csv", index=False)
+    frame[[column for column in columns if column in frame.columns]].to_csv(
+        output_dir / "production_nature_route_stops.csv", index=False
+    )
     metrics = route_interest_metrics(frame, config)
     metrics.update({"metric_scope": "selected_route_stops", "selected_attractions": int(len(frame))})
+    if "why_not_selected" in frame.columns:
+        metrics["why_not_selected"] = " | ".join(frame["why_not_selected"].dropna().astype(str).unique()[:8])
     pd.DataFrame([metrics]).to_csv(output_dir / "production_nature_metric_summary.csv", index=False)
 
 
@@ -471,4 +651,3 @@ def write_nature_route_artifacts(route_df: pd.DataFrame, output_dir: str | Path,
 # subject to weather_risk <= epsilon_w
 #            detour <= epsilon_d
 #            balance_error <= epsilon_b
-

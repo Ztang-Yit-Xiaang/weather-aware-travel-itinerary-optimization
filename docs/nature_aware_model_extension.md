@@ -64,6 +64,87 @@ interest_delta_i = 0
 
 This is the backward compatibility guarantee for the California coast workflow.
 
+Users can now choose presets in two equivalent ways:
+
+```yaml
+interest:
+  enabled: true
+  mode: nature_heavy
+```
+
+or:
+
+```yaml
+trip:
+  interest_profile: nature_heavy
+```
+
+`interest.mode` has precedence. `interest.mode: custom` uses the explicit bar weights.
+
+## Phase 2 Region Planning
+
+Phase 2 makes nature regions first-class planning units. The optimizer still allocates days to overnight base cities, but scenarios can now attach nature regions to the route before POI-level selection. This keeps the city/day model stable while allowing a plan to say "Yosemite is selected for two days" or "Death Valley was skipped because the weather exposure and detour are too high."
+
+The object types are intentionally separate:
+
+- `overnight_base_city`: a city or gateway that receives hotel/base days.
+- `nature_region`: a park or outdoor region that receives region-level value and may consume suggested nature days.
+- `pass_through_scenic_stop`: a scenic stop that can improve route value without becoming a base city.
+- `POI`: a visitable stop used by candidate selection, bandit scoring, and route repair.
+
+The new `california_statewide_nature` scenario includes Yosemite, Sequoia, Kings Canyon, Joshua Tree, Death Valley, Lake Tahoe, Point Reyes, Pinnacles, Lassen Volcanic, Redwood National and State Parks, and Big Sur. Yosemite is represented as a region with gateways such as Mariposa, Oakhurst, Fresno, and Yosemite Valley rather than as a single boosted POI.
+
+Region-level scoring uses the same spirit as POI scoring:
+
+```text
+region_score_r =
+    nature_fit_r
+  + national/state/protected/scenic_region_bonus_r
+  - detour_penalty_r
+  - weather_exposure_r
+```
+
+Selected plans are annotated with `selected_nature_regions`, `nature_days_by_region`, `gateway_bases_by_region`, and component terms for nature value, scenic value, detour penalty, and weather exposure.
+
+## Why-Not-Selected Explanations
+
+High-value unselected regions are kept in the plan audit with compact reason codes:
+
+```text
+coast_only_scenario_restriction
+excessive_inland_detour
+insufficient_trip_days
+daily_drive_limit_exceeded
+weather_risk_too_high
+budget_or_time_conflict
+lower_interest_fit_than_selected_regions
+```
+
+These explanations are designed for plan summaries, scenario comparison tables, and map metadata. For example, Yosemite can be skipped in the original `california_coast` scenario because the route is corridor-focused, while Death Valley can be skipped in a short nature-heavy trip because it exceeds weather or drive-risk thresholds.
+
+## NPS API Versus Curated Fallback
+
+Nature enrichment uses open/free sources only. When:
+
+```yaml
+nature:
+  use_nps_api: true
+```
+
+and the configured environment variable, default `NPS_API_KEY`, exists, the system fetches and caches NPS park data from `https://developer.nps.gov/api/v1/parks`. Parsed fields include park name/code, designation, states, coordinates, activities, topics, entrance fees, operating hours, URL, description, and weather notes.
+
+If live NPS is disabled or unavailable, curated scenario seeds are used with explicit audit statuses:
+
+```text
+nps_api_success
+nps_disabled_curated_fallback
+missing_NPS_API_KEY_curated_fallback
+nps_api_error_cache_fallback
+nps_api_error_curated_fallback
+```
+
+Basic runs and tests do not require a live API key.
+
 ## Route Balance
 
 For a selected route `S`, the realized route mix is:
@@ -123,6 +204,43 @@ preview_score_i =
 
 This preview is intentionally instant and local to the browser. It updates rankings and route-mix estimates when the bar moves, but it does not rerun Gurobi. Full optimized routes use the selected weights when the Python pipeline is rerun.
 
+## Map Export Architecture
+
+The legacy Folium map remains available for compatibility, but Phase 2 adds two production export modes:
+
+- `results/figures/lightweight_share_map.html`: selected/default route only, essential markers, compact dashboard, and no comparison/debug/candidate layers.
+- `results/figures/full_interactive_dashboard/`: modular dashboard with `index.html`, external CSS/JS, route GeoJSON, POI JSON, and lazy-loadable optional layers.
+
+The artifact report `results/outputs/production_map_artifact_size_report.csv` records file sizes, layer counts, route counts, marker counts, and notes. The map focus remains selected-route-first so optional nature layers do not zoom the initial view out too far.
+
+## Opening The Dashboard
+
+The full modular dashboard supports two asset-loading modes. On localhost or GitHub Pages it uses JSON and GeoJSON fetches. When opened directly with `file://`, it uses generated JavaScript fallback assets such as `route_index.js`, `dashboard_metrics.js`, route `.js`, and POI `.js` files.
+
+Serving over localhost is still recommended for development:
+
+```bash
+python scripts/serve_dashboard.py
+```
+
+Then open:
+
+```text
+http://localhost:8000/
+```
+
+If port 8000 is already in use, the helper prints the next available port. The lightweight share map is standalone and can be opened directly:
+
+```text
+results/figures/lightweight_share_map.html
+```
+
+To validate generated artifacts:
+
+```bash
+python scripts/validate_dashboard_export.py
+```
+
 ## Evaluation Metrics
 
 Nature-aware outputs report:
@@ -141,4 +259,3 @@ protected_parks_selected = sum max(is_state_park_i, is_protected_area_i)
 outdoor_weather_risk = sum weather_sensitivity_i * weather_risk_i
 seasonality_risk = sum seasonality_risk_i
 ```
-

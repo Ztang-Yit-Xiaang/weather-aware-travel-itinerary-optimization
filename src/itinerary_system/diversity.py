@@ -70,18 +70,19 @@ def poi_similarity(left: pd.Series, right: pd.Series, config: TripConfig) -> flo
     except Exception:
         geo_sim = 0.0
 
-    left_sources = {part.strip().lower() for part in str(left.get("source_list", "")).replace(",", "|").split("|") if part.strip()}
-    right_sources = {part.strip().lower() for part in str(right.get("source_list", "")).replace(",", "|").split("|") if part.strip()}
+    left_sources = {
+        part.strip().lower() for part in str(left.get("source_list", "")).replace(",", "|").split("|") if part.strip()
+    }
+    right_sources = {
+        part.strip().lower() for part in str(right.get("source_list", "")).replace(",", "|").split("|") if part.strip()
+    }
     if left_sources or right_sources:
         source_sim = len(left_sources & right_sources) / max(1, len(left_sources | right_sources))
     else:
         source_sim = 0.0
 
     return float(
-        category_weight * category_sim
-        + geo_weight * geo_sim
-        + city_weight * city_sim
-        + source_weight * source_sim
+        category_weight * category_sim + geo_weight * geo_sim + city_weight * city_sim + source_weight * source_sim
     )
 
 
@@ -99,7 +100,9 @@ def mmr_select_candidates(
     mmr_lambda = float(config.get("diversity", "mmr_lambda", 0.72))
     pool = candidate_df.copy().reset_index(drop=True)
     if score_column not in pool.columns:
-        score_column = "final_poi_value" if "final_poi_value" in pool.columns else pool.select_dtypes("number").columns[0]
+        score_column = (
+            "final_poi_value" if "final_poi_value" in pool.columns else pool.select_dtypes("number").columns[0]
+        )
     scores = pd.to_numeric(pool[score_column], errors="coerce").fillna(0.0)
     if scores.max() > scores.min():
         norm_scores = (scores - scores.min()) / (scores.max() - scores.min())

@@ -16,7 +16,10 @@ from .nature_catalog import interest_value_column, route_interest_metrics
 
 def poi_value(row: pd.Series, config: TripConfig | None = None) -> float:
     value_column = interest_value_column(config) if config is not None else "final_poi_value"
-    base_value = float(row.get(value_column, row.get("final_poi_value", row.get("utility_bayesian_ucb", row.get("source_score", 0.0)))) or 0.0)
+    base_value = float(
+        row.get(value_column, row.get("final_poi_value", row.get("utility_bayesian_ucb", row.get("source_score", 0.0))))
+        or 0.0
+    )
     if config is None:
         social_weight = 1.10
         must_go_weight = 0.85
@@ -69,7 +72,9 @@ def _weather_risk(row: pd.Series) -> float:
         return 0.15
 
 
-def route_stats(selected: list[int], pois: pd.DataFrame, depot: tuple[float, float], config: TripConfig) -> dict[str, float]:
+def route_stats(
+    selected: list[int], pois: pd.DataFrame, depot: tuple[float, float], config: TripConfig
+) -> dict[str, float]:
     if not selected:
         return {
             "total_value": 0.0,
@@ -81,8 +86,10 @@ def route_stats(selected: list[int], pois: pd.DataFrame, depot: tuple[float, flo
             "total_weather_risk": 0.0,
             "diversity_score": 0.0,
         }
-    points = [depot] + [(float(pois.loc[idx, "latitude"]), float(pois.loc[idx, "longitude"])) for idx in selected] + [depot]
-    travel = sum(travel_minutes(left, right) for left, right in zip(points[:-1], points[1:]))
+    points = (
+        [depot] + [(float(pois.loc[idx, "latitude"]), float(pois.loc[idx, "longitude"])) for idx in selected] + [depot]
+    )
+    travel = sum(travel_minutes(left, right) for left, right in zip(points[:-1], points[1:], strict=False))
     visit = sum(visit_minutes(pois.loc[idx]) for idx in selected)
     selected_frame = pois.loc[selected].copy()
     interest_metrics = route_interest_metrics(selected_frame, config)
@@ -108,13 +115,17 @@ def _constraints(config: TripConfig, max_pois: int) -> dict[str, float]:
     return {
         "time_budget": float(config.get("time", "daily_time_budget_minutes", 720)),
         "daily_hard_budget": float(config.get("multi_objective", "daily_hard_budget", daily_hard_budget)),
-        "epsilon_detour": float(config.get("multi_objective", "epsilon_detour_minutes", config.get("time", "max_detour_minutes", 45))),
+        "epsilon_detour": float(
+            config.get("multi_objective", "epsilon_detour_minutes", config.get("time", "max_detour_minutes", 45))
+        ),
         "epsilon_weather": float(config.get("multi_objective", "epsilon_weather_risk", 0.35)) * max(1, max_pois),
         "min_diversity": min(min_diversity, math.sqrt(max(1, max_pois)) * min(max_pois, 3)),
     }
 
 
-def _greedy_epsilon_repair(candidate_df: pd.DataFrame, config: TripConfig, depot: tuple[float, float]) -> dict[str, Any]:
+def _greedy_epsilon_repair(
+    candidate_df: pd.DataFrame, config: TripConfig, depot: tuple[float, float]
+) -> dict[str, Any]:
     max_pois = int(config.get("optimization", "max_pois_per_day", 4))
     constraints = _constraints(config, max_pois)
     pois = candidate_df.reset_index(drop=True).copy()
@@ -130,10 +141,12 @@ def _greedy_epsilon_repair(candidate_df: pd.DataFrame, config: TripConfig, depot
             **stats,
         }
     pois["repair_score"] = pois.apply(
-        lambda row: poi_value(row, config)
-        + float(config.get("multi_objective", "diversity_bonus_weight", 0.12))
-        - 0.004 * float(row.get("detour_minutes", 0.0) or 0.0)
-        - 0.08 * _weather_risk(row),
+        lambda row: (
+            poi_value(row, config)
+            + float(config.get("multi_objective", "diversity_bonus_weight", 0.12))
+            - 0.004 * float(row.get("detour_minutes", 0.0) or 0.0)
+            - 0.08 * _weather_risk(row)
+        ),
         axis=1,
     )
     selected: list[int] = []
@@ -195,7 +208,11 @@ def solve_multi_objective_route(
     value_column = interest_value_column(config)
     if value_column not in candidate_df.columns:
         value_column = "final_poi_value"
-    pois = candidate_df.sort_values([value_column, "social_score"], ascending=False).head(max_candidates).reset_index(drop=True)
+    pois = (
+        candidate_df.sort_values([value_column, "social_score"], ascending=False)
+        .head(max_candidates)
+        .reset_index(drop=True)
+    )
     if depot is None:
         depot = (float(pois["latitude"].mean()), float(pois["longitude"].mean()))
     max_pois = min(int(config.get("optimization", "max_pois_per_day", 4)), len(pois))
@@ -206,7 +223,12 @@ def solve_multi_objective_route(
     detours = [float(pois.loc[i].get("detour_minutes", 0.0) or 0.0) for i in range(len(pois))]
     weather = [_weather_risk(pois.loc[i]) for i in range(len(pois))]
     points = [depot] + [(float(pois.loc[i, "latitude"]), float(pois.loc[i, "longitude"])) for i in range(len(pois))]
-    travel = {(i, j): travel_minutes(points[i], points[j]) for i in range(len(pois) + 1) for j in range(len(pois) + 1) if i != j}
+    travel = {
+        (i, j): travel_minutes(points[i], points[j])
+        for i in range(len(pois) + 1)
+        for j in range(len(pois) + 1)
+        if i != j
+    }
 
     try:
         import gurobipy as gp
@@ -257,8 +279,7 @@ def solve_multi_objective_route(
                 z[category, k] = model.addVar(vtype=GRB.BINARY, name=f"div_{category}_{k}")
                 diversity_terms.append((math.sqrt(k) - math.sqrt(k - 1)) * z[category, k])
             model.addConstr(
-                gp.quicksum(z[category, k] for k in range(1, max_count + 1))
-                == gp.quicksum(x[i] for i in indices),
+                gp.quicksum(z[category, k] for k in range(1, max_count + 1)) == gp.quicksum(x[i] for i in indices),
                 name=f"div_count_{category}",
             )
         diversity_expr = gp.quicksum(diversity_terms) if diversity_terms else 0.0

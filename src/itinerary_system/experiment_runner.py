@@ -3,8 +3,8 @@
 from __future__ import annotations
 
 import ast
-from pathlib import Path
 from copy import deepcopy
+from pathlib import Path
 
 import numpy as np
 import pandas as pd
@@ -16,7 +16,7 @@ from .budget import estimate_budget_range
 from .config import TripConfig, save_resolved_config
 from .data_enrichment import build_enriched_catalog
 from .diversity import diversity_audit_row
-from .hierarchical_gurobi import solve_hierarchical_trip_with_gurobi, solve_hierarchical_trip_with_greedy
+from .hierarchical_gurobi import solve_hierarchical_trip_with_greedy, solve_hierarchical_trip_with_gurobi
 from .nature_catalog import NATURE_POI_COLUMNS, write_nature_route_artifacts
 from .route_gurobi_oracle import solve_enriched_route_with_gurobi
 
@@ -38,12 +38,14 @@ def _approximate_route_minutes(frame: pd.DataFrame) -> float:
     return float(
         sum(
             geodesic(tuple(left), tuple(right)).km * 1.25 / 38.0 * 60.0
-            for left, right in zip(points[:-1], points[1:])
+            for left, right in zip(points[:-1], points[1:], strict=False)
         )
     )
 
 
-def _numeric_column(frame: pd.DataFrame, column: str, default: float = 0.0, fallback_column: str | None = None) -> pd.Series:
+def _numeric_column(
+    frame: pd.DataFrame, column: str, default: float = 0.0, fallback_column: str | None = None
+) -> pd.Series:
     """Return a numeric Series even when optional artifact columns are absent."""
     if column in frame.columns:
         raw = frame[column]
@@ -64,14 +66,58 @@ def _enriched_metric_row(strategy: str, frame: pd.DataFrame, budget_df: pd.DataF
         "strategy": strategy,
         "profile": "balanced",
         "data_source_scope": "open_enriched_catalog",
-        "total_utility": float(pd.to_numeric(frame.get("final_poi_value", pd.Series(dtype=float)), errors="coerce").fillna(0).sum()),
-        "interest_adjusted_utility": float(pd.to_numeric(frame.get("interest_adjusted_value", frame.get("final_poi_value", pd.Series(dtype=float))), errors="coerce").fillna(0).sum()),
-        "nature_score": float(pd.to_numeric(frame.get("nature_score", pd.Series(dtype=float)), errors="coerce").fillna(0).sum()),
-        "scenic_score": float(pd.to_numeric(frame.get("scenic_score", pd.Series(dtype=float)), errors="coerce").fillna(0).sum()),
-        "national_parks_selected": int(pd.to_numeric(frame.get("is_national_park", pd.Series(dtype=float)), errors="coerce").fillna(0).astype(bool).sum()) if not frame.empty else 0,
-        "protected_parks_selected": int((pd.to_numeric(frame.get("is_state_park", pd.Series(dtype=float)), errors="coerce").fillna(0).astype(bool) | pd.to_numeric(frame.get("is_protected_area", pd.Series(dtype=float)), errors="coerce").fillna(0).astype(bool)).sum()) if not frame.empty else 0,
-        "outdoor_weather_risk": float((pd.to_numeric(frame.get("weather_sensitivity", pd.Series(dtype=float)), errors="coerce").fillna(0) * pd.to_numeric(frame.get("weather_risk", pd.Series(0.15, index=frame.index)), errors="coerce").fillna(0.15)).sum()) if not frame.empty else 0.0,
-        "seasonality_risk": float(pd.to_numeric(frame.get("seasonality_risk", pd.Series(dtype=float)), errors="coerce").fillna(0).sum()) if not frame.empty else 0.0,
+        "total_utility": float(
+            pd.to_numeric(frame.get("final_poi_value", pd.Series(dtype=float)), errors="coerce").fillna(0).sum()
+        ),
+        "interest_adjusted_utility": float(
+            pd.to_numeric(
+                frame.get("interest_adjusted_value", frame.get("final_poi_value", pd.Series(dtype=float))),
+                errors="coerce",
+            )
+            .fillna(0)
+            .sum()
+        ),
+        "nature_score": float(
+            pd.to_numeric(frame.get("nature_score", pd.Series(dtype=float)), errors="coerce").fillna(0).sum()
+        ),
+        "scenic_score": float(
+            pd.to_numeric(frame.get("scenic_score", pd.Series(dtype=float)), errors="coerce").fillna(0).sum()
+        ),
+        "national_parks_selected": int(
+            pd.to_numeric(frame.get("is_national_park", pd.Series(dtype=float)), errors="coerce")
+            .fillna(0)
+            .astype(bool)
+            .sum()
+        )
+        if not frame.empty
+        else 0,
+        "protected_parks_selected": int(
+            (
+                pd.to_numeric(frame.get("is_state_park", pd.Series(dtype=float)), errors="coerce")
+                .fillna(0)
+                .astype(bool)
+                | pd.to_numeric(frame.get("is_protected_area", pd.Series(dtype=float)), errors="coerce")
+                .fillna(0)
+                .astype(bool)
+            ).sum()
+        )
+        if not frame.empty
+        else 0,
+        "outdoor_weather_risk": float(
+            (
+                pd.to_numeric(frame.get("weather_sensitivity", pd.Series(dtype=float)), errors="coerce").fillna(0)
+                * pd.to_numeric(frame.get("weather_risk", pd.Series(0.15, index=frame.index)), errors="coerce").fillna(
+                    0.15
+                )
+            ).sum()
+        )
+        if not frame.empty
+        else 0.0,
+        "seasonality_risk": float(
+            pd.to_numeric(frame.get("seasonality_risk", pd.Series(dtype=float)), errors="coerce").fillna(0).sum()
+        )
+        if not frame.empty
+        else 0.0,
         "number_attractions": int(len(frame)),
         "total_waiting_time": np.nan,
         "within_city_travel_time": _approximate_route_minutes(frame),
@@ -81,7 +127,11 @@ def _enriched_metric_row(strategy: str, frame: pd.DataFrame, budget_df: pd.DataF
         "diversity_score": _normalized_shannon_diversity(frame.get("category", pd.Series(dtype=str))),
         "runtime_seconds": np.nan,
         "optimality_gap": np.nan,
-        "data_quality_score": float(pd.to_numeric(frame.get("data_confidence", pd.Series(dtype=float)), errors="coerce").fillna(0.15).mean()) if not frame.empty else 0.15,
+        "data_quality_score": float(
+            pd.to_numeric(frame.get("data_confidence", pd.Series(dtype=float)), errors="coerce").fillna(0.15).mean()
+        )
+        if not frame.empty
+        else 0.15,
         "gateway_start": np.nan,
         "gateway_end": np.nan,
         "days_by_city": None,
@@ -112,8 +162,13 @@ def build_enriched_experiment_summary(
             current = enriched_df.loc[selected[-1], ["latitude", "longitude"]].astype(float).tolist()
             next_idx = max(
                 remaining,
-                key=lambda idx: float(enriched_df.loc[idx, "final_poi_value"])
-                - 0.01 * geodesic(tuple(current), tuple(enriched_df.loc[idx, ["latitude", "longitude"]].astype(float).tolist())).km,
+                key=lambda idx: (
+                    float(enriched_df.loc[idx, "final_poi_value"])
+                    - 0.01
+                    * geodesic(
+                        tuple(current), tuple(enriched_df.loc[idx, ["latitude", "longitude"]].astype(float).tolist())
+                    ).km
+                ),
             )
             selected.append(next_idx)
             remaining.remove(next_idx)
@@ -154,7 +209,11 @@ def build_enriched_experiment_summary(
                 "diversity_score": float(epsilon_route_result.get("diversity_score", np.nan)),
                 "runtime_seconds": float(epsilon_route_result.get("runtime_seconds", np.nan)),
                 "optimality_gap": epsilon_route_result.get("optimality_gap", np.nan),
-                "data_quality_score": float(pd.to_numeric(enriched_df.get("data_confidence", pd.Series(dtype=float)), errors="coerce").fillna(0.15).mean()),
+                "data_quality_score": float(
+                    pd.to_numeric(enriched_df.get("data_confidence", pd.Series(dtype=float)), errors="coerce")
+                    .fillna(0.15)
+                    .mean()
+                ),
                 "gateway_start": np.nan,
                 "gateway_end": np.nan,
                 "days_by_city": None,
@@ -298,7 +357,10 @@ def _route_sequence_distance_km(points: list[list[float]]) -> float:
     if len(clean_points) < 2:
         return 0.0
     return float(
-        sum(geodesic(tuple(left), tuple(right)).km for left, right in zip(clean_points[:-1], clean_points[1:]))
+        sum(
+            geodesic(tuple(left), tuple(right)).km
+            for left, right in zip(clean_points[:-1], clean_points[1:], strict=False)
+        )
     )
 
 
@@ -308,7 +370,9 @@ def _normalized_route_stops(frame: pd.DataFrame) -> pd.DataFrame:
     output = frame.copy()
     output["day"] = pd.to_numeric(output.get("day", 1), errors="coerce").fillna(1).astype(int)
     output["stop_order"] = pd.to_numeric(output.get("stop_order", 1), errors="coerce").fillna(1).astype(int)
-    return output.sort_values(["day", "stop_order", "attraction_name"], ascending=[True, True, True]).reset_index(drop=True)
+    return output.sort_values(["day", "stop_order", "attraction_name"], ascending=[True, True, True]).reset_index(
+        drop=True
+    )
 
 
 def _route_metrics_from_stops(frame: pd.DataFrame) -> dict:
@@ -350,7 +414,9 @@ def _route_metrics_from_stops(frame: pd.DataFrame) -> dict:
                     continue
         distance_km += _route_sequence_distance_km(route_points)
 
-    utility_series = pd.to_numeric(normalized.get("final_poi_value", pd.Series(dtype=float)), errors="coerce").fillna(0.0)
+    utility_series = pd.to_numeric(normalized.get("final_poi_value", pd.Series(dtype=float)), errors="coerce").fillna(
+        0.0
+    )
     waiting_series = pd.to_numeric(normalized.get("pred_wait_minutes", pd.Series(dtype=float)), errors="coerce")
     if waiting_series.dropna().empty:
         total_waiting_time = np.nan
@@ -455,13 +521,23 @@ def _add_method_comparison_scores(method_df: pd.DataFrame) -> pd.DataFrame:
     if method_df.empty:
         return method_df
     output = method_df.copy()
-    output["utility_norm"] = _minmax_component(output.get("total_utility", pd.Series(index=output.index)), higher_is_better=True)
+    output["utility_norm"] = _minmax_component(
+        output.get("total_utility", pd.Series(index=output.index)), higher_is_better=True
+    )
     must_go_metric = output.get("must_go_selected_count", output.get("must_go_count", pd.Series(index=output.index)))
     output["must_go_norm"] = _minmax_component(must_go_metric, higher_is_better=True)
-    output["diversity_norm"] = pd.to_numeric(output.get("diversity_score", pd.Series(index=output.index)), errors="coerce").clip(lower=0.0, upper=1.0)
-    output["travel_efficiency_norm"] = _minmax_component(output.get("total_travel_time", pd.Series(index=output.index)), higher_is_better=False)
-    output["cost_efficiency_norm"] = _minmax_component(output.get("total_cost", output.get("budget_used", pd.Series(index=output.index))), higher_is_better=False)
-    output["waiting_efficiency_norm"] = _minmax_component(output.get("total_waiting_time", pd.Series(index=output.index)), higher_is_better=False)
+    output["diversity_norm"] = pd.to_numeric(
+        output.get("diversity_score", pd.Series(index=output.index)), errors="coerce"
+    ).clip(lower=0.0, upper=1.0)
+    output["travel_efficiency_norm"] = _minmax_component(
+        output.get("total_travel_time", pd.Series(index=output.index)), higher_is_better=False
+    )
+    output["cost_efficiency_norm"] = _minmax_component(
+        output.get("total_cost", output.get("budget_used", pd.Series(index=output.index))), higher_is_better=False
+    )
+    output["waiting_efficiency_norm"] = _minmax_component(
+        output.get("total_waiting_time", pd.Series(index=output.index)), higher_is_better=False
+    )
     components = {
         "utility_norm": 0.40,
         "must_go_norm": 0.15,
@@ -471,7 +547,7 @@ def _add_method_comparison_scores(method_df: pd.DataFrame) -> pd.DataFrame:
         "waiting_efficiency_norm": 0.05,
     }
     scores = []
-    for idx, row in output.iterrows():
+    for _idx, row in output.iterrows():
         used_weight = 0.0
         score_value = 0.0
         for column, weight in components.items():
@@ -522,7 +598,9 @@ def get_canonical_trip_days(config: TripConfig, best_hierarchical_trip: dict | N
     return int(config.get("trip", "trip_days", 7))
 
 
-def _canonical_budget_value_and_source(config: TripConfig, budget_estimate_df: pd.DataFrame | None = None) -> tuple[float, str]:
+def _canonical_budget_value_and_source(
+    config: TripConfig, budget_estimate_df: pd.DataFrame | None = None
+) -> tuple[float, str]:
     budget_estimate_df = budget_estimate_df if isinstance(budget_estimate_df, pd.DataFrame) else pd.DataFrame()
     for component in ["buffered_total", "hard_budget", "soft_budget"]:
         value = _budget_component_value(budget_estimate_df, component)
@@ -559,15 +637,15 @@ def build_canonical_budget_context(
     food_budget = _budget_component_value(budget_estimate_df, "food")
     transport_budget = _budget_component_value(budget_estimate_df, "fuel_parking_local_transport")
     hotel_budget_expected = _budget_component_value(budget_estimate_df, "hotel")
-    reserved_food_transport = float(
-        sum(value for value in [food_budget, transport_budget] if np.isfinite(value))
-    )
+    reserved_food_transport = float(sum(value for value in [food_budget, transport_budget] if np.isfinite(value)))
 
     days_by_city = best_trip.get("days_by_city", {}) if isinstance(best_trip, dict) else {}
     city_sequence = [str(item) for item in best_trip.get("city_sequence", [])] if isinstance(best_trip, dict) else []
     base_cities = [city for city in city_sequence if int(days_by_city.get(city, 0)) > 0]
     booked_nights = max(0, get_canonical_trip_days(config, best_trip) - 1)
-    expected_per_night = hotel_budget_expected / booked_nights if np.isfinite(hotel_budget_expected) and booked_nights > 0 else np.nan
+    expected_per_night = (
+        hotel_budget_expected / booked_nights if np.isfinite(hotel_budget_expected) and booked_nights > 0 else np.nan
+    )
 
     committed_hotel_cost = 0.0
     if isinstance(selected_hotels_by_city, dict) and base_cities:
@@ -589,7 +667,9 @@ def build_canonical_budget_context(
     elif np.isfinite(hotel_budget_expected):
         committed_hotel_cost = float(hotel_budget_expected)
 
-    remaining_route_budget = max(0.0, float(total_budget) - float(reserved_food_transport) - float(committed_hotel_cost))
+    remaining_route_budget = max(
+        0.0, float(total_budget) - float(reserved_food_transport) - float(committed_hotel_cost)
+    )
     return {
         "total_budget": float(total_budget),
         "budget_source": str(budget_source),
@@ -857,7 +937,9 @@ def _trip_from_bandit_row(row, blueprint_trip_map) -> dict:
         "overnight_bases": overnight_bases,
         "pass_through_cities": pass_through_cities,
         "intercity_drive_minutes": intercity_drive_minutes,
-        "objective": float(row.get("hierarchical_objective", np.nan)) if pd.notna(row.get("hierarchical_objective", np.nan)) else np.nan,
+        "objective": float(row.get("hierarchical_objective", np.nan))
+        if pd.notna(row.get("hierarchical_objective", np.nan))
+        else np.nan,
         "solver_status": row.get("solver_status", "bandit_summary"),
     }
 
@@ -892,9 +974,13 @@ def _strategy_weights(strategy_name: str) -> dict:
     }
     strategy = str(strategy_name or "balanced").lower()
     if strategy == "scenic_social":
-        base.update({"social": 0.78, "must_go": 0.34, "corridor": 0.34, "view": 0.30, "distance": 0.040, "detour": 0.004})
+        base.update(
+            {"social": 0.78, "must_go": 0.34, "corridor": 0.34, "view": 0.30, "distance": 0.040, "detour": 0.004}
+        )
     elif strategy == "fastest_low_cost":
-        base.update({"social": 0.20, "must_go": 0.10, "corridor": 0.08, "view": 0.06, "distance": 0.095, "detour": 0.018})
+        base.update(
+            {"social": 0.20, "must_go": 0.10, "corridor": 0.08, "view": 0.06, "distance": 0.095, "detour": 0.018}
+        )
     elif strategy == "high_must_go":
         base.update({"social": 0.60, "must_go": 0.55, "corridor": 0.20, "view": 0.18, "distance": 0.050})
     elif strategy == "low_detour":
@@ -938,20 +1024,37 @@ def _score_daily_candidate_pool(
         if "review_count" in scored.columns
         else pd.Series(0.0, index=scored.index)
     )
-    value_source = "interest_adjusted_value" if str(strategy_name).lower() in {
-        "nature_heavy",
-        "scenic_parks",
-        "national_park_priority",
-        "city_nature_balanced",
-        "weather_safe_indoor_backup",
-    } and "interest_adjusted_value" in scored.columns else "final_poi_value"
+    value_source = (
+        "interest_adjusted_value"
+        if str(strategy_name).lower()
+        in {
+            "nature_heavy",
+            "scenic_parks",
+            "national_park_priority",
+            "city_nature_balanced",
+            "weather_safe_indoor_backup",
+        }
+        and "interest_adjusted_value" in scored.columns
+        else "final_poi_value"
+    )
     scored["final_poi_value"] = _numeric_column(scored, value_source, fallback_column="source_score")
     scored["source_score"] = _numeric_column(scored, "source_score")
     scored["social_score"] = _numeric_column(scored, "social_score")
     scored["must_go_weight"] = _numeric_column(scored, "must_go_weight")
     scored["corridor_fit"] = _numeric_column(scored, "corridor_fit")
     scored["detour_minutes"] = _numeric_column(scored, "detour_minutes")
-    for interest_column in ["nature_score", "city_score", "culture_score", "history_score", "scenic_score", "hiking_score", "park_bonus", "weather_sensitivity", "weather_risk", "outdoor_intensity"]:
+    for interest_column in [
+        "nature_score",
+        "city_score",
+        "culture_score",
+        "history_score",
+        "scenic_score",
+        "hiking_score",
+        "park_bonus",
+        "weather_sensitivity",
+        "weather_risk",
+        "outdoor_intensity",
+    ]:
         scored[interest_column] = _numeric_column(scored, interest_column)
     scored["yelp_rating"] = yelp_rating_series
     scored["yelp_review_count"] = review_count_series
@@ -970,11 +1073,16 @@ def _score_daily_candidate_pool(
     scored["source_norm"] = scored["source_score"] / max_source
     scored["rating_norm"] = scored["yelp_rating"] / max_rating
     scored["review_norm"] = np.log1p(scored["yelp_review_count"]) / max(np.log1p(max_reviews), 1e-6)
-    scored["view_signal"] = scored["category"].astype(str).str.contains(
-        "view|bridge|beach|waterfront|landmark|scenic|observatory|campus",
-        case=False,
-        na=False,
-    ).astype(float)
+    scored["view_signal"] = (
+        scored["category"]
+        .astype(str)
+        .str.contains(
+            "view|bridge|beach|waterfront|landmark|scenic|observatory|campus",
+            case=False,
+            na=False,
+        )
+        .astype(float)
+    )
     scored["local_city_match"] = scored["city"].astype(str).str.lower().eq(str(overnight_city).lower()).astype(float)
     scored["transition_bonus"] = scored["view_signal"] if transition_day else 0.0
     scored["route_candidate_score"] = (
@@ -995,17 +1103,23 @@ def _score_daily_candidate_pool(
     )
     strategy = str(strategy_name or "balanced").lower()
     if strategy == "nature_heavy":
-        scored["route_candidate_score"] += 0.80 * scored["nature_score"] + 0.30 * scored["scenic_score"] + 0.25 * scored["hiking_score"]
+        scored["route_candidate_score"] += (
+            0.80 * scored["nature_score"] + 0.30 * scored["scenic_score"] + 0.25 * scored["hiking_score"]
+        )
     elif strategy == "scenic_parks":
         scored["route_candidate_score"] += 0.75 * scored["scenic_score"] + 0.35 * scored["park_bonus"]
     elif strategy == "national_park_priority":
         scored["route_candidate_score"] += 0.90 * scored["park_bonus"] + 0.25 * scored["nature_score"]
     elif strategy == "city_nature_balanced":
-        scored["route_candidate_score"] += 0.28 * scored["nature_score"] + 0.22 * scored["city_score"] + 0.14 * scored["culture_score"]
+        scored["route_candidate_score"] += (
+            0.28 * scored["nature_score"] + 0.22 * scored["city_score"] + 0.14 * scored["culture_score"]
+        )
     elif strategy == "weather_safe_indoor_backup":
         weather_exposure = (scored["weather_sensitivity"] * scored["weather_risk"]).clip(0.0, 1.0)
         scored["route_candidate_score"] += 0.38 * (1.0 - weather_exposure) - 0.18 * scored["outdoor_intensity"]
-    return scored.sort_values(["route_candidate_score", "final_poi_value", "name"], ascending=[False, False, True]).reset_index(drop=True)
+    return scored.sort_values(
+        ["route_candidate_score", "final_poi_value", "name"], ascending=[False, False, True]
+    ).reset_index(drop=True)
 
 
 def _candidate_bundle_for_hierarchical_day(
@@ -1061,7 +1175,11 @@ def _candidate_bundle_for_hierarchical_day(
             strategy_name=strategy_name,
             transition_day=bool(pass_through_cities),
         )
-    return bundle.sort_values(["route_candidate_score", "final_poi_value"], ascending=False).head(max_candidates).reset_index(drop=True)
+    return (
+        bundle.sort_values(["route_candidate_score", "final_poi_value"], ascending=False)
+        .head(max_candidates)
+        .reset_index(drop=True)
+    )
 
 
 def _solve_greedy_day_route(
@@ -1073,14 +1191,24 @@ def _solve_greedy_day_route(
     max_stops: int,
 ) -> tuple[pd.DataFrame, dict]:
     if candidate_pool.empty:
-        return pd.DataFrame(), {"solver_status": "FAILED", "objective_value": np.nan, "optimality_gap": np.nan, "runtime_seconds": 0.0}
+        return pd.DataFrame(), {
+            "solver_status": "FAILED",
+            "objective_value": np.nan,
+            "optimality_gap": np.nan,
+            "runtime_seconds": 0.0,
+        }
     remaining = candidate_pool.copy().reset_index(drop=True)
     selected_rows = []
     current_lat, current_lon = route_start
     spent_minutes = 0.0
     while len(selected_rows) < max_stops and not remaining.empty:
         remaining["travel_from_current"] = remaining.apply(
-            lambda row: geodesic((current_lat, current_lon), (float(row["latitude"]), float(row["longitude"]))).km * 1.25 / 38.0 * 60.0,
+            lambda row: (
+                geodesic((current_lat, current_lon), (float(row["latitude"]), float(row["longitude"]))).km
+                * 1.25
+                / 38.0
+                * 60.0
+            ),
             axis=1,
         )
         remaining["travel_to_end"] = remaining.apply(
@@ -1094,19 +1222,26 @@ def _solve_greedy_day_route(
             - 0.008 * remaining["travel_to_end"]
         )
         feasible = remaining[
-            spent_minutes + remaining["travel_from_current"] + remaining["visit_minutes_est"] + remaining["travel_to_end"]
+            spent_minutes
+            + remaining["travel_from_current"]
+            + remaining["visit_minutes_est"]
+            + remaining["travel_to_end"]
             <= float(available_visit_minutes)
         ].copy()
         if feasible.empty:
             break
-        next_row = feasible.sort_values(["greedy_step_score", "route_candidate_score", "final_poi_value"], ascending=[False, False, False]).iloc[0]
+        next_row = feasible.sort_values(
+            ["greedy_step_score", "route_candidate_score", "final_poi_value"], ascending=[False, False, False]
+        ).iloc[0]
         selected_rows.append(next_row)
         spent_minutes += float(next_row["travel_from_current"]) + float(next_row["visit_minutes_est"])
         current_lat = float(next_row["latitude"])
         current_lon = float(next_row["longitude"])
         remaining = remaining[remaining["name"].astype(str) != str(next_row["name"])].reset_index(drop=True)
     selected_df = pd.DataFrame(selected_rows).reset_index(drop=True) if selected_rows else pd.DataFrame()
-    objective_value = float(_numeric_column(selected_df, "route_candidate_score").sum()) if not selected_df.empty else np.nan
+    objective_value = (
+        float(_numeric_column(selected_df, "route_candidate_score").sum()) if not selected_df.empty else np.nan
+    )
     return selected_df, {
         "solver_status": "HEURISTIC",
         "objective_value": objective_value,
@@ -1134,7 +1269,12 @@ def _solve_legacy_local_gurobi_day_route(
     profile_name: str = "balanced",
 ) -> tuple[pd.DataFrame, dict]:
     if candidate_pool.empty:
-        return pd.DataFrame(), {"solver_status": "FAILED", "objective_value": np.nan, "optimality_gap": np.nan, "runtime_seconds": 0.0}
+        return pd.DataFrame(), {
+            "solver_status": "FAILED",
+            "objective_value": np.nan,
+            "optimality_gap": np.nan,
+            "runtime_seconds": 0.0,
+        }
     gurobi_itinerary_solver = import_legacy_module("gurobi_itinerary_solver")
     route_result = gurobi_itinerary_solver.solve_legacy_local_day_route(
         candidate_pool,
@@ -1148,7 +1288,13 @@ def _solve_legacy_local_gurobi_day_route(
             "time_limit_seconds": float(config.get("optimization", "gurobi_time_limit_seconds", 120)),
             "mip_gap_target": float(config.get("optimization", "gurobi_mip_gap", 0.05)),
             "max_travel": float(config.get("optimization", "max_travel_minutes", 90)),
-            "gamma": float(config.get("optimization", "cost_penalty_weight", config.get("multi_objective", "secondary_travel_penalty", 0.01))),
+            "gamma": float(
+                config.get(
+                    "optimization",
+                    "cost_penalty_weight",
+                    config.get("multi_objective", "secondary_travel_penalty", 0.01),
+                )
+            ),
             "social_score_weight": float(config.get("social", "social_score_weight", 1.10)) * 0.45,
             "must_go_bonus_weight": float(config.get("social", "must_go_bonus_weight", 0.85)),
             "must_go_is_mandatory": bool(config.get("social", "must_go_is_mandatory", False)),
@@ -1157,7 +1303,9 @@ def _solve_legacy_local_gurobi_day_route(
     selected_positions = [int(position) for position in route_result.get("selected_positions", [])]
     selected_df = _catalog_rows_for_positions(selected_positions, candidate_pool)
     if selected_df.empty and not candidate_pool.empty:
-        fallback = candidate_pool.sort_values(["route_candidate_score", "final_poi_value"], ascending=False).head(1).copy()
+        fallback = (
+            candidate_pool.sort_values(["route_candidate_score", "final_poi_value"], ascending=False).head(1).copy()
+        )
         fallback["day"] = 1
         fallback["stop_order"] = 1
         fallback["attraction_name"] = fallback.get("name", "selected stop")
@@ -1175,7 +1323,12 @@ def _solve_small_gurobi_day_route(
     route_start: tuple[float, float],
 ) -> tuple[pd.DataFrame, dict]:
     if candidate_pool.empty:
-        return pd.DataFrame(), {"solver_status": "FAILED", "objective_value": np.nan, "optimality_gap": np.nan, "runtime_seconds": 0.0}
+        return pd.DataFrame(), {
+            "solver_status": "FAILED",
+            "objective_value": np.nan,
+            "optimality_gap": np.nan,
+            "runtime_seconds": 0.0,
+        }
     day_config = TripConfig(
         data=_merge_config_data(
             config.to_dict(),
@@ -1197,7 +1350,9 @@ def _solve_small_gurobi_day_route(
     selected_names = [str(name) for name in route_result.get("selected_pois", []) if str(name).strip()]
     selected_df = _catalog_rows_for_names(selected_names, candidate_pool)
     if selected_df.empty and not candidate_pool.empty:
-        fallback = candidate_pool.sort_values(["route_candidate_score", "final_poi_value"], ascending=False).head(1).copy()
+        fallback = (
+            candidate_pool.sort_values(["route_candidate_score", "final_poi_value"], ascending=False).head(1).copy()
+        )
         fallback["day"] = 1
         fallback["stop_order"] = 1
         fallback["attraction_name"] = fallback.get("name", "selected stop")
@@ -1373,8 +1528,12 @@ def _write_hotel_selection_debug(
     rows = []
     for city, city_hotels in hotel_catalog.groupby("city", dropna=False):
         city_name = str(city)
-        stop_points = route_stops_df[route_stops_df.get("overnight_city", pd.Series(dtype=str)).astype(str).eq(city_name)]
-        must_go_points = must_go_candidates[must_go_candidates.get("city", pd.Series(dtype=str)).astype(str).eq(city_name)]
+        stop_points = route_stops_df[
+            route_stops_df.get("overnight_city", pd.Series(dtype=str)).astype(str).eq(city_name)
+        ]
+        must_go_points = must_go_candidates[
+            must_go_candidates.get("city", pd.Series(dtype=str)).astype(str).eq(city_name)
+        ]
         for rank, hotel in enumerate(city_hotels.head(12).itertuples(index=False), start=1):
             hotel_name = str(getattr(hotel, "name", f"{city_name} hotel"))
             hotel_lat = float(getattr(hotel, "latitude", np.nan))
@@ -1384,7 +1543,9 @@ def _write_hotel_selection_debug(
             if not stop_points.empty:
                 stop_distance = float(
                     stop_points.apply(
-                        lambda row: geodesic((hotel_lat, hotel_lon), (float(row["latitude"]), float(row["longitude"]))).km,
+                        lambda row: (
+                            geodesic((hotel_lat, hotel_lon), (float(row["latitude"]), float(row["longitude"]))).km
+                        ),
                         axis=1,
                     ).mean()
                 )
@@ -1393,7 +1554,9 @@ def _write_hotel_selection_debug(
             if not must_go_points.empty:
                 must_go_distance = float(
                     must_go_points.apply(
-                        lambda row: geodesic((hotel_lat, hotel_lon), (float(row["latitude"]), float(row["longitude"]))).km,
+                        lambda row: (
+                            geodesic((hotel_lat, hotel_lon), (float(row["latitude"]), float(row["longitude"]))).km
+                        ),
                         axis=1,
                     ).mean()
                 )
@@ -1425,7 +1588,11 @@ def _write_hotel_selection_debug(
                     "selected_hotel_reason": "selected route base" if selected else "candidate alternative",
                 }
             )
-    debug_df = pd.DataFrame(rows).sort_values(["city", "selected", "hotel_score"], ascending=[True, False, False]).reset_index(drop=True)
+    debug_df = (
+        pd.DataFrame(rows)
+        .sort_values(["city", "selected", "hotel_score"], ascending=[True, False, False])
+        .reset_index(drop=True)
+    )
     debug_df.to_csv(output_dir / "production_hotel_selection_debug.csv", index=False)
     return debug_df
 
@@ -1498,8 +1665,12 @@ def _hierarchical_method_route_outputs(
             previous_city = base_cities[base_index - 1] if is_transition_day else city
             previous_hotel = selected_hotels_by_city.get(previous_city, hotel)
             route_start_name = previous_hotel.get("name", f"{previous_city} hotel")
-            route_start_latitude = float(previous_hotel.get("latitude", blueprint_trip_map.CITY_COORDS[previous_city][0]))
-            route_start_longitude = float(previous_hotel.get("longitude", blueprint_trip_map.CITY_COORDS[previous_city][1]))
+            route_start_latitude = float(
+                previous_hotel.get("latitude", blueprint_trip_map.CITY_COORDS[previous_city][0])
+            )
+            route_start_longitude = float(
+                previous_hotel.get("longitude", blueprint_trip_map.CITY_COORDS[previous_city][1])
+            )
             route_end_name = hotel.get("name", f"{city} hotel")
             route_end_latitude = float(hotel.get("latitude", blueprint_trip_map.CITY_COORDS[city][0]))
             route_end_longitude = float(hotel.get("longitude", blueprint_trip_map.CITY_COORDS[city][1]))
@@ -1621,7 +1792,11 @@ def _hierarchical_method_route_outputs(
             if pd.notna(gap_value):
                 day_gaps.append(float(gap_value))
 
-    route_df = pd.concat(route_frames, ignore_index=True, sort=False) if route_frames else pd.DataFrame(columns=_comparison_route_stop_columns())
+    route_df = (
+        pd.concat(route_frames, ignore_index=True, sort=False)
+        if route_frames
+        else pd.DataFrame(columns=_comparison_route_stop_columns())
+    )
     status = "FAILED"
     if not route_df.empty:
         lowered_statuses = [str(day_status).lower() for day_status in day_statuses]
@@ -1654,7 +1829,9 @@ def _bandit_route_stop_rows(
     budget_df: pd.DataFrame | None = None,
 ) -> tuple[pd.DataFrame, dict]:
     blueprint_trip_map = import_legacy_module("blueprint_trip_map")
-    bandit_runs_df = _load_frame_from_context_or_csv(context, ["bandit_stress_runs_df"], output_dir / "production_bandit_stress_runs.csv")
+    bandit_runs_df = _load_frame_from_context_or_csv(
+        context, ["bandit_stress_runs_df"], output_dir / "production_bandit_stress_runs.csv"
+    )
     bandit_summary_df = _load_frame_from_context_or_csv(
         context,
         ["hybrid_bandit_summary_df"],
@@ -1752,11 +1929,17 @@ def _bandit_route_stop_rows(
             "total_travel_distance_km": metrics["total_travel_distance_km"] + intercity_distance,
             "total_cost": float(repaired_total_cost),
             "selected_attractions": metrics["selected_attractions"],
-            "must_go_count": int(route_stops["social_must_go"].astype(bool).sum()) if "social_must_go" in route_stops.columns else 0,
+            "must_go_count": int(route_stops["social_must_go"].astype(bool).sum())
+            if "social_must_go" in route_stops.columns
+            else 0,
             "diversity_score": metrics["diversity_score"],
-            "objective": float(best_run_row.get("combined_reward", best_summary_row.get("hierarchical_objective", np.nan)) or best_summary_row.get("hierarchical_objective", np.nan)),
+            "objective": float(
+                best_run_row.get("combined_reward", best_summary_row.get("hierarchical_objective", np.nan))
+                or best_summary_row.get("hierarchical_objective", np.nan)
+            ),
             "posterior_reward": float(best_summary_row.get("posterior_mean_reward", np.nan)),
-            "solve_seconds": float(route_info.get("solve_seconds", 0.0) or 0.0) + float(best_run_row.get("runtime_seconds", 0.0) or 0.0),
+            "solve_seconds": float(route_info.get("solve_seconds", 0.0) or 0.0)
+            + float(best_run_row.get("runtime_seconds", 0.0) or 0.0),
             "mip_gap": route_info.get("mip_gap", np.nan),
             "status": str(route_info.get("status", best_run_row.get("solver_status", "FAILED"))),
             "notes": (
@@ -1920,7 +2103,9 @@ def _route_matrix_summary_row(
         "total_travel_distance_km": metrics["total_travel_distance_km"] + intercity_distance,
         "total_cost": float(total_cost),
         "selected_attractions": metrics["selected_attractions"],
-        "must_go_count": int(route_stops["social_must_go"].astype(bool).sum()) if not route_stops.empty and "social_must_go" in route_stops.columns else 0,
+        "must_go_count": int(route_stops["social_must_go"].astype(bool).sum())
+        if not route_stops.empty and "social_must_go" in route_stops.columns
+        else 0,
         **must_go_summary,
         "diversity_score": metrics["diversity_score"],
         "objective": float(objective_value) if pd.notna(objective_value) else np.nan,
@@ -1966,7 +2151,9 @@ def _write_route_matrix_hotel_debug(
             if not route_rows["overnight_city"].astype(str).eq(city_name).any():
                 continue
             stop_points = route_rows[route_rows["overnight_city"].astype(str).eq(city_name)]
-            must_go_points = must_go_candidates[must_go_candidates.get("city", pd.Series(dtype=str)).astype(str).eq(city_name)]
+            must_go_points = must_go_candidates[
+                must_go_candidates.get("city", pd.Series(dtype=str)).astype(str).eq(city_name)
+            ]
             for rank, hotel in enumerate(city_hotels.head(10).itertuples(index=False), start=1):
                 hotel_name = str(getattr(hotel, "name", f"{city_name} hotel"))
                 hotel_lat = float(getattr(hotel, "latitude", np.nan))
@@ -1976,7 +2163,9 @@ def _write_route_matrix_hotel_debug(
                 if not stop_points.empty:
                     stop_distance = float(
                         stop_points.apply(
-                            lambda row: geodesic((hotel_lat, hotel_lon), (float(row["latitude"]), float(row["longitude"]))).km,
+                            lambda row: (
+                                geodesic((hotel_lat, hotel_lon), (float(row["latitude"]), float(row["longitude"]))).km
+                            ),
                             axis=1,
                         ).mean()
                     )
@@ -1985,7 +2174,9 @@ def _write_route_matrix_hotel_debug(
                 if not must_go_points.empty:
                     must_go_distance = float(
                         must_go_points.apply(
-                            lambda row: geodesic((hotel_lat, hotel_lon), (float(row["latitude"]), float(row["longitude"]))).km,
+                            lambda row: (
+                                geodesic((hotel_lat, hotel_lon), (float(row["latitude"]), float(row["longitude"]))).km
+                            ),
                             axis=1,
                         ).mean()
                     )
@@ -2046,8 +2237,10 @@ def _write_route_matrix_compatibility_artifacts(
     ].copy()
     if not trip_subset.empty:
         trip_subset["comparison_type"] = "trip_length"
-        trip_subset["comparison_label"] = trip_subset["trip_days"].astype(int).map(
-            lambda days: f"Trip Length · {days}-Day Hybrid Bandit + Small Gurobi"
+        trip_subset["comparison_label"] = (
+            trip_subset["trip_days"]
+            .astype(int)
+            .map(lambda days: f"Trip Length · {days}-Day Hybrid Bandit + Small Gurobi")
         )
         trip_subset = trip_subset[_comparison_route_stop_columns()]
     trip_subset.to_csv(output_dir / "production_trip_length_route_stops.csv", index=False)
@@ -2058,11 +2251,15 @@ def _write_route_matrix_compatibility_artifacts(
     ].copy()
     if not trip_summary.empty:
         trip_summary["comparison_type"] = "trip_length"
-        trip_summary["comparison_label"] = trip_summary["trip_days"].astype(int).map(
-            lambda days: f"Trip Length · {days}-Day Hybrid Bandit + Small Gurobi"
+        trip_summary["comparison_label"] = (
+            trip_summary["trip_days"]
+            .astype(int)
+            .map(lambda days: f"Trip Length · {days}-Day Hybrid Bandit + Small Gurobi")
         )
         trip_summary["estimated_budget"] = trip_summary["total_budget"]
-        trip_summary["intercity_drive_minutes"] = pd.to_numeric(trip_summary["total_travel_time"], errors="coerce").fillna(0.0)
+        trip_summary["intercity_drive_minutes"] = pd.to_numeric(
+            trip_summary["total_travel_time"], errors="coerce"
+        ).fillna(0.0)
         trip_summary["intercity_drive_hours"] = trip_summary["intercity_drive_minutes"] / 60.0
         trip_summary["solver_status"] = trip_summary["status"]
         trip_summary = trip_summary[
@@ -2256,7 +2453,11 @@ def build_route_matrix_comparison(
                 comparison_label = f"{int(trip_days)}-Day · {_method_short_label(method)} · {profile_label}"
                 if method == "hierarchical_bandit_gurobi_repair":
                     local_solver = "small_gurobi"
-                    strategy_name = default_bandit_strategy if profile == "balanced" else _profile_strategy(profile, default_bandit_strategy)
+                    strategy_name = (
+                        default_bandit_strategy
+                        if profile == "balanced"
+                        else _profile_strategy(profile, default_bandit_strategy)
+                    )
                     selected_strategy = f"bandit_repair:{strategy_name}"
                 elif method == "hierarchical_greedy_baseline":
                     local_solver = "greedy"
@@ -2327,9 +2528,17 @@ def build_route_matrix_comparison(
         if column not in matrix_df.columns:
             matrix_df[column] = "" if column in {"route_key", "method", "profile", "status", "notes"} else np.nan
     matrix_df = _add_method_comparison_scores(matrix_df)
-    matrix_df["method_sort"] = matrix_df["method"].map({method: i for i, method in enumerate(MATRIX_METHOD_ORDER)}).fillna(99)
-    matrix_df["profile_sort"] = matrix_df["profile"].map({profile: i for i, profile in enumerate(MATRIX_PROFILE_ORDER)}).fillna(99)
-    matrix_df = matrix_df.sort_values(["trip_days", "method_sort", "profile_sort"]).drop(columns=["method_sort", "profile_sort"]).reset_index(drop=True)
+    matrix_df["method_sort"] = (
+        matrix_df["method"].map({method: i for i, method in enumerate(MATRIX_METHOD_ORDER)}).fillna(99)
+    )
+    matrix_df["profile_sort"] = (
+        matrix_df["profile"].map({profile: i for i, profile in enumerate(MATRIX_PROFILE_ORDER)}).fillna(99)
+    )
+    matrix_df = (
+        matrix_df.sort_values(["trip_days", "method_sort", "profile_sort"])
+        .drop(columns=["method_sort", "profile_sort"])
+        .reset_index(drop=True)
+    )
     matrix_df = matrix_df[ROUTE_MATRIX_SUMMARY_COLUMNS]
 
     matrix_route_stops_df = (
@@ -2338,8 +2547,14 @@ def build_route_matrix_comparison(
         else pd.DataFrame(columns=_route_matrix_stop_columns())
     )
     if not matrix_route_stops_df.empty:
-        matrix_route_stops_df["method_sort"] = matrix_route_stops_df["method"].map({method: i for i, method in enumerate(MATRIX_METHOD_ORDER)}).fillna(99)
-        matrix_route_stops_df["profile_sort"] = matrix_route_stops_df["profile"].map({profile: i for i, profile in enumerate(MATRIX_PROFILE_ORDER)}).fillna(99)
+        matrix_route_stops_df["method_sort"] = (
+            matrix_route_stops_df["method"].map({method: i for i, method in enumerate(MATRIX_METHOD_ORDER)}).fillna(99)
+        )
+        matrix_route_stops_df["profile_sort"] = (
+            matrix_route_stops_df["profile"]
+            .map({profile: i for i, profile in enumerate(MATRIX_PROFILE_ORDER)})
+            .fillna(99)
+        )
         matrix_route_stops_df = (
             matrix_route_stops_df.sort_values(["trip_days", "method_sort", "profile_sort", "day", "stop_order"])
             .drop(columns=["method_sort", "profile_sort"])
@@ -2506,7 +2721,9 @@ def build_trip_length_comparison(
     )
     if not bandit_summary_df.empty and "posterior_mean_reward" in bandit_summary_df.columns:
         duration_strategy = str(
-            bandit_summary_df.sort_values("posterior_mean_reward", ascending=False).iloc[0].get(
+            bandit_summary_df.sort_values("posterior_mean_reward", ascending=False)
+            .iloc[0]
+            .get(
                 "route_search_strategy",
                 "scenic_social",
             )
@@ -2572,8 +2789,12 @@ def build_trip_length_comparison(
                 "days_by_city": str(best_trip.get("days_by_city", {})),
                 "intercity_drive_minutes": float(best_trip.get("intercity_drive_minutes", 0.0) or 0.0),
                 "intercity_drive_hours": float(best_trip.get("intercity_drive_minutes", 0.0) or 0.0) / 60.0,
-                "estimated_budget": float(route_info.get("total_budget", get_canonical_trip_budget(duration_config, budget_df))),
-                "budget_source": str(route_info.get("budget_source", _canonical_budget_value_and_source(duration_config, budget_df)[1])),
+                "estimated_budget": float(
+                    route_info.get("total_budget", get_canonical_trip_budget(duration_config, budget_df))
+                ),
+                "budget_source": str(
+                    route_info.get("budget_source", _canonical_budget_value_and_source(duration_config, budget_df)[1])
+                ),
                 "objective": float(best_trip.get("objective", np.nan)),
                 "posterior_reward": np.nan,
                 "selected_strategy": f"hierarchical_bandit_gurobi_repair:{duration_strategy}",
@@ -2591,7 +2812,11 @@ def build_trip_length_comparison(
     if not comparison_df.empty:
         comparison_df = comparison_df.sort_values(["trip_days", "gateway_start", "gateway_end"]).reset_index(drop=True)
         comparison_df = comparison_df[summary_columns]
-    route_stops_df = pd.concat(route_frames, ignore_index=True, sort=False) if route_frames else pd.DataFrame(columns=_comparison_route_stop_columns())
+    route_stops_df = (
+        pd.concat(route_frames, ignore_index=True, sort=False)
+        if route_frames
+        else pd.DataFrame(columns=_comparison_route_stop_columns())
+    )
     if not route_stops_df.empty:
         route_stops_df = route_stops_df.sort_values(["trip_days", "day", "stop_order"]).reset_index(drop=True)
         route_stops_df = route_stops_df[_comparison_route_stop_columns()]
@@ -2643,7 +2868,9 @@ def build_production_method_comparison(
         ["osm_city_hotel_catalog_df"],
         output_dir / "production_city_hotel_catalog.csv",
     )
-    budget_df = _load_frame_from_context_or_csv(context, ["budget_estimate_df"], output_dir / "production_budget_estimate.csv")
+    budget_df = _load_frame_from_context_or_csv(
+        context, ["budget_estimate_df"], output_dir / "production_budget_estimate.csv"
+    )
     city_name = str(primary_city or _first_context_value(context, "CITY", default="Santa Barbara"))
 
     summary_columns = [
@@ -2690,7 +2917,9 @@ def build_production_method_comparison(
     ]
     if city_summary_df.empty:
         pd.DataFrame(columns=summary_columns).to_csv(output_dir / "production_method_comparison.csv", index=False)
-        pd.DataFrame(columns=_comparison_route_stop_columns()).to_csv(output_dir / "production_method_route_stops.csv", index=False)
+        pd.DataFrame(columns=_comparison_route_stop_columns()).to_csv(
+            output_dir / "production_method_route_stops.csv", index=False
+        )
         return pd.DataFrame(columns=summary_columns), pd.DataFrame(columns=_comparison_route_stop_columns())
 
     best_trip = _first_context_value(context, "best_hierarchical_trip")
@@ -2730,7 +2959,11 @@ def build_production_method_comparison(
         must_go_summary = _route_must_go_summary(route_stops, must_go_candidates, config)
         intercity_minutes, intercity_distance = _intercity_route_metrics(trip_for_method)
         attraction_cost = _estimated_route_stop_cost(route_stops)
-        total_cost = float(route_info.get("reserved_food_transport", 0.0)) + float(route_info.get("committed_hotel_cost", 0.0)) + float(attraction_cost)
+        total_cost = (
+            float(route_info.get("reserved_food_transport", 0.0))
+            + float(route_info.get("committed_hotel_cost", 0.0))
+            + float(attraction_cost)
+        )
         allocation_solver, local_route_solver = _method_solver_roles(method)
         return {
             "method": method,
@@ -2741,14 +2974,18 @@ def build_production_method_comparison(
             **_trip_summary_fields(trip_for_method),
             "total_budget": float(route_info.get("total_budget", get_canonical_trip_budget(config, budget_df))),
             "budget_used": float(total_cost),
-            "budget_source": str(route_info.get("budget_source", _canonical_budget_value_and_source(config, budget_df)[1])),
+            "budget_source": str(
+                route_info.get("budget_source", _canonical_budget_value_and_source(config, budget_df)[1])
+            ),
             "total_utility": metrics["total_utility"],
             "total_waiting_time": metrics["total_waiting_time"],
             "total_travel_time": metrics["total_travel_time"] + intercity_minutes,
             "total_travel_distance_km": metrics["total_travel_distance_km"] + intercity_distance,
             "total_cost": float(total_cost),
             "selected_attractions": metrics["selected_attractions"],
-            "must_go_count": int(route_stops["social_must_go"].astype(bool).sum()) if not route_stops.empty and "social_must_go" in route_stops.columns else 0,
+            "must_go_count": int(route_stops["social_must_go"].astype(bool).sum())
+            if not route_stops.empty and "social_must_go" in route_stops.columns
+            else 0,
             **must_go_summary,
             "diversity_score": metrics["diversity_score"],
             "objective": float(objective_value) if pd.notna(objective_value) else np.nan,
@@ -2894,9 +3131,15 @@ def build_production_method_comparison(
     method_df = method_df.sort_values(["sort_order", "method"]).drop(columns=["sort_order"]).reset_index(drop=True)
     method_df = method_df[summary_columns]
 
-    route_stops_df = pd.concat(route_frames, ignore_index=True, sort=False) if route_frames else pd.DataFrame(columns=_comparison_route_stop_columns())
+    route_stops_df = (
+        pd.concat(route_frames, ignore_index=True, sort=False)
+        if route_frames
+        else pd.DataFrame(columns=_comparison_route_stop_columns())
+    )
     if not route_stops_df.empty:
-        route_stops_df = route_stops_df.sort_values(["comparison_type", "method", "trip_days", "day", "stop_order"]).reset_index(drop=True)
+        route_stops_df = route_stops_df.sort_values(
+            ["comparison_type", "method", "trip_days", "day", "stop_order"]
+        ).reset_index(drop=True)
         route_stops_df = route_stops_df[_comparison_route_stop_columns()]
 
     method_df.to_csv(output_dir / "production_method_comparison.csv", index=False)
@@ -3007,10 +3250,14 @@ def run_configurable_blueprint_pipeline(
         mmr_candidate_log_df.to_csv(output_dir / "production_mmr_candidate_log.csv", index=False)
     else:
         pd.DataFrame().to_csv(output_dir / "production_mmr_candidate_log.csv", index=False)
-    epsilon_candidates = enrichment["production_enriched_poi_catalog_df"].sort_values("final_poi_value", ascending=False).head(
-        int(config.get("optimization", "max_pois_per_day", 4)) * 4
+    epsilon_candidates = (
+        enrichment["production_enriched_poi_catalog_df"]
+        .sort_values("final_poi_value", ascending=False)
+        .head(int(config.get("optimization", "max_pois_per_day", 4)) * 4)
     )
-    epsilon_route_result = solve_enriched_route_with_gurobi(epsilon_candidates, config, candidate_size=len(epsilon_candidates))
+    epsilon_route_result = solve_enriched_route_with_gurobi(
+        epsilon_candidates, config, candidate_size=len(epsilon_candidates)
+    )
     bandit_log_df.to_csv(output_dir / "production_bandit_gurobi_runs.csv", index=False)
     bandit_summary_df.to_csv(output_dir / "production_hybrid_bandit_optimization_summary.csv", index=False)
     bandit_stress_runs_df.to_csv(output_dir / "production_bandit_stress_runs.csv", index=False)

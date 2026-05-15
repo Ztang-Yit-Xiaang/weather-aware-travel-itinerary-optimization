@@ -12,7 +12,6 @@ from typing import Any
 
 from .config import DEFAULT_CONFIG
 
-
 INTEREST_AXES = ("nature", "city", "culture", "history")
 
 
@@ -52,6 +51,7 @@ class TripPlanningRequest:
     trip_days: int = 7
     traveler_profile: str = "balanced"
     scenario: str = "california_coast"
+    interest_profile: str | None = None
     interest_mode: str = "balanced_interest"
     interest_weights: dict[str, float] | None = None
     must_include: list[str] = field(default_factory=list)
@@ -72,7 +72,7 @@ def request_to_config_overrides(request: TripPlanningRequest | dict[str, Any]) -
         weights = normalize_interest_weights(request.interest_weights)
         mode = "custom"
     else:
-        mode = str(request.interest_mode or "balanced_interest")
+        mode = str(request.interest_profile or request.interest_mode or "balanced_interest")
         weights = preset_to_interest_weights(mode, interest_config.get("presets", {}))
 
     budget_by_level = {"low": 1400.0, "medium": 2200.0, "high": 3600.0}
@@ -87,6 +87,7 @@ def request_to_config_overrides(request: TripPlanningRequest | dict[str, Any]) -
             "end_city_options": [str(request.start_city)],
             "traveler_profile": str(request.traveler_profile),
             "scenario": str(request.scenario),
+            "interest_profile": mode,
         },
         "budget": {"user_budget": float(budget)},
         "time": {"max_intercity_drive_minutes_per_day": int(request.max_daily_drive_minutes)},
@@ -101,4 +102,3 @@ def request_to_config_overrides(request: TripPlanningRequest | dict[str, Any]) -
             "allow_nature_regions": bool(request.allow_nature_regions),
         },
     }
-

@@ -1,0 +1,64 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "weather-aware-travel-itinerary-optimization"
+version = "0.1.0"
+description = "Weather-aware multi-day itinerary optimization with nature-aware planning extensions."
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+  "folium>=0.16",
+  "geopy>=2.4",
+  "gurobipy>=11.0",
+  "jupyter>=1.0",
+  "matplotlib>=3.7",
+  "numpy>=1.24",
+  "openrouteservice>=2.3",
+  "ortools>=9.10",
+  "pandas>=2.0",
+  "requests>=2.31",
+  "scikit-learn>=1.3",
+  "xgboost>=2.0",
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.ruff]
+line-length = 120
+target-version = "py312"
+exclude = [
+  ".git",
+  ".venv",
+  "__pycache__",
+  "cache",
+  "htmlcov",
+  "notebook",
+  "notebook/__pycache__",
+  "results",
+]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP"]
+ignore = ["E501"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*.py" = ["E402"]
+"src/itinerary_system/experiment_runner.py" = ["B023"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+
+[tool.coverage.run]
+source = ["src/itinerary_system"]
+omit = [
+  "*/__init__.py",
+  "*/_legacy.py",
+]
+
+[tool.coverage.report]
+show_missing = true
+skip_empty = true

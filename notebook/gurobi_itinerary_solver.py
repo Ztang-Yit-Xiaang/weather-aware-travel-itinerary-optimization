@@ -6,7 +6,6 @@ import numpy as np
 import pandas as pd
 from geopy.distance import geodesic
 
-
 DEFAULT_TOURIST_PROFILES = {
     "relaxed": {
         "alpha": 3.0,
@@ -66,6 +65,7 @@ DEFAULT_SOLVER_SETTINGS = {
     "presolve": 2,
 }
 
+
 def _safe_optimizer_outputs_for_production(context):
     """
     Prevent old local 3-day optimizer outputs from leaking into
@@ -91,6 +91,8 @@ def _safe_optimizer_outputs_for_production(context):
         return {}
 
     return optimizer_outputs
+
+
 def infer_content_theme(row):
     category_text = str(row.get("categories", "")).lower()
     type_text = str(row.get("type", "")).lower()
@@ -156,10 +158,7 @@ def _detect_license_path():
 
 
 def _has_wls_env_credentials():
-    return all(
-        os.environ.get(var_name)
-        for var_name in ["GRB_WLSACCESSID", "GRB_WLSSECRET", "GRB_LICENSEID"]
-    )
+    return all(os.environ.get(var_name) for var_name in ["GRB_WLSACCESSID", "GRB_WLSSECRET", "GRB_LICENSEID"])
 
 
 def _merge_profile_overrides(base_profiles, profile_overrides=None):
@@ -295,7 +294,7 @@ def run_gurobi_itinerary_optimization(
     hotel_price_int = np.rint(np.asarray(hotel_price, dtype=float)).astype(int)
 
     p = 0.7
-    cost_penalty = cost_norm ** p
+    cost_penalty = cost_norm**p
 
     print("Feature Normalization Summary:")
     print(f"  Utility (mean={utility_norm.mean():.3f}, std={utility_norm.std():.3f})")
@@ -353,18 +352,12 @@ def run_gurobi_itinerary_optimization(
     wine_indices = [i for i, row in top100_with_waiting_time.iterrows() if "Wine" in row["name"]]
     whale_indices = [i for i, row in top100_with_waiting_time.iterrows() if "Whale" in row["name"]]
     content_theme_groups = {
-        theme: theme_df.index.tolist()
-        for theme, theme_df in top100_with_waiting_time.groupby("content_theme")
+        theme: theme_df.index.tolist() for theme, theme_df in top100_with_waiting_time.groupby("content_theme")
     }
 
     n = len(top100_with_waiting_time)
     num_hotels = len(hotels_df)
-    base_arcs = [
-        (i, j)
-        for i in range(n)
-        for j in range(n)
-        if i != j and travel_time_int[i, j] <= max_travel
-    ]
+    base_arcs = [(i, j) for i in range(n) for j in range(n) if i != j and travel_time_int[i, j] <= max_travel]
     out_neighbors = {i: [] for i in range(n)}
     in_neighbors = {i: [] for i in range(n)}
     for i, j in base_arcs:
@@ -456,20 +449,12 @@ def run_gurobi_itinerary_optimization(
         attraction_bonus_score = int(round(objective_scale * attraction_bonus))
 
         objective = gp.quicksum(
-            (
-                utility_score[i]
-                - wait_penalty[i]
-                - attraction_cost_penalty[i]
-                + attraction_bonus_score
-            )
-            * x[i, d]
+            (utility_score[i] - wait_penalty[i] - attraction_cost_penalty[i] + attraction_bonus_score) * x[i, d]
             for i in range(n)
             for d in range(num_days)
         )
         objective -= gp.quicksum(
-            float(travel_penalty[i, j]) * y[i, j, d]
-            for i, j in base_arcs
-            for d in range(num_days)
+            float(travel_penalty[i, j]) * y[i, j, d] for i, j in base_arcs for d in range(num_days)
         )
         objective += gp.quicksum(hotel_utility_score[h] * z[h, d] for h in range(num_hotels) for d in range(num_days))
         objective -= gp.quicksum(
@@ -604,14 +589,15 @@ def run_gurobi_itinerary_optimization(
 
         for d in range(num_days):
             model.addConstr(
-                gp.quicksum(y[i, j, d] for i, j in base_arcs)
-                == gp.quicksum(x[i, d] for i in range(n)) - day_used[d],
+                gp.quicksum(y[i, j, d] for i, j in base_arcs) == gp.quicksum(x[i, d] for i in range(n)) - day_used[d],
                 name=f"path_edge_count_{d}",
             )
 
         for d in range(num_days - 1):
             model.addConstr(
-                gp.quicksum(hotel_to_hotel_time_int[h, g] * q[h, g, d] for h in range(num_hotels) for g in range(num_hotels))
+                gp.quicksum(
+                    hotel_to_hotel_time_int[h, g] * q[h, g, d] for h in range(num_hotels) for g in range(num_hotels)
+                )
                 <= overnight_relocation_limit,
                 name=f"overnight_limit_{d}",
             )
@@ -637,31 +623,22 @@ def run_gurobi_itinerary_optimization(
         has_solution = model.SolCount > 0
 
         if not has_solution:
-            print(f"  Solver finished with status [{status_label}] after {solve_seconds:.1f}s and no feasible incumbent")
+            print(
+                f"  Solver finished with status [{status_label}] after {solve_seconds:.1f}s and no feasible incumbent"
+            )
             print()
             continue
 
         day_used_by_day = {d: int(round(day_used[d].X)) for d in range(num_days)}
-        selected_by_day = {
-            d: [i for i in range(n) if x[i, d].X > 0.5]
-            for d in range(num_days)
-        }
-        travel_edges_by_day = {
-            d: [(i, j) for i, j in base_arcs if y[i, j, d].X > 0.5]
-            for d in range(num_days)
-        }
+        selected_by_day = {d: [i for i in range(n) if x[i, d].X > 0.5] for d in range(num_days)}
+        travel_edges_by_day = {d: [(i, j) for i, j in base_arcs if y[i, j, d].X > 0.5] for d in range(num_days)}
         start_edges_by_day = {
-            d: [(h, i) for h in range(num_hotels) for i in range(n) if s[h, i, d].X > 0.5]
-            for d in range(num_days)
+            d: [(h, i) for h in range(num_hotels) for i in range(n) if s[h, i, d].X > 0.5] for d in range(num_days)
         }
         end_edges_by_day = {
-            d: [(i, h) for i in range(n) for h in range(num_hotels) if e[i, h, d].X > 0.5]
-            for d in range(num_days)
+            d: [(i, h) for i in range(n) for h in range(num_hotels) if e[i, h, d].X > 0.5] for d in range(num_days)
         }
-        hotels_by_day = {
-            d: next((h for h in range(num_hotels) if z[h, d].X > 0.5), None)
-            for d in range(num_days)
-        }
+        hotels_by_day = {d: next((h for h in range(num_hotels) if z[h, d].X > 0.5), None) for d in range(num_days)}
         transitions_by_day = {
             d: [(h, g) for h in range(num_hotels) for g in range(num_hotels) if q[h, g, d].X > 0.5]
             for d in range(num_days - 1)
@@ -715,29 +692,14 @@ def run_gurobi_itinerary_optimization(
         }
 
         total_visit_wait = sum(
-            visiting_time_int[i] + waiting_time_int[i]
-            for day_nodes in selected_by_day.values()
-            for i in day_nodes
+            visiting_time_int[i] + waiting_time_int[i] for day_nodes in selected_by_day.values() for i in day_nodes
         )
-        total_travel = sum(
-            travel_time_int[i, j]
-            for day_edges in travel_edges_by_day.values()
-            for i, j in day_edges
-        )
+        total_travel = sum(travel_time_int[i, j] for day_edges in travel_edges_by_day.values() for i, j in day_edges)
         total_hotel_legs = sum(
-            hotel_to_attr_time_int[h, i]
-            for day_edges in start_edges_by_day.values()
-            for h, i in day_edges
-        ) + sum(
-            hotel_to_attr_time_int[h, i]
-            for day_edges in end_edges_by_day.values()
-            for i, h in day_edges
-        )
+            hotel_to_attr_time_int[h, i] for day_edges in start_edges_by_day.values() for h, i in day_edges
+        ) + sum(hotel_to_attr_time_int[h, i] for day_edges in end_edges_by_day.values() for i, h in day_edges)
         total_switch_time = sum(
-            hotel_to_hotel_time_int[h, g]
-            for day_edges in transitions_by_day.values()
-            for h, g in day_edges
-            if h != g
+            hotel_to_hotel_time_int[h, g] for day_edges in transitions_by_day.values() for h, g in day_edges if h != g
         )
         total_time = total_visit_wait + total_travel + total_hotel_legs
         total_hotel_cost = sum(hotel_price_int[h] for h in hotels_by_day.values() if h is not None)
@@ -757,10 +719,7 @@ def run_gurobi_itinerary_optimization(
             hotel_name = hotels_df.iloc[hotel_idx]["name"] if hotel_idx is not None else "N/A"
             nightly_rate = hotel_price_int[hotel_idx] if hotel_idx is not None else 0
             if day_used_by_day[d] == 0:
-                print(
-                    f"    Day {d + 1}: Hotel={hotel_name} (${nightly_rate:.0f}), "
-                    "No sightseeing route selected"
-                )
+                print(f"    Day {d + 1}: Hotel={hotel_name} (${nightly_rate:.0f}), No sightseeing route selected")
                 continue
 
             day_names = top100_with_waiting_time.iloc[selected_by_day[d]]["name"].tolist()
@@ -779,10 +738,7 @@ def run_gurobi_itinerary_optimization(
                 else:
                     next_name = hotels_df.iloc[next_h]["name"]
                     switch_minutes = hotel_to_hotel_time_int[current_h, next_h]
-                    print(
-                        f"      Overnight decision: switch to {next_name} "
-                        f"({switch_minutes:.1f} min relocation)"
-                    )
+                    print(f"      Overnight decision: switch to {next_name} ({switch_minutes:.1f} min relocation)")
 
         print(f"    Total hotel cost: ${total_hotel_cost:.2f} | Hotel-switch time: {total_switch_time:.1f} min")
         print(f"    Objective value: {objective_value:.1f} | Best bound: {best_bound:.1f}")
@@ -983,7 +939,13 @@ def solve_legacy_local_day_route(
         }
 
     start = time.perf_counter()
-    utility_raw = pd.Series(candidate_df.get("utility", candidate_df.get("final_poi_value", candidate_df.get("source_score", 0.0)))).astype(float).to_numpy()
+    utility_raw = (
+        pd.Series(
+            candidate_df.get("utility", candidate_df.get("final_poi_value", candidate_df.get("source_score", 0.0)))
+        )
+        .astype(float)
+        .to_numpy()
+    )
     waiting_raw = candidate_df.apply(estimate_local_route_wait_minutes, axis=1).astype(float).to_numpy()
     visit_raw = candidate_df.apply(estimate_local_route_visit_minutes, axis=1).astype(float).to_numpy()
     cost_raw = candidate_df.apply(estimate_local_route_cost, axis=1).astype(float).to_numpy()
@@ -997,7 +959,9 @@ def solve_legacy_local_day_route(
     social_weight = float(solver_overrides.get("social_score_weight", 0.45))
     must_go_weight = float(solver_overrides.get("must_go_bonus_weight", 0.85))
     must_go_signal = np.maximum(must_go_weight_raw, must_go_flag) * np.maximum(social_bonus, must_go_flag)
-    utility_signal = utility_raw + social_weight * social_bonus + must_go_weight * must_go_signal - 0.005 * detour_penalty
+    utility_signal = (
+        utility_raw + social_weight * social_bonus + must_go_weight * must_go_signal - 0.005 * detour_penalty
+    )
     utility_norm = safe_minmax(utility_signal)
     waiting_norm = safe_minmax(waiting_raw)
     cost_penalty = safe_minmax(cost_raw) ** 0.7
@@ -1047,7 +1011,9 @@ def solve_legacy_local_day_route(
     def _heuristic_result(status_suffix="heuristic_repair"):
         order = sorted(
             range(n_local),
-            key=lambda idx: float(utility_signal[idx]) - 0.012 * float(local_start[idx]) - 0.007 * float(local_return[idx]),
+            key=lambda idx: (
+                float(utility_signal[idx]) - 0.012 * float(local_start[idx]) - 0.007 * float(local_return[idx])
+            ),
             reverse=True,
         )
         selected = []
@@ -1068,11 +1034,17 @@ def solve_legacy_local_day_route(
                 break
             next_idx = max(
                 feasible,
-                key=lambda item: float(utility_signal[item[0]]) - 0.015 * float(item[1]) - 0.003 * float(local_return[item[0]]),
+                key=lambda item: (
+                    float(utility_signal[item[0]]) - 0.015 * float(item[1]) - 0.003 * float(local_return[item[0]])
+                ),
             )[0]
             selected.append(next_idx)
             remaining.remove(next_idx)
-            spent_time += float(geodesic(current_point, tuple(points[next_idx])).km * 1.25 / 38.0 * 60.0) + float(visit_raw[next_idx]) + float(waiting_raw[next_idx])
+            spent_time += (
+                float(geodesic(current_point, tuple(points[next_idx])).km * 1.25 / 38.0 * 60.0)
+                + float(visit_raw[next_idx])
+                + float(waiting_raw[next_idx])
+            )
             spent_cost += float(cost_raw[next_idx])
             current_point = tuple(points[next_idx])
         total_travel = 0.0
@@ -1085,7 +1057,9 @@ def solve_legacy_local_day_route(
         total_visit = float(sum(visit_raw[idx] for idx in selected))
         total_wait = float(sum(waiting_raw[idx] for idx in selected))
         total_cost = float(sum(cost_raw[idx] for idx in selected))
-        objective = float(sum(utility_signal[idx] for idx in selected) - 0.01 * total_travel - gamma * total_cost * 0.02)
+        objective = float(
+            sum(utility_signal[idx] for idx in selected) - 0.01 * total_travel - gamma * total_cost * 0.02
+        )
         return {
             "solver_status": status_suffix,
             "selected_positions": [int(candidate_df.iloc[idx]["_legacy_route_position"]) for idx in selected],
@@ -1096,13 +1070,25 @@ def solve_legacy_local_day_route(
             "total_waiting_minutes": total_wait,
             "total_cost": total_cost,
             "total_time_minutes": float(total_travel + total_visit + total_wait),
-            "feasible": bool(total_travel + total_visit + total_wait <= float(remaining_time) and total_cost <= float(remaining_budget)),
+            "feasible": bool(
+                total_travel + total_visit + total_wait <= float(remaining_time)
+                and total_cost <= float(remaining_budget)
+            ),
             "optimality_gap": np.nan,
             "runtime_seconds": float(time.perf_counter() - start),
         }
 
-    travel_scale = max(1.0, float(np.max(local_travel)) if local_travel.size else 1.0, float(np.max(local_start)) if local_start.size else 1.0)
-    local_arcs = [(i, j) for i in range(n_local) for j in range(n_local) if i != j and float(local_travel[i, j]) <= float(solver_cfg["max_travel"])]
+    travel_scale = max(
+        1.0,
+        float(np.max(local_travel)) if local_travel.size else 1.0,
+        float(np.max(local_start)) if local_start.size else 1.0,
+    )
+    local_arcs = [
+        (i, j)
+        for i in range(n_local)
+        for j in range(n_local)
+        if i != j and float(local_travel[i, j]) <= float(solver_cfg["max_travel"])
+    ]
     out_neighbors = {i: [] for i in range(n_local)}
     in_neighbors = {i: [] for i in range(n_local)}
     for i, j in local_arcs:
@@ -1228,7 +1214,10 @@ def solve_legacy_local_day_route(
             "total_waiting_minutes": total_wait,
             "total_cost": total_cost,
             "total_time_minutes": float(total_travel + total_visit + total_wait),
-            "feasible": bool(total_travel + total_visit + total_wait <= float(remaining_time) and total_cost <= float(remaining_budget)),
+            "feasible": bool(
+                total_travel + total_visit + total_wait <= float(remaining_time)
+                and total_cost <= float(remaining_budget)
+            ),
             "optimality_gap": float(model.MIPGap) if model.SolCount else np.nan,
             "runtime_seconds": float(time.perf_counter() - start),
         }
@@ -1428,7 +1417,9 @@ def _generate_heuristic_candidate_pool(
                 if current_idx is None
                 else float(travel_time_matrix[current_idx, chosen_attr_idx])
             )
-            local_remaining_time -= outbound + float(visiting.iloc[chosen_attr_idx]) + float(waiting.iloc[chosen_attr_idx])
+            local_remaining_time -= (
+                outbound + float(visiting.iloc[chosen_attr_idx]) + float(waiting.iloc[chosen_attr_idx])
+            )
             local_remaining_budget -= float(cost.iloc[chosen_attr_idx])
             local_wait_total += float(waiting.iloc[chosen_attr_idx])
             current_idx = chosen_attr_idx
@@ -1565,7 +1556,7 @@ def generate_receding_horizon_candidate_pool(
     utility_norm = safe_minmax(utility)
     waiting_time_norm = safe_minmax(waiting_time)
     cost_norm = safe_minmax(cost)
-    cost_penalty = cost_norm ** 0.7
+    cost_penalty = cost_norm**0.7
 
     immediate_travel = np.asarray(
         [
@@ -1606,9 +1597,7 @@ def generate_receding_horizon_candidate_pool(
     beta = float(profile_cfg["beta"])
     gamma = float(profile_cfg["gamma"])
     attraction_bonus = float(profile_cfg["attraction_bonus"])
-    max_candidate_attractions = int(
-        solver_overrides.get("max_candidate_attractions", max(candidate_pool_size * 3, 12))
-    )
+    max_candidate_attractions = int(solver_overrides.get("max_candidate_attractions", max(candidate_pool_size * 3, 12)))
 
     scored_candidates = []
     for attr_idx in candidate_indices:
@@ -1744,13 +1733,7 @@ def generate_receding_horizon_candidate_pool(
         return_penalty = scale_to_int(beta * return_travel_norm, int(solver_settings["objective_scale"]))
 
         objective = gp.quicksum(
-            (
-                utility_score[i]
-                - wait_penalty[i]
-                - cost_penalty_scaled[i]
-                + novelty_score[i]
-            )
-            * x[i]
+            (utility_score[i] - wait_penalty[i] - cost_penalty_scaled[i] + novelty_score[i]) * x[i]
             for i in range(n_local)
         )
         objective -= gp.quicksum(float(travel_penalty[i, j]) * y[i, j] for i, j in local_arcs)

@@ -9,7 +9,6 @@ from __future__ import annotations
 
 import json
 import math
-import os
 from dataclasses import dataclass
 from difflib import SequenceMatcher
 from pathlib import Path
@@ -18,7 +17,6 @@ import numpy as np
 import pandas as pd
 import requests
 from geopy.distance import geodesic
-
 
 MULTI_CITY_CATEGORY_PATTERN = (
     "Museum|Museums|Park|Parks|Garden|Aquarium|Zoo|"
@@ -388,7 +386,9 @@ def fetch_wikidata_wikipedia_stub(row: pd.Series, run_live=False) -> dict:
         }
 
 
-def deduplicate_pois(raw_df: pd.DataFrame, name_threshold=0.82, distance_threshold_km=0.30) -> tuple[pd.DataFrame, pd.DataFrame]:
+def deduplicate_pois(
+    raw_df: pd.DataFrame, name_threshold=0.82, distance_threshold_km=0.30
+) -> tuple[pd.DataFrame, pd.DataFrame]:
     if raw_df.empty:
         return raw_df.copy(), pd.DataFrame()
     df = raw_df.copy().reset_index(drop=True)
@@ -421,13 +421,15 @@ def deduplicate_pois(raw_df: pd.DataFrame, name_threshold=0.82, distance_thresho
         best_coord_row = group.sort_values(
             by="source_list",
             key=lambda s: s.astype(str).map(
-                lambda value: 0
-                if "wikidata" in value or "wikipedia" in value
-                else 1
-                if "osm" in value
-                else 2
-                if "yelp" in value
-                else 3
+                lambda value: (
+                    0
+                    if "wikidata" in value or "wikipedia" in value
+                    else 1
+                    if "osm" in value
+                    else 2
+                    if "yelp" in value
+                    else 3
+                )
             ),
         ).iloc[0]
         source_list = sorted(set("|".join(group["source_list"].astype(str)).replace(",", "|").split("|")) - {"", "nan"})
@@ -447,11 +449,20 @@ def deduplicate_pois(raw_df: pd.DataFrame, name_threshold=0.82, distance_thresho
                 "osm_tags": next((str(value) for value in group["osm_tags"] if str(value).strip()), ""),
                 "wikidata_id": next((str(value) for value in group["wikidata_id"] if str(value).strip()), ""),
                 "wikipedia_title": next((str(value) for value in group["wikipedia_title"] if str(value).strip()), ""),
-                "wikipedia_pageview_score": float(pd.to_numeric(group["wikipedia_pageview_score"], errors="coerce").fillna(0).max()),
+                "wikipedia_pageview_score": float(
+                    pd.to_numeric(group["wikipedia_pageview_score"], errors="coerce").fillna(0).max()
+                ),
                 "social_score": social_score,
                 "social_must_go": social_must_go,
                 "must_go_weight": must_go_weight,
-                "social_reason": next((str(value) for value in group.get("social_reason", pd.Series(dtype=str)).fillna("") if str(value).strip()), ""),
+                "social_reason": next(
+                    (
+                        str(value)
+                        for value in group.get("social_reason", pd.Series(dtype=str)).fillna("")
+                        if str(value).strip()
+                    ),
+                    "",
+                ),
                 "source_score": float(pd.to_numeric(group["source_score"], errors="coerce").fillna(0).max()),
                 "merged_source_count": int(len(group)),
             }
@@ -479,7 +490,9 @@ def build_enrichment_outputs(
         yelp_rows = normalize_yelp_rows(city, yelp_catalog)
         osm_rows = normalize_osm_rows(city, osm_city_poi_catalog_df)
         raw_catalog_frames.extend([yelp_rows, osm_rows])
-        city_source_rows.append({"city": city, "yelp_rows": int(len(yelp_rows)), "osm_rows": int(len(osm_rows)), "yelp_status": yelp_status})
+        city_source_rows.append(
+            {"city": city, "yelp_rows": int(len(yelp_rows)), "osm_rows": int(len(osm_rows)), "yelp_status": yelp_status}
+        )
     raw_catalog_frames.append(normalize_curated_social_rows())
     non_empty = [frame for frame in raw_catalog_frames if not frame.empty]
     raw_poi_catalog_df = pd.concat(non_empty, ignore_index=True, sort=False) if non_empty else pd.DataFrame()
@@ -534,9 +547,12 @@ def build_enrichment_outputs(
         enriched_df.at[idx, "detour_minutes"] = detour_minutes
 
     enriched_df["base_score_norm"] = minmax_series(enriched_df["source_score"])
-    enriched_df["yelp_signal_norm"] = minmax_series(enriched_df["yelp_rating"] * np.log1p(enriched_df["yelp_review_count"]))
+    enriched_df["yelp_signal_norm"] = minmax_series(
+        enriched_df["yelp_rating"] * np.log1p(enriched_df["yelp_review_count"])
+    )
     enriched_df["data_confidence"] = (
-        0.35 * enriched_df["source_list"].astype(str).str.contains("osm|openstreetmap", case=False, na=False).astype(float)
+        0.35
+        * enriched_df["source_list"].astype(str).str.contains("osm|openstreetmap", case=False, na=False).astype(float)
         + 0.25 * enriched_df["source_list"].astype(str).str.contains("yelp", case=False, na=False).astype(float)
         + 0.20 * enriched_df["source_list"].astype(str).str.contains("curated", case=False, na=False).astype(float)
         + 0.10 * enriched_df["wikidata_id"].astype(str).str.len().gt(0).astype(float)
@@ -550,7 +566,9 @@ def build_enrichment_outputs(
         + 0.30 * enriched_df["corridor_fit"]
         - 0.010 * enriched_df["detour_minutes"]
     ).clip(lower=0.0)
-    enriched_df = enriched_df.sort_values(["final_poi_value", "social_score", "source_score"], ascending=[False, False, False]).reset_index(drop=True)
+    enriched_df = enriched_df.sort_values(
+        ["final_poi_value", "social_score", "source_score"], ascending=[False, False, False]
+    ).reset_index(drop=True)
     enriched_df[CANONICAL_POI_COLUMNS].to_csv(output_dir / "production_enriched_poi_catalog.csv", index=False)
 
     source_audit_df = pd.DataFrame(city_source_rows)
@@ -572,7 +590,9 @@ def build_enrichment_outputs(
     social_signal_snapshots_df = city_summary_df.copy()
     social_signal_snapshots_df["source_name"] = "aggregate_multi_source_social_proxy"
     social_signal_snapshots_df["social_popularity_score"] = social_signal_snapshots_df["popularity_score"]
-    social_signal_snapshots_df["social_momentum_score"] = social_signal_snapshots_df[["social_signal_score", "external_poi_score"]].mean(axis=1)
+    social_signal_snapshots_df["social_momentum_score"] = social_signal_snapshots_df[
+        ["social_signal_score", "external_poi_score"]
+    ].mean(axis=1)
     social_signal_snapshots_df["crowding_risk_score"] = (
         0.55 * social_signal_snapshots_df["social_popularity_score"]
         + 0.30 * social_signal_snapshots_df["social_signal_score"]
@@ -591,14 +611,20 @@ def build_enrichment_outputs(
     }
 
 
-def build_city_catalog_summary(city_names: list[str], all_business_df: pd.DataFrame, enriched_df: pd.DataFrame) -> pd.DataFrame:
+def build_city_catalog_summary(
+    city_names: list[str], all_business_df: pd.DataFrame, enriched_df: pd.DataFrame
+) -> pd.DataFrame:
     rows = []
     for city in city_names:
         yelp_catalog, yelp_status = yelp_city_catalog(city, all_business_df)
         city_pois = enriched_df[enriched_df["city"].astype(str).str.lower().eq(city.lower())].copy()
-        yelp_review_volume = int(pd.to_numeric(yelp_catalog.get("review_count", pd.Series(dtype=float)), errors="coerce").fillna(0).sum())
+        yelp_review_volume = int(
+            pd.to_numeric(yelp_catalog.get("review_count", pd.Series(dtype=float)), errors="coerce").fillna(0).sum()
+        )
         candidate_attractions = int(len(city_pois))
-        popularity_score = max(float(CITY_POPULARITY_PRIOR.get(city, 0.50)), min(np.log1p(yelp_review_volume) / np.log1p(25000), 1.0))
+        popularity_score = max(
+            float(CITY_POPULARITY_PRIOR.get(city, 0.50)), min(np.log1p(yelp_review_volume) / np.log1p(25000), 1.0)
+        )
         social_signal_score = float(city_pois["social_score"].max()) if not city_pois.empty else 0.0
         external_poi_score = min(candidate_attractions / 60.0, 1.0)
         yelp_signal_score = min(np.log1p(yelp_review_volume) / np.log1p(5000), 1.0) if yelp_review_volume else 0.0
@@ -617,8 +643,12 @@ def build_city_catalog_summary(city_names: list[str], all_business_df: pd.DataFr
                 "candidate_attractions": candidate_attractions,
                 "mean_utility": float(city_pois["final_poi_value"].mean()) if not city_pois.empty else 0.0,
                 "total_reviews": yelp_review_volume,
-                "data_status": "multi_source_enriched" if candidate_attractions else "needs_osm_wikidata_wikipedia_ingestion",
-                "fallback_source": "multi_source_enriched_catalog" if candidate_attractions else "osm_wikidata_wikipedia_ready",
+                "data_status": "multi_source_enriched"
+                if candidate_attractions
+                else "needs_osm_wikidata_wikipedia_ingestion",
+                "fallback_source": "multi_source_enriched_catalog"
+                if candidate_attractions
+                else "osm_wikidata_wikipedia_ready",
                 "popularity_score": round(popularity_score, 3),
                 "external_poi_score": round(external_poi_score, 3),
                 "social_signal_score": round(social_signal_score, 3),
@@ -634,14 +664,22 @@ def build_city_catalog_summary(city_names: list[str], all_business_df: pd.DataFr
     return pd.DataFrame(rows)
 
 
-def hotel_price_proxy_for_city(city: str, hotels_df: pd.DataFrame, osm_city_hotel_catalog_df: pd.DataFrame, primary_city="Santa Barbara") -> float:
+def hotel_price_proxy_for_city(
+    city: str, hotels_df: pd.DataFrame, osm_city_hotel_catalog_df: pd.DataFrame, primary_city="Santa Barbara"
+) -> float:
     frames = []
     if city == primary_city and isinstance(hotels_df, pd.DataFrame) and not hotels_df.empty:
         local_hotels = hotels_df.copy()
         local_hotels["city"] = city
         frames.append(local_hotels)
-    if isinstance(osm_city_hotel_catalog_df, pd.DataFrame) and not osm_city_hotel_catalog_df.empty and "city" in osm_city_hotel_catalog_df.columns:
-        frames.append(osm_city_hotel_catalog_df[osm_city_hotel_catalog_df["city"].astype(str).str.lower().eq(city.lower())])
+    if (
+        isinstance(osm_city_hotel_catalog_df, pd.DataFrame)
+        and not osm_city_hotel_catalog_df.empty
+        and "city" in osm_city_hotel_catalog_df.columns
+    ):
+        frames.append(
+            osm_city_hotel_catalog_df[osm_city_hotel_catalog_df["city"].astype(str).str.lower().eq(city.lower())]
+        )
     if frames:
         merged = pd.concat(frames, ignore_index=True, sort=False)
         price = pd.to_numeric(merged.get("nightly_price", pd.Series(dtype=float)), errors="coerce").dropna()
@@ -669,7 +707,10 @@ def estimate_trip_budget(
     output_dir = Path(output_dir)
     day_base_sequence = expand_day_city_sequence(trip["days_by_city"])
     overnight_bases = day_base_sequence[: max(0, int(trip_days) - 1)]
-    expected_hotel_cost = sum(hotel_price_proxy_for_city(city, hotels_df, osm_city_hotel_catalog_df, primary_city=primary_city) for city in overnight_bases)
+    expected_hotel_cost = sum(
+        hotel_price_proxy_for_city(city, hotels_df, osm_city_hotel_catalog_df, primary_city=primary_city)
+        for city in overnight_bases
+    )
     low_hotel_cost = expected_hotel_cost * 0.78
     high_hotel_cost = expected_hotel_cost * 1.35
 
@@ -701,9 +742,19 @@ def estimate_trip_budget(
     budget_df = pd.DataFrame(
         [
             {"component": "hotel", "low": low_hotel_cost, "expected": expected_hotel_cost, "high": high_hotel_cost},
-            {"component": "attractions", "low": low_attraction_cost, "expected": expected_attraction_cost, "high": high_attraction_cost},
+            {
+                "component": "attractions",
+                "low": low_attraction_cost,
+                "expected": expected_attraction_cost,
+                "high": high_attraction_cost,
+            },
             {"component": "food", "low": low_food_cost, "expected": expected_food_cost, "high": high_food_cost},
-            {"component": "fuel_parking_local_transport", "low": low_drive_cost, "expected": expected_drive_cost, "high": high_drive_cost},
+            {
+                "component": "fuel_parking_local_transport",
+                "low": low_drive_cost,
+                "expected": expected_drive_cost,
+                "high": high_drive_cost,
+            },
             {"component": "buffered_total", "low": low_total, "expected": expected_total, "high": high_total},
             {"component": "soft_budget", "low": soft_budget, "expected": soft_budget, "high": soft_budget},
             {"component": "hard_budget", "low": hard_budget, "expected": hard_budget, "high": hard_budget},
@@ -886,10 +937,19 @@ def route_optimizer_oracle_reward(arm_row: pd.Series, rng: np.random.Generator) 
     bundle_quality_bonus = 0.04 * min(float(arm_row["candidate_bundle_size"]) / 20.0, 1.0)
     runtime_penalty = 0.010 * float(arm_row["estimated_solver_minutes"])
     budget_penalty = 0.35 * float(arm_row["soft_budget_penalty"])
-    return float(arm_row["reward_prior"]) + feasibility_bonus + bundle_quality_bonus - runtime_penalty - budget_penalty + rng.normal(0.0, 0.04)
+    return (
+        float(arm_row["reward_prior"])
+        + feasibility_bonus
+        + bundle_quality_bonus
+        - runtime_penalty
+        - budget_penalty
+        + rng.normal(0.0, 0.04)
+    )
 
 
-def run_hybrid_bandit_optimization_search(arms_df: pd.DataFrame, episodes=40, seed=42) -> tuple[pd.DataFrame, pd.DataFrame]:
+def run_hybrid_bandit_optimization_search(
+    arms_df: pd.DataFrame, episodes=40, seed=42
+) -> tuple[pd.DataFrame, pd.DataFrame]:
     local_rng = np.random.default_rng(seed)
     arm_ids = arms_df["arm_id"].tolist()
     pulls = {arm_id: 0 for arm_id in arm_ids}

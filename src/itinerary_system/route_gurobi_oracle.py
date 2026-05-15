@@ -75,11 +75,10 @@ def _travel_minutes(a: tuple[float, float], b: tuple[float, float]) -> float:
 def _route_stats(selected: list[int], pois: pd.DataFrame, depot: tuple[float, float]) -> tuple[float, float]:
     if not selected:
         return 0.0, 0.0
-    points = [depot] + [
-        (float(pois.loc[idx, "latitude"]), float(pois.loc[idx, "longitude"]))
-        for idx in selected
-    ] + [depot]
-    travel = sum(_travel_minutes(left, right) for left, right in zip(points[:-1], points[1:]))
+    points = (
+        [depot] + [(float(pois.loc[idx, "latitude"]), float(pois.loc[idx, "longitude"])) for idx in selected] + [depot]
+    )
+    travel = sum(_travel_minutes(left, right) for left, right in zip(points[:-1], points[1:], strict=False))
     visit = sum(_visit_minutes(pois.loc[idx]) for idx in selected)
     return float(travel), float(visit)
 
@@ -88,7 +87,9 @@ def _greedy_route_repair(candidate_df: pd.DataFrame, config: TripConfig, depot: 
     time_budget = float(config.get("time", "daily_time_budget_minutes", 720))
     max_pois = int(config.get("optimization", "max_pois_per_day", 4))
     pois = candidate_df.reset_index(drop=True).copy()
-    pois["score"] = pois.apply(lambda row: _poi_value(row) - 0.006 * float(row.get("detour_minutes", 0.0) or 0.0), axis=1)
+    pois["score"] = pois.apply(
+        lambda row: _poi_value(row) - 0.006 * float(row.get("detour_minutes", 0.0) or 0.0), axis=1
+    )
     selected: list[int] = []
     for idx in pois.sort_values("score", ascending=False).index.tolist():
         trial = selected + [int(idx)]
@@ -137,7 +138,11 @@ def solve_enriched_route_with_gurobi(
         return result
 
     max_candidates = int(candidate_size or int(config.get("optimization", "max_pois_per_day", 4)) * 3)
-    pois = candidate_df.sort_values(["final_poi_value", "social_score"], ascending=False).head(max_candidates).reset_index(drop=True)
+    pois = (
+        candidate_df.sort_values(["final_poi_value", "social_score"], ascending=False)
+        .head(max_candidates)
+        .reset_index(drop=True)
+    )
     if depot is None:
         depot = (float(pois["latitude"].mean()), float(pois["longitude"].mean()))
     time_budget = float(config.get("time", "daily_time_budget_minutes", 720))

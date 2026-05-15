@@ -1,0 +1,38 @@
+name: quality
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test-and-lint:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install package and dev tools
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e .
+          pip install ruff pytest coverage vulture
+
+      - name: Ruff format check
+        run: ruff format --check .
+
+      - name: Ruff lint
+        run: ruff check .
+
+      - name: Tests
+        run: coverage run -m pytest
+
+      - name: Coverage report
+        run: coverage report -m
+
+      - name: Dead-code report
+        run: python scripts/find_dead_code.py
+        continue-on-error: true

@@ -64,9 +64,19 @@ def estimate_budget_range(
     budget_df = pd.DataFrame(
         [
             {"component": "hotel", "low": low_hotel_cost, "expected": expected_hotel_cost, "high": high_hotel_cost},
-            {"component": "attractions", "low": low_attraction_cost, "expected": expected_attraction_cost, "high": high_attraction_cost},
+            {
+                "component": "attractions",
+                "low": low_attraction_cost,
+                "expected": expected_attraction_cost,
+                "high": high_attraction_cost,
+            },
             {"component": "food", "low": low_food_cost, "expected": expected_food_cost, "high": high_food_cost},
-            {"component": "fuel_parking_local_transport", "low": low_drive_cost, "expected": expected_drive_cost, "high": high_drive_cost},
+            {
+                "component": "fuel_parking_local_transport",
+                "low": low_drive_cost,
+                "expected": expected_drive_cost,
+                "high": high_drive_cost,
+            },
             {"component": "buffered_total", "low": low_total, "expected": expected_total, "high": high_total},
             {"component": "soft_budget", "low": soft_budget, "expected": soft_budget, "high": soft_budget},
             {"component": "hard_budget", "low": hard_budget, "expected": hard_budget, "high": hard_budget},

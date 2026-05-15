@@ -5,7 +5,6 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-
 NOTEBOOK_DIR = Path(__file__).resolve().parents[1] / "notebook"
 if str(NOTEBOOK_DIR) not in sys.path:
     sys.path.insert(0, str(NOTEBOOK_DIR))
@@ -143,7 +142,8 @@ class AdaptiveBanditPlannerTests(unittest.TestCase):
         expected_reward = (
             float(self.state.utility_norm[0])
             - float(self.state.tourist_profile["alpha"]) * (self.state.waiting_raw[0] / np.max(self.state.waiting_raw))
-            - float(self.state.tourist_profile["beta"]) * (self.state.hotel_to_attr_time[0, 0] / self.state.travel_scale)
+            - float(self.state.tourist_profile["beta"])
+            * (self.state.hotel_to_attr_time[0, 0] / self.state.travel_scale)
             - float(self.state.model_settings["gamma"]) * float(self.state.cost_penalty[0])
             + float(self.state.tourist_profile["attraction_bonus"]) * 1.0
         )

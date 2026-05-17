@@ -75,6 +75,13 @@ def route_has_geometry(route_data: Any) -> bool:
     return False
 
 
+def safe_float(value: Any, default: float = 0.0) -> float:
+    try:
+        return float(value)
+    except Exception:
+        return default
+
+
 def validate(figure_dir: Path, output_dir: Path) -> tuple[list[str], list[str]]:
     warnings: list[str] = []
     errors: list[str] = []
@@ -91,6 +98,20 @@ def validate(figure_dir: Path, output_dir: Path) -> tuple[list[str], list[str]]:
     route_index_js_path = assets / "route_index.js"
     metrics_path = assets / "dashboard_metrics.json"
     metrics_js_path = assets / "dashboard_metrics.js"
+    debug_path = assets / "debug_summary.json"
+    debug_js_path = assets / "debug_summary.js"
+    interest_path = assets / "interest_preview.json"
+    interest_js_path = assets / "interest_preview.js"
+    playback_path = assets / "playback_data.json"
+    playback_js_path = assets / "playback_data.js"
+    city_path = assets / "city_details.json"
+    city_js_path = assets / "city_details.js"
+    selected_hotels_path = assets / "selected_hotels.json"
+    selected_hotels_js_path = assets / "selected_hotels.js"
+    hotel_path = assets / "hotel_choices.json"
+    hotel_js_path = assets / "hotel_choices.js"
+    nature_path = assets / "nature_explore.json"
+    nature_js_path = assets / "nature_explore.js"
     size_report = output_dir / "production_map_artifact_size_report.csv"
 
     for path, label in [
@@ -104,6 +125,20 @@ def validate(figure_dir: Path, output_dir: Path) -> tuple[list[str], list[str]]:
         (route_index_js_path, "route index JS fallback"),
         (metrics_path, "dashboard metrics JSON"),
         (metrics_js_path, "dashboard metrics JS fallback"),
+        (debug_path, "debug summary JSON"),
+        (debug_js_path, "debug summary JS fallback"),
+        (interest_path, "interest preview JSON"),
+        (interest_js_path, "interest preview JS fallback"),
+        (playback_path, "playback data JSON"),
+        (playback_js_path, "playback data JS fallback"),
+        (city_path, "city details JSON"),
+        (city_js_path, "city details JS fallback"),
+        (selected_hotels_path, "selected hotel JSON"),
+        (selected_hotels_js_path, "selected hotel JS fallback"),
+        (hotel_path, "hotel choices JSON"),
+        (hotel_js_path, "hotel choices JS fallback"),
+        (nature_path, "nature explore JSON"),
+        (nature_js_path, "nature explore JS fallback"),
     ]:
         check_exists(path, label, errors)
 
@@ -122,6 +157,10 @@ def validate(figure_dir: Path, output_dir: Path) -> tuple[list[str], list[str]]:
             errors.append(f"Dashboard index is missing diagnostic panel: {index_html}")
         if "assets/data_loader.js" not in html:
             errors.append(f"Dashboard index is missing assets/data_loader.js: {index_html}")
+        if "Load optional layers" in html:
+            errors.append(f"Dashboard index contains stale milestone-0 optional-layer button: {index_html}")
+        if "alert(" in html:
+            errors.append(f"Dashboard index should not use alert() for milestone-1 dashboard behavior: {index_html}")
 
     if style_css.exists():
         css = style_css.read_text(encoding="utf-8", errors="replace")
@@ -130,11 +169,52 @@ def validate(figure_dir: Path, output_dir: Path) -> tuple[list[str], list[str]]:
 
     if map_js.exists():
         js = map_js.read_text(encoding="utf-8", errors="replace")
-        for token in ['L.map("map"', "loadOptionalLayers", "dashboardLogError"]:
+        for token in [
+            'L.map("map"',
+            "drawDefaultRoute",
+            "renderRouteSelector",
+            "toggleRoute",
+            "runQuickAction",
+            "loadOptionalLayers",
+            "zoomVisibleRoutes",
+            "playRouteAnimation",
+            "pauseRouteAnimation",
+            "setPlaybackStop",
+            "drawSelectedHotels",
+            "toggleSelectedHotels",
+            "toggleHotelCandidates",
+            "drawLivePreviewRoute",
+            "clearLivePreviewRoute",
+            "dashboardLogError",
+        ]:
             if token not in js:
                 errors.append(f"Dashboard JS missing required diagnostic/init token {token!r}: {map_js}")
         if "alert(" in js:
             errors.append(f"Dashboard JS should not use alert() for normal optional-layer status: {map_js}")
+
+    if dashboard_js.exists():
+        js = dashboard_js.read_text(encoding="utf-8", errors="replace")
+        for token in [
+            "renderActiveStopDetail",
+            "renderCityDetails",
+            "renderHotelChoices",
+            "setPreferredHotel",
+            "window.localStorage",
+            "renderNatureExplore",
+            "data-show-nature-layer",
+            "bindDashboardShellControls",
+            "normalizeInterestBarValues",
+            "data-interest-axis",
+            "previewScore",
+            "Build live preview route",
+            "buildLivePreviewRoute",
+            "Browser preview is approximate",
+            "data-toggle-hotel-candidates",
+        ]:
+            if token not in js:
+                errors.append(f"Dashboard panel JS missing required V2 token {token!r}: {dashboard_js}")
+        if "alert(" in js:
+            errors.append(f"Dashboard panel JS should not use alert(): {dashboard_js}")
 
     if data_loader_js.exists():
         js = data_loader_js.read_text(encoding="utf-8", errors="replace")
@@ -144,6 +224,13 @@ def validate(figure_dir: Path, output_dir: Path) -> tuple[list[str], list[str]]:
             "loadDashboardAsset",
             "loadRouteIndex",
             "loadDashboardMetrics",
+            "loadDebugSummary",
+            "loadInterestPreview",
+            "loadPlaybackData",
+            "loadCityDetails",
+            "loadSelectedHotels",
+            "loadHotelChoices",
+            "loadNatureExplore",
             "loadRouteGeoJson",
             "loadPoiJson",
             "[dashboard-loader]",
@@ -160,6 +247,13 @@ def validate(figure_dir: Path, output_dir: Path) -> tuple[list[str], list[str]]:
         except Exception as exc:
             errors.append(f"Invalid route_index.json: {route_index_path}: {exc}")
         if isinstance(route_index, dict):
+            if route_index.get("contract_version") != "core-route-index-v1":
+                errors.append(
+                    f"route_index.json must declare contract_version='core-route-index-v1': {route_index_path}"
+                )
+            for stale_key in ["default_route", "pois"]:
+                if stale_key in route_index:
+                    errors.append(f"route_index.json contains stale top-level key {stale_key!r}: {route_index_path}")
             routes = route_index.get("routes", [])
             if not routes:
                 errors.append(f"route_index.json must contain at least one route: {route_index_path}")
@@ -171,7 +265,20 @@ def validate(figure_dir: Path, output_dir: Path) -> tuple[list[str], list[str]]:
                     errors.append(f"Route index record must be an object: {route_index_path}")
                     continue
                 route_id = str(route.get("id", ""))
-                for required_key in ["id", "label", "default", "optional", "geojson", "geojson_js", "pois", "pois_js"]:
+                if "path" in route:
+                    errors.append(f"Route {route_id or '<missing id>'} contains stale key 'path': {route_index_path}")
+                for required_key in [
+                    "id",
+                    "label",
+                    "default",
+                    "optional",
+                    "family",
+                    "selector_group",
+                    "geojson",
+                    "geojson_js",
+                    "pois",
+                    "pois_js",
+                ]:
                     if required_key not in route:
                         errors.append(f"Route {route_id or '<missing id>'} missing {required_key}: {route_index_path}")
 
@@ -209,6 +316,7 @@ def validate(figure_dir: Path, output_dir: Path) -> tuple[list[str], list[str]]:
                         continue
                 poi_path = dashboard_root / poi_path_text
                 poi_js_path = dashboard_root / poi_js_text
+                is_default_route = bool(route.get("default"))
                 if poi_path.exists():
                     try:
                         poi_data = read_json(poi_path)
@@ -216,6 +324,12 @@ def validate(figure_dir: Path, output_dir: Path) -> tuple[list[str], list[str]]:
                             errors.append(f"POI JSON should be a list: {poi_path}")
                         elif not poi_data:
                             warnings.append(f"POI JSON is empty: {poi_path}")
+                        elif is_default_route and not any(point.get("lat") and point.get("lon") for point in poi_data):
+                            errors.append(f"Default route POI JSON has no playable stop coordinates: {poi_path}")
+                        elif is_default_route and not any(
+                            safe_float(point.get("display_utility")) > 0 for point in poi_data
+                        ):
+                            errors.append(f"Default route POI JSON has no nonzero display_utility: {poi_path}")
                     except Exception as exc:
                         errors.append(f"Invalid POI JSON: {poi_path}: {exc}")
                 if poi_js_path.exists():
@@ -231,19 +345,55 @@ def validate(figure_dir: Path, output_dir: Path) -> tuple[list[str], list[str]]:
             js_index = read_js_global(route_index_js_path, "DASHBOARD_ROUTE_INDEX")
             if not isinstance(js_index, dict) or not js_index.get("routes"):
                 errors.append(f"route_index.js fallback does not define routes: {route_index_js_path}")
+            elif route_index and js_index != route_index:
+                errors.append(f"route_index.js fallback disagrees with route_index.json: {route_index_js_path}")
         except Exception as exc:
             errors.append(f"Invalid route_index.js fallback: {route_index_js_path}: {exc}")
 
     if metrics_path.exists():
         try:
-            read_json(metrics_path)
+            metrics_json = read_json(metrics_path)
         except Exception as exc:
             errors.append(f"Invalid dashboard_metrics.json: {metrics_path}: {exc}")
+        else:
+            if not isinstance(metrics_json, dict):
+                errors.append(f"dashboard_metrics.json should define an object: {metrics_path}")
     if metrics_js_path.exists():
         try:
-            read_js_global(metrics_js_path, "DASHBOARD_METRICS")
+            metrics_js = read_js_global(metrics_js_path, "DASHBOARD_METRICS")
+            if metrics_path.exists():
+                try:
+                    if metrics_js != read_json(metrics_path):
+                        errors.append(f"dashboard_metrics.js disagrees with dashboard_metrics.json: {metrics_js_path}")
+                except Exception:
+                    pass
         except Exception as exc:
             errors.append(f"Invalid dashboard_metrics.js fallback: {metrics_js_path}: {exc}")
+
+    for json_path, js_path, global_name, label in [
+        (debug_path, debug_js_path, "DASHBOARD_DEBUG_SUMMARY", "debug summary"),
+        (interest_path, interest_js_path, "DASHBOARD_INTEREST_PREVIEW", "interest preview"),
+        (playback_path, playback_js_path, "DASHBOARD_PLAYBACK_DATA", "playback data"),
+        (city_path, city_js_path, "DASHBOARD_CITY_DETAILS", "city details"),
+        (selected_hotels_path, selected_hotels_js_path, "DASHBOARD_SELECTED_HOTELS", "selected hotels"),
+        (hotel_path, hotel_js_path, "DASHBOARD_HOTEL_CHOICES", "hotel choices"),
+        (nature_path, nature_js_path, "DASHBOARD_NATURE_EXPLORE", "nature explore"),
+    ]:
+        if json_path.exists():
+            try:
+                json_data = read_json(json_path)
+            except Exception as exc:
+                errors.append(f"Invalid {label} JSON: {json_path}: {exc}")
+                json_data = None
+        else:
+            json_data = None
+        if js_path.exists():
+            try:
+                js_data = read_js_global(js_path, global_name)
+                if json_data is not None and js_data != json_data:
+                    errors.append(f"{js_path.name} disagrees with {json_path.name}: {js_path}")
+            except Exception as exc:
+                errors.append(f"Invalid {label} JS fallback: {js_path}: {exc}")
 
     if not size_report.exists():
         errors.append(f"Missing artifact size report. Regenerate map artifacts to create: {size_report}")

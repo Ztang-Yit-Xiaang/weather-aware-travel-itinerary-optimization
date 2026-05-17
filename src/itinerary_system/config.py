@@ -70,7 +70,18 @@ DEFAULT_CONFIG = {
         "seeds": [42, 73, 101],
         "episode_grid": [20, 40, 80],
         "candidate_size_grid": [8, 12, 16],
-        "arms": ["scenic_social", "fastest_low_cost", "balanced", "high_must_go", "low_detour"],
+        "arms": [
+            "scenic_social",
+            "fastest_low_cost",
+            "balanced",
+            "high_must_go",
+            "low_detour",
+            "nature_heavy",
+            "scenic_parks",
+            "national_park_priority",
+            "city_nature_balanced",
+            "weather_safe_indoor_backup",
+        ],
         "available_nature_arms": [
             "nature_heavy",
             "scenic_parks",
@@ -82,8 +93,8 @@ DEFAULT_CONFIG = {
         "top_k_gurobi_repairs": 3,
     },
     "interest": {
-        "enabled": False,
-        "mode": "custom",
+        "enabled": True,
+        "mode": "balanced_interest",
         "axes": ["nature", "city", "culture", "history"],
         "weights": {
             "nature": 0.25,

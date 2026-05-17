@@ -63,12 +63,15 @@ class ConfigurableItinerarySystemTests(unittest.TestCase):
         self.assertTrue(config.get("enrichment", "use_open_meteo"))
         self.assertTrue(config.get("enrichment", "use_osrm"))
         self.assertIn("high_must_go", config.bandit_arms)
+        self.assertIn("nature_heavy", config.bandit_arms)
+        self.assertIn("national_park_priority", config.bandit_arms)
         self.assertTrue((config.to_frame()["parameter"] == "max_detour_minutes").any())
         self.assertEqual(config.get("utility", "method"), "bayesian_ucb")
         self.assertTrue(config.get("multi_objective", "use_epsilon_constraints"))
         self.assertEqual(config.get("diversity", "method"), "submodular_sqrt")
         self.assertIn("data_uncertainty", canonical_poi_columns())
-        self.assertFalse(config.get("interest", "enabled"))
+        self.assertTrue(config.get("interest", "enabled"))
+        self.assertEqual(config.get("interest", "mode"), "balanced_interest")
         self.assertIn("interest_adjusted_value", canonical_poi_columns())
         self.assertTrue(config.get("nature", "enabled"))
         self.assertEqual(config.get("nature", "nps_api_key_env"), "NPS_API_KEY")
@@ -124,7 +127,7 @@ class ConfigurableItinerarySystemTests(unittest.TestCase):
         self.assertEqual(float(output["nature_score"].iloc[0]), 0.0)
 
     def test_interest_disabled_keeps_final_value_unchanged(self):
-        config = load_trip_config(CONFIG_PATH)
+        config = load_trip_config(CONFIG_PATH, overrides={"interest": {"enabled": False}})
         frame = pd.DataFrame(
             [
                 {
@@ -315,9 +318,170 @@ class ConfigurableItinerarySystemTests(unittest.TestCase):
         )
         with tempfile.TemporaryDirectory() as tmpdir:
             root = Path(tmpdir)
+            output_dir = root / "outputs"
+            output_dir.mkdir(parents=True, exist_ok=True)
+            pd.DataFrame(
+                [
+                    {
+                        "comparison_type": "method",
+                        "comparison_label": "Method · Hierarchical + Bandit + Small Gurobi Repair",
+                        "method": "hierarchical_bandit_gurobi_repair",
+                        "method_display_name": "Hierarchical + Bandit + Small Gurobi Repair",
+                        "trip_days": 7,
+                        "day": 1,
+                        "stop_order": 1,
+                        "attraction_name": "Preferred Bandit Stop",
+                        "city": "San Francisco",
+                        "latitude": 37.7749,
+                        "longitude": -122.4194,
+                        "final_poi_value": 0.91,
+                        "interest_adjusted_value": 0.0,
+                        "hotel_name": "Optimizer Hotel",
+                        "hotel_latitude": 37.78,
+                        "hotel_longitude": -122.42,
+                    },
+                    {
+                        "comparison_type": "method",
+                        "comparison_label": "Method · Hierarchical + Bandit + Small Gurobi Repair",
+                        "method": "hierarchical_bandit_gurobi_repair",
+                        "method_display_name": "Hierarchical + Bandit + Small Gurobi Repair",
+                        "trip_days": 7,
+                        "day": 2,
+                        "stop_order": 1,
+                        "attraction_name": "Preferred Bandit Nature Stop",
+                        "city": "Mariposa",
+                        "latitude": 37.8651,
+                        "longitude": -119.5383,
+                        "final_poi_value": 0.96,
+                        "nature_region": "Yosemite National Park",
+                    },
+                    {
+                        "comparison_type": "method",
+                        "comparison_label": "Method · Hierarchical Greedy Baseline",
+                        "method": "hierarchical_greedy_baseline",
+                        "method_display_name": "Hierarchical Greedy Baseline",
+                        "trip_days": 7,
+                        "day": 1,
+                        "stop_order": 1,
+                        "attraction_name": "Nondefault Greedy Stop",
+                        "city": "Los Angeles",
+                        "latitude": 34.0522,
+                        "longitude": -118.2437,
+                        "final_poi_value": 0.5,
+                    },
+                ]
+            ).to_csv(output_dir / "production_method_route_stops.csv", index=False)
+            pd.DataFrame(
+                [
+                    {
+                        "route_key": "balanced_7_day",
+                        "comparison_label": "7-day balanced route",
+                        "profile": "balanced",
+                        "trip_days": 7,
+                        "day": 1,
+                        "stop_order": 1,
+                        "attraction_name": "Seven Day Stop",
+                        "city": "San Francisco",
+                        "latitude": 37.7749,
+                        "longitude": -122.4194,
+                        "final_poi_value": 0.7,
+                    },
+                    {
+                        "route_key": "balanced_9_day",
+                        "comparison_label": "9-day balanced route",
+                        "profile": "balanced",
+                        "trip_days": 9,
+                        "day": 1,
+                        "stop_order": 1,
+                        "attraction_name": "Nine Day Stop",
+                        "city": "Santa Barbara",
+                        "latitude": 34.4208,
+                        "longitude": -119.6982,
+                        "final_poi_value": 0.8,
+                    },
+                ]
+            ).to_csv(output_dir / "production_trip_length_route_stops.csv", index=False)
+            pd.DataFrame(
+                [
+                    {
+                        "route_key": "matrix_balanced_coast",
+                        "comparison_label": "Matrix · Balanced Coast",
+                        "profile": "balanced",
+                        "trip_days": 7,
+                        "day": 1,
+                        "stop_order": 1,
+                        "attraction_name": "Matrix San Francisco",
+                        "city": "San Francisco",
+                        "latitude": 37.7749,
+                        "longitude": -122.4194,
+                        "final_poi_value": 0.81,
+                    },
+                    {
+                        "route_key": "matrix_balanced_coast",
+                        "comparison_label": "Matrix · Balanced Coast",
+                        "profile": "balanced",
+                        "trip_days": 7,
+                        "day": 2,
+                        "stop_order": 1,
+                        "attraction_name": "Matrix Santa Barbara",
+                        "city": "Santa Barbara",
+                        "latitude": 34.4208,
+                        "longitude": -119.6982,
+                        "final_poi_value": 0.79,
+                    },
+                ]
+            ).to_csv(output_dir / "production_route_matrix_route_stops.csv", index=False)
+            pd.DataFrame(
+                [
+                    {"route_layer": "coast_context", "leg_order": 1, "from": "San Francisco", "to": "Santa Barbara"},
+                ]
+            ).to_csv(output_dir / "production_intercity_legs.csv", index=False)
+            pd.DataFrame(
+                [
+                    {
+                        "city": "San Francisco",
+                        "hotel_name": "Debug Hotel",
+                        "candidate_rank": 1,
+                        "latitude": 37.78,
+                        "longitude": -122.42,
+                    }
+                ]
+            ).to_csv(output_dir / "production_hotel_selection_debug.csv", index=False)
+            pd.DataFrame(
+                [
+                    {
+                        "name": "Must Go Pier",
+                        "city": "Santa Barbara",
+                        "latitude": 34.41,
+                        "longitude": -119.69,
+                        "final_poi_value": 0.88,
+                    }
+                ]
+            ).to_csv(output_dir / "production_social_must_go_candidates.csv", index=False)
+            pd.DataFrame(
+                [
+                    {
+                        "name": "Yosemite Valley",
+                        "city": "Yosemite Valley",
+                        "latitude": 37.7456,
+                        "longitude": -119.5936,
+                        "is_nature": True,
+                        "nature_score": 0.95,
+                        "scenic_score": 0.98,
+                        "final_poi_value": 0.9,
+                    }
+                ]
+            ).to_csv(output_dir / "production_enriched_poi_catalog.csv", index=False)
+            pd.DataFrame(
+                [{"route_key": "best", "layer_group": "selected", "method": "hierarchical_bandit_gurobi_repair"}]
+            ).to_csv(output_dir / "production_map_route_debug.csv", index=False)
+            (output_dir / "production_interest_bar_preview.json").write_text(
+                json.dumps({"bar": {"nature": 0.55, "city": 0.2}, "top_boosted_pois": [{"name": "Yosemite"}]}),
+                encoding="utf-8",
+            )
             artifacts = export_map_artifacts(
                 route_df,
-                output_dir=root / "outputs",
+                output_dir=output_dir,
                 figure_dir=root / "figures",
                 config=config,
             )
@@ -326,8 +490,14 @@ class ConfigurableItinerarySystemTests(unittest.TestCase):
             index_html = artifacts["full_interactive_dashboard"].read_text(encoding="utf-8")
             style_css = (dashboard_root / "assets" / "style.css").read_text(encoding="utf-8")
             map_js = (dashboard_root / "assets" / "map_controls.js").read_text(encoding="utf-8")
+            dashboard_js = (dashboard_root / "assets" / "dashboard.js").read_text(encoding="utf-8")
             loader_js = (dashboard_root / "assets" / "data_loader.js").read_text(encoding="utf-8")
             route_index = json.loads((dashboard_root / "assets" / "route_index.json").read_text(encoding="utf-8"))
+            poi_payload = json.loads((dashboard_root / "assets" / "pois" / "selected_route_pois.json").read_text())
+            playback_payload = json.loads((dashboard_root / "assets" / "playback_data.json").read_text())
+            selected_hotels_payload = json.loads((dashboard_root / "assets" / "selected_hotels.json").read_text())
+            hotel_payload = json.loads((dashboard_root / "assets" / "hotel_choices.json").read_text())
+            nature_payload = json.loads((dashboard_root / "assets" / "nature_explore.json").read_text())
             generated_asset_names = {
                 str(path.relative_to(dashboard_root))
                 for path in (dashboard_root / "assets").rglob("*")
@@ -340,32 +510,145 @@ class ConfigurableItinerarySystemTests(unittest.TestCase):
         self.assertIn('<div id="map">', index_html)
         self.assertIn("assets/data_loader.js", index_html)
         self.assertIn("diagnostic-panel", index_html)
+        self.assertIn("dashboard-drag-handle", index_html)
+        self.assertIn("dashboard-collapse", index_html)
+        self.assertIn("Playback", index_html)
+        self.assertIn("Active stop details", index_html)
+        self.assertIn("Hotel choices", index_html)
+        self.assertIn("Nature explore", index_html)
+        self.assertIn("Interest bars", index_html)
+        self.assertNotIn("Load optional layers", index_html)
+        self.assertNotIn("alert(", index_html)
         self.assertIn("height: 100vh", style_css)
         self.assertIn(".dashboard-panel", style_css)
+        self.assertIn(".dashboard-panel.collapsed", style_css)
+        self.assertIn(".dashboard-header", style_css)
+        self.assertIn(".playback-progress", style_css)
+        self.assertIn(".hotel-card", style_css)
+        self.assertIn(".nature-card", style_css)
+        self.assertIn(".interest-axis", style_css)
         self.assertIn('L.map("map"', map_js)
+        self.assertIn("drawDefaultRoute", map_js)
+        self.assertIn("renderRouteSelector", map_js)
+        self.assertIn("runQuickAction", map_js)
         self.assertIn("loadOptionalLayers", map_js)
+        self.assertIn("zoomVisibleRoutes", map_js)
+        self.assertIn("playRouteAnimation", map_js)
+        self.assertIn("pauseRouteAnimation", map_js)
+        self.assertIn("requestAnimationFrame", map_js)
+        self.assertIn("setPlaybackStop", map_js)
+        self.assertIn("drawSelectedHotels", map_js)
+        self.assertIn("toggleSelectedHotels", map_js)
+        self.assertIn("toggleHotelCandidates", map_js)
+        self.assertIn("drawLivePreviewRoute", map_js)
+        self.assertIn("clearLivePreviewRoute", map_js)
         self.assertNotIn("alert(", map_js)
+        self.assertIn("renderActiveStopDetail", dashboard_js)
+        self.assertIn("renderCityDetails", dashboard_js)
+        self.assertIn("renderHotelChoices", dashboard_js)
+        self.assertIn("setPreferredHotel", dashboard_js)
+        self.assertIn("window.localStorage", dashboard_js)
+        self.assertIn("renderNatureExplore", dashboard_js)
+        self.assertIn("data-show-nature-layer", dashboard_js)
+        self.assertIn("bindDashboardShellControls", dashboard_js)
+        self.assertIn("data-interest-axis", dashboard_js)
+        self.assertIn("normalizeInterestBarValues", dashboard_js)
+        self.assertIn("previewScore", dashboard_js)
+        self.assertIn("Default route is computed by Python optimization using nature-aware value weights", dashboard_js)
+        self.assertIn("National park candidates are in the Python catalog", dashboard_js)
+        self.assertIn("Build live preview route", dashboard_js)
+        self.assertIn("buildLivePreviewRoute", dashboard_js)
+        self.assertIn("Browser preview is approximate", dashboard_js)
+        self.assertIn("data-toggle-hotel-candidates", dashboard_js)
         self.assertIn("dashboardIsFileMode", loader_js)
         self.assertIn("loadScriptOnce", loader_js)
         self.assertIn("loadDashboardAsset", loader_js)
+        self.assertIn("loadDebugSummary", loader_js)
+        self.assertIn("loadInterestPreview", loader_js)
+        self.assertIn("loadPlaybackData", loader_js)
+        self.assertIn("loadCityDetails", loader_js)
+        self.assertIn("loadSelectedHotels", loader_js)
+        self.assertIn("loadHotelChoices", loader_js)
+        self.assertIn("loadNatureExplore", loader_js)
         self.assertIn("[dashboard-loader]", loader_js)
         self.assertIn("[dashboard-assets]", loader_js)
         self.assertIn("[dashboard-error]", loader_js)
         self.assertIn("assets/route_index.js", generated_asset_names)
         self.assertIn("assets/dashboard_metrics.json", generated_asset_names)
         self.assertIn("assets/dashboard_metrics.js", generated_asset_names)
+        self.assertIn("assets/debug_summary.json", generated_asset_names)
+        self.assertIn("assets/debug_summary.js", generated_asset_names)
+        self.assertIn("assets/interest_preview.json", generated_asset_names)
+        self.assertIn("assets/interest_preview.js", generated_asset_names)
+        self.assertIn("assets/playback_data.json", generated_asset_names)
+        self.assertIn("assets/playback_data.js", generated_asset_names)
+        self.assertIn("assets/city_details.json", generated_asset_names)
+        self.assertIn("assets/city_details.js", generated_asset_names)
+        self.assertIn("assets/selected_hotels.json", generated_asset_names)
+        self.assertIn("assets/selected_hotels.js", generated_asset_names)
+        self.assertIn("assets/hotel_choices.json", generated_asset_names)
+        self.assertIn("assets/hotel_choices.js", generated_asset_names)
+        self.assertIn("assets/nature_explore.json", generated_asset_names)
+        self.assertIn("assets/nature_explore.js", generated_asset_names)
         self.assertIn("assets/routes/selected_route.geojson", generated_asset_names)
         self.assertIn("assets/routes/selected_route.js", generated_asset_names)
-        self.assertIn("assets/pois/selected_pois.json", generated_asset_names)
-        self.assertIn("assets/pois/selected_pois.js", generated_asset_names)
+        self.assertIn("assets/pois/selected_route_pois.json", generated_asset_names)
+        self.assertIn("assets/pois/selected_route_pois.js", generated_asset_names)
+        self.assertEqual(route_index["contract_version"], "core-route-index-v1")
+        self.assertNotIn("default_route", route_index)
+        self.assertNotIn("pois", route_index)
+        self.assertGreater(len(route_index["routes"]), 1)
+        required_route_fields = {
+            "id",
+            "label",
+            "default",
+            "optional",
+            "family",
+            "selector_group",
+            "geojson",
+            "geojson_js",
+            "pois",
+            "pois_js",
+        }
+        self.assertTrue(
+            required_route_fields.issubset(route_index["routes"][0]),
+            route_index["routes"][0],
+        )
+        route_families = {route["family"] for route in route_index["routes"]}
+        self.assertTrue(
+            {
+                "selected",
+                "route_matrix",
+                "trip_length",
+                "method",
+                "context",
+                "hotel",
+                "must_go",
+                "nature",
+            }.issubset(route_families),
+            route_families,
+        )
         self.assertTrue(route_index["routes"][0]["default"])
-        self.assertIn("geojson", route_index["routes"][0])
-        self.assertIn("geojson_js", route_index["routes"][0])
-        self.assertIn("pois", route_index["routes"][0])
-        self.assertIn("pois_js", route_index["routes"][0])
-        self.assertTrue(route_index["routes"])
+        self.assertEqual(route_index["routes"][0]["family"], "selected")
+        self.assertEqual(route_index["routes"][0]["selector_group"], "default")
+        self.assertNotIn("path", route_index["routes"][0])
+        self.assertTrue(any(route["optional"] for route in route_index["routes"]))
+        self.assertTrue(any("days_7" in route.get("quick_groups", []) for route in route_index["routes"]))
+        self.assertTrue(any("balanced" in route.get("quick_groups", []) for route in route_index["routes"]))
+        self.assertEqual(poi_payload[0]["name"], "Preferred Bandit Stop")
+        self.assertAlmostEqual(poi_payload[0]["display_utility"], 0.91)
+        self.assertEqual(poi_payload[0]["optimization_value_source"], "final_poi_value")
+        self.assertIn("selected_route", playback_payload["routes"])
+        self.assertEqual(playback_payload["routes"]["selected_route"]["stops"][0]["name"], "Preferred Bandit Stop")
+        self.assertTrue(selected_hotels_payload["items"])
+        self.assertEqual(selected_hotels_payload["items"][0]["hotel_name"], "Optimizer Hotel")
+        self.assertIn("San Francisco", hotel_payload["cities"])
+        self.assertTrue(hotel_payload["cities"]["San Francisco"][0]["hotel_name"])
+        self.assertTrue(nature_payload["items"])
+        self.assertEqual(nature_payload["items"][0]["name"], "Yosemite Valley")
         self.assertIn("share-map-data", share_html)
         self.assertIn("l.map('map'", share_html)
+        self.assertIn("preferred bandit stop", share_html)
         self.assertNotIn("route_matrix", share_html)
         self.assertNotIn("debug route stop", share_html)
         self.assertNotIn("candidate layers", share_html)
@@ -374,6 +657,7 @@ class ConfigurableItinerarySystemTests(unittest.TestCase):
         self.assertIn("route_js_fallback", set(report["artifact_type"]))
         self.assertIn("poi_json", set(report["artifact_type"]))
         self.assertIn("poi_js_fallback", set(report["artifact_type"]))
+        self.assertTrue(report["notes"].astype(str).str.contains("optional_layer").any())
 
     def test_dashboard_validation_script_passes_and_fails_actionably(self):
         config = load_trip_config(
@@ -423,6 +707,19 @@ class ConfigurableItinerarySystemTests(unittest.TestCase):
             failed = subprocess.run(command, capture_output=True, text=True, check=False)
             self.assertNotEqual(failed.returncode, 0)
             self.assertIn("Missing route GeoJSON", failed.stdout)
+
+    def test_production_notebook_reloads_dashboard_exporter(self):
+        notebook = json.loads(
+            (REPO_ROOT / "notebook" / "production_system_blueprint.ipynb").read_text(encoding="utf-8")
+        )
+        notebook_text = "\n".join("".join(cell.get("source", [])) for cell in notebook.get("cells", []))
+
+        self.assertIn("import itinerary_system.map_exporter as map_exporter_module", notebook_text)
+        self.assertLess(notebook_text.index("map_exporter_module"), notebook_text.index("map_renderer_module"))
+        self.assertIn("import itinerary_system.map_exporter as map_exporter", notebook_text)
+        self.assertIn("map_exporter = importlib.reload(map_exporter)", notebook_text)
+        self.assertIn('print("Using map exporter:", map_exporter.__file__)', notebook_text)
+        self.assertIn("validate_dashboard_export.py", notebook_text)
 
     def test_generated_large_outputs_are_ignored(self):
         gitignore = (REPO_ROOT / ".gitignore").read_text(encoding="utf-8")

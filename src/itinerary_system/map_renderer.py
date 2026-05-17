@@ -13,10 +13,10 @@ from typing import Any
 
 import pandas as pd
 
+from . import map_exporter
 from ._legacy import import_legacy_module
 from .config import TripConfig
 from .experiment_runner import prepare_comparison_dashboard_outputs
-from .map_exporter import export_map_artifacts
 
 REQUIRED_METHODS = {
     "hierarchical_gurobi_pipeline",
@@ -559,7 +559,7 @@ def build_map(
     export_mode = str(_config_get(config, "map_export", "mode", default="both")).lower()
     if export_mode not in {"off", "none", "legacy"}:
         try:
-            export_map_artifacts(
+            map_exporter.export_map_artifacts(
                 day_plan_df,
                 output_dir=Path(merged_context["OUTPUT_DIR"]),
                 figure_dir=Path(merged_context["FIGURE_DIR"]),

@@ -499,7 +499,7 @@ class ConfigurableItinerarySystemTests(unittest.TestCase):
             hotel_payload = json.loads((dashboard_root / "assets" / "hotel_choices.json").read_text())
             nature_payload = json.loads((dashboard_root / "assets" / "nature_explore.json").read_text())
             generated_asset_names = {
-                str(path.relative_to(dashboard_root))
+                path.relative_to(dashboard_root).as_posix()
                 for path in (dashboard_root / "assets").rglob("*")
                 if path.is_file()
             }

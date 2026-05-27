@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 import math
 import re
@@ -15,6 +16,8 @@ from .config import TripConfig
 DEFAULT_DASHBOARD_ROUTE_ID = "selected_route"
 DEFAULT_DASHBOARD_METHOD = "hierarchical_bandit_gurobi_repair"
 CONTRACT_VERSION = "core-route-index-v1"
+PLAYABLE_ROUTE_FAMILIES = {"selected", "route_matrix", "trip_length", "method"}
+MARKER_ONLY_ROUTE_FAMILIES = {"hotel", "nature", "must_go"}
 
 
 def _safe_float(value: Any, default: float = 0.0) -> float:
@@ -203,6 +206,8 @@ def _route_record(
         )
     if extra:
         record.update({key: value for key, value in extra.items() if value is not None and value != ""})
+    record.setdefault("playable", family in PLAYABLE_ROUTE_FAMILIES)
+    record.setdefault("marker_only", family in MARKER_ONLY_ROUTE_FAMILIES)
     return record
 
 
@@ -261,7 +266,161 @@ def _point_records(route_df: pd.DataFrame) -> list[dict[str, Any]]:
     return records
 
 
-def _route_geojson(points: list[dict[str, Any]], route_label: str = "Selected route") -> dict[str, Any]:
+def _project_cache_dir(output_dir: Path) -> Path:
+    return output_dir.parent / "cache" if output_dir.name == "outputs" else output_dir / "cache"
+
+
+def _cached_route_geometry(
+    points: list[dict[str, Any]], output_dir: Path
+) -> tuple[list[list[float]], str, bool]:
+    """Return cached OSRM geometry in GeoJSON lon/lat order, or straight fallback."""
+    coordinates = [
+        [float(point["lat"]), float(point["lon"])]
+        for point in points
+        if point.get("lat") and point.get("lon")
+    ]
+    straight = [[lon, lat] for lat, lon in coordinates]
+    if len(coordinates) < 2:
+        return straight, "not_enough_points", False
+    cache_key = hashlib.sha1(json.dumps(coordinates).encode("utf-8")).hexdigest()[:16]
+    cache_path = _project_cache_dir(output_dir) / f"open_osrm_route_{cache_key}.json"
+    if not cache_path.exists():
+        scenic = _california_corridor_geometry(points)
+        if len(scenic) >= 2:
+            return scenic, "scenic_corridor_fallback_no_cached_osrm", False
+        return straight, "straight_line_fallback_no_cached_osrm", False
+    try:
+        payload = json.loads(cache_path.read_text(encoding="utf-8"))
+        latlon = payload.get("latlon_geometry", [])
+        routed = [
+            [float(lon), float(lat)]
+            for lat, lon in latlon
+            if lat is not None and lon is not None
+        ]
+        if len(routed) >= 2:
+            return routed, str(payload.get("status", "cached_osrm")), True
+    except Exception:
+        pass
+    scenic = _california_corridor_geometry(points)
+    if len(scenic) >= 2:
+        return scenic, "scenic_corridor_fallback_invalid_cached_osrm", False
+    return straight, "straight_line_fallback_invalid_cached_osrm", False
+
+
+def _california_corridor_geometry(points: list[dict[str, Any]]) -> list[list[float]]:
+    """Road-ish fallback corridors for the California nature demo when OSRM cache is absent."""
+    anchors: dict[str, tuple[float, float]] = {
+        "san francisco": (37.7749, -122.4194),
+        "oakdale": (37.7666, -120.8472),
+        "mariposa": (37.4849, -119.9663),
+        "yosemite valley": (37.7456, -119.5936),
+        "fresno": (36.7378, -119.7871),
+        "visalia": (36.3302, -119.2921),
+        "sequoia national park": (36.4864, -118.5658),
+        "bakersfield": (35.3733, -119.0187),
+        "lancaster": (34.6868, -118.1542),
+        "palm springs": (33.8303, -116.5453),
+        "joshua tree national park": (33.8734, -115.9010),
+        "los angeles": (34.0522, -118.2437),
+        "santa barbara": (34.4208, -119.6982),
+        "san luis obispo": (35.2828, -120.6596),
+        "hearst castle": (35.6852, -121.1666),
+        "big sur": (36.2704, -121.8081),
+        "monterey": (36.6002, -121.8947),
+        "soledad": (36.4247, -121.3263),
+        "pinnacles national park": (36.4915, -121.1825),
+    }
+    corridor: dict[tuple[str, str], list[str]] = {
+        ("san francisco", "yosemite valley"): ["oakdale", "mariposa"],
+        ("yosemite valley", "sequoia national park"): ["fresno", "visalia"],
+        ("sequoia national park", "joshua tree national park"): ["bakersfield", "lancaster", "palm springs"],
+        ("joshua tree national park", "santa barbara"): ["palm springs", "los angeles"],
+        ("santa barbara", "big sur"): ["san luis obispo", "hearst castle"],
+        ("big sur", "pinnacles national park"): ["monterey", "soledad"],
+        ("san francisco", "pinnacles national park"): ["monterey", "soledad"],
+        ("pinnacles national park", "big sur"): ["soledad", "monterey"],
+        ("big sur", "santa barbara"): ["hearst castle", "san luis obispo"],
+        ("santa barbara", "joshua tree national park"): ["los angeles", "palm springs"],
+        ("joshua tree national park", "sequoia national park"): ["palm springs", "lancaster", "bakersfield"],
+        ("sequoia national park", "yosemite valley"): ["visalia", "fresno"],
+    }
+
+    def key(point: dict[str, Any]) -> str:
+        text = f"{point.get('name', '')} {point.get('city', '')} {point.get('nature_region', '')}".lower()
+        if "yosemite" in text:
+            return "yosemite valley"
+        if "sequoia" in text:
+            return "sequoia national park"
+        if "joshua" in text:
+            return "joshua tree national park"
+        if "pinnacles" in text:
+            return "pinnacles national park"
+        if "big sur" in text:
+            return "big sur"
+        if "santa barbara" in text:
+            return "santa barbara"
+        if "san francisco" in text:
+            return "san francisco"
+        return ""
+
+    coords: list[list[float]] = []
+    for left, right in zip(points, points[1:], strict=False):
+        left_key = key(left)
+        right_key = key(right)
+        segment = [[float(left["lon"]), float(left["lat"])]]
+        for waypoint in corridor.get((left_key, right_key), []):
+            lat, lon = anchors[waypoint]
+            segment.append([lon, lat])
+        segment.append([float(right["lon"]), float(right["lat"])])
+        for coord in segment:
+            if not coords or coords[-1] != coord:
+                coords.append(coord)
+    return coords
+
+
+def _reorder_california_nature_points(points: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Prefer the demo route order SF -> Yosemite -> Sierra -> desert -> coast when those stops exist."""
+    if len(points) < 4:
+        return points
+
+    def bucket(point: dict[str, Any]) -> int:
+        text = f"{point.get('name', '')} {point.get('city', '')} {point.get('nature_region', '')}".lower()
+        if "san francisco" in text:
+            return 0
+        if "yosemite" in text:
+            return 1
+        if "sequoia" in text or "kings canyon" in text:
+            return 2
+        if "joshua" in text or "palm springs" in text:
+            return 3
+        if "santa barbara" in text or "los angeles" in text:
+            return 4
+        if "big sur" in text or "san luis obispo" in text or "hearst" in text:
+            return 5
+        if "pinnacles" in text or "monterey" in text:
+            return 6
+        return 50
+
+    buckets = {bucket(point) for point in points}
+    if not {0, 1}.issubset(buckets):
+        return points
+    ordered = sorted(enumerate(points), key=lambda item: (bucket(item[1]), item[0]))
+    output = []
+    for index, (_, point) in enumerate(ordered, start=1):
+        updated = dict(point)
+        updated["day"] = index
+        updated["stop_order"] = index
+        output.append(updated)
+    return output
+
+
+def _route_geojson(
+    points: list[dict[str, Any]],
+    route_label: str = "Selected route",
+    *,
+    draw_line: bool = True,
+    output_dir: Path | None = None,
+) -> dict[str, Any]:
     features = []
     for index, point in enumerate(points, start=1):
         features.append(
@@ -271,12 +430,23 @@ def _route_geojson(points: list[dict[str, Any]], route_label: str = "Selected ro
                 "properties": {**point, "stop_order": index},
             }
         )
-    if len(points) >= 2:
+    if draw_line and len(points) >= 2:
+        if output_dir is not None:
+            coordinates, geometry_source, road_aligned = _cached_route_geometry(points, output_dir)
+        else:
+            coordinates = [[point["lon"], point["lat"]] for point in points]
+            geometry_source = "straight_line_fallback_no_output_dir"
+            road_aligned = False
         features.append(
             {
                 "type": "Feature",
-                "geometry": {"type": "LineString", "coordinates": [[point["lon"], point["lat"]] for point in points]},
-                "properties": {"name": route_label, "role": "selected_route"},
+                "geometry": {"type": "LineString", "coordinates": coordinates},
+                "properties": {
+                    "name": route_label,
+                    "role": "selected_route",
+                    "geometry_source": geometry_source,
+                    "road_aligned": road_aligned,
+                },
             }
         )
     return {"type": "FeatureCollection", "features": features}
@@ -288,6 +458,7 @@ def _add_dashboard_record(
     route_pois: dict[str, list[dict[str, Any]]],
     record: dict[str, Any],
     points: list[dict[str, Any]],
+    output_dir: Path | None = None,
 ) -> None:
     if not points:
         return
@@ -295,13 +466,19 @@ def _add_dashboard_record(
     if route_id in route_geojsons:
         return
     records.append(record)
-    route_geojsons[route_id] = _route_geojson(points, route_label=str(record.get("label", route_id)))
+    route_geojsons[route_id] = _route_geojson(
+        points,
+        route_label=str(record.get("label", route_id)),
+        draw_line=not bool(record.get("marker_only")),
+        output_dir=output_dir,
+    )
     route_pois[route_id] = points
 
 
 def _add_grouped_route_records(
     *,
     frame: pd.DataFrame,
+    output_dir: Path,
     group_column: str,
     records: list[dict[str, Any]],
     route_geojsons: dict[str, dict[str, Any]],
@@ -338,7 +515,7 @@ def _add_grouped_route_records(
             selector_group=selector_group,
             route_df=group,
         )
-        _add_dashboard_record(records, route_geojsons, route_pois, record, points)
+        _add_dashboard_record(records, route_geojsons, route_pois, record, points, output_dir=output_dir)
 
 
 def _city_coordinate_lookup(*frames: pd.DataFrame) -> dict[str, tuple[float, float]]:
@@ -439,7 +616,7 @@ def _context_route_records(
             selector_group="context",
             extra={"quick_groups": ["context"]},
         )
-        _add_dashboard_record(records, route_geojsons, route_pois, record, points)
+        _add_dashboard_record(records, route_geojsons, route_pois, record, points, output_dir=output_dir)
 
 
 def _candidate_record_from_csv(
@@ -486,7 +663,7 @@ def _candidate_record_from_csv(
         selector_group=selector_group,
         extra={"quick_groups": [family, selector_group]},
     )
-    _add_dashboard_record(records, route_geojsons, route_pois, record, points)
+    _add_dashboard_record(records, route_geojsons, route_pois, record, points, output_dir=output_dir)
 
 
 def _debug_summary(output_dir: Path) -> dict[str, Any]:
@@ -522,6 +699,8 @@ def _interest_preview(output_dir: Path) -> dict[str, Any]:
 def _playback_data(route_records: list[dict[str, Any]], route_pois: dict[str, list[dict[str, Any]]]) -> dict[str, Any]:
     routes = {}
     for record in route_records:
+        if not record.get("playable"):
+            continue
         route_id = str(record["id"])
         stops = route_pois.get(route_id, [])
         playable = [
@@ -548,6 +727,7 @@ def _playback_data(route_records: list[dict[str, Any]], route_pois: dict[str, li
             "label": record.get("label", route_id),
             "family": record.get("family", ""),
             "default": bool(record.get("default")),
+            "playable": True,
             "stops": playable,
         }
     return {"available": True, "routes": routes}
@@ -557,6 +737,11 @@ def _city_details(
     output_dir: Path, route_records: list[dict[str, Any]], route_pois: dict[str, list[dict[str, Any]]]
 ) -> dict[str, Any]:
     city_map: dict[str, dict[str, Any]] = {}
+    hotel_choices = _hotel_choices(output_dir)
+    hotel_counts = {
+        str(city): len(candidates or [])
+        for city, candidates in (hotel_choices.get("cities", {}) if isinstance(hotel_choices, dict) else {}).items()
+    }
     for record in route_records:
         for point in route_pois.get(str(record["id"]), []):
             city = _safe_str(point.get("city") or point.get("overnight_city"))
@@ -570,8 +755,12 @@ def _city_details(
                     "days": set(),
                     "selected_stops": [],
                     "hotels": set(),
+                    "hotel_alternative_count": hotel_counts.get(city, 0),
+                    "selected_hotel": "",
                     "nature_score": 0.0,
                     "scenic_score": 0.0,
+                    "lat": _safe_float(point.get("lat", 0.0)),
+                    "lon": _safe_float(point.get("lon", 0.0)),
                 },
             )
             entry["route_ids"].add(record["id"])
@@ -579,12 +768,16 @@ def _city_details(
                 entry["days"].add(int(point.get("day", 0)))
             if point.get("hotel_name"):
                 entry["hotels"].add(point["hotel_name"])
-            if not record.get("optional") or len(entry["selected_stops"]) < 8:
+                if not entry.get("selected_hotel") and record.get("playable"):
+                    entry["selected_hotel"] = point["hotel_name"]
+            if record.get("playable") and len(entry["selected_stops"]) < 10:
                 entry["selected_stops"].append(
                     {
                         "name": point.get("name", "Stop"),
                         "day": point.get("day", 0),
                         "category": point.get("category", ""),
+                        "lat": point.get("lat"),
+                        "lon": point.get("lon"),
                         "route_label": record.get("label", ""),
                         "route_family": record.get("family", ""),
                         "utility": point.get("display_utility", point.get("final_poi_value", 0.0)),
@@ -618,6 +811,7 @@ def _city_details(
                 "route_ids": sorted(entry["route_ids"]),
                 "days": sorted(entry["days"]),
                 "hotels": sorted(entry["hotels"]),
+                "hotel_alternative_count": int(entry.get("hotel_alternative_count") or hotel_counts.get(entry["city"], 0)),
             }
         )
     cities.sort(key=lambda item: (min(item["days"]) if item["days"] else 999, item["city"]))
@@ -809,6 +1003,7 @@ def _build_dashboard_payloads(
         route_df, output_dir=output_dir, config=config, max_routes=max_routes
     )
     default_points = _point_records(selected)
+    default_points = _reorder_california_nature_points(default_points)
     records: list[dict[str, Any]] = []
     route_geojsons: dict[str, dict[str, Any]] = {}
     route_pois: dict[str, list[dict[str, Any]]] = {}
@@ -822,11 +1017,12 @@ def _build_dashboard_payloads(
         route_df=selected,
         extra={"source": route_source},
     )
-    _add_dashboard_record(records, route_geojsons, route_pois, default_record, default_points)
+    _add_dashboard_record(records, route_geojsons, route_pois, default_record, default_points, output_dir=output_dir)
 
     matrix = _read_csv_if_present(output_dir / "production_route_matrix_route_stops.csv")
     _add_grouped_route_records(
         frame=matrix,
+        output_dir=output_dir,
         group_column="route_key",
         records=records,
         route_geojsons=route_geojsons,
@@ -840,6 +1036,7 @@ def _build_dashboard_payloads(
     trip_lengths = _read_csv_if_present(output_dir / "production_trip_length_route_stops.csv")
     _add_grouped_route_records(
         frame=trip_lengths,
+        output_dir=output_dir,
         group_column="trip_days",
         records=records,
         route_geojsons=route_geojsons,
@@ -853,6 +1050,7 @@ def _build_dashboard_payloads(
     methods = _read_csv_if_present(output_dir / "production_method_route_stops.csv")
     _add_grouped_route_records(
         frame=methods,
+        output_dir=output_dir,
         group_column="method",
         records=records,
         route_geojsons=route_geojsons,
@@ -1006,7 +1204,11 @@ def _clear_stale_dashboard_assets(assets: Path, routes_dir: Path, pois_dir: Path
             continue
         for pattern in ["*.geojson", "*.json", "*.js"]:
             for path in directory.glob(pattern):
-                path.unlink(missing_ok=True)
+                try:
+                    path.unlink(missing_ok=True)
+                except PermissionError:
+                    # Some Windows sandbox ACLs allow writing but not deleting generated assets.
+                    path.write_text("", encoding="utf-8")
     for name in [
         "route_index.json",
         "route_index.js",
@@ -1031,7 +1233,11 @@ def _clear_stale_dashboard_assets(assets: Path, routes_dir: Path, pois_dir: Path
         "map_controls.js",
         "style.css",
     ]:
-        (assets / name).unlink(missing_ok=True)
+        path = assets / name
+        try:
+            path.unlink(missing_ok=True)
+        except PermissionError:
+            path.write_text("", encoding="utf-8")
 
 
 def _write_lightweight_map(path: Path, points: list[dict[str, Any]], metrics: dict[str, Any]) -> None:
@@ -1134,11 +1340,39 @@ def _write_full_dashboard(
     style_path = assets / "style.css"
     _write_text_asset(
         style_path,
-        """html,
+        """:root {
+  --forest: #0a6b53;
+  --forest-dark: #064738;
+  --teal: #18b8a5;
+  --teal-soft: #d9fbf6;
+  --coral: #f9735b;
+  --amber: #f5b642;
+  --sky: #d9edf6;
+  --panel: rgba(255, 255, 255, .94);
+  --panel-solid: #ffffff;
+  --panel-muted: #f6faf9;
+  --line: #d8e5e1;
+  --line-strong: #b8d3ca;
+  --text: #10233d;
+  --muted: #5b6b7d;
+  --shadow: 0 18px 48px rgba(14, 35, 58, .22);
+  --soft-shadow: 0 8px 22px rgba(14, 35, 58, .12);
+  --radius: 8px;
+  --fast: 160ms ease;
+  --medium: 320ms cubic-bezier(.2, .8, .2, 1);
+}
+
+html,
 body {
   height: 100%;
   margin: 0;
-  font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  color: var(--text);
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  background: #dcebf0;
+}
+
+* {
+  box-sizing: border-box;
 }
 
 #map {
@@ -1147,41 +1381,90 @@ body {
   width: 100%;
   height: 100vh;
   z-index: 0;
-  background: #e5edf2;
+  background:
+    radial-gradient(circle at 24% 24%, rgba(24, 184, 165, .22), transparent 28%),
+    linear-gradient(135deg, #cfe8ef 0%, #edf3e2 54%, #e7dac4 100%);
+}
+
+#map::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 430;
+  background:
+    linear-gradient(90deg, rgba(255,255,255,.16), transparent 18%, transparent 78%, rgba(255,255,255,.18)),
+    radial-gradient(circle at 52% 48%, transparent 0 28%, rgba(10, 107, 83, .08) 70%);
+  mix-blend-mode: soft-light;
 }
 
 .dashboard-panel {
   position: absolute;
   z-index: 1000;
-  top: 18px;
-  left: 18px;
-  width: 360px;
-  max-height: calc(100vh - 36px);
+  top: 14px;
+  left: 14px;
+  width: 392px;
+  max-height: calc(100vh - 28px);
   overflow: auto;
-  background: #fff;
-  border: 1px solid #dbe3ea;
-  border-radius: 8px;
-  box-shadow: 0 12px 30px rgba(15, 23, 42, .18);
+  background: var(--panel);
+  border: 1px solid rgba(184, 211, 202, .86);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
   padding: 12px;
+  backdrop-filter: blur(18px) saturate(1.15);
+  animation: panelEnter var(--medium);
+  scrollbar-width: thin;
+  scrollbar-color: rgba(10, 107, 83, .45) transparent;
 }
 
-.dashboard-panel h1 {
-  font-size: 17px;
-  margin: 0;
+.dashboard-panel::-webkit-scrollbar {
+  width: 8px;
+}
+
+.dashboard-panel::-webkit-scrollbar-thumb {
+  background: rgba(10, 107, 83, .34);
+  border-radius: 999px;
 }
 
 .dashboard-header {
-  display: flex;
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr) auto;
   align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  margin: 0 0 8px;
+  gap: 10px;
+  min-height: 48px;
+  margin: 0 0 10px;
   cursor: move;
   user-select: none;
 }
 
-.dashboard-header button {
-  cursor: pointer;
+.dashboard-mark {
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  color: #fff;
+  border-radius: 8px;
+  background: linear-gradient(145deg, var(--forest), var(--teal));
+  box-shadow: 0 8px 18px rgba(10, 107, 83, .24);
+}
+
+.dashboard-title-block {
+  min-width: 0;
+}
+
+.dashboard-panel h1 {
+  margin: 0;
+  color: var(--text);
+  font-size: 20px;
+  line-height: 1.05;
+  font-weight: 800;
+}
+
+.dashboard-subtitle {
+  margin-top: 3px;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.2;
 }
 
 .dashboard-panel.collapsed {
@@ -1194,115 +1477,265 @@ body {
 }
 
 .dashboard-section {
-  border-top: 1px solid #e2e8f0;
-  padding-top: 8px;
   margin-top: 8px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: linear-gradient(180deg, rgba(255,255,255,.90), rgba(246,250,249,.90));
+  overflow: hidden;
+  box-shadow: 0 1px 0 rgba(255,255,255,.9) inset;
+}
+
+.dashboard-section[open] {
+  border-color: var(--line-strong);
 }
 
 .dashboard-section summary {
+  position: relative;
+  display: flex;
+  align-items: center;
+  min-height: 38px;
+  padding: 10px 34px 9px 12px;
   cursor: pointer;
-  font-size: 13px;
-  font-weight: 700;
-  color: #334155;
+  color: var(--forest);
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0;
+  text-transform: uppercase;
+  list-style: none;
 }
 
-.dashboard-panel button {
-  border: 1px solid #cbd5e1;
-  background: #f8fafc;
-  border-radius: 6px;
-  padding: 6px 8px;
+.dashboard-section summary::-webkit-details-marker {
+  display: none;
+}
+
+.dashboard-section summary::after {
+  content: "";
+  position: absolute;
+  right: 13px;
+  width: 8px;
+  height: 8px;
+  border-right: 2px solid currentColor;
+  border-bottom: 2px solid currentColor;
+  transform: rotate(45deg);
+  transition: transform var(--fast);
+}
+
+.dashboard-section[open] summary::after {
+  transform: rotate(225deg) translate(-2px, -2px);
+}
+
+.dashboard-section > :not(summary) {
+  margin-inline: 12px;
+}
+
+.dashboard-section > :last-child {
+  margin-bottom: 12px;
+}
+
+.dashboard-panel button,
+.dashboard-panel select {
+  min-height: 30px;
+  border: 1px solid var(--line-strong);
+  background: var(--panel-solid);
+  color: var(--text);
+  border-radius: 7px;
+  padding: 7px 10px;
+  font: 700 12px/1 Inter, ui-sans-serif, system-ui, sans-serif;
   cursor: pointer;
+  transition: transform var(--fast), border-color var(--fast), box-shadow var(--fast), background var(--fast), color var(--fast);
+}
+
+.dashboard-panel button:hover,
+.dashboard-panel select:hover {
+  border-color: var(--teal);
+  box-shadow: 0 6px 16px rgba(24, 184, 165, .16);
+  transform: translateY(-1px);
+}
+
+.dashboard-panel button:focus-visible,
+.dashboard-panel select:focus-visible,
+.dashboard-panel input:focus-visible {
+  outline: 3px solid rgba(24, 184, 165, .25);
+  outline-offset: 2px;
 }
 
 .dashboard-panel button:disabled {
-  color: #94a3b8;
+  color: #93a2b1;
+  background: #eef4f3;
   cursor: default;
+  transform: none;
+  box-shadow: none;
+}
+
+#dashboard-collapse {
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  font-size: 0;
+}
+
+#dashboard-collapse::before {
+  content: "‹‹";
+  font-size: 18px;
+  line-height: 1;
+}
+
+.dashboard-panel.collapsed #dashboard-collapse::before {
+  content: "››";
+}
+
+.metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 2px;
 }
 
 .metric {
-  font-size: 12px;
-  color: #475569;
-  margin: 4px 0;
+  min-width: 0;
+  padding: 9px 8px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: rgba(255,255,255,.74);
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.25;
+}
+
+.metric b {
+  display: block;
+  margin-bottom: 3px;
+  color: var(--text);
+  font-size: 15px;
+  line-height: 1.1;
 }
 
 .status {
   min-height: 18px;
-  margin-top: 8px;
-  color: #0f766e;
+  margin-top: 9px;
+  color: var(--forest);
   font-size: 12px;
+  font-weight: 700;
   line-height: 1.35;
 }
 
 .route-selector {
   margin-top: 8px;
-  color: #334155;
+  color: #2a3f54;
   font-size: 12px;
 }
 
 .route-group-title {
-  margin: 8px 0 4px;
-  color: #0f172a;
+  margin: 10px 0 5px;
+  color: var(--forest-dark);
   font-size: 11px;
-  font-weight: 700;
+  font-weight: 800;
   text-transform: uppercase;
 }
 
 .route-row {
   display: grid;
   grid-template-columns: 18px minmax(0, 1fr);
-  gap: 6px;
+  gap: 8px;
   align-items: start;
-  padding: 5px 0;
-  border-bottom: 1px solid #f1f5f9;
+  padding: 8px 6px;
+  border: 1px solid transparent;
+  border-radius: 7px;
+  transition: background var(--fast), border-color var(--fast), transform var(--fast);
+}
+
+.route-row:hover {
+  border-color: var(--line);
+  background: rgba(217, 251, 246, .56);
+  transform: translateX(1px);
 }
 
 .route-row label {
+  min-width: 0;
   cursor: pointer;
+  font-weight: 700;
 }
 
 .route-row small {
   display: block;
-  color: #64748b;
+  margin-top: 3px;
+  color: var(--muted);
+  font-weight: 500;
   line-height: 1.3;
 }
 
 .layer-chip {
   display: inline-block;
-  margin-left: 4px;
+  margin-left: 5px;
   border-radius: 999px;
-  padding: 1px 6px;
+  padding: 2px 7px;
   color: #fff;
-  background: #64748b;
+  background: linear-gradient(135deg, var(--forest), var(--teal));
   font-size: 10px;
+  font-weight: 800;
   vertical-align: middle;
 }
 
-.quick-actions {
+.quick-actions,
+.playback-controls,
+.filter-row {
   display: flex;
   flex-wrap: wrap;
+  gap: 7px;
+  margin: 8px 0;
+}
+
+.quick-actions button:first-child {
+  color: #fff;
+  border-color: var(--forest);
+  background: linear-gradient(135deg, var(--forest), var(--teal));
+}
+
+.filter-row label {
+  display: inline-flex;
+  align-items: center;
   gap: 6px;
-  margin-top: 8px;
+  min-height: 28px;
+  padding: 5px 8px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: rgba(255,255,255,.72);
+  color: #294056;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+input[type="checkbox"] {
+  width: 14px;
+  height: 14px;
+  accent-color: var(--forest);
 }
 
 .interest-axis {
   display: grid;
-  grid-template-columns: 62px minmax(0, 1fr) 42px;
-  gap: 6px;
+  grid-template-columns: 58px minmax(0, 1fr) 42px;
+  gap: 8px;
   align-items: center;
-  margin: 7px 0;
+  margin: 8px 0;
   font-size: 12px;
+  font-weight: 700;
 }
 
 .interest-axis input[type="range"] {
   width: 100%;
-  accent-color: #0f766e;
+  accent-color: var(--teal);
+}
+
+.interest-axis strong {
+  color: var(--forest);
+  text-align: right;
 }
 
 .interest-note {
-  color: #64748b;
+  color: var(--muted);
   font-size: 11px;
   line-height: 1.35;
-  margin-top: 6px;
+  margin-top: 7px;
 }
 
 .interest-ranking {
@@ -1311,7 +1744,7 @@ body {
 
 .summary-list {
   font-size: 12px;
-  color: #475569;
+  color: var(--muted);
   line-height: 1.45;
 }
 
@@ -1319,19 +1752,11 @@ body {
   margin: 4px 0;
 }
 
-.playback-controls,
-.filter-row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  margin: 8px 0;
-}
-
 .playback-progress {
-  height: 6px;
+  height: 7px;
   overflow: hidden;
   border-radius: 999px;
-  background: #e2e8f0;
+  background: #dbe8e7;
 }
 
 .playback-progress span {
@@ -1339,7 +1764,8 @@ body {
   width: 0%;
   height: 100%;
   border-radius: inherit;
-  background: #0f766e;
+  background: linear-gradient(90deg, var(--forest), var(--teal), var(--coral));
+  box-shadow: 0 0 12px rgba(24, 184, 165, .42);
   transition: width .18s ease;
 }
 
@@ -1348,30 +1774,316 @@ body {
 .nature-card,
 .city-card {
   margin: 8px 0;
-  padding: 8px;
-  border: 1px solid #e2e8f0;
+  padding: 9px;
+  border: 1px solid var(--line);
   border-radius: 7px;
-  background: #f8fafc;
+  background: rgba(255, 255, 255, .78);
+  box-shadow: var(--soft-shadow);
   font-size: 12px;
-  color: #334155;
+  color: #2b4258;
+  transition: transform var(--fast), border-color var(--fast), box-shadow var(--fast);
+}
+
+.detail-card:hover,
+.hotel-card:hover,
+.nature-card:hover,
+.city-card:hover {
+  border-color: var(--teal);
+  transform: translateY(-1px);
 }
 
 .detail-card strong,
 .hotel-card strong,
 .nature-card strong,
 .city-card strong {
-  color: #0f172a;
+  color: var(--text);
+  font-size: 13px;
 }
 
 .hotel-card.selected,
 .hotel-card.preferred {
-  border-color: #0f766e;
-  background: #ecfdf5;
+  border-color: var(--teal);
+  background: linear-gradient(180deg, #f6fffd, var(--teal-soft));
+}
+
+.city-card-header,
+.hotel-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.city-stop-list {
+  margin: 8px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.city-stop-list li + li {
+  margin-top: 5px;
+}
+
+.city-stop-list button {
+  width: 100%;
+  min-height: 26px;
+  text-align: left;
+  background: #f7fbfa;
 }
 
 .nature-card button,
 .hotel-card button {
   margin-top: 6px;
+}
+
+.playback-pulse {
+  position: relative;
+  width: 24px;
+  height: 24px;
+  border: 3px solid #fff;
+  border-radius: 999px;
+  background: var(--coral);
+  box-shadow: 0 0 0 5px rgba(249, 115, 91, .20), 0 8px 18px rgba(15, 23, 42, .26);
+}
+
+.playback-pulse::after {
+  content: "";
+  position: absolute;
+  inset: -10px;
+  border: 2px solid rgba(249, 115, 91, .42);
+  border-radius: inherit;
+  animation: pulseRing 1.4s ease-out infinite;
+}
+
+.route-line-default {
+  filter: drop-shadow(0 0 5px rgba(24, 184, 165, .70));
+}
+
+.live-preview-line {
+  filter: drop-shadow(0 0 7px rgba(249, 115, 91, .62));
+}
+
+.route-marker,
+.nature-marker {
+  transition: filter var(--fast), opacity var(--fast);
+}
+
+.nature-marker {
+  filter: drop-shadow(0 0 5px rgba(106, 198, 89, .46));
+}
+
+.weather-chip {
+  position: absolute;
+  z-index: 960;
+  top: 16px;
+  left: 430px;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 10px;
+  align-items: center;
+  min-width: 150px;
+  padding: 10px 12px;
+  border: 1px solid rgba(184, 211, 202, .86);
+  border-radius: var(--radius);
+  background: var(--panel);
+  box-shadow: var(--soft-shadow);
+  backdrop-filter: blur(16px) saturate(1.1);
+}
+
+.weather-sun {
+  width: 26px;
+  height: 26px;
+  border-radius: 999px;
+  background: #fbbf24;
+  box-shadow: 0 0 0 5px rgba(251, 191, 36, .16), 0 0 18px rgba(251, 191, 36, .45);
+}
+
+.weather-temp {
+  display: block;
+  color: var(--text);
+  font-size: 20px;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.weather-city {
+  display: block;
+  margin-top: 3px;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.map-side-panels {
+  position: absolute;
+  z-index: 960;
+  top: 16px;
+  right: 16px;
+  display: grid;
+  gap: 12px;
+  width: 190px;
+}
+
+.map-card,
+.map-legend {
+  border: 1px solid rgba(184, 211, 202, .86);
+  border-radius: var(--radius);
+  background: var(--panel);
+  box-shadow: var(--soft-shadow);
+  backdrop-filter: blur(16px) saturate(1.1);
+}
+
+.map-card {
+  padding: 12px;
+}
+
+.map-card h2 {
+  margin: 0 0 10px;
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.map-card label,
+.risk-row,
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #26394d;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.25;
+}
+
+.map-card label + label,
+.risk-row + .risk-row {
+  margin-top: 9px;
+}
+
+.risk-dot,
+.legend-dot {
+  flex: 0 0 auto;
+  width: 11px;
+  height: 11px;
+  border-radius: 999px;
+  background: var(--teal);
+  box-shadow: 0 0 0 2px rgba(255,255,255,.86);
+}
+
+.risk-low { background: #4c9f38; }
+.risk-mid { background: #eab308; }
+.risk-high { background: #f97316; }
+.risk-very { background: #dc2626; }
+
+.map-legend {
+  position: absolute;
+  z-index: 960;
+  left: 50%;
+  bottom: 22px;
+  display: grid;
+  grid-template-columns: repeat(4, max-content);
+  gap: 12px 20px;
+  align-items: center;
+  padding: 12px 16px;
+  transform: translateX(-38%);
+}
+
+.legend-line {
+  width: 28px;
+  height: 0;
+  border-top: 3px solid var(--teal);
+  border-radius: 999px;
+}
+
+.legend-line.alt {
+  border-top-style: dashed;
+  border-top-color: #2f6fdd;
+}
+
+.legend-line.preview {
+  border-top-style: dotted;
+  border-top-color: var(--coral);
+}
+
+.legend-hotel {
+  display: grid;
+  place-items: center;
+  width: 17px;
+  height: 17px;
+  border-radius: 4px;
+  color: #fff;
+  background: #6d4fd7;
+  font-size: 11px;
+  font-weight: 900;
+}
+
+.legend-star {
+  color: #d92652;
+  font-size: 15px;
+  line-height: 1;
+}
+
+.stop-visual {
+  min-height: 112px;
+  margin: -1px -1px 9px;
+  border-radius: 7px 7px 0 0;
+  background:
+    linear-gradient(180deg, rgba(5, 31, 43, .10), rgba(5, 31, 43, .42)),
+    url("https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=600&q=80") center/cover;
+}
+
+.detail-card.active-stop-card {
+  padding: 0;
+  overflow: hidden;
+}
+
+.active-stop-body {
+  padding: 0 10px 10px;
+}
+
+.active-stop-title-row {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.day-pill {
+  flex: 0 0 auto;
+  border: 1px solid var(--line-strong);
+  border-radius: 999px;
+  padding: 3px 8px;
+  color: var(--forest);
+  background: var(--teal-soft);
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.active-stop-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px 10px;
+  margin-top: 8px;
+}
+
+.active-stop-grid div {
+  min-width: 0;
+  color: #31485e;
+}
+
+.active-stop-grid b {
+  display: block;
+  color: var(--muted);
+  font-size: 10px;
+  text-transform: uppercase;
+}
+
+.leaflet-control-zoom a,
+.leaflet-control-layers-toggle {
+  color: var(--text) !important;
 }
 
 .diagnostic-panel {
@@ -1382,10 +2094,10 @@ body {
   top: 18px;
   max-width: 420px;
   border-radius: 8px;
-  border: 1px solid #f59e0b;
+  border: 1px solid var(--amber);
   background: #fffbeb;
   color: #78350f;
-  box-shadow: 0 14px 32px rgba(15, 23, 42, .20);
+  box-shadow: var(--shadow);
   padding: 12px;
   font-size: 13px;
   line-height: 1.45;
@@ -1404,6 +2116,60 @@ body {
 
 .diagnostic-panel code {
   word-break: break-all;
+}
+
+@keyframes panelEnter {
+  from { opacity: 0; transform: translateX(-14px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes pulseRing {
+  from { opacity: .75; transform: scale(.55); }
+  to { opacity: 0; transform: scale(1.45); }
+}
+
+@media (max-width: 720px) {
+  .dashboard-panel {
+    top: 10px;
+    left: 10px;
+    right: 10px;
+    width: auto;
+    max-height: min(76vh, calc(100vh - 20px));
+  }
+
+  .dashboard-header {
+    grid-template-columns: 38px minmax(0, 1fr) auto;
+  }
+
+  .dashboard-mark {
+    width: 38px;
+    height: 38px;
+  }
+
+  .dashboard-panel h1 {
+    font-size: 18px;
+  }
+
+  .metrics-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .weather-chip,
+  .map-side-panels,
+  .map-legend {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: .001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .001ms !important;
+  }
 }
 """,
         written,
@@ -1521,6 +2287,10 @@ function dashboardLogError(message, extra) {
 }
 
 function showDashboardDiagnostic(level, checkName, assetUrl, detail) {
+  if (level !== 'error') {
+    dashboardLogLoader(`${checkName}: ${detail || ''}`, assetUrl || '');
+    return;
+  }
   const panel = document.getElementById('diagnostic-panel');
   if (!panel) return;
   panel.classList.toggle('error', level === 'error');
@@ -1735,21 +2505,21 @@ let hotelCandidatesVisible = false;
 let livePreviewLayer = null;
 
 const FAMILY_STYLES = {
-  selected: { color: '#0f766e', fill: '#2A9D8F', weight: 5, dashArray: null },
-  route_matrix: { color: '#2563eb', fill: '#60a5fa', weight: 3, dashArray: '6 6' },
-  trip_length: { color: '#9333ea', fill: '#c084fc', weight: 3, dashArray: '4 6' },
-  method: { color: '#f97316', fill: '#fdba74', weight: 3, dashArray: '2 6' },
-  context: { color: '#64748b', fill: '#94a3b8', weight: 2, dashArray: '8 8' },
-  hotel: { color: '#0f172a', fill: '#f8fafc', weight: 2, dashArray: null },
-  must_go: { color: '#be123c', fill: '#fb7185', weight: 2, dashArray: null },
-  nature: { color: '#166534', fill: '#22c55e', weight: 2, dashArray: null }
+  selected: { color: '#0a8f83', fill: '#18b8a5', weight: 6, dashArray: null },
+  route_matrix: { color: '#2f6fdd', fill: '#7eb6ff', weight: 3, dashArray: '7 7' },
+  trip_length: { color: '#7c4dd8', fill: '#bba7ff', weight: 3, dashArray: '4 7' },
+  method: { color: '#f9735b', fill: '#ffba8e', weight: 3, dashArray: '2 7' },
+  context: { color: '#66788a', fill: '#aab8c4', weight: 2, dashArray: '9 8' },
+  hotel: { color: '#6d4fd7', fill: '#d8cffd', weight: 2, dashArray: null },
+  must_go: { color: '#d92652', fill: '#ff8aa4', weight: 2, dashArray: null },
+  nature: { color: '#247a32', fill: '#6ac659', weight: 2, dashArray: null }
 };
 
 function setDashboardStatus(message, isError = false) {
   const target = document.getElementById('dashboard-status');
   if (!target) return;
   target.textContent = message;
-  target.style.color = isError ? '#b91c1c' : '#0f766e';
+  target.style.color = isError ? '#b91c1c' : '#0a6b53';
 }
 
 function assertMapContainerReady() {
@@ -1774,7 +2544,24 @@ function defaultRoute(index) {
   return routes.find(route => route.default) || routes[0] || null;
 }
 
+function isPlayableRoute(routeRecord) {
+  if (!routeRecord) return false;
+  if (routeRecord.playable === false || routeRecord.marker_only === true) return false;
+  return ['selected', 'route_matrix', 'trip_length', 'method'].includes(routeRecord.family);
+}
+
+function firstPlayableRouteId() {
+  const routes = Array.isArray(dashboardRouteIndex?.routes) ? dashboardRouteIndex.routes : [];
+  const current = routeById(activePlaybackRouteId);
+  if (isPlayableRoute(current) && activeRouteIds.has(activePlaybackRouteId)) return activePlaybackRouteId;
+  const visible = routes.find(route => activeRouteIds.has(route.id) && isPlayableRoute(route));
+  const fallback = visible || routes.find(route => route.default && isPlayableRoute(route)) || routes.find(isPlayableRoute);
+  return fallback?.id || null;
+}
+
 function playbackStops(routeId = activePlaybackRouteId) {
+  const record = routeById(routeId);
+  if (!isPlayableRoute(record)) return [];
   const fromAsset = dashboardPlaybackData?.routes?.[routeId]?.stops;
   if (Array.isArray(fromAsset) && fromAsset.length) return fromAsset;
   const loaded = loadedRouteLayers.get(routeId);
@@ -1802,12 +2589,14 @@ function ensurePlaybackMarker(stop) {
   if (!stop || !Number.isFinite(Number(stop.lat)) || !Number.isFinite(Number(stop.lon))) return null;
   const latLng = [Number(stop.lat), Number(stop.lon)];
   if (!playbackMarker) {
-    playbackMarker = L.circleMarker(latLng, {
-      radius: 10,
-      color: '#f59e0b',
-      fillColor: '#fbbf24',
-      fillOpacity: 0.95,
-      weight: 3
+    playbackMarker = L.marker(latLng, {
+      icon: L.divIcon({
+        className: 'playback-marker-icon',
+        html: '<span class="playback-pulse" aria-hidden="true"></span>',
+        iconSize: [24, 24],
+        iconAnchor: [12, 12]
+      }),
+      zIndexOffset: 900
     }).addTo(dashboardMap);
   } else {
     playbackMarker.setLatLng(latLng);
@@ -1922,7 +2711,10 @@ function routeLineStyle(routeRecord) {
     color: style.color,
     weight: style.weight,
     opacity: routeRecord?.default ? 0.88 : 0.62,
-    dashArray: style.dashArray
+    dashArray: style.dashArray,
+    lineCap: 'round',
+    lineJoin: 'round',
+    className: routeRecord?.default ? 'route-line route-line-default' : 'route-line'
   };
 }
 
@@ -1946,22 +2738,30 @@ function markerPopup(point, index, routeRecord) {
 function pointToMarker(point, index, routeRecord) {
   const style = FAMILY_STYLES[routeRecord?.family] || FAMILY_STYLES.selected;
   const marker = L.circleMarker([Number(point.lat), Number(point.lon)], {
-    radius: routeRecord?.optional ? 5 : 7,
+    radius: routeRecord?.optional ? 5 : 8,
     color: style.color,
     fillColor: style.fill,
     fillOpacity: routeRecord?.optional ? 0.72 : 0.9,
-    weight: 2
+    weight: routeRecord?.optional ? 2 : 3,
+    className: routeRecord?.family === 'nature' ? 'nature-marker' : 'route-marker'
   });
   marker.bindPopup(routeRecord?.family === 'hotel' ? hotelMarkerPopup(point, Boolean(point.selected)) : markerPopup(point, index, routeRecord));
+  marker.on('mouseover', () => marker.setStyle({ radius: routeRecord?.optional ? 7 : 10, fillOpacity: 1 }));
+  marker.on('mouseout', () => marker.setStyle({ radius: routeRecord?.optional ? 5 : 8, fillOpacity: routeRecord?.optional ? 0.72 : 0.9 }));
   marker.on('click', () => {
-    activePlaybackRouteId = routeRecord?.id || activePlaybackRouteId;
-    playbackStopIndex = index;
-    setPlaybackStop(index, false);
+    if (isPlayableRoute(routeRecord)) {
+      activePlaybackRouteId = routeRecord?.id || activePlaybackRouteId;
+      playbackStopIndex = index;
+      setPlaybackStop(index, false);
+    } else if (window.renderActiveStopDetail) {
+      window.renderActiveStopDetail(point, routeRecord, { index, total: 1 });
+    }
   });
   return marker;
 }
 
 function drawRouteGeometry(group, route, routeRecord) {
+  if (routeRecord?.marker_only) return null;
   if (!route || !Array.isArray(route.features) || route.features.length === 0) return null;
   return L.geoJSON(route, {
     filter: feature => feature.geometry && feature.geometry.type !== 'Point',
@@ -2003,8 +2803,8 @@ function drawSelectedHotels(payload) {
     if (!Number.isFinite(Number(hotel.lat)) || !Number.isFinite(Number(hotel.lon))) return;
     const marker = L.circleMarker([Number(hotel.lat), Number(hotel.lon)], {
       radius: 8,
-      color: '#6d28d9',
-      fillColor: '#ddd6fe',
+      color: '#6d4fd7',
+      fillColor: '#d8cffd',
       fillOpacity: 0.95,
       weight: 3
     });
@@ -2015,6 +2815,15 @@ function drawSelectedHotels(payload) {
     selectedHotelLayer.addTo(dashboardMap);
   }
   updateLayerToggleState();
+}
+
+function focusDashboardLocation(lat, lon, label = 'Selected location') {
+  if (!dashboardMap || !Number.isFinite(Number(lat)) || !Number.isFinite(Number(lon))) return;
+  dashboardMap.flyTo([Number(lat), Number(lon)], Math.max(dashboardMap.getZoom(), 8), { duration: 0.65 });
+  L.popup({ closeButton: true, autoClose: true })
+    .setLatLng([Number(lat), Number(lon)])
+    .setContent(`<b>${label}</b>`)
+    .openOn(dashboardMap);
 }
 
 function toggleSelectedHotels(forceVisible = null) {
@@ -2033,6 +2842,27 @@ function toggleSelectedHotels(forceVisible = null) {
   updateLayerToggleState();
 }
 
+function extendBoundsFromLayer(bounds, layer) {
+  if (!layer) return bounds;
+  try {
+    if (typeof layer.getBounds === 'function') {
+      const layerBounds = layer.getBounds();
+      if (layerBounds?.isValid && layerBounds.isValid()) bounds.extend(layerBounds);
+      return bounds;
+    }
+    if (typeof layer.getLatLng === 'function') {
+      bounds.extend(layer.getLatLng());
+      return bounds;
+    }
+    if (typeof layer.eachLayer === 'function') {
+      layer.eachLayer(child => extendBoundsFromLayer(bounds, child));
+    }
+  } catch (error) {
+    dashboardLogError('layer bounds skipped', error);
+  }
+  return bounds;
+}
+
 function fitVisibleRoutes() {
   try {
     const groups = [...activeRouteIds].map(id => loadedRouteLayers.get(id)?.group).filter(Boolean);
@@ -2040,10 +2870,10 @@ function fitVisibleRoutes() {
       setDashboardStatus('No visible routes to zoom.');
       return;
     }
-    const group = L.featureGroup(groups);
-    const bounds = group.getBounds();
+    const bounds = L.latLngBounds([]);
+    groups.forEach(group => extendBoundsFromLayer(bounds, group));
     if (bounds.isValid()) {
-      dashboardMap.fitBounds(bounds, { padding: [40, 40] });
+      dashboardMap.fitBounds(bounds, { padding: [56, 56], maxZoom: 6 });
       return;
     }
   } catch (error) {
@@ -2112,11 +2942,13 @@ async function toggleRoute(routeId, visible, fitAfter = true) {
     if (visible) {
       if (!dashboardMap.hasLayer(payload.group)) payload.group.addTo(dashboardMap);
       activeRouteIds.add(routeId);
-      setActivePlaybackRoute(routeId);
+      if (isPlayableRoute(routeRecord)) setActivePlaybackRoute(routeId);
+      else if (!firstPlayableRouteId()) setActivePlaybackRoute(defaultRoute(dashboardRouteIndex)?.id);
       setDashboardStatus(`Loaded ${routeRecord.label}`);
     } else {
       if (dashboardMap.hasLayer(payload.group)) dashboardMap.removeLayer(payload.group);
       activeRouteIds.delete(routeId);
+      if (activePlaybackRouteId === routeId) setActivePlaybackRoute(firstPlayableRouteId());
       setDashboardStatus(`Hidden ${routeRecord.label}`);
     }
     if (routeId === 'hotel_candidates') hotelCandidatesVisible = activeRouteIds.has(routeId);
@@ -2144,6 +2976,7 @@ function clearRoutes() {
     activeRouteIds.delete(routeId);
   }
   updateSelectorState();
+  setActivePlaybackRoute(firstPlayableRouteId(), false);
   setDashboardStatus('Cleared visible routes.');
 }
 
@@ -2158,17 +2991,19 @@ function drawLivePreviewRoute(points, weights = {}) {
   const latLngs = drawable.map(point => [Number(point.lat), Number(point.lon)]);
   if (latLngs.length > 1) {
     L.polyline(latLngs, {
-      color: '#db2777',
-      weight: 4,
+      color: '#f9735b',
+      weight: 5,
       opacity: 0.85,
-      dashArray: '10 8'
+      dashArray: '3 12',
+      lineCap: 'round',
+      className: 'route-line live-preview-line'
     }).addTo(livePreviewLayer);
   }
   drawable.forEach((point, index) => {
     const marker = L.circleMarker([Number(point.lat), Number(point.lon)], {
       radius: 6,
-      color: '#be185d',
-      fillColor: '#f9a8d4',
+      color: '#c94b35',
+      fillColor: '#ffb199',
       fillOpacity: 0.88,
       weight: 2
     });
@@ -2181,7 +3016,7 @@ function drawLivePreviewRoute(points, weights = {}) {
   livePreviewLayer.addTo(dashboardMap);
   try {
     const bounds = L.featureGroup(livePreviewLayer.getLayers()).getBounds();
-    if (bounds.isValid()) dashboardMap.fitBounds(bounds, { padding: [48, 48] });
+    if (bounds.isValid()) dashboardMap.fitBounds(bounds, { padding: [56, 56], maxZoom: 6 });
   } catch (error) {
     dashboardLogError('preview route fit failed', error);
   }
@@ -2445,6 +3280,7 @@ window.zoomVisibleRoutes = fitVisibleRoutes;
 window.loadOptionalLayers = loadOptionalLayers;
 window.drawLivePreviewRoute = drawLivePreviewRoute;
 window.clearLivePreviewRoute = clearLivePreviewRoute;
+window.focusDashboardLocation = focusDashboardLocation;
 window.playRouteAnimation = playRouteAnimation;
 window.pauseRouteAnimation = pauseRouteAnimation;
 window.restartRouteAnimation = restartRouteAnimation;
@@ -2461,14 +3297,19 @@ window.addEventListener('DOMContentLoaded', initMap);
   const target = document.getElementById('metrics');
   if (!target) return;
   target.innerHTML = `
-    <div class="metric"><b>Scenario:</b> ${metrics.scenario}</div>
-    <div class="metric"><b>Interest:</b> ${metrics.interest_profile}</div>
-    <div class="metric"><b>Stops:</b> ${metrics.selected_stop_count}</div>
-    <div class="metric"><b>Optimizer value:</b> ${metrics.display_utility ?? metrics.interest_adjusted_utility}</div>
-    <div class="metric"><b>Value column:</b> ${metrics.optimization_value_column || 'final_poi_value'}</div>
-    <div class="metric"><b>Nature optimization:</b> ${metrics.nature_optimization_enabled ? 'active' : 'inactive'}</div>
-    <div class="metric"><b>Default route:</b> ${metrics.default_route_label}</div>
-    <div class="metric"><b>Indexed layers:</b> ${metrics.route_record_count || 1}</div>
+    <div class="metrics-grid">
+      <div class="metric"><b>${metrics.trip_days || '7'}</b>Days</div>
+      <div class="metric"><b>${metrics.selected_stop_count}</b>Stops</div>
+      <div class="metric"><b>${metrics.display_utility ?? metrics.interest_adjusted_utility}</b>Optimizer value</div>
+      <div class="metric"><b>${metrics.nature_optimization_enabled ? 'Active' : 'Off'}</b>Nature mode</div>
+    </div>
+    <div class="summary-list">
+      <div><b>Scenario:</b> ${metrics.scenario}</div>
+      <div><b>Interest:</b> ${metrics.interest_profile}</div>
+      <div><b>Value column:</b> ${metrics.optimization_value_column || 'final_poi_value'}</div>
+      <div><b>Default route:</b> ${metrics.default_route_label}</div>
+      <div><b>Indexed layers:</b> ${metrics.route_record_count || 1}</div>
+    </div>
     <div class="interest-note">Default route is computed by Python optimization using nature-aware value weights.</div>
     <div class="interest-note">Browser hotel choices and interest bars are visual previews until you rerun the notebook.</div>
   `;
@@ -2559,10 +3400,19 @@ function renderActiveStopDetail(stop, routeRecord, playbackMeta = {}) {
     ['Weather sensitivity', compactValue(stop.weather_sensitivity)],
     ['Source', stop.source_list || '']
   ].filter(([, value]) => value !== '' && value !== undefined && value !== null);
+  const keyRows = rows.filter(([key]) => ['City', 'Category', 'Nature region', 'Optimizer value', 'Nature score', 'Scenic score', 'Weather sensitivity', 'Overnight hotel'].includes(key));
   target.innerHTML = `
-    <div class="detail-card">
-      <strong>${stop.name || 'Stop'}</strong>
-      ${rows.map(([key, value]) => `<div><b>${key}:</b> ${value}</div>`).join('')}
+    <div class="detail-card active-stop-card">
+      <div class="stop-visual" role="img" aria-label="Scenic landscape preview"></div>
+      <div class="active-stop-body">
+        <div class="active-stop-title-row">
+          <strong>${stop.name || 'Stop'}</strong>
+          <span class="day-pill">Day ${stop.day || playbackMeta.index + 1 || 1}</span>
+        </div>
+        <div class="active-stop-grid">
+          ${keyRows.map(([key, value]) => `<div><b>${key}</b>${value}</div>`).join('')}
+        </div>
+      </div>
     </div>
   `;
 }
@@ -2581,18 +3431,37 @@ function renderCityDetails(payload) {
       .filter(leg => leg.from === city.city || leg.to === city.city)
       .slice(0, 3)
       .map(leg => `${leg.from} → ${leg.to} (${compactValue(leg.estimated_drive_minutes, 0)} min)`);
+    const stops = (city.selected_stops || []).slice(0, 5).map(stop => `
+      <li>
+        <button type="button" data-focus-city-stop="${stop.name || ''}" data-lat="${stop.lat || ''}" data-lon="${stop.lon || ''}">
+          ${stop.day ? `D${stop.day}` : 'Stop'} · ${stop.name || 'Stop'}
+        </button>
+      </li>
+    `).join('');
     return `
       <div class="city-card">
-        <strong>${city.city}</strong>
+        <div class="city-card-header">
+          <strong>${city.city}</strong>
+          <button type="button" data-focus-city="${city.city}" data-lat="${city.lat || ''}" data-lon="${city.lon || ''}">Focus</button>
+        </div>
         <div>Days: ${(city.days || []).join(', ') || 'n/a'}</div>
-        <div>Route roles: ${(city.route_ids || []).slice(0, 3).join(', ') || 'n/a'}</div>
-        <div>Hotels: ${(city.hotels || []).slice(0, 2).join(', ') || 'n/a'}</div>
+        <div>Selected hotel: ${city.selected_hotel || (city.hotels || [])[0] || 'n/a'}</div>
+        <div>Hotel options: ${city.hotel_alternative_count || 0}</div>
         <div>Travel legs: ${cityLegs.join('; ') || 'n/a'}</div>
         <div>Top nature/scenic: ${compactValue(city.nature_score)} / ${compactValue(city.scenic_score)}</div>
-        <div>Stops: ${(city.selected_stops || []).slice(0, 3).map(stop => stop.name).join(', ')}</div>
+        <ul class="city-stop-list">${stops || '<li>No selected route stops exported for this city.</li>'}</ul>
       </div>
     `;
   }).join('');
+  target.querySelectorAll('[data-focus-city], [data-focus-city-stop]').forEach(button => {
+    button.addEventListener('click', () => {
+      const lat = Number(button.dataset.lat);
+      const lon = Number(button.dataset.lon);
+      if (window.focusDashboardLocation && Number.isFinite(lat) && Number.isFinite(lon)) {
+        window.focusDashboardLocation(lat, lon, button.dataset.focusCity || button.dataset.focusCityStop || 'City detail');
+      }
+    });
+  });
 }
 
 function hotelPreferenceKey(city) {
@@ -2615,6 +3484,36 @@ function setPreferredHotel(city, hotelName) {
   }
 }
 
+function clearPreferredHotel(city) {
+  try {
+    window.localStorage.removeItem(hotelPreferenceKey(city));
+  } catch {
+    return;
+  }
+}
+
+function preferredHotelPayload(payload) {
+  const cities = payload?.cities || {};
+  const preferred_hotels = {};
+  Object.keys(cities).forEach(city => {
+    const hotel = preferredHotel(city);
+    if (hotel) preferred_hotels[city] = hotel;
+  });
+  return { hotels: { preferred_hotels, preferred_hotel_bonus: 3.0 } };
+}
+
+function downloadPreferredHotelConfig(payload) {
+  const blob = new Blob([JSON.stringify(preferredHotelPayload(payload), null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = 'preferred_hotels_config.json';
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
+}
+
 function renderHotelChoices(payload) {
   const target = document.getElementById('hotel-choices');
   if (!target) return;
@@ -2627,11 +3526,14 @@ function renderHotelChoices(payload) {
   target.innerHTML = `
     <div class="filter-row">
       <button type="button" data-toggle-hotel-candidates="true">Show hotel candidates</button>
+      <button type="button" data-export-hotel-preferences="true">Export preferences</button>
     </div>
-    <div class="interest-note">Preferred hotel choices are browser-local only and do not rewrite the optimized route.</div>
+    <div class="interest-note">Preferred hotels are reversible here and can be exported into config as a soft bonus for the next optimizer rerun.</div>
   ` + cityNames.map(city => {
     const preferred = preferredHotel(city);
-    const cards = (cities[city] || []).slice(0, 6).map(hotel => {
+    const cityHotels = cities[city] || [];
+    const limited = cityHotels.length <= 1 && cityHotels.some(hotel => hotel.source === 'preview');
+    const cards = cityHotels.slice(0, 6).map(hotel => {
       const isPreferred = preferred && preferred === hotel.hotel_name;
       const classes = ['hotel-card', hotel.selected ? 'selected' : '', isPreferred ? 'preferred' : ''].join(' ');
       return `
@@ -2640,11 +3542,15 @@ function renderHotelChoices(payload) {
           <div>Rank ${hotel.candidate_rank || 'n/a'} · Score ${compactValue(hotel.hotel_score)}</div>
           <div>${hotel.selected ? 'Selected by optimizer' : 'Candidate alternative'} · ${hotel.source || ''}</div>
           <div>${hotel.selected_hotel_reason || ''}</div>
-          <button type="button" data-prefer-hotel="${hotel.hotel_name}" data-hotel-city="${city}">${isPreferred ? 'Preferred' : 'Mark preferred'}</button>
+          <div class="hotel-actions">
+            <button type="button" data-prefer-hotel="${hotel.hotel_name}" data-hotel-city="${city}">${isPreferred ? 'Preferred' : 'Prefer'}</button>
+            ${isPreferred ? `<button type="button" data-clear-hotel-preference="${city}">Clear</button>` : ''}
+          </div>
         </div>
       `;
     }).join('');
-    return `<div class="city-card"><strong>${city}</strong>${cards}</div>`;
+    const limitedNote = limited ? '<div class="interest-note">Limited hotel data: only preview fallback exported for this city. Rerun with the hotel catalog to show more options.</div>' : '';
+    return `<div class="city-card"><strong>${city}</strong>${limitedNote}${cards}</div>`;
   }).join('');
   const candidateButton = target.querySelector('[data-toggle-hotel-candidates]');
   candidateButton?.addEventListener('click', () => {
@@ -2659,6 +3565,15 @@ function renderHotelChoices(payload) {
       setPreferredHotel(button.dataset.hotelCity, button.dataset.preferHotel);
       renderHotelChoices(payload);
     });
+  });
+  target.querySelectorAll('[data-clear-hotel-preference]').forEach(button => {
+    button.addEventListener('click', () => {
+      clearPreferredHotel(button.dataset.clearHotelPreference);
+      renderHotelChoices(payload);
+    });
+  });
+  target.querySelector('[data-export-hotel-preferences]')?.addEventListener('click', () => {
+    downloadPreferredHotelConfig(payload);
   });
 }
 
@@ -2736,11 +3651,38 @@ function previewItemAxis(item, axis) {
   return Number(item[axis] ?? item[`${axis}_score`] ?? 0);
 }
 
+function previewAxisFit(item, weights) {
+  return ['nature', 'city', 'culture', 'history']
+    .reduce((sum, axis) => sum + (weights[axis] || 0) * Math.max(0, previewItemAxis(item, axis) || 0), 0);
+}
+
+function dominantPreviewAxis(item) {
+  const axes = ['nature', 'city', 'culture', 'history'];
+  return axes
+    .map(axis => ({ axis, value: Math.max(0, previewItemAxis(item, axis) || 0) }))
+    .sort((a, b) => b.value - a.value)[0] || { axis: 'nature', value: 0 };
+}
+
+function candidateAllowedByWeights(item, weights) {
+  const dominant = dominantPreviewAxis(item);
+  const dominantWeight = Number(weights[dominant.axis] || 0);
+  const nonNatureFit = ['city', 'culture', 'history']
+    .reduce((sum, axis) => sum + Number(weights[axis] || 0) * Math.max(0, previewItemAxis(item, axis) || 0), 0);
+  const natureSignal = Math.max(
+    Number(item.nature_score || 0),
+    Number(item.scenic_score || 0),
+    Number(item.park_bonus || 0),
+    item.is_national_park ? 1 : 0
+  );
+  if (Number(weights.nature || 0) <= 0.001 && natureSignal >= 0.35 && nonNatureFit < 0.18) return false;
+  if (dominant.value >= 0.35 && dominantWeight <= 0.001) return false;
+  return previewAxisFit(item, weights) > 0.02 || dominant.value < 0.2;
+}
+
 function previewScore(item, weights, lambdas) {
-  const fit = ['nature', 'city', 'culture', 'history']
-    .reduce((sum, axis) => sum + weights[axis] * previewItemAxis(item, axis), 0);
-  const base = Number(item.final_poi_value ?? item.interest_adjusted_value ?? 0);
-  const park = Number(item.park_bonus || 0);
+  const fit = previewAxisFit(item, weights);
+  const base = Math.min(Number(item.final_poi_value ?? item.interest_adjusted_value ?? 0) || 0, 120) / 120;
+  const park = Number(weights.nature || 0) * Number(item.park_bonus || 0);
   const weather = Number(item.weather_sensitivity || 0) * Number(item.weather_risk || 0.15);
   const season = Number(item.seasonality_risk || 0);
   const detour = Number(item.detour_minutes || 0);
@@ -2804,14 +3746,13 @@ function renderInterestPreview(preview) {
     const candidates = (preview.top_boosted_pois || [])
       .map(item => ({ ...item, preview_score: previewScore(item, normalized, preview.lambdas || {}) }))
       .sort((a, b) => b.preview_score - a.preview_score)
-      .slice(0, 8);
+    .filter(item => candidateAllowedByWeights(item, normalized))
+    .slice(0, 8);
     target.querySelector('#interest-ranking').innerHTML = candidates.map(item => `
       <div class="nature-card">
         <strong>${item.name}</strong>
         <div>${item.city || ''} · ${item.nature_region || item.park_type || ''}</div>
-        <div>Preview score: ${compactValue(item.preview_score)} · Fit: ${compactValue(
-          ['nature', 'city', 'culture', 'history'].reduce((sum, axis) => sum + normalized[axis] * previewItemAxis(item, axis), 0)
-        )}</div>
+        <div>Preview score: ${compactValue(item.preview_score)} · Fit: ${compactValue(previewAxisFit(item, normalized))}</div>
       </div>
     `).join('');
   };
@@ -2832,12 +3773,14 @@ function renderInterestPreview(preview) {
         seen.add(key);
         return true;
       })
+      .filter(item => candidateAllowedByWeights(item, weights))
       .map(item => ({ ...item, preview_score: previewScore(item, weights, preview.lambdas || {}) }))
       .sort((a, b) => b.preview_score - a.preview_score);
   };
   const buildLivePreviewRoute = () => {
     const weights = currentWeights();
-    const candidates = rankedPreviewCandidates(weights).slice(0, Math.max(4, Math.min(10, Number(window.dashboardMetrics?.selected_stop_count || 8))));
+    const maxStops = Math.max(2, Math.min(10, Number(window.dashboardMetrics?.selected_stop_count || 8)));
+    const candidates = rankedPreviewCandidates(weights).slice(0, maxStops);
     if (!candidates.length) {
       const status = document.getElementById('dashboard-status');
       if (status) {
@@ -2876,16 +3819,58 @@ window.renderInterestPreview = renderInterestPreview;
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Full Interactive Dashboard</title>
+  <title>Weather-Aware Itinerary Dashboard</title>
   <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
   <link rel="stylesheet" href="assets/style.css" />
 </head>
 <body>
   <div id="map"></div>
   <div id="diagnostic-panel" class="diagnostic-panel" role="status" aria-live="polite"></div>
+  <aside class="weather-chip" aria-label="Current weather preview">
+    <span class="weather-sun" aria-hidden="true"></span>
+    <span>
+      <span class="weather-temp">62°F</span>
+      <span class="weather-city">Clear · San Francisco</span>
+    </span>
+  </aside>
+  <aside class="map-side-panels" aria-label="Map context controls">
+    <section class="map-card" aria-label="Map layers">
+      <h2>Map layers</h2>
+      <label><input type="checkbox" checked readonly /> Terrain</label>
+      <label><input type="checkbox" checked readonly /> Roads</label>
+      <label><input type="checkbox" checked readonly /> Labels</label>
+      <label><input type="checkbox" checked readonly /> Weather risk</label>
+    </section>
+    <section class="map-card" aria-label="Weather risk legend">
+      <h2>Weather risk (7-day)</h2>
+      <div class="risk-row"><span class="risk-dot risk-low"></span>Low (0 - 0.25)</div>
+      <div class="risk-row"><span class="risk-dot risk-mid"></span>Moderate (0.25 - 0.5)</div>
+      <div class="risk-row"><span class="risk-dot risk-high"></span>High (0.5 - 0.75)</div>
+      <div class="risk-row"><span class="risk-dot risk-very"></span>Very high (0.75 - 1)</div>
+    </section>
+  </aside>
+  <aside class="map-legend" aria-label="Route legend">
+    <div class="legend-item"><span class="legend-line"></span>Optimized route</div>
+    <div class="legend-item"><span class="legend-line alt"></span>Alternative route</div>
+    <div class="legend-item"><span class="legend-hotel">H</span>Selected hotel</div>
+    <div class="legend-item"><span class="legend-dot risk-low"></span>Nature / park spot</div>
+    <div class="legend-item"><span class="risk-dot risk-high"></span>Hotel candidate</div>
+    <div class="legend-item"><span class="legend-star">*</span>Must-see stop</div>
+    <div class="legend-item"><span class="legend-line preview"></span>Playback trail</div>
+    <div class="legend-item"><span class="legend-dot"></span>Route stop</div>
+  </aside>
   <section class="dashboard-panel">
     <div id="dashboard-drag-handle" class="dashboard-header">
-      <h1>Full Interactive Dashboard</h1>
+      <div class="dashboard-mark" aria-hidden="true">
+        <svg viewBox="0 0 48 48" width="30" height="30" focusable="false">
+          <path d="M5 34 19 10l8 14 5-8 11 18H5Z" fill="currentColor" opacity=".95"/>
+          <path d="M5 38c8-5 16-5 24 0 5 3 10 3 14 0" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round"/>
+        </svg>
+      </div>
+      <div class="dashboard-title-block">
+        <h1>Weather-Aware Itinerary</h1>
+        <div class="dashboard-subtitle">California nature and national parks</div>
+      </div>
       <button id="dashboard-collapse" type="button">Collapse</button>
     </div>
     <div id="dashboard-content">
@@ -2909,11 +3894,11 @@ window.renderInterestPreview = renderInterestPreview;
         <summary>Playback</summary>
         <div class="summary-list"><b>Route:</b> <span id="playback-route-label">Loading...</span></div>
         <div class="playback-controls">
-          <button id="playback-play" type="button">Play</button>
-          <button id="playback-pause" type="button">Pause</button>
-          <button id="playback-restart" type="button">Restart</button>
-          <button id="playback-prev" type="button">Prev</button>
-          <button id="playback-next" type="button">Next</button>
+          <button id="playback-restart" type="button" aria-label="Restart route playback">|&lt;</button>
+          <button id="playback-prev" type="button" aria-label="Previous stop">&lt;&lt;</button>
+          <button id="playback-play" type="button" aria-label="Play route animation">Play</button>
+          <button id="playback-pause" type="button" aria-label="Pause route animation">Pause</button>
+          <button id="playback-next" type="button" aria-label="Next stop">&gt;&gt;</button>
         </div>
         <div class="playback-controls">
           <select id="playback-speed" aria-label="Playback speed">
@@ -3059,7 +4044,7 @@ def export_map_artifacts(
             route_notes[str(record["pois"])] = record
             route_notes[str(record["pois_js"])] = record
         for path in written:
-            rel_path = str(path.relative_to(dashboard_root)) if dashboard_root in path.parents else path.name
+            rel_path = path.relative_to(dashboard_root).as_posix() if dashboard_root in path.parents else path.name
             record = route_notes.get(rel_path)
             record_note = ""
             if record:

@@ -1597,6 +1597,45 @@ def _write_hotel_selection_debug(
     return debug_df
 
 
+def _hotel_preference_map(config: TripConfig) -> dict[str, str]:
+    raw = config.get("hotels", "preferred_hotels", {})
+    if not isinstance(raw, dict):
+        return {}
+    return {str(city).strip().lower(): str(hotel).strip() for city, hotel in raw.items() if str(hotel).strip()}
+
+
+def _apply_preferred_hotel_soft_bonus(
+    hotel_catalog: pd.DataFrame,
+    selected_hotel,
+    *,
+    city: str,
+    config: TripConfig,
+):
+    preferences = _hotel_preference_map(config)
+    preferred_name = preferences.get(str(city).strip().lower())
+    if not preferred_name or hotel_catalog.empty:
+        return selected_hotel
+    preferred_rows = hotel_catalog[
+        hotel_catalog.get("name", pd.Series(dtype=str)).astype(str).str.lower().eq(preferred_name.lower())
+    ]
+    if preferred_rows.empty:
+        return selected_hotel
+    selected_name = str(selected_hotel.get("name", "") if hasattr(selected_hotel, "get") else "")
+    if selected_name.lower() == preferred_name.lower():
+        return selected_hotel
+    bonus = float(config.get("hotels", "preferred_hotel_bonus", 3.0) or 0.0)
+    ranked = hotel_catalog.copy().reset_index(drop=True)
+    ranked["preference_score"] = -ranked.index.astype(float)
+    ranked.loc[
+        ranked.get("name", pd.Series(dtype=str)).astype(str).str.lower().eq(preferred_name.lower()),
+        "preference_score",
+    ] += bonus
+    preferred_winner = ranked.sort_values("preference_score", ascending=False).iloc[0]
+    if str(preferred_winner.get("name", "")).lower() == preferred_name.lower():
+        return preferred_winner
+    return selected_hotel
+
+
 def _hierarchical_method_route_outputs(
     *,
     context: dict,
@@ -1643,6 +1682,7 @@ def _hierarchical_method_route_outputs(
             stops_per_day=stops_per_day,
             profile_config=profile_config,
         )
+        hotel = _apply_preferred_hotel_soft_bonus(hotel_catalog, hotel, city=city, config=config)
         selected_hotels_by_city[city] = hotel
 
     budget_context = build_canonical_budget_context(

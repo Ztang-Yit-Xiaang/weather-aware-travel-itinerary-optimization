@@ -37,6 +37,8 @@ DEFAULT_CONFIG = {
         "allow_visit_city_without_hotel": True,
         "charge_hotel_only_for_overnight_base": True,
         "hotel_price_fallback": 150,
+        "preferred_hotels": {},
+        "preferred_hotel_bonus": 3.0,
     },
     "enrichment": {
         "run_live_apis": False,

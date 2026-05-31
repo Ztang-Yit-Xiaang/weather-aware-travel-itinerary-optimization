@@ -56,6 +56,13 @@ DEFAULT_SCENARIO_ROUTES = {
     ],
 }
 
+REQUIRED_NATURE_ANCHOR_GATEWAYS = {
+    "yosemite": ["Mariposa", "Yosemite Valley", "Oakhurst", "Fresno"],
+    "sequoia": ["Three Rivers", "Visalia", "Fresno"],
+    "kings canyon": ["Three Rivers", "Visalia", "Fresno"],
+    "joshua tree": ["Palm Springs", "Twentynine Palms", "Los Angeles"],
+}
+
 
 def city_score(city: str, city_catalog_summary_df: pd.DataFrame, default=0.45) -> float:
     row = city_catalog_summary_df[city_catalog_summary_df["city"].astype(str).eq(city)]
@@ -150,6 +157,92 @@ def scenario_route_options(config: TripConfig) -> list[dict]:
     ]
 
 
+def _is_statewide_nature_heavy(config: TripConfig) -> bool:
+    scenario = str(config.get("trip", "scenario", "california_coast")).lower()
+    interest = str(config.get("interest", "mode", config.get("trip", "interest_profile", ""))).lower()
+    return scenario == "california_statewide_nature" and interest == "nature_heavy"
+
+
+def _configured_required_nature_anchors(config: TripConfig) -> list[str]:
+    if not _is_statewide_nature_heavy(config):
+        return []
+    raw = config.get("nature", "required_selected_anchors_for_nature_heavy", [])
+    if isinstance(raw, str):
+        raw = [part.strip() for part in raw.split(",") if part.strip()]
+    if not isinstance(raw, list):
+        return []
+    return [str(anchor).strip() for anchor in raw if str(anchor).strip()]
+
+
+def _anchor_key(anchor: str) -> str:
+    return str(anchor or "").lower().replace("national park", "").strip()
+
+
+def _route_regions_contain_anchor(route_nature_regions: list[str] | None, anchor: str) -> bool:
+    anchor_key = _anchor_key(anchor)
+    region_text = " | ".join(str(region) for region in (route_nature_regions or [])).lower()
+    return bool(anchor_key and anchor_key in region_text)
+
+
+def _required_anchor_gateway_for_sequence(anchor: str, candidate_cities: list[str]) -> str | None:
+    candidate_set = set(candidate_cities)
+    for gateway in REQUIRED_NATURE_ANCHOR_GATEWAYS.get(_anchor_key(anchor), []):
+        if gateway in candidate_set:
+            return gateway
+    return None
+
+
+def _mandatory_required_anchor_bases(
+    config: TripConfig,
+    candidate_cities: list[str],
+    route_nature_regions: list[str] | None,
+) -> list[str]:
+    if str(config.get("nature", "anchor_inclusion_policy", "")).lower() != "require_if_feasible_else_explain":
+        return []
+    mandatory = []
+    for anchor in _configured_required_nature_anchors(config):
+        if not _route_regions_contain_anchor(route_nature_regions, anchor):
+            continue
+        gateway = _required_anchor_gateway_for_sequence(anchor, candidate_cities)
+        if gateway:
+            mandatory.append(gateway)
+    return unique_in_order(mandatory)
+
+
+def _required_anchor_coverage_component(
+    config: TripConfig,
+    base_cities: list[str],
+    route_nature_regions: list[str] | None,
+) -> dict:
+    required = [
+        anchor
+        for anchor in _configured_required_nature_anchors(config)
+        if _route_regions_contain_anchor(route_nature_regions, anchor)
+    ]
+    if not required:
+        return {
+            "covered": [],
+            "missed": [],
+            "component": 0.0,
+        }
+    base_set = set(base_cities)
+    covered = []
+    missed = []
+    for anchor in required:
+        gateways = REQUIRED_NATURE_ANCHOR_GATEWAYS.get(_anchor_key(anchor), [])
+        if any(gateway in base_set for gateway in gateways):
+            covered.append(anchor)
+        else:
+            missed.append(anchor)
+    bonus = float(config.get("nature", "required_anchor_bonus_weight", 2.25))
+    penalty = float(config.get("nature", "required_anchor_skip_penalty_weight", 4.0))
+    return {
+        "covered": covered,
+        "missed": missed,
+        "component": bonus * len(covered) - penalty * len(missed),
+    }
+
+
 def build_gateway_scenarios(config: TripConfig) -> list[tuple[str, str]]:
     return unique_in_order(
         [(option["gateway_start"], option["gateway_end"]) for option in scenario_route_options(config)]
@@ -180,7 +273,13 @@ def generate_day_allocations(config: TripConfig, cities: list[str]) -> list[dict
     return allocations
 
 
-def generate_base_city_sets(config: TripConfig, sequence: list[str], start_city: str, end_city: str) -> list[list[str]]:
+def generate_base_city_sets(
+    config: TripConfig,
+    sequence: list[str],
+    start_city: str,
+    end_city: str,
+    route_nature_regions: list[str] | None = None,
+) -> list[list[str]]:
     """Generate possible overnight/base city subsets.
 
     The full sequence can include pass-through cities. Only the returned base
@@ -197,6 +296,7 @@ def generate_base_city_sets(config: TripConfig, sequence: list[str], start_city:
     mandatory = [start_city]
     if end_city != start_city:
         mandatory.append(end_city)
+    mandatory.extend(_mandatory_required_anchor_bases(config, candidate_cities, route_nature_regions))
     mandatory = [city for city in unique_in_order(mandatory) if city in candidate_cities]
     max_base_count = max(max_base_count, len(mandatory))
 
@@ -433,7 +533,14 @@ def candidate_plans(config: TripConfig, city_catalog_summary_df: pd.DataFrame) -
         sequence_cities = unique_in_order(sequence)
         leg_minutes = [drive_minutes_between_cities(sequence[i], sequence[i + 1]) for i in range(len(sequence) - 1)]
         total_drive_minutes = float(sum(leg_minutes))
-        for base_cities in generate_base_city_sets(config, base_sequence, start_city, end_city):
+        route_nature_regions = route_option.get("nature_regions", [])
+        for base_cities in generate_base_city_sets(
+            config,
+            base_sequence,
+            start_city,
+            end_city,
+            route_nature_regions=route_nature_regions,
+        ):
             pass_through_cities = [city for city in sequence_cities if city not in set(base_cities)]
             for allocation in generate_day_allocations(config, base_cities):
                 city_value = sum(
@@ -462,6 +569,18 @@ def candidate_plans(config: TripConfig, city_catalog_summary_df: pd.DataFrame) -
                     - endpoint_penalty
                     - switch_penalty
                 )
+                required_anchor_component = _required_anchor_coverage_component(
+                    config,
+                    list(allocation.keys()),
+                    route_nature_regions,
+                )
+                objective += float(required_anchor_component["component"])
+                preferred_route_component = 0.0
+                preferred_route = str(config.get("nature", "preferred_statewide_route_shape", "")).lower()
+                route_label_slug = str(route_option.get("label", "")).lower().replace(" ", "_")
+                if _is_statewide_nature_heavy(config) and preferred_route and preferred_route in route_label_slug:
+                    preferred_route_component = float(config.get("nature", "preferred_route_shape_bonus_weight", 1.35))
+                    objective += preferred_route_component
                 plan = {
                     "gateway_start": start_city,
                     "gateway_end": end_city,
@@ -474,6 +593,10 @@ def candidate_plans(config: TripConfig, city_catalog_summary_df: pd.DataFrame) -
                     "must_go_city_component": float(must_go_value),
                     "pass_through_value_component": float(pass_through_value),
                     "data_uncertainty_exploration_bonus": float(uncertainty_bonus),
+                    "required_nature_anchor_component": float(required_anchor_component["component"]),
+                    "required_nature_anchor_coverage": list(required_anchor_component["covered"]),
+                    "required_nature_anchor_misses": list(required_anchor_component["missed"]),
+                    "preferred_route_shape_component": float(preferred_route_component),
                     "base_switch_penalty": float(switch_penalty),
                     "overnight_bases": list(allocation.keys()),
                     "pass_through_cities": pass_through_cities,
@@ -485,7 +608,7 @@ def candidate_plans(config: TripConfig, city_catalog_summary_df: pd.DataFrame) -
                     plan,
                     config,
                     sequence=sequence,
-                    route_nature_regions=route_option.get("nature_regions", []),
+                    route_nature_regions=route_nature_regions,
                 )
                 plans.append(plan)
     return plans
@@ -536,6 +659,18 @@ def _score_hierarchical_plan(
         - endpoint_penalty
         - switch_penalty
     )
+    required_anchor_component = _required_anchor_coverage_component(
+        config,
+        list(allocation.keys()),
+        route_nature_regions,
+    )
+    objective += float(required_anchor_component["component"])
+    preferred_route_component = 0.0
+    preferred_route = str(config.get("nature", "preferred_statewide_route_shape", "")).lower()
+    route_label_slug = str(route_option_label or "").lower().replace(" ", "_")
+    if _is_statewide_nature_heavy(config) and preferred_route and preferred_route in route_label_slug:
+        preferred_route_component = float(config.get("nature", "preferred_route_shape_bonus_weight", 1.35))
+        objective += preferred_route_component
     plan = {
         "gateway_start": start_city,
         "gateway_end": end_city,
@@ -548,6 +683,10 @@ def _score_hierarchical_plan(
         "must_go_city_component": float(must_go_value),
         "pass_through_value_component": float(pass_through_value),
         "data_uncertainty_exploration_bonus": float(uncertainty_bonus),
+        "required_nature_anchor_component": float(required_anchor_component["component"]),
+        "required_nature_anchor_coverage": list(required_anchor_component["covered"]),
+        "required_nature_anchor_misses": list(required_anchor_component["missed"]),
+        "preferred_route_shape_component": float(preferred_route_component),
         "base_switch_penalty": float(switch_penalty),
         "overnight_bases": list(allocation.keys()),
         "pass_through_cities": pass_through_cities,
@@ -584,6 +723,13 @@ def solve_hierarchical_trip_with_greedy(
         mandatory = [start_city]
         if end_city != start_city:
             mandatory.append(end_city)
+        mandatory.extend(
+            _mandatory_required_anchor_bases(
+                config,
+                candidate_cities,
+                route_option.get("nature_regions", []),
+            )
+        )
         mandatory = [city for city in unique_in_order(mandatory) if city in candidate_cities]
         min_base_count = max(len(mandatory), math.ceil(total_days / max(1, max_days)))
         max_base_count = min(len(candidate_cities), max_config_cities, max(1, total_days // max(1, min_days)))

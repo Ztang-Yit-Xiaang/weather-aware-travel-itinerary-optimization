@@ -112,6 +112,9 @@ def validate(figure_dir: Path, output_dir: Path) -> tuple[list[str], list[str]]:
     hotel_js_path = assets / "hotel_choices.js"
     nature_path = assets / "nature_explore.json"
     nature_js_path = assets / "nature_explore.js"
+    evaluation_html = dashboard_root / "evaluation.html"
+    evaluation_path = assets / "evaluation_metrics.json"
+    evaluation_js_path = assets / "evaluation_metrics.js"
     size_report = output_dir / "production_map_artifact_size_report.csv"
 
     for path, label in [
@@ -139,6 +142,9 @@ def validate(figure_dir: Path, output_dir: Path) -> tuple[list[str], list[str]]:
         (hotel_js_path, "hotel choices JS fallback"),
         (nature_path, "nature explore JSON"),
         (nature_js_path, "nature explore JS fallback"),
+        (evaluation_html, "evaluation dashboard HTML"),
+        (evaluation_path, "evaluation metrics JSON"),
+        (evaluation_js_path, "evaluation metrics JS fallback"),
     ]:
         check_exists(path, label, errors)
 
@@ -161,6 +167,25 @@ def validate(figure_dir: Path, output_dir: Path) -> tuple[list[str], list[str]]:
             errors.append(f"Dashboard index contains stale milestone-0 optional-layer button: {index_html}")
         if "alert(" in html:
             errors.append(f"Dashboard index should not use alert() for milestone-1 dashboard behavior: {index_html}")
+        for token in ["Saved optimized route", "Preview only route", "evaluation.html"]:
+            if token not in html:
+                errors.append(f"Dashboard index missing required truth-first UI label {token!r}: {index_html}")
+        for token in [
+            'data-map-layer-toggle="terrain"',
+            'data-map-layer-toggle="roads"',
+            'data-map-layer-toggle="labels"',
+            'data-map-layer-toggle="weather_risk"',
+        ]:
+            if token not in html:
+                errors.append(f"Dashboard index missing wired upper-right map layer control {token!r}: {index_html}")
+        if "checked readonly" in html:
+            errors.append(f"Dashboard index still contains decorative readonly layer checkboxes: {index_html}")
+
+    if evaluation_html.exists():
+        html = evaluation_html.read_text(encoding="utf-8", errors="replace")
+        for token in ["Method Evaluation Dashboard", "assets/evaluation_metrics.js", "Method Comparison", "Solver Tradeoffs"]:
+            if token not in html:
+                errors.append(f"Evaluation dashboard missing required token {token!r}: {evaluation_html}")
 
     if style_css.exists():
         css = style_css.read_text(encoding="utf-8", errors="replace")
@@ -185,6 +210,13 @@ def validate(figure_dir: Path, output_dir: Path) -> tuple[list[str], list[str]]:
             "toggleHotelCandidates",
             "drawLivePreviewRoute",
             "clearLivePreviewRoute",
+            "Preview only - rerun pipeline to save",
+            "initializeBaseMapLayers",
+            "bindMapLayerToggles",
+            "buildLabelLayer",
+            "buildWeatherRiskLayer",
+            "data-map-layer-toggle",
+            "numbered-route-stop",
             "dashboardLogError",
         ]:
             if token not in js:
@@ -208,6 +240,7 @@ def validate(figure_dir: Path, output_dir: Path) -> tuple[list[str], list[str]]:
             "previewScore",
             "Build live preview route",
             "buildLivePreviewRoute",
+            "window.setTimeout(buildLivePreviewRoute",
             "Browser preview is approximate",
             "data-toggle-hotel-candidates",
         ]:
@@ -330,6 +363,19 @@ def validate(figure_dir: Path, output_dir: Path) -> tuple[list[str], list[str]]:
                             safe_float(point.get("display_utility")) > 0 for point in poi_data
                         ):
                             errors.append(f"Default route POI JSON has no nonzero display_utility: {poi_path}")
+                        if is_default_route and poi_data:
+                            required_stop_fields = {
+                                "description",
+                                "why_selected",
+                                "expected_duration_minutes",
+                                "weather_risk",
+                                "source_confidence",
+                                "type",
+                                "city_or_anchor",
+                            }
+                            missing = required_stop_fields.difference(poi_data[0])
+                            if missing:
+                                errors.append(f"Default route POI JSON missing rich stop fields {sorted(missing)}: {poi_path}")
                     except Exception as exc:
                         errors.append(f"Invalid POI JSON: {poi_path}: {exc}")
                 if poi_js_path.exists():
@@ -378,6 +424,7 @@ def validate(figure_dir: Path, output_dir: Path) -> tuple[list[str], list[str]]:
         (selected_hotels_path, selected_hotels_js_path, "DASHBOARD_SELECTED_HOTELS", "selected hotels"),
         (hotel_path, hotel_js_path, "DASHBOARD_HOTEL_CHOICES", "hotel choices"),
         (nature_path, nature_js_path, "DASHBOARD_NATURE_EXPLORE", "nature explore"),
+        (evaluation_path, evaluation_js_path, "DASHBOARD_EVALUATION_METRICS", "evaluation metrics"),
     ]:
         if json_path.exists():
             try:
@@ -394,6 +441,52 @@ def validate(figure_dir: Path, output_dir: Path) -> tuple[list[str], list[str]]:
                     errors.append(f"{js_path.name} disagrees with {json_path.name}: {js_path}")
             except Exception as exc:
                 errors.append(f"Invalid {label} JS fallback: {js_path}: {exc}")
+
+    if playback_path.exists():
+        try:
+            playback_data = read_json(playback_path)
+            route_stops = next(iter((playback_data.get("routes") or {}).values()), {}).get("stops", [])
+            if route_stops:
+                required_playback_fields = {
+                    "description",
+                    "why_selected",
+                    "expected_duration_minutes",
+                    "weather_risk",
+                    "source_confidence",
+                    "type",
+                    "city_or_anchor",
+                }
+                missing = required_playback_fields.difference(route_stops[0])
+                if missing:
+                    errors.append(f"Playback stop records missing rich fields {sorted(missing)}: {playback_path}")
+        except Exception as exc:
+            errors.append(f"Invalid playback rich-stop check: {playback_path}: {exc}")
+
+    if evaluation_path.exists():
+        try:
+            evaluation_data = read_json(evaluation_path)
+            found = {str(method.get("method")) for method in evaluation_data.get("methods", [])}
+            required = {
+                "hierarchical_gurobi_pipeline",
+                "hierarchical_greedy_baseline",
+                "hierarchical_bandit_gurobi_repair",
+            }
+            missing = required.difference(found)
+            if missing:
+                errors.append(f"Evaluation metrics missing methods {sorted(missing)}: {evaluation_path}")
+            for key in [
+                "comparison_score",
+                "route_distance_km",
+                "route_time_minutes",
+                "nature_score",
+                "weather_risk",
+                "selected_nature_stops",
+                "runtime_seconds",
+            ]:
+                if not any(field.get("key") == key for field in evaluation_data.get("chart_fields", [])):
+                    errors.append(f"Evaluation metrics missing chart field {key}: {evaluation_path}")
+        except Exception as exc:
+            errors.append(f"Invalid evaluation metrics JSON: {evaluation_path}: {exc}")
 
     if not size_report.exists():
         errors.append(f"Missing artifact size report. Regenerate map artifacts to create: {size_report}")

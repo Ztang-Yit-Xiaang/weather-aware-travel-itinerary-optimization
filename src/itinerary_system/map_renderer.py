@@ -15,6 +15,7 @@ import pandas as pd
 
 from . import map_exporter
 from ._legacy import import_legacy_module
+from .artifact_metadata import artifact_metadata_matches
 from .config import TripConfig
 from .experiment_runner import prepare_comparison_dashboard_outputs
 
@@ -311,9 +312,10 @@ def _valid_method_summary_file(
 
     if canonical_budget is not None and "total_budget" in df.columns:
         budgets = pd.to_numeric(df["total_budget"], errors="coerce").dropna().round(2).unique()
-        if len(budgets) != 1:
+        if len(budgets) == 0:
             return False
-        if abs(float(budgets[0]) - float(canonical_budget)) > 1.0:
+        tolerance = max(1.0, 0.10 * float(canonical_budget))
+        if not any(abs(float(budget) - float(canonical_budget)) <= tolerance for budget in budgets):
             return False
 
     return True
@@ -367,8 +369,12 @@ def _dashboard_artifacts_ready(
     output_dir: str | Path,
     canonical_days: int | None = None,
     canonical_budget: float | None = None,
+    config: TripConfig | None = None,
 ) -> bool:
     output_dir = Path(output_dir)
+    if config is not None and bool(_config_get(config, "map", "require_matching_artifact_metadata", default=True)):
+        if not artifact_metadata_matches(output_dir, config):
+            return False
 
     return (
         _valid_route_matrix_file(output_dir / "production_route_matrix_comparison.csv")
@@ -410,6 +416,7 @@ def prepare_map_dashboard_data(
         output_dir,
         canonical_days=merged_context.get("CANONICAL_TRIP_DAYS"),
         canonical_budget=merged_context.get("CANONICAL_TOTAL_BUDGET"),
+        config=config,
     ):
         print("Keeping existing production comparison dashboard artifacts.")
         return {

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import ast
+import re
 from copy import deepcopy
 from pathlib import Path
 
@@ -11,6 +12,7 @@ import pandas as pd
 from geopy.distance import geodesic
 
 from ._legacy import import_legacy_module
+from .artifact_metadata import write_artifact_metadata
 from .bandit_candidate_selector import build_bandit_arms, run_bandit_gurobi_stress_benchmark, run_bandit_search
 from .budget import estimate_budget_range
 from .config import TripConfig, save_resolved_config
@@ -19,6 +21,34 @@ from .diversity import diversity_audit_row
 from .hierarchical_gurobi import solve_hierarchical_trip_with_greedy, solve_hierarchical_trip_with_gurobi
 from .nature_catalog import NATURE_POI_COLUMNS, write_nature_route_artifacts
 from .route_gurobi_oracle import solve_enriched_route_with_gurobi
+
+PRODUCTION_ARTIFACT_FILES = [
+    "production_enriched_poi_catalog.csv",
+    "production_city_poi_catalog.csv",
+    "production_city_catalog_summary.csv",
+    "production_method_route_stops.csv",
+    "production_method_comparison.csv",
+    "production_day_plan.csv",
+    "production_route_anchor_audit.csv",
+    "production_dataset_completeness_audit.csv",
+]
+
+REQUIRED_DASHBOARD_ANCHORS = {
+    "San Francisco": ["san francisco", "golden gate", "stanford"],
+    "Los Angeles": ["los angeles", "hollywood", "griffith", "tcl chinese"],
+    "Monterey": ["monterey", "bixby creek", "17-mile"],
+    "Big Sur": ["big sur", "bixby creek"],
+    "Santa Barbara": ["santa barbara", "stearns wharf"],
+    "Yosemite": ["yosemite"],
+    "Sequoia": ["sequoia"],
+    "Kings Canyon": ["kings canyon"],
+    "Joshua Tree": ["joshua tree"],
+}
+
+ROUTE_ANCHOR_AUDIT_KEYWORDS = {
+    **REQUIRED_DASHBOARD_ANCHORS,
+    "Bixby Creek": ["bixby creek"],
+}
 
 
 def _normalized_shannon_diversity(labels) -> float:
@@ -747,6 +777,71 @@ def _profile_strategy(profile: str, fallback: str = "balanced") -> str:
     return PROFILE_STRATEGY_DEFAULTS.get(str(profile).lower(), fallback)
 
 
+def _default_strategy_for_config(config: TripConfig, fallback: str = "balanced") -> str:
+    interest_mode = str(config.get("interest", "mode", config.get("trip", "interest_profile", ""))).lower()
+    scenario = str(config.get("trip", "scenario", "")).lower()
+    if interest_mode == "nature_heavy" and scenario == "california_statewide_nature":
+        return "national_park_priority"
+    if interest_mode == "nature_heavy":
+        return "nature_heavy"
+    return fallback
+
+
+NATURE_PRIORITY_STRATEGIES = {
+    "national_park_priority": 0,
+    "nature_heavy": 1,
+    "scenic_parks": 2,
+    "city_nature_balanced": 3,
+}
+
+REQUIRED_ANCHOR_BASES = {
+    "Yosemite": ["Mariposa", "Yosemite Valley", "Oakhurst", "Fresno"],
+    "Sequoia": ["Three Rivers", "Visalia", "Fresno"],
+    "Kings Canyon": ["Three Rivers", "Visalia", "Fresno"],
+    "Joshua Tree": ["Palm Springs", "Twentynine Palms", "Los Angeles"],
+}
+
+
+def _is_statewide_nature_heavy(config: TripConfig) -> bool:
+    return (
+        str(config.get("trip", "scenario", "")).lower() == "california_statewide_nature"
+        and str(config.get("interest", "mode", config.get("trip", "interest_profile", ""))).lower() == "nature_heavy"
+    )
+
+
+def _required_selected_anchor_names(config: TripConfig) -> list[str]:
+    if not _is_statewide_nature_heavy(config):
+        return []
+    raw = config.get("nature", "required_selected_anchors_for_nature_heavy", [])
+    if isinstance(raw, str):
+        raw = [part.strip() for part in raw.split(",") if part.strip()]
+    if not isinstance(raw, list):
+        return []
+    return [str(anchor).strip() for anchor in raw if str(anchor).strip()]
+
+
+def _rank_bandit_summary_for_config(summary_df: pd.DataFrame, config: TripConfig) -> pd.DataFrame:
+    if summary_df.empty:
+        return summary_df
+    ranked = summary_df.copy()
+    if _is_statewide_nature_heavy(config):
+        ranked["nature_strategy_priority"] = (
+            ranked.get("route_search_strategy", pd.Series("", index=ranked.index))
+            .astype(str)
+            .str.lower()
+            .map(NATURE_PRIORITY_STRATEGIES)
+            .fillna(99)
+        )
+        return ranked.sort_values(
+            ["nature_strategy_priority", "posterior_mean_reward", "hierarchical_objective", "estimated_total_cost"],
+            ascending=[True, False, False, True],
+        )
+    return ranked.sort_values(
+        ["posterior_mean_reward", "hierarchical_objective", "estimated_total_cost"],
+        ascending=[False, False, True],
+    )
+
+
 def _comparison_route_stop_columns() -> list[str]:
     return [
         "comparison_type",
@@ -773,6 +868,7 @@ def _comparison_route_stop_columns() -> list[str]:
         "must_go_weight",
         "social_reason",
         "final_poi_value",
+        "route_fit",
         "route_start_city",
         "route_start_name",
         "route_start_latitude",
@@ -831,6 +927,7 @@ def _day_plan_to_comparison_route_stops(
         "must_go_weight": 0.0,
         "social_reason": "",
         "final_poi_value": source_score_default,
+        "route_fit": output.get("route_fit", output.get("corridor_fit", 0.0)),
         "route_start_city": output.get("route_start_city", output.get("city", "")),
         "route_start_name": output.get("hotel_name", ""),
         "route_start_latitude": output.get("hotel_latitude", np.nan),
@@ -1042,6 +1139,8 @@ def _score_daily_candidate_pool(
     scored["social_score"] = _numeric_column(scored, "social_score")
     scored["must_go_weight"] = _numeric_column(scored, "must_go_weight")
     scored["corridor_fit"] = _numeric_column(scored, "corridor_fit")
+    scored["route_fit"] = _numeric_column(scored, "route_fit", fallback_column="corridor_fit")
+    scored["route_context_fit"] = np.maximum(scored["corridor_fit"], scored["route_fit"])
     scored["detour_minutes"] = _numeric_column(scored, "detour_minutes")
     for interest_column in [
         "nature_score",
@@ -1094,7 +1193,7 @@ def _score_daily_candidate_pool(
         + weights["must_go"] * scored["must_go_weight"]
         + 0.18 * scored["social_must_go"].astype(float)
         + 0.12 * scored["must_go_weight"] * scored["social_score"]
-        + weights["corridor"] * scored["corridor_fit"]
+        + weights["corridor"] * scored["route_context_fit"]
         + weights["view"] * scored["view_signal"]
         + weights["local_city_bonus"] * scored["local_city_match"]
         + weights["pass_through_bonus"] * scored["transition_bonus"]
@@ -1412,6 +1511,7 @@ def _build_route_rows_from_selected(
     output["must_go_weight"] = _numeric_column(output, "must_go_weight")
     output["social_reason"] = output["social_reason"].fillna("") if "social_reason" in output.columns else ""
     output["final_poi_value"] = _numeric_column(output, "final_poi_value", fallback_column="source_score")
+    output["route_fit"] = _numeric_column(output, "route_fit", fallback_column="corridor_fit")
     output["route_start_city"] = previous_city
     output["route_start_name"] = route_start_name
     output["route_start_latitude"] = route_start_latitude
@@ -1511,6 +1611,28 @@ def _write_hotel_selection_debug(
     hotel_catalog = _load_csv(output_dir / "production_city_hotel_catalog.csv")
     if hotel_catalog.empty:
         hotel_catalog = _load_csv(output_dir / "osm_city_hotel_catalog.csv")
+    if hotel_catalog.empty and not route_stops_df.empty:
+        hotel_catalog = (
+            route_stops_df[
+                [
+                    column
+                    for column in ["overnight_city", "hotel_name", "hotel_latitude", "hotel_longitude"]
+                    if column in route_stops_df.columns
+                ]
+            ]
+            .dropna(subset=["overnight_city", "hotel_name"])
+            .drop_duplicates()
+            .rename(
+                columns={
+                    "overnight_city": "city",
+                    "hotel_name": "name",
+                    "hotel_latitude": "latitude",
+                    "hotel_longitude": "longitude",
+                }
+            )
+        )
+        hotel_catalog["source"] = "selected_route_stop_fallback"
+        hotel_catalog["rating_score"] = 0.0
     if hotel_catalog.empty:
         debug_df = pd.DataFrame()
         debug_df.to_csv(output_dir / "production_hotel_selection_debug.csv", index=False)
@@ -1531,9 +1653,12 @@ def _write_hotel_selection_debug(
         stop_points = route_stops_df[
             route_stops_df.get("overnight_city", pd.Series(dtype=str)).astype(str).eq(city_name)
         ]
-        must_go_points = must_go_candidates[
-            must_go_candidates.get("city", pd.Series(dtype=str)).astype(str).eq(city_name)
-        ]
+        if {"city", "latitude", "longitude"}.issubset(must_go_candidates.columns):
+            must_go_points = must_go_candidates[
+                must_go_candidates.get("city", pd.Series(dtype=str)).astype(str).eq(city_name)
+            ]
+        else:
+            must_go_points = pd.DataFrame()
         for rank, hotel in enumerate(city_hotels.head(12).itertuples(index=False), start=1):
             hotel_name = str(getattr(hotel, "name", f"{city_name} hotel"))
             hotel_lat = float(getattr(hotel, "latitude", np.nan))
@@ -1595,6 +1720,316 @@ def _write_hotel_selection_debug(
     )
     debug_df.to_csv(output_dir / "production_hotel_selection_debug.csv", index=False)
     return debug_df
+
+
+def _frame_contains_keywords(frame: pd.DataFrame, columns: list[str], keywords: list[str]) -> pd.Series:
+    if frame.empty:
+        return pd.Series(dtype=bool)
+    text = pd.Series("", index=frame.index)
+    for column in columns:
+        if column in frame.columns:
+            text = text + " " + frame[column].fillna("").astype(str)
+    pattern = "|".join(re.escape(keyword) for keyword in keywords)
+    return text.str.lower().str.contains(pattern, regex=True, na=False)
+
+
+def _write_route_anchor_audit(
+    *,
+    output_dir: Path,
+    enriched_df: pd.DataFrame,
+    route_stops_df: pd.DataFrame,
+    config: TripConfig,
+) -> pd.DataFrame:
+    rows = []
+    scenario = str(config.get("trip", "scenario", "california_coast"))
+    interest = str(config.get("interest", "mode", config.get("trip", "interest_profile", "")))
+    audited_route_stops = route_stops_df.copy()
+    if not audited_route_stops.empty and "trip_days" in audited_route_stops.columns:
+        day_filtered = audited_route_stops[
+            pd.to_numeric(audited_route_stops["trip_days"], errors="coerce")
+            .fillna(-1)
+            .astype(int)
+            .eq(int(config.get("trip", "trip_days", 7)))
+        ].copy()
+        if not day_filtered.empty:
+            audited_route_stops = day_filtered
+    audited_method = ""
+    if not audited_route_stops.empty and "method" in audited_route_stops.columns:
+        preferred = audited_route_stops[
+            audited_route_stops["method"].astype(str).eq("hierarchical_bandit_gurobi_repair")
+        ].copy()
+        if not preferred.empty:
+            audited_route_stops = preferred
+        method_values = audited_route_stops["method"].dropna().astype(str)
+        audited_method = str(method_values.iloc[0]) if not method_values.empty else ""
+    for anchor, keywords in ROUTE_ANCHOR_AUDIT_KEYWORDS.items():
+        candidate_mask = _frame_contains_keywords(
+            enriched_df,
+            ["name", "city", "nature_region", "category", "source_list"],
+            keywords,
+        )
+        selected_mask = _frame_contains_keywords(
+            audited_route_stops,
+            ["attraction_name", "name", "city", "nature_region", "category"],
+            keywords,
+        )
+        gateway_mask = _frame_contains_keywords(
+            audited_route_stops,
+            ["gateway_start", "gateway_end"],
+            keywords,
+        )
+        base_mask = _frame_contains_keywords(
+            audited_route_stops,
+            ["overnight_city", "route_start_city", "route_end_city"],
+            keywords,
+        )
+        context_mask = _frame_contains_keywords(
+            audited_route_stops,
+            ["pass_through_cities", "city_sequence", "route_context", "notes"],
+            keywords,
+        )
+        candidate_rows = enriched_df[candidate_mask].copy() if not enriched_df.empty else pd.DataFrame()
+        selected_rows = audited_route_stops[selected_mask].copy() if not audited_route_stops.empty else pd.DataFrame()
+        gateway = bool(gateway_mask.any()) if not gateway_mask.empty else False
+        base_city = bool(base_mask.any()) if not base_mask.empty else False
+        context = bool(context_mask.any()) if not context_mask.empty else False
+        gateway_or_base = gateway or base_city
+        candidate = not candidate_rows.empty
+        selected = not selected_rows.empty
+        if selected:
+            role = "selected_stop"
+            reason = "selected_route_stop"
+        elif gateway:
+            role = "gateway"
+            reason = "used_as_trip_gateway_without_matching_selected_poi"
+        elif base_city:
+            role = "base_city"
+            reason = "used_as_route_or_overnight_base_without_matching_selected_poi"
+        elif context:
+            role = "context_only"
+            reason = "appears_in_pass_through_or_context_route_but_not_selected"
+        elif candidate:
+            role = "candidate_only"
+            reason = "available_candidate_not_selected_by_objective_or_feasibility"
+        else:
+            role = "missing"
+            reason = "not_in_candidate_catalog_for_active_scenario"
+        selected_days = (
+            pd.to_numeric(selected_rows.get("day", pd.Series(dtype=float)), errors="coerce")
+            .dropna()
+            .astype(int)
+            .unique()
+            if not selected_rows.empty
+            else []
+        )
+        rows.append(
+            {
+                "scenario": scenario,
+                "interest": interest,
+                "anchor": anchor,
+                "audited_method": audited_method,
+                "candidate": bool(candidate),
+                "selected": bool(selected),
+                "gateway_or_base": bool(gateway_or_base),
+                "candidate_count": int(len(candidate_rows)),
+                "selected_count": int(len(selected_rows)),
+                "selected_methods": "; ".join(
+                    sorted(selected_rows.get("method", pd.Series(dtype=str)).dropna().astype(str).unique())
+                )
+                if not selected_rows.empty
+                else "",
+                "selected_days": "; ".join(str(int(day)) for day in sorted(selected_days)),
+                "role": role,
+                "status": role,
+                "reason": reason,
+            }
+        )
+    audit_df = pd.DataFrame(rows)
+    audit_df.to_csv(output_dir / "production_route_anchor_audit.csv", index=False)
+    audit_df.to_csv(output_dir / "production_dataset_completeness_audit.csv", index=False)
+    return audit_df
+
+
+def _anchor_keywords(anchor: str) -> list[str]:
+    return REQUIRED_DASHBOARD_ANCHORS.get(anchor, [str(anchor).lower()])
+
+
+def _required_anchor_candidate(enriched_df: pd.DataFrame, anchor: str) -> pd.Series | None:
+    if enriched_df.empty:
+        return None
+    mask = _frame_contains_keywords(
+        enriched_df,
+        ["name", "city", "nature_region", "category", "source_list"],
+        _anchor_keywords(anchor),
+    )
+    candidates = enriched_df[mask].copy()
+    if candidates.empty:
+        return None
+    for column in ["interest_adjusted_value", "final_poi_value", "source_score", "nature_score", "scenic_score"]:
+        if column not in candidates.columns:
+            candidates[column] = 0.0
+    candidates["required_anchor_rank_score"] = (
+        pd.to_numeric(candidates["interest_adjusted_value"], errors="coerce").fillna(0.0)
+        + pd.to_numeric(candidates["final_poi_value"], errors="coerce").fillna(0.0)
+        + 0.35 * pd.to_numeric(candidates["nature_score"], errors="coerce").fillna(0.0)
+        + 0.25 * pd.to_numeric(candidates["scenic_score"], errors="coerce").fillna(0.0)
+    )
+    return candidates.sort_values(["required_anchor_rank_score", "name"], ascending=[False, True]).iloc[0]
+
+
+def _rows_for_required_anchor_day(route_df: pd.DataFrame, anchor: str) -> pd.DataFrame:
+    if route_df.empty:
+        return pd.DataFrame()
+    gateways = [gateway.lower() for gateway in REQUIRED_ANCHOR_BASES.get(anchor, [])]
+    if not gateways:
+        return pd.DataFrame()
+    mask = pd.Series(False, index=route_df.index)
+    for column in ["overnight_city", "route_start_city", "route_end_city", "pass_through_cities"]:
+        if column not in route_df.columns:
+            continue
+        text = route_df[column].fillna("").astype(str).str.lower()
+        column_mask = pd.Series(False, index=route_df.index)
+        for gateway in gateways:
+            column_mask = column_mask | text.str.contains(re.escape(gateway), regex=True, na=False)
+        mask = mask | column_mask
+    return route_df[mask].copy()
+
+
+def _route_stop_from_required_candidate(
+    *,
+    candidate: pd.Series,
+    template: pd.Series,
+    anchor: str,
+    day_number: int,
+    stop_order: int,
+) -> pd.Series:
+    output = template.copy()
+    candidate_to_route_columns = {
+        "city": "city",
+        "latitude": "latitude",
+        "longitude": "longitude",
+        "category": "category",
+        "source_list": "source_list",
+        "social_must_go": "social_must_go",
+        "social_score": "social_score",
+        "must_go_weight": "must_go_weight",
+        "social_reason": "social_reason",
+        "final_poi_value": "final_poi_value",
+        "route_fit": "route_fit",
+        "corridor_fit": "route_fit",
+    }
+    for source_column, target_column in candidate_to_route_columns.items():
+        if source_column in candidate.index:
+            output[target_column] = candidate.get(source_column)
+    for column in NATURE_POI_COLUMNS:
+        if column in candidate.index:
+            output[column] = candidate.get(column)
+    output["day"] = int(day_number)
+    output["stop_order"] = int(stop_order)
+    output["attraction_name"] = str(candidate.get("name", f"{anchor} National Park"))
+    output["status"] = "REQUIRED_ANCHOR_SELECTED"
+    reason = str(candidate.get("reason_selected", "") or "").strip()
+    if not reason:
+        reason = f"Required nature-heavy anchor for the active statewide nature scenario: {anchor}."
+    output["reason_selected"] = reason
+    existing_notes = str(output.get("notes", "") or "").strip()
+    required_note = f"Required-anchor policy inserted {anchor} because a compatible base day was feasible."
+    output["notes"] = f"{existing_notes} {required_note}".strip()
+    if "route_type" in output.index:
+        output["route_type"] = f"{output.get('route_type', 'comparison_route')}; required_anchor_survival"
+    for column in _comparison_route_stop_columns():
+        if column not in output.index:
+            output[column] = np.nan if column.endswith(("latitude", "longitude")) else ""
+    return output[_comparison_route_stop_columns()]
+
+
+def _ensure_required_anchor_stops(
+    route_df: pd.DataFrame,
+    *,
+    enriched_df: pd.DataFrame,
+    config: TripConfig,
+) -> tuple[pd.DataFrame, list[str]]:
+    required = _required_selected_anchor_names(config)
+    if route_df.empty or not required:
+        return route_df, []
+    output = route_df.copy().reset_index(drop=True)
+    notes = []
+    max_stops_per_day = int(config.get("optimization", "max_pois_per_day", 4))
+    for anchor in required:
+        selected_anchor_mask = _frame_contains_keywords(
+            output,
+            ["attraction_name", "name", "city", "nature_region", "category"],
+            _anchor_keywords(anchor),
+        )
+        if not selected_anchor_mask.empty and selected_anchor_mask.any():
+            continue
+        candidate = _required_anchor_candidate(enriched_df, anchor)
+        if candidate is None:
+            notes.append(f"Required anchor {anchor} could not be inserted because no enriched candidate row exists.")
+            continue
+        target_rows = _rows_for_required_anchor_day(output, anchor)
+        if target_rows.empty:
+            notes.append(f"Required anchor {anchor} remained candidate-only because no compatible base day was selected.")
+            continue
+        target_day = int(
+            pd.to_numeric(target_rows["day"], errors="coerce")
+            .dropna()
+            .astype(int)
+            .sort_values()
+            .iloc[0]
+        )
+        day_rows = output[pd.to_numeric(output["day"], errors="coerce").fillna(-1).astype(int).eq(target_day)].copy()
+        current_max_order = int(pd.to_numeric(day_rows.get("stop_order", pd.Series([0])), errors="coerce").fillna(0).max())
+        anchor_row = _route_stop_from_required_candidate(
+            candidate=candidate,
+            template=day_rows.sort_values(["day", "stop_order"]).iloc[0],
+            anchor=anchor,
+            day_number=target_day,
+            stop_order=current_max_order + 1,
+        )
+        replace_index = None
+        if len(day_rows) >= max_stops_per_day:
+            replacement_pool = day_rows.copy()
+            for required_anchor in required:
+                required_mask = _frame_contains_keywords(
+                    replacement_pool,
+                    ["attraction_name", "name", "city", "nature_region", "category"],
+                    _anchor_keywords(required_anchor),
+                )
+                replacement_pool = replacement_pool[~required_mask].copy()
+            if "social_must_go" in replacement_pool.columns:
+                replacement_pool = replacement_pool[
+                    ~replacement_pool["social_must_go"].fillna(False).astype(bool)
+                ].copy()
+            if not replacement_pool.empty:
+                replacement_pool["replace_rank"] = pd.to_numeric(
+                    replacement_pool.get("interest_adjusted_value", replacement_pool.get("final_poi_value", 0.0)),
+                    errors="coerce",
+                ).fillna(0.0)
+                replace_index = replacement_pool.sort_values(["replace_rank", "stop_order"]).index[0]
+        if replace_index is not None:
+            output.loc[replace_index, _comparison_route_stop_columns()] = anchor_row.values
+            notes.append(f"Required anchor {anchor} replaced a lower-priority stop on day {target_day}.")
+        else:
+            output = pd.concat([output, pd.DataFrame([anchor_row])], ignore_index=True, sort=False)
+            notes.append(f"Required anchor {anchor} was added to feasible day {target_day}.")
+
+    placeholder_text = (
+        output.get("attraction_name", pd.Series("", index=output.index)).fillna("").astype(str)
+        + " "
+        + output.get("category", pd.Series("", index=output.index)).fillna("").astype(str)
+    ).str.lower()
+    placeholder_mask = placeholder_text.str.contains("catalog pending|data_ingestion_needed", regex=True, na=False)
+    if _is_statewide_nature_heavy(config) and placeholder_mask.any() and int((~placeholder_mask).sum()) > 0:
+        removed = output.loc[placeholder_mask, "attraction_name"].fillna("placeholder stop").astype(str).tolist()
+        output = output.loc[~placeholder_mask].copy()
+        notes.append(f"Removed placeholder selected stops from nature-heavy route: {', '.join(removed)}.")
+
+    if not output.empty:
+        output = output.sort_values(["day", "stop_order", "attraction_name"]).reset_index(drop=True)
+        output["stop_order"] = output.groupby("day").cumcount() + 1
+        output = output[_comparison_route_stop_columns()]
+    return output, notes
 
 
 def _hotel_preference_map(config: TripConfig) -> dict[str, str]:
@@ -1837,6 +2272,17 @@ def _hierarchical_method_route_outputs(
         if route_frames
         else pd.DataFrame(columns=_comparison_route_stop_columns())
     )
+    enriched_for_required_anchors = _load_frame_from_context_or_csv(
+        context,
+        ["production_enriched_poi_catalog_df", "enriched_df"],
+        Path(_first_context_value(context, "OUTPUT_DIR", default="results/outputs")) / "production_enriched_poi_catalog.csv",
+    )
+    route_df, required_anchor_notes = _ensure_required_anchor_stops(
+        route_df,
+        enriched_df=enriched_for_required_anchors,
+        config=config,
+    )
+    notes.extend(required_anchor_notes)
     status = "FAILED"
     if not route_df.empty:
         lowered_statuses = [str(day_status).lower() for day_status in day_statuses]
@@ -1913,10 +2359,7 @@ def _bandit_route_stop_rows(
         summary_row["notes"] = "Bandit stress or bandit optimization summary artifacts are missing or empty."
         return pd.DataFrame(columns=_comparison_route_stop_columns()), summary_row
 
-    summary_rank = bandit_summary_df.sort_values(
-        ["posterior_mean_reward", "hierarchical_objective", "estimated_total_cost"],
-        ascending=[False, False, True],
-    )
+    summary_rank = _rank_bandit_summary_for_config(bandit_summary_df, config)
     best_summary_row = summary_rank.iloc[0]
     best_arm_id = str(best_summary_row.get("arm_id"))
     runs_for_arm = bandit_runs_df[bandit_runs_df["arm_id"].astype(str).eq(best_arm_id)].copy()
@@ -2173,6 +2616,28 @@ def _write_route_matrix_hotel_debug(
     hotel_catalog = _load_csv(output_dir / "production_city_hotel_catalog.csv")
     if hotel_catalog.empty:
         hotel_catalog = _load_csv(output_dir / "osm_city_hotel_catalog.csv")
+    if hotel_catalog.empty and not route_stops_df.empty:
+        hotel_catalog = (
+            route_stops_df[
+                [
+                    column
+                    for column in ["overnight_city", "hotel_name", "hotel_latitude", "hotel_longitude"]
+                    if column in route_stops_df.columns
+                ]
+            ]
+            .dropna(subset=["overnight_city", "hotel_name"])
+            .drop_duplicates()
+            .rename(
+                columns={
+                    "overnight_city": "city",
+                    "hotel_name": "name",
+                    "hotel_latitude": "latitude",
+                    "hotel_longitude": "longitude",
+                }
+            )
+        )
+        hotel_catalog["source"] = "selected_route_stop_fallback"
+        hotel_catalog["rating_score"] = 0.0
     if hotel_catalog.empty or route_stops_df.empty:
         debug_df = pd.DataFrame()
         debug_df.to_csv(output_dir / "production_route_matrix_hotel_selection_debug.csv", index=False)
@@ -2191,9 +2656,12 @@ def _write_route_matrix_hotel_debug(
             if not route_rows["overnight_city"].astype(str).eq(city_name).any():
                 continue
             stop_points = route_rows[route_rows["overnight_city"].astype(str).eq(city_name)]
-            must_go_points = must_go_candidates[
-                must_go_candidates.get("city", pd.Series(dtype=str)).astype(str).eq(city_name)
-            ]
+            if {"city", "latitude", "longitude"}.issubset(must_go_candidates.columns):
+                must_go_points = must_go_candidates[
+                    must_go_candidates.get("city", pd.Series(dtype=str)).astype(str).eq(city_name)
+                ]
+            else:
+                must_go_points = pd.DataFrame()
             for rank, hotel in enumerate(city_hotels.head(10).itertuples(index=False), start=1):
                 hotel_name = str(getattr(hotel, "name", f"{city_name} hotel"))
                 hotel_lat = float(getattr(hotel, "latitude", np.nan))
@@ -2269,6 +2737,7 @@ def _write_route_matrix_compatibility_artifacts(
     matrix_route_stops_df: pd.DataFrame,
     config: TripConfig,
     must_go_candidates: pd.DataFrame,
+    enriched_df: pd.DataFrame,
 ) -> None:
     canonical_days = int(config.get("trip", "trip_days", 7))
     trip_subset = matrix_route_stops_df[
@@ -2397,6 +2866,12 @@ def _write_route_matrix_compatibility_artifacts(
         route_stops_df=method_subset if not method_subset.empty else pd.DataFrame(),
         must_go_candidates=must_go_candidates,
     )
+    _write_route_anchor_audit(
+        output_dir=output_dir,
+        enriched_df=enriched_df,
+        route_stops_df=method_subset if not method_subset.empty else pd.DataFrame(),
+        config=config,
+    )
 
 
 def build_route_matrix_comparison(
@@ -2445,7 +2920,7 @@ def build_route_matrix_comparison(
         output_dir / "production_hybrid_bandit_optimization_summary.csv",
     )
     if not bandit_summary_df.empty and "posterior_mean_reward" in bandit_summary_df.columns:
-        best_bandit_row = bandit_summary_df.sort_values("posterior_mean_reward", ascending=False).iloc[0]
+        best_bandit_row = _rank_bandit_summary_for_config(bandit_summary_df, config).iloc[0]
         default_bandit_strategy = str(best_bandit_row.get("route_search_strategy", "scenic_social"))
         posterior_reward = float(best_bandit_row.get("posterior_mean_reward", np.nan))
     else:
@@ -2616,6 +3091,7 @@ def build_route_matrix_comparison(
         matrix_route_stops_df=matrix_route_stops_df,
         config=config,
         must_go_candidates=must_go_candidates,
+        enriched_df=enriched_df,
     )
     return matrix_df, matrix_route_stops_df
 
@@ -2761,7 +3237,7 @@ def build_trip_length_comparison(
     )
     if not bandit_summary_df.empty and "posterior_mean_reward" in bandit_summary_df.columns:
         duration_strategy = str(
-            bandit_summary_df.sort_values("posterior_mean_reward", ascending=False)
+            _rank_bandit_summary_for_config(bandit_summary_df, config)
             .iloc[0]
             .get(
                 "route_search_strategy",
@@ -2984,6 +3460,7 @@ def build_production_method_comparison(
     must_go_candidates = _must_go_candidates_from_output(output_dir, enriched_df)
     method_rows = []
     route_frames = []
+    default_strategy = _default_strategy_for_config(config)
 
     def _finalize_method_row(
         method: str,
@@ -3042,7 +3519,7 @@ def build_production_method_comparison(
         trip=best_trip,
         config=config,
         method="hierarchical_gurobi_pipeline",
-        strategy_name="balanced",
+        strategy_name=default_strategy,
         local_solver="legacy_gurobi",
         budget_df=budget_df,
     )
@@ -3074,7 +3551,7 @@ def build_production_method_comparison(
             trip=greedy_trip,
             config=config,
             method="hierarchical_greedy_baseline",
-            strategy_name="balanced",
+            strategy_name=default_strategy,
             local_solver="greedy",
             budget_df=budget_df,
         )
@@ -3185,6 +3662,12 @@ def build_production_method_comparison(
     method_df.to_csv(output_dir / "production_method_comparison.csv", index=False)
     route_stops_df.to_csv(output_dir / "production_method_route_stops.csv", index=False)
     write_nature_route_artifacts(route_stops_df, output_dir, config)
+    _write_route_anchor_audit(
+        output_dir=output_dir,
+        enriched_df=enriched_df,
+        route_stops_df=route_stops_df,
+        config=config,
+    )
     _write_must_go_coverage(
         output_dir=output_dir,
         method_df=method_df,
@@ -3235,6 +3718,7 @@ def prepare_comparison_dashboard_outputs(
     trip_length_route_stops_df = _load_csv(output_dir / "production_trip_length_route_stops.csv")
     method_df = _load_csv(output_dir / "production_method_comparison.csv")
     method_route_stops_df = _load_csv(output_dir / "production_method_route_stops.csv")
+    write_artifact_metadata(output_dir, config, artifact_files=PRODUCTION_ARTIFACT_FILES)
     return {
         "production_route_matrix_comparison_df": route_matrix_df,
         "production_route_matrix_route_stops_df": route_matrix_route_stops_df,
@@ -3385,6 +3869,7 @@ def run_configurable_blueprint_pipeline(
     trip_length_route_stops_df = _load_csv(output_dir / "production_trip_length_route_stops.csv")
     method_comparison_df = _load_csv(output_dir / "production_method_comparison.csv")
     method_route_stops_df = _load_csv(output_dir / "production_method_route_stops.csv")
+    write_artifact_metadata(output_dir, config, artifact_files=PRODUCTION_ARTIFACT_FILES)
     return {
         **enrichment,
         "best_hierarchical_trip": best_trip,

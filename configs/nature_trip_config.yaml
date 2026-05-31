@@ -1,5 +1,8 @@
 trip:
-  scenario: california_coast
+  scenario: california_statewide_nature
+  scenario_city_universe: auto
+  start_city_options: [San Francisco]
+  end_city_options: [Los Angeles]
   traveler_profile: balanced
   interest_profile: nature_heavy
 
@@ -13,6 +16,14 @@ nature:
   enabled: true
   use_nps_api: false
   use_curated_nature_fallback: true
+  min_selected_nature_stops_for_nature_heavy: 2
+  required_selected_anchors_for_nature_heavy: [Yosemite, Sequoia]
+  preferred_statewide_route_shape: sierra_national_parks
+  anchor_inclusion_policy: require_if_feasible_else_explain
+  la_inclusion_policy: gateway_or_selected_or_explain
+
+map:
+  require_matching_artifact_metadata: true
 
 bandit:
   arms:

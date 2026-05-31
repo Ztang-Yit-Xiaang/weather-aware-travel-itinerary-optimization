@@ -18,6 +18,12 @@ import pandas as pd
 import requests
 from geopy.distance import geodesic
 
+try:
+    from itinerary_system.region_scenarios import all_scenario_coordinates
+except Exception:  # pragma: no cover - keeps the notebook helper standalone.
+    def all_scenario_coordinates():
+        return {}
+
 MULTI_CITY_CATEGORY_PATTERN = (
     "Museum|Museums|Park|Parks|Garden|Aquarium|Zoo|"
     "Landmark|Historic|Monument|Observatory|Tour|Attraction|"
@@ -33,6 +39,7 @@ CALIFORNIA_CITY_COORDS = {
     "Santa Cruz": (36.9741, -122.0308),
     "San Francisco": (37.7749, -122.4194),
 }
+CALIFORNIA_CITY_COORDS.update(all_scenario_coordinates())
 
 CITY_POPULARITY_PRIOR = {
     "Los Angeles": 0.98,
@@ -200,6 +207,7 @@ CANONICAL_POI_COLUMNS = [
     "social_must_go",
     "must_go_weight",
     "corridor_fit",
+    "route_fit",
     "detour_minutes",
     "data_confidence",
     "final_poi_value",
@@ -544,6 +552,7 @@ def build_enrichment_outputs(
     for idx, row in enriched_df.iterrows():
         corridor_fit, detour_minutes = corridor_metrics(row["latitude"], row["longitude"])
         enriched_df.at[idx, "corridor_fit"] = corridor_fit
+        enriched_df.at[idx, "route_fit"] = corridor_fit
         enriched_df.at[idx, "detour_minutes"] = detour_minutes
 
     enriched_df["base_score_norm"] = minmax_series(enriched_df["source_score"])

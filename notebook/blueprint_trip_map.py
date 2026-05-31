@@ -10,6 +10,38 @@ import pandas as pd
 import requests
 from folium import plugins
 
+try:
+    from itinerary_system.nature_catalog import NATURE_POI_COLUMNS
+    from itinerary_system.region_scenarios import all_scenario_coordinates
+except Exception:  # pragma: no cover - keeps notebook execution standalone.
+    NATURE_POI_COLUMNS = [
+        "is_nature",
+        "is_national_park",
+        "is_state_park",
+        "is_protected_area",
+        "is_scenic_viewpoint",
+        "is_hiking",
+        "nature_score",
+        "city_score",
+        "culture_score",
+        "history_score",
+        "scenic_score",
+        "hiking_score",
+        "outdoor_intensity",
+        "weather_sensitivity",
+        "seasonality_risk",
+        "park_type",
+        "nature_region",
+        "interest_fit",
+        "park_bonus",
+        "interest_adjusted_value",
+        "interest_delta",
+        "reason_selected",
+    ]
+
+    def all_scenario_coordinates():
+        return {}
+
 CITY_COORDS = {
     "San Diego": (32.7157, -117.1611),
     "Los Angeles": (34.0522, -118.2437),
@@ -19,6 +51,18 @@ CITY_COORDS = {
     "Santa Cruz": (36.9741, -122.0308),
     "San Francisco": (37.7749, -122.4194),
 }
+CITY_COORDS.update(all_scenario_coordinates())
+
+OPTIONAL_POI_COLUMNS = ["route_fit", *NATURE_POI_COLUMNS]
+OPTIONAL_BOOL_POI_COLUMNS = {
+    "is_nature",
+    "is_national_park",
+    "is_state_park",
+    "is_protected_area",
+    "is_scenic_viewpoint",
+    "is_hiking",
+}
+OPTIONAL_TEXT_POI_COLUMNS = {"park_type", "nature_region", "reason_selected"}
 
 SCENIC_CA1_COLOR = "#2A9D8F"
 FASTEST_ROUTE_COLOR = "#6C757D"
@@ -211,8 +255,11 @@ def _escape(value):
 
 def _load_csv(path):
     path = Path(path)
-    if path.exists():
-        return pd.read_csv(path)
+    if path.exists() and path.stat().st_size > 0:
+        try:
+            return pd.read_csv(path)
+        except pd.errors.EmptyDataError:
+            return pd.DataFrame()
     return pd.DataFrame()
 
 
@@ -227,6 +274,48 @@ def _catalog_series(output, column, default):
     if column in output.columns:
         return output[column]
     return pd.Series(default, index=output.index)
+
+
+def _numeric_catalog_series(output, column, default):
+    return pd.to_numeric(_catalog_series(output, column, default), errors="coerce").fillna(default)
+
+
+def _coerce_optional_poi_columns(output):
+    for column in OPTIONAL_POI_COLUMNS:
+        if column not in output.columns:
+            if column in OPTIONAL_BOOL_POI_COLUMNS:
+                output[column] = False
+            elif column in OPTIONAL_TEXT_POI_COLUMNS:
+                output[column] = ""
+            else:
+                output[column] = 0.0
+        if column in OPTIONAL_BOOL_POI_COLUMNS:
+            output[column] = output[column].fillna(False).astype(bool)
+        elif column in OPTIONAL_TEXT_POI_COLUMNS:
+            output[column] = output[column].fillna("").astype(str)
+        else:
+            output[column] = pd.to_numeric(output[column], errors="coerce").fillna(0.0)
+    return output
+
+
+def _optional_poi_fields(stop):
+    fields = {}
+    for column in OPTIONAL_POI_COLUMNS:
+        value = stop.get(column, False if column in OPTIONAL_BOOL_POI_COLUMNS else "")
+        try:
+            missing = pd.isna(value)
+        except Exception:
+            missing = False
+        if column in OPTIONAL_BOOL_POI_COLUMNS:
+            fields[column] = False if missing else bool(value)
+        elif column in OPTIONAL_TEXT_POI_COLUMNS:
+            fields[column] = "" if missing else str(value)
+        else:
+            try:
+                fields[column] = 0.0 if missing else float(value)
+            except Exception:
+                fields[column] = 0.0
+    return fields
 
 
 def _normalize_catalog_columns(df, city, source_name):
@@ -249,6 +338,7 @@ def _normalize_catalog_columns(df, city, source_name):
                 "data_confidence",
                 "final_poi_value",
                 "social_reason",
+                *OPTIONAL_POI_COLUMNS,
             ]
         )
 
@@ -289,27 +379,27 @@ def _normalize_catalog_columns(df, city, source_name):
     ).fillna(0.0)
     output["latitude"] = pd.to_numeric(output["latitude"], errors="coerce")
     output["longitude"] = pd.to_numeric(output["longitude"], errors="coerce")
+    output = _coerce_optional_poi_columns(output)
     output = output.dropna(subset=["name", "latitude", "longitude"])
-    return output[
-        [
-            "city",
-            "name",
-            "category",
-            "latitude",
-            "longitude",
-            "source",
-            "source_score",
-            "source_list",
-            "social_score",
-            "social_must_go",
-            "must_go_weight",
-            "corridor_fit",
-            "detour_minutes",
-            "data_confidence",
-            "final_poi_value",
-            "social_reason",
-        ]
+    base_columns = [
+        "city",
+        "name",
+        "category",
+        "latitude",
+        "longitude",
+        "source",
+        "source_score",
+        "source_list",
+        "social_score",
+        "social_must_go",
+        "must_go_weight",
+        "corridor_fit",
+        "detour_minutes",
+        "data_confidence",
+        "final_poi_value",
+        "social_reason",
     ]
+    return output[base_columns + OPTIONAL_POI_COLUMNS]
 
 
 def _social_must_go_catalog(city=None):
@@ -379,16 +469,28 @@ def _select_compact_day_stops(poi_catalog, hotel, used_names, stops_per_day=3, p
 
     available["latitude"] = pd.to_numeric(available["latitude"], errors="coerce")
     available["longitude"] = pd.to_numeric(available["longitude"], errors="coerce")
-    available["source_score"] = pd.to_numeric(available.get("source_score", 1.0), errors="coerce").fillna(1.0)
-    available["social_score"] = pd.to_numeric(available.get("social_score", 0.0), errors="coerce").fillna(0.0)
-    available["must_go_weight"] = pd.to_numeric(available.get("must_go_weight", 0.0), errors="coerce").fillna(0.0)
-    available["corridor_fit"] = pd.to_numeric(available.get("corridor_fit", 0.0), errors="coerce").fillna(0.0)
-    available["detour_minutes"] = pd.to_numeric(available.get("detour_minutes", 0.0), errors="coerce").fillna(0.0)
+    available["source_score"] = pd.to_numeric(_catalog_series(available, "source_score", 1.0), errors="coerce").fillna(
+        1.0
+    )
+    available["social_score"] = pd.to_numeric(_catalog_series(available, "social_score", 0.0), errors="coerce").fillna(
+        0.0
+    )
+    available["must_go_weight"] = pd.to_numeric(
+        _catalog_series(available, "must_go_weight", 0.0), errors="coerce"
+    ).fillna(0.0)
+    available["corridor_fit"] = pd.to_numeric(
+        _catalog_series(available, "corridor_fit", 0.0), errors="coerce"
+    ).fillna(0.0)
+    available["route_fit"] = pd.to_numeric(_catalog_series(available, "route_fit", 0.0), errors="coerce").fillna(0.0)
+    available["route_context_fit"] = np.maximum(available["corridor_fit"], available["route_fit"])
+    available["detour_minutes"] = pd.to_numeric(
+        _catalog_series(available, "detour_minutes", 0.0), errors="coerce"
+    ).fillna(0.0)
     available["final_poi_value"] = pd.to_numeric(
-        available.get("final_poi_value", available["source_score"] + available["social_score"] * 3.0),
+        _catalog_series(available, "final_poi_value", available["source_score"] + available["social_score"] * 3.0),
         errors="coerce",
     ).fillna(0.0)
-    available["social_must_go"] = available.get("social_must_go", False)
+    available["social_must_go"] = _catalog_series(available, "social_must_go", False)
     available["social_must_go"] = available["social_must_go"].fillna(False).astype(bool)
     available = available.dropna(subset=["latitude", "longitude"])
     if available.empty:
@@ -427,7 +529,7 @@ def _select_compact_day_stops(poi_catalog, hotel, used_names, stops_per_day=3, p
             pool["source_score_norm"] * 1.05
             + pool["social_score"] * float(profile_config.get("social_weight", 1.15))
             + pool["must_go_weight"] * pool["social_score"] * float(profile_config.get("must_go_bonus", 0.65))
-            + pool["corridor_fit"] * 0.18
+            + pool["route_context_fit"] * 0.18
             - pool["distance_to_anchor_km"] * float(profile_config.get("anchor_distance_weight", 0.18))
             - pool["distance_to_hotel_km"] * float(profile_config.get("hotel_distance_weight", 0.10))
             - pool["detour_minutes"] * 0.004
@@ -447,7 +549,7 @@ def _select_compact_day_stops(poi_catalog, hotel, used_names, stops_per_day=3, p
             + float(cluster["social_score"].mean()) * (float(profile_config.get("social_weight", 1.15)) + 0.20)
             + float((cluster["must_go_weight"] * cluster["social_score"]).mean())
             * (float(profile_config.get("must_go_bonus", 0.65)) + 0.10)
-            + float(cluster["corridor_fit"].mean()) * 0.18
+            + float(cluster["route_context_fit"].mean()) * 0.18
             - mean_pairwise * 0.16
             - float(cluster["distance_to_hotel_km"].mean()) * float(profile_config.get("hotel_distance_weight", 0.10))
             - float(cluster["detour_minutes"].mean()) * 0.004
@@ -477,6 +579,7 @@ def _select_compact_day_stops(poi_catalog, hotel, used_names, stops_per_day=3, p
         "data_confidence",
         "final_poi_value",
         "social_reason",
+        *OPTIONAL_POI_COLUMNS,
     ]
     for column in output_columns:
         if column not in ordered.columns:
@@ -486,6 +589,7 @@ def _select_compact_day_stops(poi_catalog, hotel, used_names, stops_per_day=3, p
                 ordered[column] = ordered.get("source", "unknown")
             else:
                 ordered[column] = 0.0
+    ordered = _coerce_optional_poi_columns(ordered)
     return ordered[output_columns]
 
 
@@ -495,7 +599,7 @@ def _select_hotel_for_city_plan(hotel_catalog, poi_catalog, used_names, stops_pe
         return hotel_catalog.iloc[0]
 
     hotels = hotel_catalog.copy().head(14).reset_index(drop=True)
-    hotels["rating_score"] = pd.to_numeric(hotels.get("rating_score", 0.0), errors="coerce").fillna(0.0)
+    hotels["rating_score"] = _numeric_catalog_series(hotels, "rating_score", 0.0)
     hotels["nightly_price"] = pd.to_numeric(hotels.get("nightly_price", np.nan), errors="coerce")
     rating_span = max(float(hotels["rating_score"].max() - hotels["rating_score"].min()), 1e-6)
     price_filled = hotels["nightly_price"].fillna(
@@ -549,8 +653,12 @@ def _city_poi_catalog(context, city):
 
     if not cached_enriched.empty:
         include_corridor_social = city in {"San Francisco", "Monterey", "Los Angeles"}
+        route_context_fit = np.maximum(
+            pd.to_numeric(_catalog_series(cached_enriched, "corridor_fit", 0.0), errors="coerce").fillna(0.0),
+            pd.to_numeric(_catalog_series(cached_enriched, "route_fit", 0.0), errors="coerce").fillna(0.0),
+        )
         corridor_social_mask = (
-            cached_enriched.get("corridor_fit", pd.Series(0.0, index=cached_enriched.index)).astype(float).gt(0.70)
+            route_context_fit.gt(0.70)
             & cached_enriched.get("social_must_go", pd.Series(False, index=cached_enriched.index)).astype(bool)
             & include_corridor_social
         )
@@ -598,13 +706,14 @@ def _city_poi_catalog(context, city):
             ]
         )
 
-    city_frame["social_score"] = pd.to_numeric(city_frame.get("social_score", 0.0), errors="coerce").fillna(0.0)
-    city_frame["source_score"] = pd.to_numeric(city_frame.get("source_score", 0.0), errors="coerce").fillna(0.0)
+    city_frame["social_score"] = _numeric_catalog_series(city_frame, "social_score", 0.0)
+    city_frame["source_score"] = _numeric_catalog_series(city_frame, "source_score", 0.0)
     city_frame["final_poi_value"] = pd.to_numeric(
         city_frame.get("final_poi_value", city_frame["source_score"] + 3.0 * city_frame["social_score"]),
         errors="coerce",
     ).fillna(0.0)
-    city_frame["ranking_score"] = city_frame["final_poi_value"]
+    interest_value = _numeric_catalog_series(city_frame, "interest_adjusted_value", 0.0)
+    city_frame["ranking_score"] = np.where(interest_value.gt(0.0), interest_value, city_frame["final_poi_value"])
     return city_frame.sort_values(
         ["ranking_score", "source_score", "name"], ascending=[False, False, True]
     ).drop_duplicates("name")
@@ -624,7 +733,7 @@ def _city_hotel_catalog(context, city):
         local_hotels["rating_score"] = pd.to_numeric(
             local_hotels.get("rating_score", local_hotels.get("stars", 0)), errors="coerce"
         ).fillna(0)
-        local_hotels["nightly_price"] = pd.to_numeric(local_hotels.get("nightly_price", 0), errors="coerce").fillna(0)
+        local_hotels["nightly_price"] = _numeric_catalog_series(local_hotels, "nightly_price", 0)
         local_hotels["type_priority"] = (
             local_hotels.get("type", "hotel")
             .map({"hotel": 0, "motel": 1, "guest_house": 2, "hostel": 3, "apartment": 4})
@@ -638,7 +747,7 @@ def _city_hotel_catalog(context, city):
     if not cached_osm.empty:
         city_rows = cached_osm[cached_osm["city"].astype(str).str.lower().eq(city.lower())].copy()
         if not city_rows.empty:
-            city_rows["rating_score"] = pd.to_numeric(city_rows.get("stars", 0), errors="coerce").fillna(0)
+            city_rows["rating_score"] = _numeric_catalog_series(city_rows, "stars", 0)
             city_rows["nightly_price"] = np.nan
             city_rows["source"] = city_rows.get("source", "openstreetmap_overpass_cache")
             type_priority = {"hotel": 0, "motel": 1, "guest_house": 2, "hostel": 3, "apartment": 4}
@@ -650,9 +759,9 @@ def _city_hotel_catalog(context, city):
 
     if hotel_frames:
         hotels = pd.concat(hotel_frames, ignore_index=True, sort=False)
-        hotels["rating_score"] = pd.to_numeric(hotels.get("rating_score", 0), errors="coerce").fillna(0)
+        hotels["rating_score"] = _numeric_catalog_series(hotels, "rating_score", 0)
         hotels["nightly_price"] = pd.to_numeric(hotels.get("nightly_price", np.nan), errors="coerce")
-        hotels["type_priority"] = pd.to_numeric(hotels.get("type_priority", 5), errors="coerce").fillna(5)
+        hotels["type_priority"] = _numeric_catalog_series(hotels, "type_priority", 5)
         hotels["distance_to_center_km"] = pd.to_numeric(
             hotels.get(
                 "distance_to_center_km", _distance_to_city_center(city, hotels["latitude"], hotels["longitude"])
@@ -809,10 +918,18 @@ def _select_pass_through_day_stops(context, pass_through_cities, used_names_by_c
         if catalog.empty:
             continue
 
-        catalog["final_poi_value"] = pd.to_numeric(catalog.get("final_poi_value", 0), errors="coerce").fillna(0)
-        catalog["social_score"] = pd.to_numeric(catalog.get("social_score", 0), errors="coerce").fillna(0)
-        catalog["corridor_fit"] = pd.to_numeric(catalog.get("corridor_fit", 0), errors="coerce").fillna(0)
-        catalog["detour_minutes"] = pd.to_numeric(catalog.get("detour_minutes", 0), errors="coerce").fillna(0)
+        catalog["final_poi_value"] = pd.to_numeric(
+            _catalog_series(catalog, "final_poi_value", 0), errors="coerce"
+        ).fillna(0)
+        catalog["social_score"] = pd.to_numeric(_catalog_series(catalog, "social_score", 0), errors="coerce").fillna(
+            0
+        )
+        catalog["corridor_fit"] = pd.to_numeric(_catalog_series(catalog, "corridor_fit", 0), errors="coerce").fillna(0)
+        catalog["route_fit"] = pd.to_numeric(_catalog_series(catalog, "route_fit", 0), errors="coerce").fillna(0)
+        catalog["route_context_fit"] = np.maximum(catalog["corridor_fit"], catalog["route_fit"])
+        catalog["detour_minutes"] = pd.to_numeric(
+            _catalog_series(catalog, "detour_minutes", 0), errors="coerce"
+        ).fillna(0)
         if "social_must_go" in catalog.columns:
             catalog["social_must_go"] = catalog["social_must_go"].fillna(False).astype(bool)
         else:
@@ -820,7 +937,7 @@ def _select_pass_through_day_stops(context, pass_through_cities, used_names_by_c
         catalog["transition_stop_score"] = (
             catalog["final_poi_value"] * float(profile_config.get("value_weight", 1.0))
             + catalog["social_score"] * float(profile_config.get("social_weight", 0.6))
-            + catalog["corridor_fit"] * 0.35
+            + catalog["route_context_fit"] * 0.35
             + catalog["social_must_go"].astype(float) * 0.45
             + catalog["category"]
             .astype(str)
@@ -848,10 +965,11 @@ def _select_corridor_view_stops(context, segment_cities, used_names_by_city, max
     enriched = _load_csv(output_dir / "production_enriched_poi_catalog.csv")
     if enriched.empty:
         return pd.DataFrame()
-    pool = enriched[
-        enriched["city"].astype(str).isin(segment_cities)
-        | pd.to_numeric(enriched.get("corridor_fit", 0.0), errors="coerce").fillna(0.0).ge(0.75)
-    ].copy()
+    route_context_fit = np.maximum(
+        pd.to_numeric(_catalog_series(enriched, "corridor_fit", 0.0), errors="coerce").fillna(0.0),
+        pd.to_numeric(_catalog_series(enriched, "route_fit", 0.0), errors="coerce").fillna(0.0),
+    )
+    pool = enriched[enriched["city"].astype(str).isin(segment_cities) | route_context_fit.ge(0.75)].copy()
     if pool.empty:
         return pd.DataFrame()
     used_names = set()
@@ -860,10 +978,14 @@ def _select_corridor_view_stops(context, segment_cities, used_names_by_city, max
     pool = pool[~pool["name"].astype(str).isin(used_names)].copy()
     if pool.empty:
         return pd.DataFrame()
-    pool["final_poi_value"] = pd.to_numeric(pool.get("final_poi_value", 0.0), errors="coerce").fillna(0.0)
-    pool["social_score"] = pd.to_numeric(pool.get("social_score", 0.0), errors="coerce").fillna(0.0)
-    pool["corridor_fit"] = pd.to_numeric(pool.get("corridor_fit", 0.0), errors="coerce").fillna(0.0)
-    pool["detour_minutes"] = pd.to_numeric(pool.get("detour_minutes", 0.0), errors="coerce").fillna(0.0)
+    pool["final_poi_value"] = pd.to_numeric(_catalog_series(pool, "final_poi_value", 0.0), errors="coerce").fillna(
+        0.0
+    )
+    pool["social_score"] = pd.to_numeric(_catalog_series(pool, "social_score", 0.0), errors="coerce").fillna(0.0)
+    pool["corridor_fit"] = pd.to_numeric(_catalog_series(pool, "corridor_fit", 0.0), errors="coerce").fillna(0.0)
+    pool["route_fit"] = pd.to_numeric(_catalog_series(pool, "route_fit", 0.0), errors="coerce").fillna(0.0)
+    pool["route_context_fit"] = np.maximum(pool["corridor_fit"], pool["route_fit"])
+    pool["detour_minutes"] = pd.to_numeric(_catalog_series(pool, "detour_minutes", 0.0), errors="coerce").fillna(0.0)
     pool["view_signal"] = (
         pool["category"]
         .astype(str)
@@ -877,7 +999,7 @@ def _select_corridor_view_stops(context, segment_cities, used_names_by_city, max
     pool["cross_city_view_score"] = (
         pool["final_poi_value"] * float(profile_config.get("value_weight", 1.0))
         + pool["social_score"] * float(profile_config.get("social_weight", 0.6))
-        + pool["corridor_fit"] * 0.35
+        + pool["route_context_fit"] * 0.35
         + pool["view_signal"] * 0.55
         - pool["detour_minutes"] * 0.006
     )
@@ -897,8 +1019,8 @@ def _stanford_transition_stop(context, used_names_by_city):
         social_catalog = _social_must_go_catalog()
         stanford_rows = social_catalog[social_catalog["name"].astype(str).eq(STANFORD_WAYPOINT_NAME)].copy()
         if not stanford_rows.empty:
-            source_score = pd.to_numeric(stanford_rows.get("source_score", 0.0), errors="coerce").fillna(0.0)
-            social_score = pd.to_numeric(stanford_rows.get("social_score", 0.0), errors="coerce").fillna(0.0)
+            source_score = _numeric_catalog_series(stanford_rows, "source_score", 0.0)
+            social_score = _numeric_catalog_series(stanford_rows, "social_score", 0.0)
             stanford_rows["final_poi_value"] = source_score * 0.15 + social_score * 0.90
     if stanford_rows.empty:
         return pd.DataFrame()
@@ -1071,6 +1193,7 @@ def build_day_plan(context, stops_per_day=None, profile_name="balanced"):
                         "data_confidence": float(stop.get("data_confidence", 0.5) or 0.5),
                         "final_poi_value": float(stop.get("final_poi_value", stop.get("source_score", 0.0)) or 0.0),
                         "social_reason": stop.get("social_reason", ""),
+                        **_optional_poi_fields(stop),
                     }
                 )
             day_number += 1
@@ -1092,13 +1215,25 @@ def _select_greedy_day_stops(poi_catalog, hotel, used_names, stops_per_day=3):
         available.get("final_poi_value", available.get("source_score", 0.0)),
         errors="coerce",
     ).fillna(0.0)
-    available["source_score"] = pd.to_numeric(available.get("source_score", 0.0), errors="coerce").fillna(0.0)
-    available["social_score"] = pd.to_numeric(available.get("social_score", 0.0), errors="coerce").fillna(0.0)
+    available["source_score"] = pd.to_numeric(_catalog_series(available, "source_score", 0.0), errors="coerce").fillna(
+        0.0
+    )
+    available["social_score"] = pd.to_numeric(_catalog_series(available, "social_score", 0.0), errors="coerce").fillna(
+        0.0
+    )
     available["social_must_go"] = available.get("social_must_go", False)
     available["social_must_go"] = available["social_must_go"].fillna(False).astype(bool)
-    available["must_go_weight"] = pd.to_numeric(available.get("must_go_weight", 0.0), errors="coerce").fillna(0.0)
-    available["corridor_fit"] = pd.to_numeric(available.get("corridor_fit", 0.0), errors="coerce").fillna(0.0)
-    available["detour_minutes"] = pd.to_numeric(available.get("detour_minutes", 0.0), errors="coerce").fillna(0.0)
+    available["must_go_weight"] = pd.to_numeric(
+        _catalog_series(available, "must_go_weight", 0.0), errors="coerce"
+    ).fillna(0.0)
+    available["corridor_fit"] = pd.to_numeric(
+        _catalog_series(available, "corridor_fit", 0.0), errors="coerce"
+    ).fillna(0.0)
+    available["route_fit"] = pd.to_numeric(_catalog_series(available, "route_fit", 0.0), errors="coerce").fillna(0.0)
+    available["route_context_fit"] = np.maximum(available["corridor_fit"], available["route_fit"])
+    available["detour_minutes"] = pd.to_numeric(
+        _catalog_series(available, "detour_minutes", 0.0), errors="coerce"
+    ).fillna(0.0)
     available = available.dropna(subset=["latitude", "longitude"]).reset_index(drop=True)
     if available.empty:
         return poi_catalog.head(stops_per_day)
@@ -1115,7 +1250,7 @@ def _select_greedy_day_stops(poi_catalog, hotel, used_names, stops_per_day=3):
             lambda row: (
                 float(row["final_poi_value"])
                 + 0.12 * float(row["social_score"])
-                + 0.08 * float(row["corridor_fit"])
+                + 0.08 * float(row["route_context_fit"])
                 - 0.02 * _point_distance_km(current_lat, current_lon, row["latitude"], row["longitude"])
                 - 0.004 * float(row["detour_minutes"])
             ),
@@ -1148,6 +1283,7 @@ def _select_greedy_day_stops(poi_catalog, hotel, used_names, stops_per_day=3):
         "data_confidence",
         "final_poi_value",
         "social_reason",
+        *OPTIONAL_POI_COLUMNS,
     ]
     for column in output_columns:
         if column not in selected.columns:
@@ -1157,6 +1293,7 @@ def _select_greedy_day_stops(poi_catalog, hotel, used_names, stops_per_day=3):
                 selected[column] = selected.get("source", "unknown")
             else:
                 selected[column] = 0.0
+    selected = _coerce_optional_poi_columns(selected)
     return selected[output_columns]
 
 
@@ -1174,8 +1311,8 @@ def _select_greedy_pass_through_day_stops(context, pass_through_cities, used_nam
         catalog = catalog[~catalog["name"].astype(str).isin(used_names)].copy()
         if catalog.empty:
             continue
-        catalog["final_poi_value"] = pd.to_numeric(catalog.get("final_poi_value", 0.0), errors="coerce").fillna(0.0)
-        catalog["source_score"] = pd.to_numeric(catalog.get("source_score", 0.0), errors="coerce").fillna(0.0)
+        catalog["final_poi_value"] = _numeric_catalog_series(catalog, "final_poi_value", 0.0)
+        catalog["source_score"] = _numeric_catalog_series(catalog, "source_score", 0.0)
         stop = catalog.sort_values(["final_poi_value", "source_score", "name"], ascending=[False, False, True]).iloc[0]
         selected_rows.append(stop)
         used_names.add(str(stop["name"]))
@@ -1313,6 +1450,7 @@ def build_greedy_baseline_day_plan(context, stops_per_day=None, profile_name="ba
                         "data_confidence": float(stop.get("data_confidence", 0.5) or 0.5),
                         "final_poi_value": float(stop.get("final_poi_value", stop.get("source_score", 0.0)) or 0.0),
                         "social_reason": stop.get("social_reason", ""),
+                        **_optional_poi_fields(stop),
                     }
                 )
             day_number += 1
@@ -2406,7 +2544,7 @@ def _hotel_loop_points_from_day_group(group):
         local_rows = group.copy()
     if local_rows.empty:
         return [], local_rows
-    local_rows["stop_order"] = pd.to_numeric(local_rows.get("stop_order", 1), errors="coerce").fillna(1).astype(int)
+    local_rows["stop_order"] = _numeric_catalog_series(local_rows, "stop_order", 1).astype(int)
     local_rows = local_rows.sort_values(["stop_order", "attraction_name"]).reset_index(drop=True)
     stop_points = local_rows[["latitude", "longitude"]].dropna().astype(float).values.tolist()
     return [hotel_point, *stop_points, hotel_point], local_rows
@@ -2436,7 +2574,7 @@ def _transition_points_from_day_group(group):
     transition_rows = group[~group["city"].astype(str).eq(overnight_city)].copy()
     if not transition_rows.empty:
         transition_rows["stop_order"] = (
-            pd.to_numeric(transition_rows.get("stop_order", 1), errors="coerce").fillna(1).astype(int)
+            _numeric_catalog_series(transition_rows, "stop_order", 1).astype(int)
         )
         transition_rows = transition_rows.sort_values(["stop_order", "attraction_name"]).reset_index(drop=True)
     stop_points = (
@@ -2513,8 +2651,8 @@ def _append_route_debug_row(
     issue = ""
     status = "OK"
     if len(clean_points) < 2:
-        status = "FAILED"
-        issue = "not enough unique finite coordinates to draw a route"
+        status = "WARN"
+        issue = "single-point marker/loop diagnostic; no route line drawn"
     elif source_rows and distance_km < 0.05:
         status = "FAILED"
         issue = "route collapsed to a single point"
@@ -2664,8 +2802,8 @@ def _add_selected_result_layer(
     )
 
     day_frame = day_plan_df.copy()
-    day_frame["day"] = pd.to_numeric(day_frame.get("day", 1), errors="coerce").fillna(1).astype(int)
-    day_frame["stop_order"] = pd.to_numeric(day_frame.get("stop_order", 1), errors="coerce").fillna(1).astype(int)
+    day_frame["day"] = _numeric_catalog_series(day_frame, "day", 1).astype(int)
+    day_frame["stop_order"] = _numeric_catalog_series(day_frame, "stop_order", 1).astype(int)
     day_frame = day_frame.sort_values(["day", "stop_order", "attraction_name"]).reset_index(drop=True)
 
     for day, group in day_frame.groupby("day", sort=True):
@@ -2815,8 +2953,8 @@ def _add_model_comparison_layers(
             show=show_layer,
         )
         day_frame = layer_df.copy()
-        day_frame["day"] = pd.to_numeric(day_frame.get("day", 1), errors="coerce").fillna(1).astype(int)
-        day_frame["stop_order"] = pd.to_numeric(day_frame.get("stop_order", 1), errors="coerce").fillna(1).astype(int)
+        day_frame["day"] = _numeric_catalog_series(day_frame, "day", 1).astype(int)
+        day_frame["stop_order"] = _numeric_catalog_series(day_frame, "stop_order", 1).astype(int)
         day_frame = day_frame.sort_values(["day", "stop_order", "attraction_name"]).reset_index(drop=True)
         for day, group in day_frame.groupby("day", sort=True):
             first = group.iloc[0]
@@ -2936,9 +3074,9 @@ def _add_traveler_overview_layers(
         layer = folium.FeatureGroup(name=layer_name, show=bool(show_by_default))
 
         sorted_plan = plan_df.copy()
-        sorted_plan["day"] = pd.to_numeric(sorted_plan.get("day", 1), errors="coerce").fillna(1).astype(int)
+        sorted_plan["day"] = _numeric_catalog_series(sorted_plan, "day", 1).astype(int)
         sorted_plan["stop_order"] = (
-            pd.to_numeric(sorted_plan.get("stop_order", 1), errors="coerce").fillna(1).astype(int)
+            _numeric_catalog_series(sorted_plan, "stop_order", 1).astype(int)
         )
         sorted_plan = sorted_plan.sort_values(["day", "stop_order", "attraction_name"]).reset_index(drop=True)
 
@@ -3009,8 +3147,8 @@ def _add_city_detail_layers(
         return [], []
 
     sorted_plan = day_plan_df.copy()
-    sorted_plan["day"] = pd.to_numeric(sorted_plan.get("day", 1), errors="coerce").fillna(1).astype(int)
-    sorted_plan["stop_order"] = pd.to_numeric(sorted_plan.get("stop_order", 1), errors="coerce").fillna(1).astype(int)
+    sorted_plan["day"] = _numeric_catalog_series(sorted_plan, "day", 1).astype(int)
+    sorted_plan["stop_order"] = _numeric_catalog_series(sorted_plan, "stop_order", 1).astype(int)
     sorted_plan = sorted_plan.sort_values(["day", "stop_order", "attraction_name"]).reset_index(drop=True)
 
     city_loop_groups = {}
@@ -3317,10 +3455,10 @@ def _add_route_matrix_layers(
         return [], []
 
     matrix_routes = matrix_routes.copy()
-    matrix_routes["trip_days"] = pd.to_numeric(matrix_routes.get("trip_days", 7), errors="coerce").fillna(7).astype(int)
-    matrix_routes["day"] = pd.to_numeric(matrix_routes.get("day", 1), errors="coerce").fillna(1).astype(int)
+    matrix_routes["trip_days"] = _numeric_catalog_series(matrix_routes, "trip_days", 7).astype(int)
+    matrix_routes["day"] = _numeric_catalog_series(matrix_routes, "day", 1).astype(int)
     matrix_routes["stop_order"] = (
-        pd.to_numeric(matrix_routes.get("stop_order", 1), errors="coerce").fillna(1).astype(int)
+        _numeric_catalog_series(matrix_routes, "stop_order", 1).astype(int)
     )
     matrix_routes = matrix_routes.sort_values(["trip_days", "method", "profile", "day", "stop_order"]).reset_index(
         drop=True
@@ -3796,8 +3934,8 @@ def _full_route_points_from_plan(plan_df):
     if plan_df is None or plan_df.empty:
         return []
     sorted_plan = plan_df.copy()
-    sorted_plan["day"] = pd.to_numeric(sorted_plan.get("day", 1), errors="coerce").fillna(1).astype(int)
-    sorted_plan["stop_order"] = pd.to_numeric(sorted_plan.get("stop_order", 1), errors="coerce").fillna(1).astype(int)
+    sorted_plan["day"] = _numeric_catalog_series(sorted_plan, "day", 1).astype(int)
+    sorted_plan["stop_order"] = _numeric_catalog_series(sorted_plan, "stop_order", 1).astype(int)
     sorted_plan = sorted_plan.sort_values(["day", "stop_order", "attraction_name"]).reset_index(drop=True)
     full_points = []
     for _, group in sorted_plan.groupby("day", sort=True):
@@ -5518,8 +5656,8 @@ def _load_default_hierarchical_gurobi_day_plan(output_dir, fallback_df):
     if route_stops.empty:
         return fallback_df
 
-    route_stops["day"] = pd.to_numeric(route_stops.get("day", 1), errors="coerce").fillna(1).astype(int)
-    route_stops["stop_order"] = pd.to_numeric(route_stops.get("stop_order", 1), errors="coerce").fillna(1).astype(int)
+    route_stops["day"] = _numeric_catalog_series(route_stops, "day", 1).astype(int)
+    route_stops["stop_order"] = _numeric_catalog_series(route_stops, "stop_order", 1).astype(int)
     route_stops = route_stops.sort_values(["day", "stop_order", "attraction_name"]).reset_index(drop=True)
     total_days = int(route_stops["day"].max()) if not route_stops.empty else 0
     output = route_stops.copy()

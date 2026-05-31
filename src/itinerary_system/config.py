@@ -18,6 +18,7 @@ DEFAULT_CONFIG = {
         "end_city_options": ["Los Angeles", "San Francisco"],
         "traveler_profile": "balanced",
         "scenario": "california_coast",
+        "scenario_city_universe": "auto",
         "interest_profile": "balanced_interest",
     },
     "budget": {
@@ -128,7 +129,9 @@ DEFAULT_CONFIG = {
         "max_nature_detour_minutes": 240,
         "max_single_day_drive_minutes_for_nature": 360,
         "min_nature_days_for_nature_heavy": 2,
+        "min_selected_nature_stops_for_nature_heavy": 2,
         "min_nature_score_for_nature_heavy": 0.35,
+        "la_inclusion_policy": "gateway_or_selected_or_explain",
         "national_park_bonus": 0.80,
         "state_park_bonus": 0.45,
         "protected_area_bonus": 0.35,
@@ -143,6 +146,7 @@ DEFAULT_CONFIG = {
     },
     "map": {
         "balanced_only_default_view": True,
+        "require_matching_artifact_metadata": True,
         "refresh_road_geometry": False,
         "show_debug_on_load": False,
     },

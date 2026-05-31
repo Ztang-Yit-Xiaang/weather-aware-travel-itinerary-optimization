@@ -24,6 +24,10 @@ results/figures/full_interactive_dashboard/
 results/outputs/*.csv
 results/outputs/*.json
 results/outputs/*.html
+results/outputs/*.tmp
+results/outputs/probe_*/
+results/outputs/pytest_tmp*/
+tmp_test/
 results/outputs/production_interest_bar_preview.json
 results/outputs/production_interest_profile_comparison.csv
 results/outputs/production_nature_metric_summary.csv

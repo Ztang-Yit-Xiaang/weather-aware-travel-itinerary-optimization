@@ -11,7 +11,9 @@ from typing import Any
 
 import pandas as pd
 
+from .artifact_metadata import artifact_metadata_matches, read_artifact_metadata
 from .config import TripConfig
+from .region_scenarios import get_scenario_definition
 
 DEFAULT_DASHBOARD_ROUTE_ID = "selected_route"
 DEFAULT_DASHBOARD_METHOD = "hierarchical_bandit_gurobi_repair"
@@ -211,6 +213,101 @@ def _route_record(
     return record
 
 
+def _clamp(value: float, low: float = 0.0, high: float = 1.0) -> float:
+    return max(low, min(high, float(value)))
+
+
+def _point_type(row: pd.Series) -> str:
+    for column in ["type", "category", "park_type", "route_type"]:
+        value = _safe_str(row.get(column, ""))
+        if value:
+            return value
+    return "point_of_interest"
+
+
+def _city_or_anchor(row: pd.Series) -> str:
+    nature_region = _safe_str(row.get("nature_region", ""))
+    category = _safe_str(row.get("category", "")).lower()
+    if nature_region and any(token in nature_region.lower() for token in ["national park", "big sur", "bixby"]):
+        return nature_region
+    if nature_region and any(token in category for token in ["national_park", "park", "viewpoint", "hiking", "nature"]):
+        return nature_region
+    for column in ["city_or_anchor", "city", "overnight_city", "route_start_city", "route_end_city"]:
+        value = _safe_str(row.get(column, ""))
+        if value:
+            return value
+    return nature_region or "Unassigned"
+
+
+def _source_confidence(row: pd.Series) -> float:
+    for column in ["source_confidence", "data_confidence", "confidence", "confidence_score"]:
+        value = _safe_float(row.get(column, 0.0))
+        if value > 0:
+            return round(_clamp(value), 3)
+    source = _safe_str(row.get("source_list", row.get("source", ""))).lower()
+    if any(token in source for token in ["openstreetmap", "osm", "wikidata", "wikipedia", "yelp"]):
+        return 0.75
+    if "curated" in source:
+        return 0.58
+    if source:
+        return 0.5
+    return 0.4
+
+
+def _weather_risk(row: pd.Series) -> float:
+    for column in ["weather_risk", "risk_score", "weather_score"]:
+        value = _safe_float(row.get(column, -1.0), -1.0)
+        if value >= 0:
+            return round(_clamp(value), 3)
+    sensitivity = _safe_float(row.get("weather_sensitivity", 0.0))
+    seasonality = _safe_float(row.get("seasonality_risk", 0.0))
+    return round(_clamp(0.08 + 0.28 * sensitivity + 0.18 * seasonality), 3)
+
+
+def _expected_duration_minutes(row: pd.Series) -> int:
+    for column in ["expected_duration_minutes", "visit_duration_minutes", "visit_duration_sim", "available_visit_minutes"]:
+        value = _safe_float(row.get(column, 0.0))
+        if value > 0:
+            return int(round(max(30.0, min(240.0, value))))
+    category = _safe_str(row.get("category", "")).lower()
+    if any(token in category for token in ["national_park", "hiking", "viewpoint", "park", "nature"]):
+        return 120
+    if "museum" in category or "history" in category:
+        return 90
+    return 75
+
+
+def _point_description(row: pd.Series) -> str:
+    for column in ["description", "summary", "poi_description", "notes"]:
+        value = _safe_str(row.get(column, "")).strip()
+        if value and value.lower() not in {"nan", "none", "selected route stop"}:
+            return value
+    name = _route_name(row)
+    anchor = _city_or_anchor(row)
+    point_type = _point_type(row).replace("_", " ")
+    source = _safe_str(row.get("source_list", row.get("source", "")))
+    source_part = f" using {source} signals" if source else ""
+    return f"{name} is a {point_type} in {anchor}{source_part}."
+
+
+def _why_selected(row: pd.Series) -> str:
+    for column in ["why_selected", "reason_selected", "selection_reason"]:
+        value = _safe_str(row.get(column, "")).strip()
+        if value:
+            return value
+    why_not = _safe_str(row.get("why_not_selected", "")).strip()
+    if why_not:
+        return f"Not selected for the saved route: {why_not}"
+    value = _safe_float(row.get("interest_adjusted_value", row.get("final_poi_value", 0.0)))
+    nature = _safe_float(row.get("nature_score", 0.0))
+    scenic = _safe_float(row.get("scenic_score", 0.0))
+    if nature > 0.35 or scenic > 0.35:
+        return "Selected or ranked because it strengthens the nature/scenic objective for the active scenario."
+    if value > 0:
+        return "Selected or ranked because it contributes positive artifact-backed itinerary value."
+    return "Shown for route context or candidate comparison; not counted as a saved optimized stop unless it appears in the selected route layer."
+
+
 def _point_records(route_df: pd.DataFrame) -> list[dict[str, Any]]:
     records = []
     for _, row in route_df.iterrows():
@@ -222,10 +319,16 @@ def _point_records(route_df: pd.DataFrame) -> list[dict[str, Any]]:
         interest_adjusted_value = _safe_float(row.get("interest_adjusted_value", 0.0))
         display_utility = interest_adjusted_value if interest_adjusted_value > 0 else final_poi_value
         optimization_value_source = "interest_adjusted_value" if interest_adjusted_value > 0 else "final_poi_value"
+        point_type = _point_type(row)
+        city_or_anchor = _city_or_anchor(row)
+        source_confidence = _source_confidence(row)
+        weather_risk = _weather_risk(row)
+        expected_duration = _expected_duration_minutes(row)
         records.append(
             {
                 "name": _route_name(row),
                 "city": _safe_str(row.get("city", row.get("overnight_city", ""))),
+                "city_or_anchor": city_or_anchor,
                 "lat": lat,
                 "lon": lon,
                 "day": int(_safe_float(row.get("day", 0), 0.0)),
@@ -242,7 +345,9 @@ def _point_records(route_df: pd.DataFrame) -> list[dict[str, Any]]:
                 "mean_distance_to_must_go_km": _safe_float(row.get("mean_distance_to_must_go_km", 0.0)),
                 "selected_hotel_reason": _safe_str(row.get("selected_hotel_reason", "")),
                 "category": _safe_str(row.get("category", "")),
+                "type": point_type,
                 "source_list": _safe_str(row.get("source_list", row.get("source", ""))),
+                "source_confidence": source_confidence,
                 "nature_region": _safe_str(row.get("nature_region", "")),
                 "final_poi_value": final_poi_value,
                 "interest_adjusted_value": interest_adjusted_value,
@@ -253,6 +358,7 @@ def _point_records(route_df: pd.DataFrame) -> list[dict[str, Any]]:
                 "nature_score": _safe_float(row.get("nature_score", 0.0)),
                 "scenic_score": _safe_float(row.get("scenic_score", 0.0)),
                 "weather_sensitivity": _safe_float(row.get("weather_sensitivity", 0.0)),
+                "weather_risk": weather_risk,
                 "seasonality_risk": _safe_float(row.get("seasonality_risk", 0.0)),
                 "park_type": _safe_str(row.get("park_type", "")),
                 "route_type": _safe_str(row.get("route_type", "")),
@@ -260,7 +366,10 @@ def _point_records(route_df: pd.DataFrame) -> list[dict[str, Any]]:
                 "notes": _safe_str(row.get("notes", "")),
                 "drive_minutes_to_next_base": _safe_float(row.get("drive_minutes_to_next_base", 0.0)),
                 "reason_selected": _safe_str(row.get("reason_selected", "")),
+                "why_selected": _why_selected(row),
                 "why_not_selected": _safe_str(row.get("why_not_selected", "")),
+                "description": _point_description(row),
+                "expected_duration_minutes": expected_duration,
             }
         )
     return records
@@ -707,13 +816,24 @@ def _playback_data(route_records: list[dict[str, Any]], route_pois: dict[str, li
             {
                 "name": point.get("name", "Stop"),
                 "city": point.get("city", ""),
+                "city_or_anchor": point.get("city_or_anchor", point.get("city", "")),
                 "lat": point.get("lat"),
                 "lon": point.get("lon"),
                 "day": point.get("day", 0),
                 "stop_order": point.get("stop_order", index + 1),
                 "category": point.get("category", ""),
+                "type": point.get("type", point.get("category", "")),
                 "nature_region": point.get("nature_region", ""),
                 "hotel_name": point.get("hotel_name", ""),
+                "description": point.get("description", ""),
+                "why_selected": point.get("why_selected", point.get("reason_selected", "")),
+                "expected_duration_minutes": point.get("expected_duration_minutes", 0),
+                "weather_risk": point.get("weather_risk", 0.0),
+                "source_confidence": point.get("source_confidence", 0.0),
+                "source_list": point.get("source_list", ""),
+                "nature_score": point.get("nature_score", 0.0),
+                "scenic_score": point.get("scenic_score", 0.0),
+                "weather_sensitivity": point.get("weather_sensitivity", 0.0),
                 "interest_adjusted_value": point.get("interest_adjusted_value", 0.0),
                 "final_poi_value": point.get("final_poi_value", 0.0),
                 "display_utility": point.get("display_utility", point.get("final_poi_value", 0.0)),
@@ -984,6 +1104,70 @@ def _nature_explore(output_dir: Path) -> dict[str, Any]:
     }
 
 
+def _anchor_audit_payload(output_dir: Path) -> dict[str, Any]:
+    path = output_dir / "production_dataset_completeness_audit.csv"
+    if not path.exists():
+        path = output_dir / "production_route_anchor_audit.csv"
+    frame = _read_csv_if_present(path)
+    if frame.empty:
+        return {
+            "available": False,
+            "ready": False,
+            "readiness": "missing",
+            "message": "No route anchor or dataset completeness audit artifact found.",
+            "items": [],
+            "required_anchor_count": 0,
+            "missing_count": 0,
+            "warning_count": 1,
+        }
+    allowed_roles = {
+        "selected_stop",
+        "gateway",
+        "base_city",
+        "candidate_only",
+        "context_only",
+        "missing",
+        "infeasible",
+    }
+    records: list[dict[str, Any]] = []
+    missing_count = 0
+    warning_count = 0
+    for _, row in frame.iterrows():
+        role = _safe_str(row.get("role", row.get("status", ""))).strip() or "missing"
+        if role not in allowed_roles:
+            role = "missing"
+        reason = _safe_str(row.get("reason", "")) or "no_reason_recorded"
+        if role == "missing":
+            missing_count += 1
+        if role in {"missing", "context_only"} or reason == "no_reason_recorded":
+            warning_count += 1
+        records.append(
+            {
+                "scenario": _safe_str(row.get("scenario", "")),
+                "interest": _safe_str(row.get("interest", "")),
+                "anchor": _safe_str(row.get("anchor", "")),
+                "candidate": _safe_bool(row.get("candidate", False)),
+                "selected": _safe_bool(row.get("selected", False)),
+                "role": role,
+                "reason": reason,
+                "candidate_count": int(_safe_float(row.get("candidate_count", 0.0))),
+                "selected_count": int(_safe_float(row.get("selected_count", 0.0))),
+                "audited_method": _safe_str(row.get("audited_method", "")),
+            }
+        )
+    ready = missing_count == 0 and all(item["reason"] for item in records)
+    return {
+        "available": True,
+        "ready": ready,
+        "readiness": "ready" if ready else "needs_attention",
+        "path": path.name,
+        "items": records,
+        "required_anchor_count": len(records),
+        "missing_count": missing_count,
+        "warning_count": warning_count,
+    }
+
+
 def _build_dashboard_payloads(
     route_df: pd.DataFrame,
     *,
@@ -1003,7 +1187,6 @@ def _build_dashboard_payloads(
         route_df, output_dir=output_dir, config=config, max_routes=max_routes
     )
     default_points = _point_records(selected)
-    default_points = _reorder_california_nature_points(default_points)
     records: list[dict[str, Any]] = []
     route_geojsons: dict[str, dict[str, Any]] = {}
     route_pois: dict[str, list[dict[str, Any]]] = {}
@@ -1099,7 +1282,7 @@ def _build_dashboard_payloads(
         output_dir=output_dir,
         filename="production_enriched_poi_catalog.csv",
         route_id="nature_candidates",
-        label="Nature candidates",
+        label="National park candidates",
         family="nature",
         selector_group="candidates",
         records=records,
@@ -1109,14 +1292,21 @@ def _build_dashboard_payloads(
         nature_only=True,
     )
 
+    anchor_audit = _anchor_audit_payload(output_dir)
+    artifact_metadata = read_artifact_metadata(output_dir)
+    artifact_fresh = artifact_metadata_matches(output_dir, config)
     metrics = _dashboard_metrics(
         default_points,
         config,
         route_label=route_label,
         route_source=route_source,
+        route_method=_first_nonempty(selected, ["method"]),
         route_count=len(records),
         optional_route_count=sum(1 for record in records if record.get("optional")),
         layer_families=sorted({str(record.get("family", "")) for record in records if record.get("family")}),
+        anchor_audit=anchor_audit,
+        artifact_metadata=artifact_metadata,
+        artifact_metadata_fresh=artifact_fresh,
     )
     return records, route_geojsons, route_pois, metrics, default_points, route_label
 
@@ -1126,18 +1316,24 @@ def _dashboard_metrics(
     config: TripConfig,
     route_label: str = "Selected Route",
     route_source: str = "",
+    route_method: str = "",
     route_count: int = 1,
     optional_route_count: int = 0,
     layer_families: list[str] | None = None,
+    anchor_audit: dict[str, Any] | None = None,
+    artifact_metadata: dict[str, Any] | None = None,
+    artifact_metadata_fresh: bool = False,
 ) -> dict[str, Any]:
     display_values = [float(point.get("display_utility", point.get("final_poi_value", 0.0)) or 0.0) for point in points]
     final_values = [float(point.get("final_poi_value", 0.0) or 0.0) for point in points]
     interest_values = [float(point.get("interest_adjusted_value", 0.0) or 0.0) for point in points]
     interest_enabled = bool(config.get("interest", "enabled", False))
     value_column = "interest_adjusted_value" if interest_enabled else "final_poi_value"
+    scenario = str(config.get("trip", "scenario", "california_coast"))
     return {
         "trip_days": int(config.get("trip", "trip_days", 7)),
-        "scenario": str(config.get("trip", "scenario", "california_coast")),
+        "scenario": scenario,
+        "scenario_label": get_scenario_definition(scenario).label,
         "interest_profile": str(
             config.get("trip", "interest_profile", config.get("interest", "mode", "balanced_interest"))
         ),
@@ -1150,6 +1346,18 @@ def _dashboard_metrics(
         "nature_optimization_enabled": bool(config.get("nature", "enabled", False)) and interest_enabled,
         "default_route_label": route_label,
         "default_route_source": route_source,
+        "default_route_method": route_method,
+        "route_state_label": "Saved optimized route",
+        "preview_state_label": "Preview only - rerun pipeline to save",
+        "artifact_metadata_fresh": bool(artifact_metadata_fresh),
+        "artifact_contract_version": _safe_str((artifact_metadata or {}).get("artifact_contract_version", "")),
+        "artifact_timestamp_utc": _safe_str((artifact_metadata or {}).get("timestamp_utc", "")),
+        "audit_ready": bool((anchor_audit or {}).get("ready", False)),
+        "audit_readiness": _safe_str((anchor_audit or {}).get("readiness", "missing")),
+        "audit_missing_count": int((anchor_audit or {}).get("missing_count", 0) or 0),
+        "audit_warning_count": int((anchor_audit or {}).get("warning_count", 0) or 0),
+        "anchor_audit_path": _safe_str((anchor_audit or {}).get("path", "")),
+        "anchor_audit": anchor_audit or {"available": False, "items": []},
         "route_record_count": int(route_count),
         "optional_record_count": int(optional_route_count),
         "layer_families": layer_families or [],
@@ -1228,6 +1436,8 @@ def _clear_stale_dashboard_assets(assets: Path, routes_dir: Path, pois_dir: Path
         "hotel_choices.js",
         "nature_explore.json",
         "nature_explore.js",
+        "evaluation_metrics.json",
+        "evaluation_metrics.js",
         "data_loader.js",
         "dashboard.js",
         "map_controls.js",
@@ -1315,6 +1525,202 @@ def _write_lightweight_map(path: Path, points: list[dict[str, Any]], metrics: di
     path.write_text(html, encoding="utf-8")
 
 
+EVALUATION_METHODS = [
+    ("hierarchical_gurobi_pipeline", "Hierarchical Gurobi"),
+    ("hierarchical_greedy_baseline", "Hierarchical Greedy"),
+    ("hierarchical_bandit_gurobi_repair", "Bandit + Repair"),
+]
+
+
+def _evaluation_stop_mask(frame: pd.DataFrame) -> pd.Series:
+    if frame.empty:
+        return pd.Series(dtype=bool)
+    mask = pd.Series(False, index=frame.index)
+    for column in ["is_nature", "is_national_park", "is_state_park", "is_protected_area", "is_scenic_viewpoint"]:
+        if column in frame.columns:
+            mask = mask | frame[column].astype(str).str.lower().isin({"1", "true", "yes"})
+    if "category" in frame.columns:
+        mask = mask | frame["category"].fillna("").astype(str).str.lower().str.contains(
+            "national_park|park|viewpoint|scenic|hiking|nature",
+            regex=True,
+            na=False,
+        )
+    if "nature_score" in frame.columns:
+        mask = mask | (pd.to_numeric(frame["nature_score"], errors="coerce").fillna(0.0) >= 0.35)
+    return mask
+
+
+def _evaluation_metrics(output_dir: Path) -> dict[str, Any]:
+    comparison = _read_csv_if_present(output_dir / "production_method_comparison.csv")
+    route_stops = _read_csv_if_present(output_dir / "production_method_route_stops.csv")
+    methods: list[dict[str, Any]] = []
+    for method_id, default_label in EVALUATION_METHODS:
+        comparison_rows = (
+            comparison[comparison.get("method", pd.Series(dtype=str)).astype(str).eq(method_id)].copy()
+            if not comparison.empty and "method" in comparison.columns
+            else pd.DataFrame()
+        )
+        row = comparison_rows.iloc[0] if not comparison_rows.empty else pd.Series(dtype=object)
+        stops = (
+            route_stops[route_stops.get("method", pd.Series(dtype=str)).astype(str).eq(method_id)].copy()
+            if not route_stops.empty and "method" in route_stops.columns
+            else pd.DataFrame()
+        )
+        nature_mask = _evaluation_stop_mask(stops)
+        weather_values = pd.to_numeric(
+            stops.get("weather_risk", stops.get("weather_sensitivity", pd.Series(dtype=float))),
+            errors="coerce",
+        ).fillna(0.0)
+        method_label = _safe_str(row.get("method_display_name", "")) or default_label
+        methods.append(
+            {
+                "method": method_id,
+                "label": method_label,
+                "short_label": default_label,
+                "status": _safe_str(row.get("status", "missing" if comparison_rows.empty else "")),
+                "comparison_score": _safe_float(row.get("comparison_score", 0.0)),
+                "objective": _safe_float(row.get("objective", row.get("total_utility", 0.0))),
+                "route_distance_km": _safe_float(row.get("total_travel_distance_km", 0.0)),
+                "route_time_minutes": _safe_float(row.get("total_travel_time", 0.0)),
+                "nature_score": float(
+                    pd.to_numeric(stops.get("nature_score", pd.Series(dtype=float)), errors="coerce").fillna(0.0).sum()
+                ),
+                "scenic_score": float(
+                    pd.to_numeric(stops.get("scenic_score", pd.Series(dtype=float)), errors="coerce").fillna(0.0).sum()
+                ),
+                "weather_risk": float(weather_values.mean()) if not weather_values.empty else 0.0,
+                "selected_nature_stops": int(nature_mask.sum()) if not nature_mask.empty else 0,
+                "selected_stop_count": int(len(stops)) if not stops.empty else int(_safe_float(row.get("selected_attractions", 0.0))),
+                "runtime_seconds": _safe_float(row.get("solve_seconds", 0.0)),
+                "notes": _safe_str(row.get("notes", "")),
+            }
+        )
+    return {
+        "available": bool(methods),
+        "source_files": [
+            "production_method_comparison.csv",
+            "production_method_route_stops.csv",
+        ],
+        "methods": methods,
+        "chart_fields": [
+            {"key": "comparison_score", "label": "Comparison score", "higher_is_better": True},
+            {"key": "route_distance_km", "label": "Route distance (km)", "higher_is_better": False},
+            {"key": "route_time_minutes", "label": "Route time (min)", "higher_is_better": False},
+            {"key": "nature_score", "label": "Nature score", "higher_is_better": True},
+            {"key": "weather_risk", "label": "Weather risk", "higher_is_better": False},
+            {"key": "selected_nature_stops", "label": "Selected nature stops", "higher_is_better": True},
+            {"key": "runtime_seconds", "label": "Runtime (sec)", "higher_is_better": False},
+        ],
+        "tradeoff_explanation": [
+            "Hierarchical Gurobi optimizes the saved city/base allocation and local route with the strongest exact-solver signal.",
+            "Hierarchical Greedy is fastest and useful as a transparent baseline, but can miss globally valuable nature anchors.",
+            "Bandit + Repair explores route strategies, then repairs promising candidates with a small Gurobi pass; this is the default saved dashboard route.",
+        ],
+    }
+
+
+def _write_evaluation_page(root: Path, assets: Path, metrics: dict[str, Any], written: list[Path]) -> None:
+    metrics_json = assets / "evaluation_metrics.json"
+    _write_json_asset(metrics_json, metrics, written)
+    metrics_js = assets / "evaluation_metrics.js"
+    _write_text_asset(metrics_js, _global_assignment("DASHBOARD_EVALUATION_METRICS", metrics), written)
+    page = root / "evaluation.html"
+    _write_text_asset(
+        page,
+        """<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Itinerary Method Evaluation</title>
+  <style>
+    :root { --forest:#0a6b53; --teal:#18b8a5; --line:#d8e5e1; --text:#10233d; --muted:#5b6b7d; --panel:#fff; }
+    * { box-sizing: border-box; }
+    body { margin: 0; color: var(--text); font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: #eef6f5; }
+    main { width: min(1180px, calc(100% - 32px)); margin: 0 auto; padding: 24px 0 36px; }
+    header { display: flex; align-items: end; justify-content: space-between; gap: 16px; margin-bottom: 18px; }
+    h1 { margin: 0; font-size: 28px; line-height: 1.05; }
+    p { margin: 6px 0 0; color: var(--muted); line-height: 1.45; }
+    a { color: var(--forest); font-weight: 800; text-decoration: none; }
+    .grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+    .panel { border: 1px solid var(--line); border-radius: 8px; background: var(--panel); box-shadow: 0 10px 28px rgba(14,35,58,.10); padding: 16px; }
+    .panel h2 { margin: 0 0 12px; font-size: 15px; text-transform: uppercase; }
+    .chart-row { display: grid; grid-template-columns: 170px minmax(0, 1fr) 80px; gap: 10px; align-items: center; margin: 9px 0; font-size: 12px; }
+    .bar-track { height: 12px; border-radius: 999px; background: #dbe8e7; overflow: hidden; }
+    .bar { height: 100%; border-radius: inherit; background: linear-gradient(90deg, var(--forest), var(--teal)); }
+    table { width: 100%; border-collapse: collapse; font-size: 12px; }
+    th, td { padding: 9px 8px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; }
+    th { color: var(--muted); font-size: 11px; text-transform: uppercase; }
+    .wide { grid-column: 1 / -1; }
+    .note-list { margin: 0; padding-left: 18px; color: var(--muted); line-height: 1.45; }
+    @media (max-width: 860px) { header { display: block; } .grid { grid-template-columns: 1fr; } .chart-row { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+  <main>
+    <header>
+      <div>
+        <h1>Method Evaluation Dashboard</h1>
+        <p>Static comparison from saved Python/Gurobi, greedy, and bandit + repair artifacts.</p>
+      </div>
+      <a href="index.html">Back to map dashboard</a>
+    </header>
+    <section id="charts" class="grid" aria-label="Method comparison charts"></section>
+    <section class="panel wide" aria-label="Method comparison table">
+      <h2>Method Comparison</h2>
+      <div id="method-table"></div>
+    </section>
+    <section class="panel wide" aria-label="Solver tradeoff explanation">
+      <h2>Solver Tradeoffs</h2>
+      <ul id="tradeoff-list" class="note-list"></ul>
+    </section>
+  </main>
+  <script src="assets/evaluation_metrics.js"></script>
+  <script>
+    const payload = window.DASHBOARD_EVALUATION_METRICS || { methods: [], chart_fields: [], tradeoff_explanation: [] };
+    const methods = payload.methods || [];
+    const fields = payload.chart_fields || [];
+    const charts = document.getElementById('charts');
+    const fmt = value => Number.isFinite(Number(value)) ? Number(value).toFixed(Number(value) >= 100 ? 0 : 2) : 'n/a';
+    fields.forEach(field => {
+      const values = methods.map(method => Number(method[field.key] || 0));
+      const max = Math.max(...values, 0.0001);
+      const section = document.createElement('section');
+      section.className = 'panel';
+      section.innerHTML = `<h2>${field.label}</h2>` + methods.map(method => {
+        const value = Number(method[field.key] || 0);
+        const width = Math.max(3, Math.min(100, (value / max) * 100));
+        return `<div class="chart-row"><strong>${method.short_label || method.label}</strong><div class="bar-track"><div class="bar" style="width:${width}%"></div></div><span>${fmt(value)}</span></div>`;
+      }).join('');
+      charts.appendChild(section);
+    });
+    document.getElementById('method-table').innerHTML = `
+      <table>
+        <thead><tr><th>Method</th><th>Score</th><th>Distance</th><th>Time</th><th>Nature</th><th>Weather</th><th>Runtime</th><th>Status</th></tr></thead>
+        <tbody>
+          ${methods.map(method => `<tr>
+            <td><strong>${method.label}</strong><br>${method.notes || ''}</td>
+            <td>${fmt(method.comparison_score)}</td>
+            <td>${fmt(method.route_distance_km)} km</td>
+            <td>${fmt(method.route_time_minutes)} min</td>
+            <td>${fmt(method.nature_score)} (${method.selected_nature_stops || 0} stops)</td>
+            <td>${fmt(method.weather_risk)}</td>
+            <td>${fmt(method.runtime_seconds)} sec</td>
+            <td>${method.status || ''}</td>
+          </tr>`).join('')}
+        </tbody>
+      </table>`;
+    document.getElementById('tradeoff-list').innerHTML = (payload.tradeoff_explanation || [])
+      .map(item => `<li>${item}</li>`)
+      .join('');
+  </script>
+</body>
+</html>
+""",
+        written,
+    )
+
+
 def _write_full_dashboard(
     root: Path,
     route_records: list[dict[str, Any]],
@@ -1328,6 +1734,7 @@ def _write_full_dashboard(
     selected_hotels: dict[str, Any],
     hotel_choices: dict[str, Any],
     nature_explore: dict[str, Any],
+    evaluation_metrics: dict[str, Any],
 ) -> list[Path]:
     assets = root / "assets"
     routes_dir = assets / "routes"
@@ -1381,9 +1788,7 @@ body {
   width: 100%;
   height: 100vh;
   z-index: 0;
-  background:
-    radial-gradient(circle at 24% 24%, rgba(24, 184, 165, .22), transparent 28%),
-    linear-gradient(135deg, #cfe8ef 0%, #edf3e2 54%, #e7dac4 100%);
+  background: #e7efe8;
 }
 
 #map::after {
@@ -1392,9 +1797,7 @@ body {
   inset: 0;
   pointer-events: none;
   z-index: 430;
-  background:
-    linear-gradient(90deg, rgba(255,255,255,.16), transparent 18%, transparent 78%, rgba(255,255,255,.18)),
-    radial-gradient(circle at 52% 48%, transparent 0 28%, rgba(10, 107, 83, .08) 70%);
+  background: linear-gradient(90deg, rgba(255,255,255,.08), transparent 16%, transparent 82%, rgba(255,255,255,.12));
   mix-blend-mode: soft-light;
 }
 
@@ -1543,6 +1946,12 @@ body {
   font: 700 12px/1 Inter, ui-sans-serif, system-ui, sans-serif;
   cursor: pointer;
   transition: transform var(--fast), border-color var(--fast), box-shadow var(--fast), background var(--fast), color var(--fast);
+}
+
+.dashboard-panel a {
+  color: var(--forest);
+  font-weight: 800;
+  text-decoration: none;
 }
 
 .dashboard-panel button:hover,
@@ -1869,6 +2278,47 @@ input[type="checkbox"] {
   transition: filter var(--fast), opacity var(--fast);
 }
 
+.numbered-route-stop {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border: 3px solid #fff;
+  border-radius: 999px;
+  background: var(--teal);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 900;
+  line-height: 1;
+  box-shadow: 0 2px 0 rgba(10,107,83,.28), 0 0 0 2px rgba(10,143,131,.34), 0 10px 22px rgba(15,23,42,.24);
+}
+
+.numbered-route-stop span {
+  display: block;
+  transform: translateY(-1px);
+}
+
+.map-text-label {
+  width: auto !important;
+  height: auto !important;
+  padding: 2px 7px;
+  border: 1px solid rgba(15,23,42,.14);
+  border-radius: 5px;
+  background: rgba(255,255,255,.86);
+  color: #183045;
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 1.1;
+  white-space: nowrap;
+  box-shadow: 0 3px 9px rgba(15,23,42,.14);
+}
+
+.map-text-label.nature-label {
+  color: #1f6f2c;
+  border-color: rgba(36,122,50,.24);
+  background: rgba(249,255,246,.88);
+}
+
 .nature-marker {
   filter: drop-shadow(0 0 5px rgba(106, 198, 89, .46));
 }
@@ -2081,6 +2531,21 @@ input[type="checkbox"] {
   text-transform: uppercase;
 }
 
+.detail-copy {
+  margin-top: 8px;
+  color: #31485e;
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.detail-copy b {
+  display: block;
+  margin-bottom: 2px;
+  color: var(--muted);
+  font-size: 10px;
+  text-transform: uppercase;
+}
+
 .leaflet-control-zoom a,
 .leaflet-control-layers-toggle {
   color: var(--text) !important;
@@ -2134,7 +2599,7 @@ input[type="checkbox"] {
     left: 10px;
     right: 10px;
     width: auto;
-    max-height: min(76vh, calc(100vh - 20px));
+    max-height: min(78vh, calc(100vh - 20px));
   }
 
   .dashboard-header {
@@ -2259,6 +2724,8 @@ input[type="checkbox"] {
 
     route_index_js_path = assets / "route_index.js"
     _write_text_asset(route_index_js_path, _global_assignment("DASHBOARD_ROUTE_INDEX", route_index), written)
+
+    _write_evaluation_page(root, assets, evaluation_metrics, written)
 
     data_loader = assets / "data_loader.js"
     _write_text_asset(
@@ -2503,6 +2970,12 @@ let selectedHotelLayer = null;
 let selectedHotelsVisible = true;
 let hotelCandidatesVisible = false;
 let livePreviewLayer = null;
+let livePreviewPlaybackStops = [];
+let livePreviewRouteRecord = null;
+let terrainBaseLayer = null;
+let roadsOverlayLayer = null;
+let labelOverlayLayer = null;
+let weatherRiskLayer = null;
 
 const FAMILY_STYLES = {
   selected: { color: '#0a8f83', fill: '#18b8a5', weight: 6, dashArray: null },
@@ -2510,9 +2983,10 @@ const FAMILY_STYLES = {
   trip_length: { color: '#7c4dd8', fill: '#bba7ff', weight: 3, dashArray: '4 7' },
   method: { color: '#f9735b', fill: '#ffba8e', weight: 3, dashArray: '2 7' },
   context: { color: '#66788a', fill: '#aab8c4', weight: 2, dashArray: '9 8' },
-  hotel: { color: '#6d4fd7', fill: '#d8cffd', weight: 2, dashArray: null },
-  must_go: { color: '#d92652', fill: '#ff8aa4', weight: 2, dashArray: null },
-  nature: { color: '#247a32', fill: '#6ac659', weight: 2, dashArray: null }
+  hotel: { color: '#6d4fd7', fill: '#d8cffd', weight: 1.5, dashArray: null },
+  must_go: { color: '#d92652', fill: '#ff8aa4', weight: 1.5, dashArray: null },
+  nature: { color: '#247a32', fill: '#6ac659', weight: 1.5, dashArray: null },
+  live_preview: { color: '#f9735b', fill: '#ffb199', weight: 5, dashArray: '3 12' }
 };
 
 function setDashboardStatus(message, isError = false) {
@@ -2546,6 +3020,7 @@ function defaultRoute(index) {
 
 function isPlayableRoute(routeRecord) {
   if (!routeRecord) return false;
+  if (routeRecord.id === 'live_preview') return livePreviewPlaybackStops.length > 1;
   if (routeRecord.playable === false || routeRecord.marker_only === true) return false;
   return ['selected', 'route_matrix', 'trip_length', 'method'].includes(routeRecord.family);
 }
@@ -2554,12 +3029,14 @@ function firstPlayableRouteId() {
   const routes = Array.isArray(dashboardRouteIndex?.routes) ? dashboardRouteIndex.routes : [];
   const current = routeById(activePlaybackRouteId);
   if (isPlayableRoute(current) && activeRouteIds.has(activePlaybackRouteId)) return activePlaybackRouteId;
+  if (activePlaybackRouteId === 'live_preview' && livePreviewPlaybackStops.length > 1) return 'live_preview';
   const visible = routes.find(route => activeRouteIds.has(route.id) && isPlayableRoute(route));
   const fallback = visible || routes.find(route => route.default && isPlayableRoute(route)) || routes.find(isPlayableRoute);
   return fallback?.id || null;
 }
 
 function playbackStops(routeId = activePlaybackRouteId) {
+  if (routeId === 'live_preview') return livePreviewPlaybackStops;
   const record = routeById(routeId);
   if (!isPlayableRoute(record)) return [];
   const fromAsset = dashboardPlaybackData?.routes?.[routeId]?.stops;
@@ -2719,6 +3196,8 @@ function routeLineStyle(routeRecord) {
 }
 
 function markerPopup(point, index, routeRecord) {
+  const candidateFamilies = ['hotel', 'nature', 'must_go', 'context'];
+  const selectionState = candidateFamilies.includes(routeRecord?.family) ? 'Candidate/context marker - not a selected route stop' : 'Saved optimized route stop';
   const label = routeRecord?.family === 'hotel' || routeRecord?.family === 'nature'
     ? (point.name || point.hotel_name || routeRecord.label)
     : `${index + 1}. ${point.name || 'Stop'}`;
@@ -2732,22 +3211,44 @@ function markerPopup(point, index, routeRecord) {
     ? `<br>Interest-adjusted value: ${interestValue.toFixed(2)}`
     : '';
   const hotel = point.hotel_name ? `<br>Hotel: ${point.hotel_name}` : '';
-  return `<b>${label}</b><br>${day}${point.city || ''}<br>${point.nature_region || point.category || ''}${hotel}${utility}${finalLine}${interestLine}`;
+  return `<b>${label}</b><br>${selectionState}<br>${day}${point.city || ''}<br>${point.nature_region || point.category || ''}${hotel}${utility}${finalLine}${interestLine}`;
 }
 
 function pointToMarker(point, index, routeRecord) {
   const style = FAMILY_STYLES[routeRecord?.family] || FAMILY_STYLES.selected;
+  const candidateMarker = ['hotel', 'must_go', 'nature', 'context'].includes(routeRecord?.family);
+  if (!candidateMarker) {
+    const marker = L.marker([Number(point.lat), Number(point.lon)], {
+      icon: L.divIcon({
+        className: 'numbered-route-stop',
+        html: `<span>${index + 1}</span>`,
+        iconSize: [30, 30],
+        iconAnchor: [15, 15],
+        popupAnchor: [0, -16]
+      }),
+      zIndexOffset: routeRecord?.default ? 760 : 460
+    });
+    marker.bindPopup(markerPopup(point, index, routeRecord));
+    marker.on('click', () => {
+      if (isPlayableRoute(routeRecord)) {
+        activePlaybackRouteId = routeRecord?.id || activePlaybackRouteId;
+        playbackStopIndex = index;
+        setPlaybackStop(index, false);
+      }
+    });
+    return marker;
+  }
   const marker = L.circleMarker([Number(point.lat), Number(point.lon)], {
-    radius: routeRecord?.optional ? 5 : 8,
+    radius: candidateMarker ? 4.5 : (routeRecord?.optional ? 5 : 8),
     color: style.color,
     fillColor: style.fill,
-    fillOpacity: routeRecord?.optional ? 0.72 : 0.9,
-    weight: routeRecord?.optional ? 2 : 3,
+    fillOpacity: candidateMarker ? 0.5 : (routeRecord?.optional ? 0.72 : 0.9),
+    weight: candidateMarker ? 1.5 : (routeRecord?.optional ? 2 : 3),
     className: routeRecord?.family === 'nature' ? 'nature-marker' : 'route-marker'
   });
   marker.bindPopup(routeRecord?.family === 'hotel' ? hotelMarkerPopup(point, Boolean(point.selected)) : markerPopup(point, index, routeRecord));
-  marker.on('mouseover', () => marker.setStyle({ radius: routeRecord?.optional ? 7 : 10, fillOpacity: 1 }));
-  marker.on('mouseout', () => marker.setStyle({ radius: routeRecord?.optional ? 5 : 8, fillOpacity: routeRecord?.optional ? 0.72 : 0.9 }));
+  marker.on('mouseover', () => marker.setStyle({ radius: candidateMarker ? 6 : (routeRecord?.optional ? 7 : 10), fillOpacity: candidateMarker ? 0.76 : 1 }));
+  marker.on('mouseout', () => marker.setStyle({ radius: candidateMarker ? 4.5 : (routeRecord?.optional ? 5 : 8), fillOpacity: candidateMarker ? 0.5 : (routeRecord?.optional ? 0.72 : 0.9) }));
   marker.on('click', () => {
     if (isPlayableRoute(routeRecord)) {
       activePlaybackRouteId = routeRecord?.id || activePlaybackRouteId;
@@ -2873,7 +3374,11 @@ function fitVisibleRoutes() {
     const bounds = L.latLngBounds([]);
     groups.forEach(group => extendBoundsFromLayer(bounds, group));
     if (bounds.isValid()) {
-      dashboardMap.fitBounds(bounds, { padding: [56, 56], maxZoom: 6 });
+      dashboardMap.fitBounds(bounds, {
+        paddingTopLeft: [430, 80],
+        paddingBottomRight: [250, 120],
+        maxZoom: 7
+      });
       return;
     }
   } catch (error) {
@@ -2881,7 +3386,169 @@ function fitVisibleRoutes() {
   }
 }
 
+function initializeBaseMapLayers() {
+  terrainBaseLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}', {
+    maxZoom: 18,
+    attribution: 'Tiles &copy; Esri &mdash; Sources: Esri, USGS, NOAA'
+  }).addTo(dashboardMap);
+  roadsOverlayLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    maxZoom: 18,
+    opacity: 0.34,
+    zIndex: 220,
+    attribution: '&copy; OpenStreetMap contributors'
+  }).addTo(dashboardMap);
+}
+
+function mapLayerToggleChecked(layerName, fallback = true) {
+  const input = document.querySelector(`[data-map-layer-toggle="${layerName}"]`);
+  return input ? Boolean(input.checked) : fallback;
+}
+
+function setLeafletLayerVisible(layer, visible) {
+  if (!dashboardMap || !layer) return;
+  if (visible && !dashboardMap.hasLayer(layer)) layer.addTo(dashboardMap);
+  if (!visible && dashboardMap.hasLayer(layer)) dashboardMap.removeLayer(layer);
+}
+
+function selectedContextStops() {
+  const routeId = activePlaybackRouteId || defaultRoute(dashboardRouteIndex)?.id;
+  const stops = playbackStops(routeId);
+  if (Array.isArray(stops) && stops.length) return stops;
+  const routes = dashboardPlaybackData?.routes || {};
+  const defaultId = defaultRoute(dashboardRouteIndex)?.id;
+  return routes[defaultId]?.stops || [];
+}
+
+function loadedCandidatePois(routeId) {
+  const loaded = loadedRouteLayers.get(routeId);
+  return Array.isArray(loaded?.pois) ? loaded.pois : [];
+}
+
+function labelPointHtml(point, index, selected = false) {
+  const prefix = selected ? `${index + 1}. ` : '';
+  return `${prefix}${point.name || point.hotel_name || point.nature_region || 'Place'}`;
+}
+
+function addTextLabel(group, point, className, html) {
+  if (!Number.isFinite(Number(point.lat)) || !Number.isFinite(Number(point.lon))) return;
+  L.marker([Number(point.lat), Number(point.lon)], {
+    icon: L.divIcon({
+      className: `map-text-label ${className || ''}`,
+      html,
+      iconSize: null,
+      iconAnchor: [-10, 8]
+    }),
+    interactive: false,
+    zIndexOffset: className === 'selected-label' ? 520 : 260
+  }).addTo(group);
+}
+
+function buildLabelLayer() {
+  const group = L.layerGroup();
+  selectedContextStops().slice(0, 24).forEach((point, index) => {
+    addTextLabel(group, point, 'selected-label', labelPointHtml(point, index, true));
+  });
+  const naturePoints = [
+    ...loadedCandidatePois('nature_candidates'),
+    ...(Array.isArray(window.dashboardNatureExplore?.items) ? window.dashboardNatureExplore.items : [])
+  ];
+  const seen = new Set();
+  naturePoints.slice(0, 80).forEach(point => {
+    const key = `${point.name || point.nature_region || ''}:${point.lat}:${point.lon}`;
+    if (seen.has(key)) return;
+    seen.add(key);
+    addTextLabel(group, point, 'nature-label', labelPointHtml(point, 0, false));
+  });
+  return group;
+}
+
+function riskColor(value) {
+  const risk = Number(value || 0);
+  if (risk >= 0.75) return '#dc2626';
+  if (risk >= 0.50) return '#f97316';
+  if (risk >= 0.25) return '#eab308';
+  return '#49a33f';
+}
+
+function collectWeatherRiskPoints() {
+  const items = [
+    ...selectedContextStops(),
+    ...loadedCandidatePois('nature_candidates'),
+    ...loadedCandidatePois('hotel_candidates'),
+    ...(Array.isArray(window.dashboardNatureExplore?.items) ? window.dashboardNatureExplore.items : []),
+    ...(Array.isArray(window.dashboardSelectedHotels?.items) ? window.dashboardSelectedHotels.items : [])
+  ];
+  const seen = new Set();
+  return items
+    .filter(point => Number.isFinite(Number(point.lat)) && Number.isFinite(Number(point.lon)))
+    .filter(point => {
+      const key = `${point.name || point.hotel_name || ''}:${point.lat}:${point.lon}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+}
+
+function buildWeatherRiskLayer() {
+  const group = L.layerGroup();
+  collectWeatherRiskPoints().forEach(point => {
+    const risk = Number(point.weather_risk ?? point.weather_sensitivity ?? 0.12);
+    const color = riskColor(risk);
+    L.circleMarker([Number(point.lat), Number(point.lon)], {
+      radius: 10 + Math.min(8, risk * 8),
+      color,
+      fillColor: color,
+      fillOpacity: 0.14,
+      opacity: 0.45,
+      weight: 2,
+      interactive: false
+    }).addTo(group);
+  });
+  return group;
+}
+
+function refreshMapContextLayers() {
+  if (!dashboardMap) return;
+  if (labelOverlayLayer && dashboardMap.hasLayer(labelOverlayLayer)) dashboardMap.removeLayer(labelOverlayLayer);
+  if (weatherRiskLayer && dashboardMap.hasLayer(weatherRiskLayer)) dashboardMap.removeLayer(weatherRiskLayer);
+  labelOverlayLayer = buildLabelLayer();
+  weatherRiskLayer = buildWeatherRiskLayer();
+  setLeafletLayerVisible(labelOverlayLayer, mapLayerToggleChecked('labels', true));
+  setLeafletLayerVisible(weatherRiskLayer, mapLayerToggleChecked('weather_risk', true));
+}
+
+function updateMapLayerToggleState() {
+  document.querySelectorAll('[data-map-layer-toggle]').forEach(input => {
+    const action = input.dataset.mapLayerToggle;
+    if (action === 'terrain') input.checked = Boolean(terrainBaseLayer && dashboardMap?.hasLayer(terrainBaseLayer));
+    if (action === 'roads') input.checked = Boolean(roadsOverlayLayer && dashboardMap?.hasLayer(roadsOverlayLayer));
+    if (action === 'labels') input.checked = Boolean(labelOverlayLayer && dashboardMap?.hasLayer(labelOverlayLayer));
+    if (action === 'weather_risk') input.checked = Boolean(weatherRiskLayer && dashboardMap?.hasLayer(weatherRiskLayer));
+  });
+}
+
+function bindMapLayerToggles() {
+  document.querySelectorAll('[data-map-layer-toggle]').forEach(input => {
+    input.addEventListener('change', event => {
+      const action = event.target.dataset.mapLayerToggle;
+      const checked = event.target.checked;
+      if (action === 'terrain') setLeafletLayerVisible(terrainBaseLayer, checked);
+      if (action === 'roads') setLeafletLayerVisible(roadsOverlayLayer, checked);
+      if (action === 'labels') {
+        if (!labelOverlayLayer) labelOverlayLayer = buildLabelLayer();
+        setLeafletLayerVisible(labelOverlayLayer, checked);
+      }
+      if (action === 'weather_risk') {
+        if (!weatherRiskLayer) weatherRiskLayer = buildWeatherRiskLayer();
+        setLeafletLayerVisible(weatherRiskLayer, checked);
+      }
+      updateMapLayerToggleState();
+    });
+  });
+}
+
 function routeById(routeId) {
+  if (routeId === 'live_preview') return livePreviewRouteRecord;
   const routes = Array.isArray(dashboardRouteIndex?.routes) ? dashboardRouteIndex.routes : [];
   return routes.find(route => route.id === routeId);
 }
@@ -2953,6 +3620,8 @@ async function toggleRoute(routeId, visible, fitAfter = true) {
     }
     if (routeId === 'hotel_candidates') hotelCandidatesVisible = activeRouteIds.has(routeId);
     updateSelectorState();
+    refreshMapContextLayers();
+    updateMapLayerToggleState();
     if (fitAfter) fitVisibleRoutes();
   } catch (error) {
     setDashboardStatus(`Could not load ${routeRecord.label}: ${error.message}`, true);
@@ -2987,6 +3656,31 @@ function drawLivePreviewRoute(points, weights = {}) {
     setDashboardStatus('No preview candidates with coordinates were available.', true);
     return;
   }
+  livePreviewPlaybackStops = drawable.map((point, index) => ({
+    ...point,
+    name: point.name || `Preview stop ${index + 1}`,
+    city: point.city || point.nature_region || '',
+    day: point.day || index + 1,
+    stop_order: index + 1,
+    type: point.type || point.category || point.park_type || (point.nature_region ? 'nature_candidate' : 'preview_candidate'),
+    category: point.category || point.type || point.park_type || (point.nature_region ? 'nature_candidate' : 'preview_candidate'),
+    description: point.description || `${point.name || 'Preview stop'} is a browser-only preview candidate from exported POI data.`,
+    why_selected: 'Preview only - rerun pipeline to save. This stop is not written back to optimizer artifacts.',
+    expected_duration_minutes: point.expected_duration_minutes || 75,
+    weather_risk: Number(point.weather_risk || 0.15),
+    source_confidence: Number(point.source_confidence || point.data_confidence || 0.5),
+    display_utility: Number(point.preview_score || point.display_utility || point.final_poi_value || 0),
+    optimization_value_source: 'browser_preview_score'
+  }));
+  livePreviewRouteRecord = {
+    id: 'live_preview',
+    label: 'Preview only - rerun pipeline to save',
+    family: 'live_preview',
+    default: false,
+    optional: true,
+    playable: true,
+    marker_only: false
+  };
   livePreviewLayer = L.layerGroup();
   const latLngs = drawable.map(point => [Number(point.lat), Number(point.lon)]);
   if (latLngs.length > 1) {
@@ -3016,13 +3710,20 @@ function drawLivePreviewRoute(points, weights = {}) {
   livePreviewLayer.addTo(dashboardMap);
   try {
     const bounds = L.featureGroup(livePreviewLayer.getLayers()).getBounds();
-    if (bounds.isValid()) dashboardMap.fitBounds(bounds, { padding: [56, 56], maxZoom: 6 });
+    if (bounds.isValid()) {
+      dashboardMap.fitBounds(bounds, {
+        paddingTopLeft: [430, 80],
+        paddingBottomRight: [250, 120],
+        maxZoom: 7
+      });
+    }
   } catch (error) {
     dashboardLogError('preview route fit failed', error);
   }
   updateLayerToggleState();
   const naturePct = Math.round((Number(weights.nature) || 0) * 100);
-  setDashboardStatus(`Live preview route built from browser-side interest bars (${naturePct}% nature).`);
+  setActivePlaybackRoute('live_preview', true);
+  setDashboardStatus(`Preview only - rerun pipeline to save. Browser-side route rebuilt (${naturePct}% nature).`);
 }
 
 function clearLivePreviewRoute(updateStatus = true) {
@@ -3030,6 +3731,9 @@ function clearLivePreviewRoute(updateStatus = true) {
     dashboardMap.removeLayer(livePreviewLayer);
   }
   livePreviewLayer = null;
+  livePreviewPlaybackStops = [];
+  livePreviewRouteRecord = null;
+  if (activePlaybackRouteId === 'live_preview') setActivePlaybackRoute(firstPlayableRouteId(), true);
   updateLayerToggleState();
   if (updateStatus) setDashboardStatus('Live preview route cleared.');
 }
@@ -3089,8 +3793,15 @@ function bindLayerToggles() {
         toggleHotelCandidates(checked);
       } else if (action === 'nature_candidates') {
         toggleRoute('nature_candidates', checked);
-      } else if (action === 'live_preview' && !checked) {
-        clearLivePreviewRoute();
+      } else if (action === 'live_preview') {
+        if (!checked) clearLivePreviewRoute();
+        else if (livePreviewLayer && !dashboardMap.hasLayer(livePreviewLayer)) {
+          livePreviewLayer.addTo(dashboardMap);
+          setActivePlaybackRoute('live_preview', true);
+        } else if (!livePreviewLayer) {
+          setDashboardStatus('No preview route is available yet. Drag interest bars or build a preview route first.');
+          event.target.checked = false;
+        }
       }
     });
   });
@@ -3104,7 +3815,7 @@ function renderQuickButtons(index) {
   const availableGroups = new Set(routes.flatMap(route => route.quick_groups || []));
   const buttonSpecs = [
     ['clear', 'Clear'],
-    ['default', 'Default route'],
+    ['default', 'Saved route'],
     ['days_7', '7-day'],
     ['days_9', '9-day'],
     ['days_12', '12-day'],
@@ -3183,10 +3894,7 @@ async function initMap() {
   try {
     assertMapContainerReady();
     dashboardMap = L.map("map", { preferCanvas: true }).setView([36.5, -119.5], 6);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      maxZoom: 18,
-      attribution: '&copy; OpenStreetMap contributors'
-    }).addTo(dashboardMap);
+    initializeBaseMapLayers();
 
     const index = await loadRouteIndex();
     const metrics = await loadDashboardMetrics();
@@ -3251,6 +3959,7 @@ async function initMap() {
     renderQuickButtons(index);
     renderRouteSelector(index);
     bindLayerToggles();
+    bindMapLayerToggles();
 
     const selected = defaultRoute(index);
     if (!selected) {
@@ -3258,6 +3967,8 @@ async function initMap() {
       throw new Error('No default route found');
     }
     await drawDefaultRoute(selected);
+    refreshMapContextLayers();
+    updateMapLayerToggleState();
     loadOptionalLayers();
     dashboardLogInit('complete');
   } catch (error) {
@@ -3293,9 +4004,11 @@ window.addEventListener('DOMContentLoaded', initMap);
     dashboard_js = assets / "dashboard.js"
     _write_text_asset(
         dashboard_js,
-        """function renderDashboardMetrics(metrics) {
+"""function renderDashboardMetrics(metrics) {
   const target = document.getElementById('metrics');
   if (!target) return;
+  const subtitle = document.getElementById('dashboard-subtitle');
+  if (subtitle) subtitle.textContent = metrics.scenario_label || metrics.scenario || 'Itinerary scenario';
   target.innerHTML = `
     <div class="metrics-grid">
       <div class="metric"><b>${metrics.trip_days || '7'}</b>Days</div>
@@ -3307,11 +4020,15 @@ window.addEventListener('DOMContentLoaded', initMap);
       <div><b>Scenario:</b> ${metrics.scenario}</div>
       <div><b>Interest:</b> ${metrics.interest_profile}</div>
       <div><b>Value column:</b> ${metrics.optimization_value_column || 'final_poi_value'}</div>
+      <div><b>Route state:</b> ${metrics.route_state_label || 'Saved optimized route'}</div>
       <div><b>Default route:</b> ${metrics.default_route_label}</div>
+      <div><b>Route method:</b> ${metrics.default_route_method || 'selected artifact'}</div>
+      <div><b>Artifact freshness:</b> ${metrics.artifact_metadata_fresh ? 'fresh metadata match' : 'metadata missing/stale'}</div>
+      <div><b>Anchor audit:</b> ${metrics.audit_readiness || 'missing'}${metrics.audit_missing_count ? ` · ${metrics.audit_missing_count} missing` : ''}</div>
       <div><b>Indexed layers:</b> ${metrics.route_record_count || 1}</div>
     </div>
     <div class="interest-note">Default route is computed by Python optimization using nature-aware value weights.</div>
-    <div class="interest-note">Browser hotel choices and interest bars are visual previews until you rerun the notebook.</div>
+    <div class="interest-note">${metrics.preview_state_label || 'Preview only - rerun pipeline to save'}.</div>
   `;
 }
 
@@ -3388,9 +4105,14 @@ function renderActiveStopDetail(stop, routeRecord, playbackMeta = {}) {
     ['Playback', playbackMeta.total ? `${playbackMeta.index + 1} of ${playbackMeta.total}` : ''],
     ['Day', stop.day || ''],
     ['City', stop.city || ''],
+    ['City/anchor', stop.city_or_anchor || ''],
     ['Overnight hotel', stop.hotel_name || ''],
+    ['Type', stop.type || stop.category || ''],
     ['Category', stop.category || ''],
     ['Nature region', stop.nature_region || ''],
+    ['Expected duration', stop.expected_duration_minutes ? `${stop.expected_duration_minutes} min` : ''],
+    ['Weather risk', compactValue(stop.weather_risk)],
+    ['Source confidence', compactValue(stop.source_confidence)],
     ['Optimizer value', compactValue(stop.display_utility ?? stop.interest_adjusted_value ?? stop.final_poi_value)],
     ['Final POI value', compactValue(stop.final_poi_value)],
     ['Interest-adjusted value', Number(stop.interest_adjusted_value) > 0 ? compactValue(stop.interest_adjusted_value) : ''],
@@ -3400,7 +4122,7 @@ function renderActiveStopDetail(stop, routeRecord, playbackMeta = {}) {
     ['Weather sensitivity', compactValue(stop.weather_sensitivity)],
     ['Source', stop.source_list || '']
   ].filter(([, value]) => value !== '' && value !== undefined && value !== null);
-  const keyRows = rows.filter(([key]) => ['City', 'Category', 'Nature region', 'Optimizer value', 'Nature score', 'Scenic score', 'Weather sensitivity', 'Overnight hotel'].includes(key));
+  const keyRows = rows.filter(([key]) => ['City/anchor', 'Type', 'Expected duration', 'Weather risk', 'Source confidence', 'Optimizer value', 'Nature score', 'Scenic score'].includes(key));
   target.innerHTML = `
     <div class="detail-card active-stop-card">
       <div class="stop-visual" role="img" aria-label="Scenic landscape preview"></div>
@@ -3412,6 +4134,8 @@ function renderActiveStopDetail(stop, routeRecord, playbackMeta = {}) {
         <div class="active-stop-grid">
           ${keyRows.map(([key, value]) => `<div><b>${key}</b>${value}</div>`).join('')}
         </div>
+        <div class="detail-copy"><b>Description</b>${stop.description || 'No description exported.'}</div>
+        <div class="detail-copy"><b>Why selected</b>${stop.why_selected || stop.reason_selected || 'Selection reason was not exported.'}</div>
       </div>
     </div>
   `;
@@ -3713,16 +4437,18 @@ function renderInterestPreview(preview) {
         </label>
       `).join('')}
     </div>
-    <div class="interest-note">Drag the bars to preview route-fit changes. Balanced is equal weights. Full optimized routes use these weights only after rerunning the notebook/config.</div>
-    <div class="interest-note">National park candidates are in the Python catalog and enter optimization through nature/park scores when interest mode is enabled.</div>
+    <div class="interest-note">Saved optimized route stays artifact-backed. Dragging bars builds a browser preview only.</div>
+    <div class="interest-note">National park candidates stay in candidate/context layers unless the selected route artifact includes them.</div>
     <div class="playback-controls">
       <button type="button" data-build-live-preview="true">Build live preview route</button>
       <button type="button" data-clear-live-preview="true">Clear preview route</button>
     </div>
-    <div class="interest-note">Browser preview is approximate; Run All recomputes the real optimized route.</div>
+    <div class="interest-note"><b>Preview only - rerun pipeline to save.</b> Browser preview is approximate; Run All recomputes the real optimized route.</div>
     <div id="interest-route-match" class="summary-list"></div>
     <div id="interest-ranking" class="interest-ranking"></div>
   `;
+  let previewDebounce = null;
+  let latestPreviewCandidates = [];
   const renderRanking = () => {
     const raw = Object.fromEntries(axes.map(axis => [
       axis,
@@ -3741,13 +4467,17 @@ function renderInterestPreview(preview) {
     const routeScore = Math.max(0, 1 - routeError);
     const matchNode = target.querySelector('#interest-route-match');
     if (matchNode) {
-      matchNode.innerHTML = `<div><b>Selected-route match preview:</b> ${compactValue(routeScore, 2)}</div>`;
+      matchNode.innerHTML = `
+        <div><b>Saved route match:</b> ${compactValue(routeScore, 2)}</div>
+        <div><b>Route state:</b> Preview only - rerun pipeline to save</div>
+      `;
     }
     const candidates = (preview.top_boosted_pois || [])
       .map(item => ({ ...item, preview_score: previewScore(item, normalized, preview.lambdas || {}) }))
       .sort((a, b) => b.preview_score - a.preview_score)
     .filter(item => candidateAllowedByWeights(item, normalized))
     .slice(0, 8);
+    latestPreviewCandidates = candidates;
     target.querySelector('#interest-ranking').innerHTML = candidates.map(item => `
       <div class="nature-card">
         <strong>${item.name}</strong>
@@ -3790,12 +4520,34 @@ function renderInterestPreview(preview) {
       return;
     }
     if (window.drawLivePreviewRoute) window.drawLivePreviewRoute(candidates, weights);
+    const matchNode = target.querySelector('#interest-route-match');
+    const score = candidates.reduce((sum, item) => sum + Number(item.preview_score || 0), 0);
+    const natureStops = candidates.filter(item => {
+      const text = `${item.name || ''} ${item.category || ''} ${item.nature_region || ''} ${item.park_type || ''}`.toLowerCase();
+      return Number(item.nature_score || 0) >= 0.35
+        || Number(item.scenic_score || 0) >= 0.35
+        || Number(item.park_bonus || 0) > 0
+        || item.is_national_park
+        || /park|nature|scenic|hiking|viewpoint|yosemite|sequoia|kings canyon|joshua tree|big sur/.test(text);
+    }).length;
+    if (matchNode) {
+      matchNode.innerHTML = `
+        <div><b>Preview route score:</b> ${compactValue(score)}</div>
+        <div><b>Preview stops:</b> ${candidates.length}</div>
+        <div><b>Preview nature stops:</b> ${natureStops}</div>
+        <div><b>Route state:</b> Preview only - rerun pipeline to save</div>
+      `;
+    }
   };
   target.querySelector('[data-build-live-preview]')?.addEventListener('click', buildLivePreviewRoute);
   target.querySelector('[data-clear-live-preview]')?.addEventListener('click', () => {
     if (window.clearLivePreviewRoute) window.clearLivePreviewRoute();
   });
-  target.querySelectorAll('[data-interest-axis]').forEach(input => input.addEventListener('input', renderRanking));
+  target.querySelectorAll('[data-interest-axis]').forEach(input => input.addEventListener('input', () => {
+    renderRanking();
+    if (previewDebounce) window.clearTimeout(previewDebounce);
+    previewDebounce = window.setTimeout(buildLivePreviewRoute, 260);
+  }));
   renderRanking();
 }
 
@@ -3836,10 +4588,10 @@ window.renderInterestPreview = renderInterestPreview;
   <aside class="map-side-panels" aria-label="Map context controls">
     <section class="map-card" aria-label="Map layers">
       <h2>Map layers</h2>
-      <label><input type="checkbox" checked readonly /> Terrain</label>
-      <label><input type="checkbox" checked readonly /> Roads</label>
-      <label><input type="checkbox" checked readonly /> Labels</label>
-      <label><input type="checkbox" checked readonly /> Weather risk</label>
+      <label><input type="checkbox" checked data-map-layer-toggle="terrain" /> Terrain</label>
+      <label><input type="checkbox" checked data-map-layer-toggle="roads" /> Roads</label>
+      <label><input type="checkbox" checked data-map-layer-toggle="labels" /> Labels</label>
+      <label><input type="checkbox" checked data-map-layer-toggle="weather_risk" /> Weather risk</label>
     </section>
     <section class="map-card" aria-label="Weather risk legend">
       <h2>Weather risk (7-day)</h2>
@@ -3869,7 +4621,7 @@ window.renderInterestPreview = renderInterestPreview;
       </div>
       <div class="dashboard-title-block">
         <h1>Weather-Aware Itinerary</h1>
-        <div class="dashboard-subtitle">California nature and national parks</div>
+        <div id="dashboard-subtitle" class="dashboard-subtitle">Loading scenario</div>
       </div>
       <button id="dashboard-collapse" type="button">Collapse</button>
     </div>
@@ -3877,15 +4629,16 @@ window.renderInterestPreview = renderInterestPreview;
       <details class="dashboard-section" open>
         <summary>Dashboard summary</summary>
         <div id="metrics"></div>
+        <div class="interest-note"><a href="evaluation.html">Open evaluation dashboard</a></div>
       </details>
       <details class="dashboard-section" open>
-        <summary>Route selector</summary>
+        <summary>Route & layers</summary>
         <div class="filter-row">
-          <label><input type="checkbox" data-layer-toggle="default_route" checked /> Default optimized route</label>
+          <label><input type="checkbox" data-layer-toggle="default_route" checked /> Saved optimized route</label>
           <label><input type="checkbox" data-layer-toggle="selected_hotels" checked /> Selected hotels</label>
           <label><input type="checkbox" data-layer-toggle="hotel_candidates" /> Hotel candidates</label>
-          <label><input type="checkbox" data-layer-toggle="nature_candidates" /> Nature candidates</label>
-          <label><input type="checkbox" data-layer-toggle="live_preview" disabled /> Live preview route</label>
+          <label><input type="checkbox" data-layer-toggle="nature_candidates" /> National park candidates</label>
+          <label><input type="checkbox" data-layer-toggle="live_preview" /> Preview only route</label>
         </div>
         <div id="quick-actions" class="quick-actions"></div>
         <div id="route-selector" class="route-selector"></div>
@@ -4001,6 +4754,7 @@ def export_map_artifacts(
     hotel_choices = _hotel_choices(output_dir)
     selected_hotels = _selected_hotels(points, hotel_choices)
     nature_explore = _nature_explore(output_dir)
+    evaluation_metrics = _evaluation_metrics(output_dir)
     mode = str(config.get("map_export", "mode", "both")).lower()
 
     artifacts: dict[str, Path] = {}
@@ -4035,8 +4789,10 @@ def export_map_artifacts(
             selected_hotels,
             hotel_choices,
             nature_explore,
+            evaluation_metrics,
         )
         artifacts["full_interactive_dashboard"] = dashboard_root / "index.html"
+        artifacts["evaluation_dashboard"] = dashboard_root / "evaluation.html"
         route_notes = {}
         for record in route_records:
             route_notes[str(record["geojson"])] = record

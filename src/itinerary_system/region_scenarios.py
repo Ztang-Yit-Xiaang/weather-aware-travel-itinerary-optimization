@@ -355,8 +355,10 @@ SCENARIOS: dict[str, ScenarioDefinition] = {
             ("Los Angeles", "San Francisco"): [
                 "Los Angeles",
                 "Palm Springs",
-                "Furnace Creek",
-                "Yosemite Valley",
+                "Twentynine Palms",
+                "Three Rivers",
+                "Fresno",
+                "Mariposa",
                 "San Francisco",
             ],
             ("San Francisco", "San Francisco"): [
@@ -376,7 +378,43 @@ SCENARIOS: dict[str, ScenarioDefinition] = {
                 ["Yosemite National Park", "Sequoia National Park", "Kings Canyon National Park"],
             ),
             _route_option(
-                "Desert to Sierra parks",
+                "Coast and southern desert nature",
+                "San Francisco",
+                "Los Angeles",
+                [
+                    "San Francisco",
+                    "Monterey",
+                    "Big Sur",
+                    "Santa Barbara",
+                    "Los Angeles",
+                    "Palm Springs",
+                    "Twentynine Palms",
+                    "Los Angeles",
+                ],
+                ["Big Sur", "Joshua Tree National Park"],
+            ),
+            _route_option(
+                "Southern desert to Sierra national parks",
+                "Los Angeles",
+                "San Francisco",
+                [
+                    "Los Angeles",
+                    "Palm Springs",
+                    "Twentynine Palms",
+                    "Three Rivers",
+                    "Fresno",
+                    "Mariposa",
+                    "San Francisco",
+                ],
+                [
+                    "Joshua Tree National Park",
+                    "Sequoia National Park",
+                    "Kings Canyon National Park",
+                    "Yosemite National Park",
+                ],
+            ),
+            _route_option(
+                "Desert to Sierra parks via Death Valley",
                 "Los Angeles",
                 "San Francisco",
                 [
@@ -605,6 +643,65 @@ def all_scenario_coordinates() -> dict[str, tuple[float, float]]:
     for scenario in SCENARIOS.values():
         coords.update(scenario.coordinate_fallbacks)
     return coords
+
+
+def scenario_enrichment_city_universe(
+    scenario_id: str | None = None,
+    *,
+    seed_city_names: list[str] | None = None,
+    start_city_options: list[str] | None = None,
+    end_city_options: list[str] | None = None,
+) -> list[str]:
+    """Return the real city/base universe that should be enriched for a scenario.
+
+    Notebook cells historically passed a fixed coastal list.  This helper keeps
+    coastal behavior intact while expanding statewide nature runs to the route
+    bases and nature gateway bases that can actually feed the optimizer.
+    """
+    scenario = get_scenario_definition(scenario_id)
+    starts = {str(city) for city in (start_city_options or []) if str(city).strip()}
+    ends = {str(city) for city in (end_city_options or []) if str(city).strip()}
+    options = get_route_options(scenario.scenario_id)
+    filtered = [
+        option
+        for option in options
+        if (not starts or option.get("gateway_start") in starts)
+        and (not ends or option.get("gateway_end") in ends)
+    ]
+    if not filtered:
+        filtered = options
+
+    region_lookup = {
+        region.name: region for region in scenario.nature_region_definitions
+    } | {
+        region.region_id: region for region in scenario.nature_region_definitions
+    }
+    names: list[str] = []
+
+    def add(value: Any) -> None:
+        text = str(value or "").strip()
+        if text and text not in names:
+            names.append(text)
+
+    for city in start_city_options or []:
+        add(city)
+    for option in filtered:
+        for city in option.get("sequence", []):
+            add(city)
+        for region_name in option.get("nature_regions", []):
+            region = region_lookup.get(str(region_name))
+            if region is None:
+                continue
+            for gateway in region.gateway_bases:
+                add(gateway)
+    for city in end_city_options or []:
+        add(city)
+    for city in seed_city_names or []:
+        add(city)
+
+    if not names:
+        names.extend(scenario.overnight_base_cities)
+    return names
 
 
 def scenario_summary_rows() -> list[dict[str, Any]]:

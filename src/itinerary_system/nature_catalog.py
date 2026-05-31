@@ -287,19 +287,28 @@ def curated_nature_fallback_pois(scenario_id: str | None = None) -> pd.DataFrame
     scenario = get_scenario_definition(scenario_id)
     rows = []
     for row in scenario.curated_seed_pois:
+        category = str(row.get("category", row.get("park_type", ""))).lower()
+        name = str(row.get("name", ""))
+        score = float(row.get("source_score", 6.0) or 6.0)
+        national_anchor = "national_park" in category or "national park" in name.lower()
+        anchor_social_score = min(1.0, max(0.0, score / 10.0))
         rows.append(
             {
                 "yelp_rating": 0.0,
                 "yelp_review_count": 0,
-                "social_score": 0.0,
-                "social_must_go": False,
-                "must_go_weight": 0.0,
+                "social_score": float(row.get("social_score", anchor_social_score if national_anchor else 0.55)),
+                "social_must_go": bool(row.get("social_must_go", national_anchor)),
+                "must_go_weight": float(row.get("must_go_weight", 0.72 if national_anchor else 0.38)),
                 "corridor_fit": 0.0,
+                "route_fit": 0.0,
                 "detour_minutes": 0.0,
-                "data_confidence": 0.35,
-                "data_uncertainty": 0.65,
-                "final_poi_value": float(row.get("source_score", 6.0)) / 10.0,
-                "social_reason": "",
+                "data_confidence": float(row.get("data_confidence", 0.45 if national_anchor else 0.40)),
+                "data_uncertainty": float(row.get("data_uncertainty", 0.55 if national_anchor else 0.60)),
+                "final_poi_value": score / 10.0,
+                "social_reason": row.get(
+                    "social_reason",
+                    "Curated nature anchor for the active scenario; used when live park data is unavailable.",
+                ),
                 **row,
             }
         )

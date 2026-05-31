@@ -17,6 +17,7 @@ from typing import Any
 import numpy as np
 import pandas as pd
 import requests
+from geopy.distance import geodesic
 
 from ._legacy import import_legacy_module
 from .config import TripConfig
@@ -27,7 +28,7 @@ from .nature_catalog import (
     load_nps_or_curated_nature_pois,
     write_interest_catalog_artifacts,
 )
-from .region_scenarios import all_scenario_coordinates
+from .region_scenarios import all_scenario_coordinates, get_route_options, scenario_enrichment_city_universe
 from .utility_model import apply_utility_models, learning_to_rank_audit
 
 USER_AGENT = "IE5533-WeatherAwareTravelPlanner/1.0 (academic project; open data cache)"
@@ -49,6 +50,7 @@ OPEN_ENRICHED_POI_COLUMNS = [
     "social_must_go",
     "must_go_weight",
     "corridor_fit",
+    "route_fit",
     "detour_minutes",
     "data_confidence",
     "data_uncertainty",
@@ -561,17 +563,89 @@ def _numeric_series(frame: pd.DataFrame, column: str, default: float = 0.0) -> p
     return pd.Series(default, index=frame.index, dtype=float)
 
 
+def _configured_city_names(city_names: list[str], config: TripConfig) -> list[str]:
+    if str(config.get("trip", "scenario_city_universe", "auto")).lower() != "auto":
+        return list(city_names)
+    return scenario_enrichment_city_universe(
+        str(config.get("trip", "scenario", "california_coast")),
+        seed_city_names=list(city_names),
+        start_city_options=list(config.get("trip", "start_city_options", [])),
+        end_city_options=list(config.get("trip", "end_city_options", [])),
+    )
+
+
+def _scenario_route_waypoints(config: TripConfig) -> list[tuple[float, float]]:
+    scenario_id = str(config.get("trip", "scenario", "california_coast"))
+    starts = {str(city) for city in config.get("trip", "start_city_options", [])}
+    ends = {str(city) for city in config.get("trip", "end_city_options", [])}
+    coords = all_scenario_coordinates()
+    waypoints: list[tuple[float, float]] = []
+    options = get_route_options(scenario_id)
+    filtered = [
+        option
+        for option in options
+        if (not starts or option.get("gateway_start") in starts)
+        and (not ends or option.get("gateway_end") in ends)
+    ]
+    for option in filtered or options:
+        for name in list(option.get("sequence", [])) + list(option.get("nature_regions", [])):
+            if name in coords:
+                waypoints.append((float(coords[name][0]), float(coords[name][1])))
+    if not waypoints:
+        waypoints = [(float(lat), float(lon)) for lat, lon in coords.values()]
+    deduped: list[tuple[float, float]] = []
+    seen = set()
+    for lat, lon in waypoints:
+        key = (round(lat, 5), round(lon, 5))
+        if key not in seen:
+            seen.add(key)
+            deduped.append((lat, lon))
+    return deduped
+
+
+def _scenario_route_metrics(
+    lat: float,
+    lon: float,
+    config: TripConfig,
+    *,
+    threshold_minutes: float,
+    waypoints: list[tuple[float, float]] | None = None,
+) -> tuple[float, float]:
+    if pd.isna(lat) or pd.isna(lon):
+        return 0.0, float(threshold_minutes)
+    points = waypoints if waypoints is not None else _scenario_route_waypoints(config)
+    if not points:
+        return 0.0, float(threshold_minutes)
+    nearest_km = min(geodesic((float(lat), float(lon)), point).km for point in points)
+    detour_minutes = nearest_km * 2.0 / 48.0 * 60.0
+    route_fit = max(0.0, 1.0 - detour_minutes / float(threshold_minutes))
+    return round(float(route_fit), 4), round(float(detour_minutes), 2)
+
+
 def _recompute_value_columns(enriched_df: pd.DataFrame, config: TripConfig) -> pd.DataFrame:
     production_enrichment = import_legacy_module("production_enrichment")
     output = enriched_df.copy()
     max_detour = float(config.get("time", "max_detour_minutes", 45))
+    scenario_id = str(config.get("trip", "scenario", "california_coast"))
+    route_waypoints = _scenario_route_waypoints(config)
     for idx, row in output.iterrows():
         corridor_fit, detour_minutes = production_enrichment.corridor_metrics(
             row["latitude"],
             row["longitude"],
             threshold_minutes=max_detour,
         )
+        route_fit, route_detour_minutes = _scenario_route_metrics(
+            row["latitude"],
+            row["longitude"],
+            config,
+            threshold_minutes=max_detour,
+            waypoints=route_waypoints,
+        )
+        if scenario_id != "california_coast":
+            corridor_fit = max(float(corridor_fit), float(route_fit))
+            detour_minutes = min(float(detour_minutes), float(route_detour_minutes))
         output.at[idx, "corridor_fit"] = corridor_fit
+        output.at[idx, "route_fit"] = route_fit
         output.at[idx, "detour_minutes"] = detour_minutes
     social_weight = float(config.get("social", "social_score_weight", 1.10))
     must_go_weight = float(config.get("social", "must_go_bonus_weight", 0.85))
@@ -598,11 +672,51 @@ def _recompute_value_columns(enriched_df: pd.DataFrame, config: TripConfig) -> p
         + 0.20 * _numeric_series(output, "yelp_signal_norm")
         + social_weight * _numeric_series(output, "social_score")
         + must_go_weight * _numeric_series(output, "must_go_weight") * _numeric_series(output, "social_score")
-        + corridor_weight * _numeric_series(output, "corridor_fit")
+        + corridor_weight
+        * np.maximum(_numeric_series(output, "corridor_fit"), _numeric_series(output, "route_fit"))
         - detour_penalty * _numeric_series(output, "detour_minutes")
         + 0.10 * _numeric_series(output, "wikipedia_pageview_score")
     ).clip(lower=0.0)
     return output.sort_values(["final_poi_value", "social_score"], ascending=[False, False]).reset_index(drop=True)
+
+
+def _write_candidate_audit(enriched_df: pd.DataFrame, output_dir: Path, config: TripConfig) -> pd.DataFrame:
+    frame = _ensure_open_columns(enriched_df)
+    if frame.empty:
+        audit = pd.DataFrame()
+        audit.to_csv(output_dir / "production_candidate_audit_by_city_category_source.csv", index=False)
+        return audit
+    frame = frame.copy()
+    frame["candidate_anchor"] = frame["nature_region"].where(
+        frame["nature_region"].astype(str).str.strip().ne(""),
+        frame["city"].astype(str),
+    )
+    frame["source_group"] = frame["source_list"].astype(str).str.split("|").str[0].fillna("unknown")
+    audit = (
+        frame.groupby(["city", "candidate_anchor", "category", "source_group"], dropna=False)
+        .agg(
+            candidate_count=("name", "nunique"),
+            nature_candidate_count=("is_nature", "sum"),
+            national_park_candidate_count=("is_national_park", "sum"),
+            avg_data_confidence=("data_confidence", "mean"),
+            avg_final_poi_value=("final_poi_value", "mean"),
+            avg_route_fit=("route_fit", "mean"),
+        )
+        .reset_index()
+    )
+    audit.insert(0, "scenario", str(config.get("trip", "scenario", "california_coast")))
+    audit.insert(1, "interest", str(config.get("interest", "mode", config.get("trip", "interest_profile", ""))))
+    audit.to_csv(output_dir / "production_candidate_audit_by_city_category_source.csv", index=False)
+    return audit
+
+
+def scenario_route_fit_metrics(lat: float, lon: float, config: TripConfig) -> tuple[float, float]:
+    return _scenario_route_metrics(
+        lat,
+        lon,
+        config,
+        threshold_minutes=float(config.get("time", "max_detour_minutes", 45)),
+    )
 
 
 def build_enriched_catalog(
@@ -616,6 +730,7 @@ def build_enriched_catalog(
     output_dir = Path(output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
     production_enrichment = import_legacy_module("production_enrichment")
+    city_names = _configured_city_names(city_names, config)
 
     osm_poi_catalog, osm_hotel_catalog, osm_audit_df = build_open_osm_catalogs(city_names, output_dir, config)
     local_yelp_df = (
@@ -640,6 +755,7 @@ def build_enriched_catalog(
     ltr_audit_df = learning_to_rank_audit(enriched_df, config)
     enriched_df[OPEN_ENRICHED_POI_COLUMNS].to_csv(output_dir / "production_enriched_poi_catalog.csv", index=False)
     write_interest_catalog_artifacts(enriched_df, output_dir, config)
+    candidate_audit_df = _write_candidate_audit(enriched_df, output_dir, config)
 
     city_summary_df = production_enrichment.build_city_catalog_summary(city_names, local_yelp_df, enriched_df)
     if not city_summary_df.empty and "city" in city_summary_df.columns:
@@ -716,6 +832,7 @@ def build_enriched_catalog(
             else pd.DataFrame(),
             "production_utility_model_audit_df": utility_audit_df,
             "learning_to_rank_audit_df": ltr_audit_df,
+            "production_candidate_audit_by_city_category_source_df": candidate_audit_df,
             "social_signal_snapshots_df": social_signal_snapshots_df,
             "open_meteo_context_df": weather_df,
         }

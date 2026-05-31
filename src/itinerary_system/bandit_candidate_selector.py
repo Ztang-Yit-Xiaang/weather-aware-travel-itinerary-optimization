@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import ast
 
+import numpy as np
 import pandas as pd
 
 from ._legacy import import_legacy_module
@@ -159,7 +160,8 @@ def _candidate_bundle_for_arm(
     if cities:
         mask = pool["city"].isin(cities)
         if strategy in {"scenic_social", "high_must_go"}:
-            mask = mask | _bool_column(pool, "social_must_go") | _numeric_column(pool, "corridor_fit").ge(0.55)
+            route_context_fit = np.maximum(_numeric_column(pool, "corridor_fit"), _numeric_column(pool, "route_fit"))
+            mask = mask | _bool_column(pool, "social_must_go") | route_context_fit.ge(0.55)
         pool = pool[mask].copy()
     if pool.empty:
         pool = enriched_df.copy()
@@ -173,11 +175,12 @@ def _candidate_bundle_for_arm(
     #   + phi_safe(a)*(1 - weather_sensitivity_i*weather_risk_i)
     #   - phi_d(a)*detour_minutes_i
     pool["bundle_score"] = _numeric_column(pool, base_score_column)
+    route_context_fit = np.maximum(_numeric_column(pool, "corridor_fit"), _numeric_column(pool, "route_fit"))
     if strategy in {"scenic_social", "high_must_go"}:
         pool["bundle_score"] += 1.25 * _numeric_column(pool, "social_score")
         pool["bundle_score"] += 0.75 * _numeric_column(pool, "must_go_weight")
     if strategy in {"scenic_social", "low_detour"}:
-        pool["bundle_score"] += 0.40 * _numeric_column(pool, "corridor_fit")
+        pool["bundle_score"] += 0.40 * route_context_fit
         pool["bundle_score"] -= 0.01 * _numeric_column(pool, "detour_minutes")
     if strategy == "fastest_low_cost":
         pool["bundle_score"] -= 0.02 * _numeric_column(pool, "detour_minutes")

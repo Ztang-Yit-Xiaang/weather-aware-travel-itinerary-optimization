@@ -50,12 +50,22 @@ The current notebook implements a **multi-day Tourist Trip Design Problem (TTDP)
 
 ## Interactive Results
 
-- [Interactive route map (CP-SAT)](results/figures/tourist_routes_map.html)
-- [Interactive route map (Gurobi)](results/figures/tourist_routes_map_gurobi.html)
-- [Static route overview (Gurobi PNG)](results/figures/tourist_routes_static_gurobi.png)
-- Nature-aware production exports:
-  - `results/figures/lightweight_share_map.html`
+- Production dashboard, recommended entry point:
   - `results/figures/full_interactive_dashboard/index.html`
+  - Use the in-page mode switch to choose **Customer mode** or **Research/Test mode**.
+  - Customer mode shows the traveler-facing trip planner: route map, selected stops, selected hotels, weather risk, playback, trip-day choices, interest controls, and hotel preferences.
+  - Research/Test mode shows the full artifact-backed optimizer dashboard: comparison routes, audits, route variants, diagnostics, candidate layers, and the evaluation dashboard link.
+- Evaluation dashboard:
+  - `results/figures/full_interactive_dashboard/evaluation.html`
+- Compatibility entry points:
+  - `results/figures/full_interactive_dashboard/customer.html`
+  - `results/figures/full_interactive_dashboard/research.html`
+  - These mirror the two modes but are not the main workflow.
+- Legacy/original notebook maps:
+  - [Interactive route map (CP-SAT)](results/figures/tourist_routes_map.html)
+  - [Interactive route map (Gurobi)](results/figures/tourist_routes_map_gurobi.html)
+  - [Static route overview (Gurobi PNG)](results/figures/tourist_routes_static_gurobi.png)
+  - `results/figures/lightweight_share_map.html`
 
 > GitHub may not render the HTML maps inline. If the preview is blocked, download the HTML file or open the project locally and run `python -m http.server`, then visit the generated local URL.
 
@@ -123,6 +133,8 @@ In `california_statewide_nature`, Yosemite, Sequoia, Kings Canyon, Joshua Tree, 
 
 Live NPS enrichment is optional. Set `nature.use_nps_api: true` and provide `NPS_API_KEY` to fetch and cache official NPS park data; otherwise the pipeline falls back to curated open-data seeds and writes an explicit audit status.
 
+The strongest production scope today is the California statewide nature demo. It now uses airport-backed endpoints such as SFO and LAX, selected hotel/base nodes, saved interest-profile route artifacts such as `nature_heavy`, `balanced_interest`, and `city_heavy`, and explicit route sequence audits. Browser interest sliders are truth-preserving: they can switch to a saved optimized profile route when one exists, or show a clearly labeled **Preview only - rerun pipeline to save** route. They do not rewrite Gurobi, method-comparison, dashboard metric, or selected-route artifacts in the browser.
+
 ### Opening The Dashboard
 
 The full modular dashboard supports two asset-loading modes. On localhost or GitHub Pages it loads JSON and GeoJSON with `fetch()`. When opened directly with `file://`, it uses generated JavaScript fallback assets beside the JSON files.
@@ -139,9 +151,93 @@ Then open the printed URL:
 http://localhost:8000/
 ```
 
+The helper serves `results/figures/full_interactive_dashboard/index.html` directly. The dashboard starts in the configured default mode and includes a one-button switch between:
+
+- **Customer trip planner**: simplified traveler-facing controls and the currently selected saved/preview route.
+- **Research/Test dashboard**: full optimizer, audits, comparison methods, candidate/context layers, and evaluation outputs.
+
 If port 8000 is occupied, the helper automatically tries 8001, 8002, and so on. The lightweight share map at `results/figures/lightweight_share_map.html` is standalone and can be opened directly.
 
 For development quality checks and dashboard validation, see [docs/code_quality_workflow.md](docs/code_quality_workflow.md).
+
+---
+
+## Nationwide Expansion Roadmap
+
+The current system is intentionally strongest for California and California statewide nature planning. Making the planner nationwide is not only a UI change; it requires replacing state-specific route assumptions with national geography, enrichment, routing, and validation layers.
+
+### Phase 1: National geography registry
+
+Replace hardcoded California coordinate constants and route anchors with a loaded registry for:
+
+- `country: US`
+- states and regions
+- metro areas and gateway airports
+- national parks and nature regions
+- scenic corridors and major road corridors
+- airport-to-city and park-to-gateway relationships
+
+Curated California scenarios should remain as high-quality demos and regression tests, but the registry should make new regions data-driven rather than hand-coded one by one.
+
+### Phase 2: Automatic route graph generation
+
+Add a scenario builder that creates feasible route graphs from:
+
+- start airport and end airport,
+- trip length,
+- traveler interests,
+- candidate cities, parks, and corridors,
+- maximum daily drive minutes,
+- hotel/base feasibility.
+
+For example, instead of manually writing every route, the builder should generate candidate graphs such as West Coast city-plus-nature, Southwest national parks, Northeast cities plus nearby nature, or cross-state airport-to-airport trips. The optimizer should still enforce airport start/end nodes, ordered day segments, no backtracking, duplicate prevention, hotel/base consistency, and maximum-drive thresholds.
+
+### Phase 3: Nationwide enrichment
+
+Generalize candidate data collection beyond California:
+
+- OSM/Overpass for POIs, hotels, viewpoints, trails, and city/culture/history places.
+- NPS for national parks and official park metadata.
+- Wikidata/Wikipedia for descriptions, images, source URLs, and place identity.
+- Open-Meteo for weather risk and weather-aware scoring.
+- OSRM, Valhalla, GraphHopper, or another routing engine for drive-time matrices.
+
+Every source should keep `source_confidence`, fallback status, and state/region/category audit rows so missing data is visible before a dashboard is exported.
+
+### Phase 4: Nationwide validation and audits
+
+Before exporting customer-facing pages, the pipeline should validate:
+
+- required anchors and gateway airports,
+- state and region coverage,
+- hotel coverage for every overnight base,
+- stale artifact metadata,
+- route sequence feasibility,
+- impossible drive segments,
+- selected POIs outside their allowed segment,
+- duplicate stops or backtracking.
+
+These audits are the guardrail that prevents a nationwide planner from looking polished while silently using incomplete data.
+
+### Phase 5: Optional backend
+
+The current static dashboard architecture can still work nationwide by switching among saved artifacts and showing browser-only previews. Add a backend only when customer inputs need true real-time personalized optimization. Until then, true optimized route changes should come from rerunning the Python pipeline, not from mutating saved artifacts in the browser.
+
+### Practical first steps
+
+1. Keep California statewide nature as the benchmark scenario.
+2. Build a national registry table for airports, states, metros, parks, corridors, and gateway/base cities.
+3. Pilot three new automatic regions: West Coast, Southwest national parks, and Northeast city-plus-nature.
+4. Require the route graph generator to pass sequence, hotel, and coverage audits before adding new UI controls.
+5. Expand only after the data and route feasibility checks are stable.
+
+---
+
+## Current Limitations
+
+- The dashboard is static: browser sliders can switch saved profiles or create preview-only routes, but they do not run true optimization in the browser.
+- The strongest production-ready scope is California statewide nature. Nationwide planning needs national data coverage, route graph generation, drive-time routing, and audits before it can be reliable.
+- Customer mode is designed for artifact-backed trip review and lightweight preference previews. Fully personalized arbitrary customer optimization requires rerunning the Python pipeline or adding a backend later.
 
 ---
 
@@ -681,8 +777,9 @@ The executed notebook output is generated locally and is ignored by git.
 For tests:
 
 ```bash
-python -m pytest
-python scripts/validate_dashboard_export.py
+python -B scripts\validate_dashboard_export.py
+python -B scripts\validate_nature_route_pipeline.py --config configs\nature_trip_config.yaml --strict
+python -B -m pytest -q
 ```
 
 For local HTML viewing:
@@ -706,7 +803,9 @@ The project produces several output types:
 - hotel-aware route plans,
 - interactive HTML route maps,
 - greedy-baseline comparison tables.
-- nature-aware scenario, route, and map artifact summaries.
+- nature-aware scenario, route, and map artifact summaries,
+- customer/research dashboard mode exports,
+- evaluation metrics and comparison dashboard assets.
 
 Useful output files include:
 
@@ -715,6 +814,7 @@ Useful output files include:
 - [results/figures/tourist_routes_static_gurobi.png](results/figures/tourist_routes_static_gurobi.png)
 - `results/figures/lightweight_share_map.html`
 - `results/figures/full_interactive_dashboard/index.html`
+- `results/figures/full_interactive_dashboard/evaluation.html`
 - `results/outputs/production_map_artifact_size_report.csv`
 - `results/outputs/production_nature_metric_summary.csv`
 
@@ -728,7 +828,8 @@ Possible next steps include:
 - adding stochastic or robust weather scenarios,
 - learning traveler-specific preference weights,
 - improving hotel pricing with stronger external data sources,
-- supporting rolling re-optimization for real-time trip updates.
+- scaling from California scenarios to nationwide route graph generation,
+- supporting rolling re-optimization for real-time trip updates,
 - upgrading the documented advanced TODOs into learned preference models once labeled route feedback exists.
 
 ---

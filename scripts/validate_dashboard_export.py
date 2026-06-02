@@ -184,21 +184,37 @@ def validate(figure_dir: Path, output_dir: Path) -> tuple[list[str], list[str]]:
                 errors.append(f"Dashboard index missing wired upper-right map layer control {token!r}: {index_html}")
         if "checked readonly" in html:
             errors.append(f"Dashboard index still contains decorative readonly layer checkboxes: {index_html}")
+        for token in ["dashboard-mode-toggle", 'data-mode-section="customer"', 'data-mode-section="research"']:
+            if token not in html:
+                errors.append(f"Dashboard index missing one-page mode switch token {token!r}: {index_html}")
 
     if research_html.exists():
         html = research_html.read_text(encoding="utf-8", errors="replace")
-        for token in ["Research/Test dashboard", "route-selector", "evaluation.html", "Debug summary"]:
+        for token in [
+            'data-dashboard-mode="research"',
+            "Research/Test dashboard",
+            "dashboard-mode-toggle",
+            "customer-trip-controls",
+            "route-selector",
+            "evaluation.html",
+            "Debug summary",
+        ]:
             if token not in html:
                 errors.append(f"Research dashboard missing required research-mode token {token!r}: {research_html}")
 
     if customer_html.exists():
         html = customer_html.read_text(encoding="utf-8", errors="replace")
-        for token in ["Customer trip planner", "Plan your trip", "customer-trip-controls", "Trip summary"]:
+        for token in [
+            'data-dashboard-mode="customer"',
+            "Customer trip planner",
+            "dashboard-mode-toggle",
+            "Plan your trip",
+            "customer-trip-controls",
+            "Trip summary",
+            'data-mode-section="research"',
+        ]:
             if token not in html:
                 errors.append(f"Customer dashboard missing required customer-mode token {token!r}: {customer_html}")
-        for token in ["evaluation.html", "Open evaluation dashboard", "Debug summary", "route-selector", "Route & layers"]:
-            if token in html:
-                errors.append(f"Customer dashboard exposes research-only token {token!r}: {customer_html}")
 
     if evaluation_html.exists():
         html = evaluation_html.read_text(encoding="utf-8", errors="replace")
@@ -237,7 +253,7 @@ def validate(figure_dir: Path, output_dir: Path) -> tuple[list[str], list[str]]:
             "data-map-layer-toggle",
             "numbered-route-stop",
             "renderCustomerControls(index)",
-            "customer-trip-controls",
+            "window.dashboardMap",
             "dashboardLogError",
         ]:
             if token not in js:
@@ -266,6 +282,8 @@ def validate(figure_dir: Path, output_dir: Path) -> tuple[list[str], list[str]]:
             "data-toggle-hotel-candidates",
             "renderCustomerControls",
             "customer_visible",
+            "dashboard-mode-toggle",
+            "applyDashboardMode",
         ]:
             if token not in js:
                 errors.append(f"Dashboard panel JS missing required V2 token {token!r}: {dashboard_js}")

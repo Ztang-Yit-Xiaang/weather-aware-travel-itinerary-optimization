@@ -1942,63 +1942,9 @@ def _write_evaluation_page(root: Path, assets: Path, metrics: dict[str, Any], wr
 
 
 def _dashboard_page_html(mode: str) -> str:
-    is_customer = mode == "customer"
-    mode_label = "Customer trip planner" if is_customer else "Research/Test dashboard"
-    summary_title = "Trip summary" if is_customer else "Dashboard summary"
-    body_class = "customer-dashboard" if is_customer else "research-dashboard"
-    summary_extra = (
-        ""
-        if is_customer
-        else '<div class="interest-note"><a href="evaluation.html">Open evaluation dashboard</a></div>'
-    )
-    customer_controls = (
-        """
-      <details class="dashboard-section" open>
-        <summary>Plan your trip</summary>
-        <div id="customer-trip-controls"></div>
-      </details>"""
-        if is_customer
-        else ""
-    )
-    route_layers = (
-        ""
-        if is_customer
-        else """
-      <details class="dashboard-section" open>
-        <summary>Route & layers</summary>
-        <div class="filter-row">
-          <label><input type="checkbox" data-layer-toggle="default_route" checked /> Saved optimized route</label>
-          <label><input type="checkbox" data-layer-toggle="selected_hotels" checked /> Selected hotels</label>
-          <label><input type="checkbox" data-layer-toggle="hotel_candidates" /> Hotel candidates</label>
-          <label><input type="checkbox" data-layer-toggle="nature_candidates" /> National park candidates</label>
-          <label><input type="checkbox" data-layer-toggle="live_preview" /> Preview only route</label>
-        </div>
-        <div id="quick-actions" class="quick-actions"></div>
-        <div id="route-selector" class="route-selector"></div>
-      </details>"""
-    )
-    research_sections = (
-        ""
-        if is_customer
-        else """
-      <details class="dashboard-section">
-        <summary>City details</summary>
-        <div id="city-details"></div>
-      </details>
-      <details class="dashboard-section">
-        <summary>Nature explore</summary>
-        <div id="nature-explore"></div>
-      </details>
-      <details class="dashboard-section">
-        <summary>Debug summary</summary>
-        <div id="debug-summary"></div>
-      </details>"""
-    )
-    customer_note = (
-        '<div class="interest-note">Customer choices load saved route artifacts or clearly labeled browser previews. They do not overwrite optimizer results.</div>'
-        if is_customer
-        else ""
-    )
+    default_mode = "customer" if mode == "customer" else "research"
+    mode_label = "Customer trip planner" if default_mode == "customer" else "Research/Test dashboard"
+    switch_label = "Research/Test mode" if default_mode == "customer" else "Customer mode"
     return f"""<!doctype html>
 <html lang="en">
 <head>
@@ -2008,7 +1954,7 @@ def _dashboard_page_html(mode: str) -> str:
   <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
   <link rel="stylesheet" href="assets/style.css" />
 </head>
-<body class="{body_class}" data-dashboard-mode="{mode}">
+<body class="dashboard-shell" data-dashboard-mode="{default_mode}">
   <div id="map"></div>
   <div id="diagnostic-panel" class="diagnostic-panel" role="status" aria-live="polite"></div>
   <aside class="weather-chip" aria-label="Current weather preview">
@@ -2055,19 +2001,37 @@ def _dashboard_page_html(mode: str) -> str:
       <div class="dashboard-title-block">
         <h1>Weather-Aware Itinerary</h1>
         <div id="dashboard-subtitle" class="dashboard-subtitle">Loading scenario</div>
-        <div class="dashboard-mode-label">{mode_label}</div>
+        <div id="dashboard-mode-label" class="dashboard-mode-label">{mode_label}</div>
       </div>
+      <button id="dashboard-mode-toggle" type="button">{switch_label}</button>
       <button id="dashboard-collapse" type="button">Collapse</button>
     </div>
     <div id="dashboard-content">
-      {customer_controls}
-      <details class="dashboard-section" open>
-        <summary>{summary_title}</summary>
-        <div id="metrics"></div>
-        {customer_note}
-        {summary_extra}
+      <details class="dashboard-section" open data-mode-section="customer">
+        <summary>Plan your trip</summary>
+        <div id="customer-trip-controls"></div>
       </details>
-      {route_layers}
+      <details class="dashboard-section" open>
+        <summary>
+          <span data-mode-section="customer">Trip summary</span>
+          <span data-mode-section="research">Dashboard summary</span>
+        </summary>
+        <div id="metrics"></div>
+        <div class="interest-note" data-mode-section="customer">Customer choices load saved route artifacts or clearly labeled browser previews. They do not overwrite optimizer results.</div>
+        <div class="interest-note" data-mode-section="research"><a href="evaluation.html">Open evaluation dashboard</a></div>
+      </details>
+      <details class="dashboard-section" open data-mode-section="research">
+        <summary>Route & layers</summary>
+        <div class="filter-row">
+          <label><input type="checkbox" data-layer-toggle="default_route" checked /> Saved optimized route</label>
+          <label><input type="checkbox" data-layer-toggle="selected_hotels" checked /> Selected hotels</label>
+          <label><input type="checkbox" data-layer-toggle="hotel_candidates" /> Hotel candidates</label>
+          <label><input type="checkbox" data-layer-toggle="nature_candidates" /> National park candidates</label>
+          <label><input type="checkbox" data-layer-toggle="live_preview" /> Preview only route</label>
+        </div>
+        <div id="quick-actions" class="quick-actions"></div>
+        <div id="route-selector" class="route-selector"></div>
+      </details>
       <details class="dashboard-section" open>
         <summary>Playback</summary>
         <div class="summary-list"><b>Route:</b> <span id="playback-route-label">Loading...</span></div>
@@ -2101,7 +2065,18 @@ def _dashboard_page_html(mode: str) -> str:
         <summary>Interest bars</summary>
         <div id="interest-preview"></div>
       </details>
-      {research_sections}
+      <details class="dashboard-section" data-mode-section="research">
+        <summary>City details</summary>
+        <div id="city-details"></div>
+      </details>
+      <details class="dashboard-section" data-mode-section="research">
+        <summary>Nature explore</summary>
+        <div id="nature-explore"></div>
+      </details>
+      <details class="dashboard-section" data-mode-section="research">
+        <summary>Debug summary</summary>
+        <div id="debug-summary"></div>
+      </details>
       <div id="dashboard-status" class="status"></div>
     </div>
   </section>
@@ -2224,7 +2199,7 @@ body {
 
 .dashboard-header {
   display: grid;
-  grid-template-columns: 42px minmax(0, 1fr) auto;
+  grid-template-columns: 42px minmax(0, 1fr) auto auto;
   align-items: center;
   gap: 10px;
   min-height: 48px;
@@ -2275,6 +2250,11 @@ body {
   font-size: 11px;
   font-weight: 800;
   line-height: 1;
+}
+
+body[data-dashboard-mode="customer"] [data-mode-section="research"],
+body[data-dashboard-mode="research"] [data-mode-section="customer"] {
+  display: none !important;
 }
 
 .dashboard-panel.collapsed {
@@ -2388,6 +2368,11 @@ body {
   height: 36px;
   padding: 0;
   font-size: 0;
+}
+
+#dashboard-mode-toggle {
+  min-width: 112px;
+  white-space: nowrap;
 }
 
 #dashboard-collapse::before {
@@ -4441,6 +4426,7 @@ async function initMap() {
   try {
     assertMapContainerReady();
     dashboardMap = L.map("map", { preferCanvas: true }).setView([36.5, -119.5], 6);
+    window.dashboardMap = dashboardMap;
     initializeBaseMapLayers();
 
     const index = await loadRouteIndex();
@@ -4503,14 +4489,11 @@ async function initMap() {
     }
     drawSelectedHotels(selectedHotels);
     bindPlaybackControls();
-    const customerControls = document.getElementById('customer-trip-controls');
     if (window.renderCustomerControls) {
       window.renderCustomerControls(index);
     }
-    if (!customerControls) {
-      renderQuickButtons(index);
-      renderRouteSelector(index);
-    }
+    renderQuickButtons(index);
+    renderRouteSelector(index);
     bindLayerToggles();
     bindMapLayerToggles();
 
@@ -4522,10 +4505,10 @@ async function initMap() {
     await drawDefaultRoute(selected);
     refreshMapContextLayers();
     updateMapLayerToggleState();
-    if (!customerControls) {
-      loadOptionalLayers();
-    } else {
+    if (document.body.dataset.dashboardMode === 'customer') {
       setDashboardStatus('Customer planner ready. Changes load saved artifacts or preview-only routes.');
+    } else {
+      loadOptionalLayers();
     }
     dashboardLogInit('complete');
   } catch (error) {
@@ -4624,12 +4607,45 @@ function bindDashboardShellControls() {
   const panel = document.querySelector('.dashboard-panel');
   const handle = document.getElementById('dashboard-drag-handle');
   const collapse = document.getElementById('dashboard-collapse');
+  const modeToggle = document.getElementById('dashboard-mode-toggle');
   if (!panel || !handle) return;
   collapse?.addEventListener('click', event => {
     event.stopPropagation();
     panel.classList.toggle('collapsed');
     collapse.textContent = panel.classList.contains('collapsed') ? 'Expand' : 'Collapse';
   });
+  const applyMode = mode => {
+    const nextMode = mode === 'customer' ? 'customer' : 'research';
+    document.body.dataset.dashboardMode = nextMode;
+    document.body.classList.toggle('customer-dashboard', nextMode === 'customer');
+    document.body.classList.toggle('research-dashboard', nextMode === 'research');
+    const modeLabel = document.getElementById('dashboard-mode-label');
+    if (modeLabel) {
+      modeLabel.textContent = nextMode === 'customer' ? 'Customer trip planner' : 'Research/Test dashboard';
+    }
+    if (modeToggle) {
+      modeToggle.textContent = nextMode === 'customer' ? 'Research/Test mode' : 'Customer mode';
+      modeToggle.setAttribute('aria-pressed', nextMode === 'customer' ? 'true' : 'false');
+    }
+    if (window.dashboardMap?.invalidateSize) {
+      window.setTimeout(() => window.dashboardMap.invalidateSize(), 80);
+    }
+  };
+  applyMode(document.body.dataset.dashboardMode || 'research');
+  modeToggle?.addEventListener('click', event => {
+    event.stopPropagation();
+    const current = document.body.dataset.dashboardMode === 'customer' ? 'customer' : 'research';
+    const next = current === 'customer' ? 'research' : 'customer';
+    applyMode(next);
+    const status = document.getElementById('dashboard-status');
+    if (status) {
+      status.textContent = next === 'customer'
+        ? 'Customer planner mode: choices load saved artifacts or preview-only routes.'
+        : 'Research/Test mode: all comparison, debug, and evaluation controls are visible.';
+      status.style.color = '#0a6b53';
+    }
+  });
+  window.applyDashboardMode = applyMode;
   let dragState = null;
   handle.addEventListener('pointerdown', event => {
     if (event.target?.tagName === 'BUTTON') return;

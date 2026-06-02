@@ -170,6 +170,13 @@ DEFAULT_CONFIG = {
         "refresh_road_geometry": False,
         "show_debug_on_load": False,
     },
+    "map_dashboard": {
+        "export_modes": ["customer", "research"],
+        "default_mode": "research",
+        "customer_day_options": "auto",
+        "customer_hide_research_controls": True,
+        "customer_allow_preference_export": True,
+    },
     "map_export": {
         "mode": "both",
         "lightweight_max_routes": 1,

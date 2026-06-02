@@ -101,6 +101,9 @@ class ConfigurableItinerarySystemTests(unittest.TestCase):
         self.assertIn("interest_adjusted_value", canonical_poi_columns())
         self.assertTrue(config.get("nature", "enabled"))
         self.assertEqual(config.get("nature", "nps_api_key_env"), "NPS_API_KEY")
+        self.assertEqual(config.get("map_dashboard", "default_mode"), "research")
+        self.assertIn("customer", config.get("map_dashboard", "export_modes"))
+        self.assertTrue(config.get("map_dashboard", "customer_hide_research_controls"))
         self.assertEqual(config.get("map_export", "mode"), "both")
 
     def test_interest_mode_nature_heavy_resolves_preset_weights(self):
@@ -841,6 +844,38 @@ class ConfigurableItinerarySystemTests(unittest.TestCase):
             ).to_csv(output_dir / "production_route_matrix_route_stops.csv", index=False)
             pd.DataFrame(
                 [
+                    {
+                        "route_key": "interest_nature",
+                        "comparison_label": "Interest · Nature Heavy",
+                        "interest_profile": "nature_heavy",
+                        "profile": "nature_heavy",
+                        "trip_days": 7,
+                        "day": 1,
+                        "stop_order": 1,
+                        "attraction_name": "Interest Yosemite",
+                        "city": "Mariposa",
+                        "latitude": 37.8651,
+                        "longitude": -119.5383,
+                        "final_poi_value": 0.93,
+                    },
+                    {
+                        "route_key": "interest_city",
+                        "comparison_label": "Interest · City Heavy",
+                        "interest_profile": "city_heavy",
+                        "profile": "city_heavy",
+                        "trip_days": 7,
+                        "day": 1,
+                        "stop_order": 1,
+                        "attraction_name": "Interest Los Angeles",
+                        "city": "Los Angeles",
+                        "latitude": 34.0522,
+                        "longitude": -118.2437,
+                        "final_poi_value": 0.75,
+                    },
+                ]
+            ).to_csv(output_dir / "production_interest_route_stops.csv", index=False)
+            pd.DataFrame(
+                [
                     {"route_layer": "coast_context", "leg_order": 1, "from": "San Francisco", "to": "Santa Barbara"},
                 ]
             ).to_csv(output_dir / "production_intercity_legs.csv", index=False)
@@ -896,6 +931,8 @@ class ConfigurableItinerarySystemTests(unittest.TestCase):
             share_html = artifacts["lightweight_share_map"].read_text(encoding="utf-8").lower()
             dashboard_root = artifacts["full_interactive_dashboard"].parent
             index_html = artifacts["full_interactive_dashboard"].read_text(encoding="utf-8")
+            research_html = (dashboard_root / "research.html").read_text(encoding="utf-8")
+            customer_html = (dashboard_root / "customer.html").read_text(encoding="utf-8")
             style_css = (dashboard_root / "assets" / "style.css").read_text(encoding="utf-8")
             map_js = (dashboard_root / "assets" / "map_controls.js").read_text(encoding="utf-8")
             dashboard_js = (dashboard_root / "assets" / "dashboard.js").read_text(encoding="utf-8")
@@ -934,8 +971,12 @@ class ConfigurableItinerarySystemTests(unittest.TestCase):
 
         self.assertIn("lightweight_share_map", artifacts)
         self.assertIn("evaluation_dashboard", artifacts)
+        self.assertIn("full_customer_dashboard", artifacts)
+        self.assertIn("full_research_dashboard", artifacts)
         self.assertFalse(report.empty)
         self.assertIn('<div id="map">', index_html)
+        self.assertIn("Research/Test dashboard", index_html)
+        self.assertIn("Research/Test dashboard", research_html)
         self.assertIn("assets/data_loader.js", index_html)
         self.assertIn("evaluation.html", index_html)
         self.assertIn("diagnostic-panel", index_html)
@@ -955,10 +996,23 @@ class ConfigurableItinerarySystemTests(unittest.TestCase):
         self.assertNotIn("checked readonly", index_html)
         self.assertNotIn("Load optional layers", index_html)
         self.assertNotIn("alert(", index_html)
+        self.assertIn("Customer trip planner", customer_html)
+        self.assertIn("Plan your trip", customer_html)
+        self.assertIn("customer-trip-controls", customer_html)
+        self.assertIn("Trip summary", customer_html)
+        self.assertIn("Hotel choices", customer_html)
+        self.assertIn("Interest bars", customer_html)
+        self.assertNotIn("evaluation.html", customer_html)
+        self.assertNotIn("Open evaluation dashboard", customer_html)
+        self.assertNotIn("Debug summary", customer_html)
+        self.assertNotIn("route-selector", customer_html)
+        self.assertNotIn("Route & layers", customer_html)
         self.assertIn("height: 100vh", style_css)
         self.assertIn(".dashboard-panel", style_css)
         self.assertIn(".dashboard-panel.collapsed", style_css)
         self.assertIn(".dashboard-header", style_css)
+        self.assertIn(".dashboard-mode-label", style_css)
+        self.assertIn(".customer-control-grid", style_css)
         self.assertIn(".playback-progress", style_css)
         self.assertIn(".hotel-card", style_css)
         self.assertIn(".nature-card", style_css)
@@ -988,6 +1042,8 @@ class ConfigurableItinerarySystemTests(unittest.TestCase):
         self.assertIn("buildWeatherRiskLayer", map_js)
         self.assertIn("numbered-route-stop", map_js)
         self.assertIn("data-map-layer-toggle", map_js)
+        self.assertIn("renderCustomerControls(index)", map_js)
+        self.assertIn("customer-trip-controls", map_js)
         self.assertNotIn("alert(", map_js)
         self.assertIn("renderActiveStopDetail", dashboard_js)
         self.assertIn("renderCityDetails", dashboard_js)
@@ -1011,6 +1067,9 @@ class ConfigurableItinerarySystemTests(unittest.TestCase):
         self.assertIn("Build live preview route", dashboard_js)
         self.assertIn("buildLivePreviewRoute", dashboard_js)
         self.assertIn("window.setTimeout(buildLivePreviewRoute", dashboard_js)
+        self.assertIn("renderCustomerControls", dashboard_js)
+        self.assertIn("Loaded saved ${kind} route artifact", dashboard_js)
+        self.assertIn("customer_visible", dashboard_js)
         self.assertIn("Route state", dashboard_js)
         self.assertIn("Browser preview is approximate", dashboard_js)
         self.assertIn("data-toggle-hotel-candidates", dashboard_js)
@@ -1074,6 +1133,9 @@ class ConfigurableItinerarySystemTests(unittest.TestCase):
             "geojson_js",
             "pois",
             "pois_js",
+            "customer_visible",
+            "research_only",
+            "customer_control_group",
         }
         self.assertTrue(
             required_route_fields.issubset(route_index["routes"][0]),
@@ -1100,10 +1162,17 @@ class ConfigurableItinerarySystemTests(unittest.TestCase):
         self.assertTrue(any(route["optional"] for route in route_index["routes"]))
         route_by_id = {route["id"]: route for route in route_index["routes"]}
         self.assertTrue(route_by_id["selected_route"]["playable"])
+        self.assertTrue(route_by_id["selected_route"]["customer_visible"])
+        self.assertFalse(route_by_id["selected_route"]["research_only"])
+        self.assertEqual(route_by_id["selected_route"]["customer_control_group"], "saved_route")
         self.assertFalse(route_by_id["hotel_candidates"]["playable"])
         self.assertTrue(route_by_id["hotel_candidates"]["marker_only"])
+        self.assertFalse(route_by_id["hotel_candidates"]["customer_visible"])
+        self.assertTrue(route_by_id["hotel_candidates"]["research_only"])
         self.assertTrue(route_by_id["nature_candidates"]["marker_only"])
         self.assertTrue(route_by_id["must_go_candidates"]["marker_only"])
+        self.assertTrue(any(route.get("customer_control_group") == "trip_days" for route in route_index["routes"]))
+        self.assertTrue(any(route.get("customer_control_group") == "interest" for route in route_index["routes"]))
         for payload in [hotel_geojson, nature_geojson, must_go_geojson]:
             self.assertFalse(
                 any(feature.get("geometry", {}).get("type") == "LineString" for feature in payload["features"])
@@ -1113,6 +1182,8 @@ class ConfigurableItinerarySystemTests(unittest.TestCase):
         )
         self.assertTrue(any("days_7" in route.get("quick_groups", []) for route in route_index["routes"]))
         self.assertTrue(any("balanced" in route.get("quick_groups", []) for route in route_index["routes"]))
+        self.assertIn("full_customer_dashboard", set(report["artifact_type"]))
+        self.assertIn("full_research_dashboard", set(report["artifact_type"]))
         self.assertEqual(poi_payload[0]["name"], "Preferred Bandit Stop")
         self.assertAlmostEqual(poi_payload[0]["display_utility"], 0.91)
         self.assertEqual(poi_payload[0]["optimization_value_source"], "final_poi_value")

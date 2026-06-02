@@ -152,6 +152,13 @@ map:
   refresh_road_geometry: false
   show_debug_on_load: false
 
+map_dashboard:
+  export_modes: [customer, research]
+  default_mode: research
+  customer_day_options: auto
+  customer_hide_research_controls: true
+  customer_allow_preference_export: true
+
 map_export:
   mode: both
   lightweight_max_routes: 1

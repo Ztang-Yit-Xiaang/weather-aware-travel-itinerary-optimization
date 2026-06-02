@@ -20,6 +20,12 @@ DEFAULT_DASHBOARD_METHOD = "hierarchical_bandit_gurobi_repair"
 CONTRACT_VERSION = "core-route-index-v1"
 PLAYABLE_ROUTE_FAMILIES = {"selected", "route_matrix", "trip_length", "method", "interest_profile"}
 MARKER_ONLY_ROUTE_FAMILIES = {"hotel", "nature", "must_go"}
+CUSTOMER_ROUTE_FAMILIES = {"selected", "trip_length", "interest_profile"}
+CUSTOMER_CONTROL_GROUPS = {
+    "selected": "saved_route",
+    "trip_length": "trip_days",
+    "interest_profile": "interest",
+}
 PLACEHOLDER_HOTEL_PATTERNS = (
     "lodging candidate pending",
     "city_center_placeholder",
@@ -225,6 +231,9 @@ def _route_record(
         record.update({key: value for key, value in extra.items() if value is not None and value != ""})
     record.setdefault("playable", family in PLAYABLE_ROUTE_FAMILIES)
     record.setdefault("marker_only", family in MARKER_ONLY_ROUTE_FAMILIES)
+    record.setdefault("customer_visible", family in CUSTOMER_ROUTE_FAMILIES)
+    record.setdefault("research_only", family not in CUSTOMER_ROUTE_FAMILIES)
+    record.setdefault("customer_control_group", CUSTOMER_CONTROL_GROUPS.get(family, "research"))
     return record
 
 
@@ -1932,6 +1941,179 @@ def _write_evaluation_page(root: Path, assets: Path, metrics: dict[str, Any], wr
     )
 
 
+def _dashboard_page_html(mode: str) -> str:
+    is_customer = mode == "customer"
+    mode_label = "Customer trip planner" if is_customer else "Research/Test dashboard"
+    summary_title = "Trip summary" if is_customer else "Dashboard summary"
+    body_class = "customer-dashboard" if is_customer else "research-dashboard"
+    summary_extra = (
+        ""
+        if is_customer
+        else '<div class="interest-note"><a href="evaluation.html">Open evaluation dashboard</a></div>'
+    )
+    customer_controls = (
+        """
+      <details class="dashboard-section" open>
+        <summary>Plan your trip</summary>
+        <div id="customer-trip-controls"></div>
+      </details>"""
+        if is_customer
+        else ""
+    )
+    route_layers = (
+        ""
+        if is_customer
+        else """
+      <details class="dashboard-section" open>
+        <summary>Route & layers</summary>
+        <div class="filter-row">
+          <label><input type="checkbox" data-layer-toggle="default_route" checked /> Saved optimized route</label>
+          <label><input type="checkbox" data-layer-toggle="selected_hotels" checked /> Selected hotels</label>
+          <label><input type="checkbox" data-layer-toggle="hotel_candidates" /> Hotel candidates</label>
+          <label><input type="checkbox" data-layer-toggle="nature_candidates" /> National park candidates</label>
+          <label><input type="checkbox" data-layer-toggle="live_preview" /> Preview only route</label>
+        </div>
+        <div id="quick-actions" class="quick-actions"></div>
+        <div id="route-selector" class="route-selector"></div>
+      </details>"""
+    )
+    research_sections = (
+        ""
+        if is_customer
+        else """
+      <details class="dashboard-section">
+        <summary>City details</summary>
+        <div id="city-details"></div>
+      </details>
+      <details class="dashboard-section">
+        <summary>Nature explore</summary>
+        <div id="nature-explore"></div>
+      </details>
+      <details class="dashboard-section">
+        <summary>Debug summary</summary>
+        <div id="debug-summary"></div>
+      </details>"""
+    )
+    customer_note = (
+        '<div class="interest-note">Customer choices load saved route artifacts or clearly labeled browser previews. They do not overwrite optimizer results.</div>'
+        if is_customer
+        else ""
+    )
+    return f"""<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Weather-Aware Itinerary Dashboard</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+  <link rel="stylesheet" href="assets/style.css" />
+</head>
+<body class="{body_class}" data-dashboard-mode="{mode}">
+  <div id="map"></div>
+  <div id="diagnostic-panel" class="diagnostic-panel" role="status" aria-live="polite"></div>
+  <aside class="weather-chip" aria-label="Current weather preview">
+    <span class="weather-sun" aria-hidden="true"></span>
+    <span>
+      <span class="weather-temp">62°F</span>
+      <span class="weather-city">Clear · San Francisco</span>
+    </span>
+  </aside>
+  <aside class="map-side-panels" aria-label="Map context controls">
+    <section class="map-card" aria-label="Map layers">
+      <h2>Map layers</h2>
+      <label><input type="checkbox" checked data-map-layer-toggle="terrain" /> Terrain</label>
+      <label><input type="checkbox" checked data-map-layer-toggle="roads" /> Roads</label>
+      <label><input type="checkbox" checked data-map-layer-toggle="labels" /> Labels</label>
+      <label><input type="checkbox" checked data-map-layer-toggle="weather_risk" /> Weather risk</label>
+    </section>
+    <section class="map-card" aria-label="Weather risk legend">
+      <h2>Weather risk (7-day)</h2>
+      <div class="risk-row"><span class="risk-dot risk-low"></span>Low (0 - 0.25)</div>
+      <div class="risk-row"><span class="risk-dot risk-mid"></span>Moderate (0.25 - 0.5)</div>
+      <div class="risk-row"><span class="risk-dot risk-high"></span>High (0.5 - 0.75)</div>
+      <div class="risk-row"><span class="risk-dot risk-very"></span>Very high (0.75 - 1)</div>
+    </section>
+  </aside>
+  <aside class="map-legend" aria-label="Route legend">
+    <div class="legend-item"><span class="legend-line"></span>Optimized route</div>
+    <div class="legend-item"><span class="legend-line alt"></span>Alternative route</div>
+    <div class="legend-item"><span class="legend-hotel">H</span>Selected hotel</div>
+    <div class="legend-item"><span class="legend-dot risk-low"></span>Nature / park spot</div>
+    <div class="legend-item"><span class="risk-dot risk-high"></span>Hotel candidate</div>
+    <div class="legend-item"><span class="legend-star">*</span>Must-see stop</div>
+    <div class="legend-item"><span class="legend-line preview"></span>Playback trail</div>
+    <div class="legend-item"><span class="legend-dot"></span>Route stop</div>
+  </aside>
+  <section class="dashboard-panel">
+    <div id="dashboard-drag-handle" class="dashboard-header">
+      <div class="dashboard-mark" aria-hidden="true">
+        <svg viewBox="0 0 48 48" width="30" height="30" focusable="false">
+          <path d="M5 34 19 10l8 14 5-8 11 18H5Z" fill="currentColor" opacity=".95"/>
+          <path d="M5 38c8-5 16-5 24 0 5 3 10 3 14 0" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round"/>
+        </svg>
+      </div>
+      <div class="dashboard-title-block">
+        <h1>Weather-Aware Itinerary</h1>
+        <div id="dashboard-subtitle" class="dashboard-subtitle">Loading scenario</div>
+        <div class="dashboard-mode-label">{mode_label}</div>
+      </div>
+      <button id="dashboard-collapse" type="button">Collapse</button>
+    </div>
+    <div id="dashboard-content">
+      {customer_controls}
+      <details class="dashboard-section" open>
+        <summary>{summary_title}</summary>
+        <div id="metrics"></div>
+        {customer_note}
+        {summary_extra}
+      </details>
+      {route_layers}
+      <details class="dashboard-section" open>
+        <summary>Playback</summary>
+        <div class="summary-list"><b>Route:</b> <span id="playback-route-label">Loading...</span></div>
+        <div class="playback-controls">
+          <button id="playback-restart" type="button" aria-label="Restart route playback">|&lt;</button>
+          <button id="playback-prev" type="button" aria-label="Previous stop">&lt;&lt;</button>
+          <button id="playback-play" type="button" aria-label="Play route animation">Play</button>
+          <button id="playback-pause" type="button" aria-label="Pause route animation">Pause</button>
+          <button id="playback-next" type="button" aria-label="Next stop">&gt;&gt;</button>
+        </div>
+        <div class="playback-controls">
+          <select id="playback-speed" aria-label="Playback speed">
+            <option value="1600">Slow</option>
+            <option value="900" selected>Normal</option>
+            <option value="420">Fast</option>
+          </select>
+          <label><input id="playback-follow" type="checkbox" checked /> Follow marker</label>
+        </div>
+        <div class="playback-progress"><span id="playback-progress-bar"></span></div>
+        <div id="playback-current-stop" class="status"></div>
+      </details>
+      <details class="dashboard-section" open>
+        <summary>Active stop details</summary>
+        <div id="active-stop-detail"></div>
+      </details>
+      <details class="dashboard-section" open>
+        <summary>Hotel choices</summary>
+        <div id="hotel-choices"></div>
+      </details>
+      <details class="dashboard-section" open>
+        <summary>Interest bars</summary>
+        <div id="interest-preview"></div>
+      </details>
+      {research_sections}
+      <div id="dashboard-status" class="status"></div>
+    </div>
+  </section>
+  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+  <script src="assets/data_loader.js"></script>
+  <script src="assets/dashboard.js"></script>
+  <script src="assets/map_controls.js"></script>
+</body>
+</html>
+"""
+
+
 def _write_full_dashboard(
     root: Path,
     route_records: list[dict[str, Any]],
@@ -2079,6 +2261,20 @@ body {
   color: var(--muted);
   font-size: 12px;
   line-height: 1.2;
+}
+
+.dashboard-mode-label {
+  display: inline-flex;
+  width: fit-content;
+  margin-top: 6px;
+  border: 1px solid rgba(10, 107, 83, .22);
+  border-radius: 999px;
+  padding: 4px 8px;
+  color: var(--forest);
+  background: rgba(217, 251, 246, .72);
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 1;
 }
 
 .dashboard-panel.collapsed {
@@ -2323,6 +2519,40 @@ body {
   color: #294056;
   font-size: 12px;
   font-weight: 700;
+}
+
+.customer-control-grid {
+  display: grid;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.customer-control-block {
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  padding: 9px;
+  background: rgba(255,255,255,.72);
+}
+
+.customer-control-block strong {
+  display: block;
+  margin-bottom: 6px;
+  color: var(--forest-dark);
+  font-size: 12px;
+  text-transform: uppercase;
+}
+
+.customer-option-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.customer-option-grid button.active {
+  border-color: var(--forest);
+  color: #fff;
+  background: var(--forest);
+  box-shadow: 0 8px 18px rgba(10, 107, 83, .22);
 }
 
 input[type="checkbox"] {
@@ -4273,8 +4503,14 @@ async function initMap() {
     }
     drawSelectedHotels(selectedHotels);
     bindPlaybackControls();
-    renderQuickButtons(index);
-    renderRouteSelector(index);
+    const customerControls = document.getElementById('customer-trip-controls');
+    if (window.renderCustomerControls) {
+      window.renderCustomerControls(index);
+    }
+    if (!customerControls) {
+      renderQuickButtons(index);
+      renderRouteSelector(index);
+    }
     bindLayerToggles();
     bindMapLayerToggles();
 
@@ -4286,7 +4522,11 @@ async function initMap() {
     await drawDefaultRoute(selected);
     refreshMapContextLayers();
     updateMapLayerToggleState();
-    loadOptionalLayers();
+    if (!customerControls) {
+      loadOptionalLayers();
+    } else {
+      setDashboardStatus('Customer planner ready. Changes load saved artifacts or preview-only routes.');
+    }
     dashboardLogInit('complete');
   } catch (error) {
     dashboardLogError('initialization failed', error);
@@ -5022,6 +5262,81 @@ function renderInterestPreview(preview) {
   renderRanking();
 }
 
+function routeButtonLabel(route) {
+  if (route.customer_control_group === 'trip_days') return `${route.trip_days || '?'} days`;
+  if (route.customer_control_group === 'interest') {
+    return String(route.interest_profile || route.profile || route.label || 'Interest').replaceAll('_', ' ');
+  }
+  return route.label || 'Saved route';
+}
+
+function customerVisibleRoutes(index, controlGroup) {
+  const routes = Array.isArray(index?.routes) ? index.routes : [];
+  return routes
+    .filter(route => route.customer_visible !== false)
+    .filter(route => !controlGroup || route.customer_control_group === controlGroup)
+    .filter(route => route.playable !== false && route.marker_only !== true);
+}
+
+function activateCustomerRoute(route, statusText) {
+  if (!route || !window.showOnlyRoute) return;
+  if (window.clearLivePreviewRoute) window.clearLivePreviewRoute(false);
+  window.showOnlyRoute(route);
+  const status = document.getElementById('dashboard-status');
+  if (status) {
+    status.textContent = statusText || `Loaded saved route artifact: ${route.label || route.id}`;
+    status.style.color = '#0a6b53';
+  }
+  document.querySelectorAll('[data-customer-route-id]').forEach(button => {
+    button.classList.toggle('active', button.dataset.customerRouteId === route.id);
+  });
+}
+
+function renderCustomerControls(index) {
+  const target = document.getElementById('customer-trip-controls');
+  if (!target) return;
+  const defaultRoute = customerVisibleRoutes(index).find(route => route.default);
+  const dayRoutes = customerVisibleRoutes(index, 'trip_days')
+    .sort((a, b) => Number(a.trip_days || 0) - Number(b.trip_days || 0));
+  const interestRoutes = customerVisibleRoutes(index, 'interest')
+    .sort((a, b) => String(a.interest_profile || a.profile || a.label).localeCompare(String(b.interest_profile || b.profile || b.label)));
+  const dayButtons = dayRoutes.length
+    ? dayRoutes.map(route => `<button type="button" data-customer-route-id="${escapeHtml(route.id)}" data-customer-route-kind="days">${escapeHtml(routeButtonLabel(route))}</button>`).join('')
+    : '<span class="interest-note">No alternate day-count artifacts were exported. Requires pipeline rerun.</span>';
+  const interestButtons = interestRoutes.length
+    ? interestRoutes.map(route => `<button type="button" data-customer-route-id="${escapeHtml(route.id)}" data-customer-route-kind="interest">${escapeHtml(routeButtonLabel(route))}</button>`).join('')
+    : '<span class="interest-note">No saved interest-profile artifacts were exported. Slider changes are preview-only.</span>';
+  target.innerHTML = `
+    <div class="customer-control-grid">
+      <div class="customer-control-block">
+        <strong>Trip length</strong>
+        <div class="customer-option-grid">${dayButtons}</div>
+        <div class="interest-note">Only exported trip-day artifacts can be selected here; other day counts require a Python pipeline rerun.</div>
+      </div>
+      <div class="customer-control-block">
+        <strong>Interest preset</strong>
+        <div class="customer-option-grid">${interestButtons}</div>
+        <div class="interest-note">Saved profile routes are optimizer artifacts. Custom slider mixes remain preview-only.</div>
+      </div>
+      <div class="customer-control-block">
+        <strong>Hotels</strong>
+        <div class="interest-note">Hotel preferences are saved locally in this browser and can be exported as a soft bonus for the next optimizer rerun.</div>
+      </div>
+    </div>
+  `;
+  const byId = new Map(customerVisibleRoutes(index).map(route => [route.id, route]));
+  target.querySelectorAll('[data-customer-route-id]').forEach(button => {
+    button.addEventListener('click', () => {
+      const route = byId.get(button.dataset.customerRouteId);
+      const kind = button.dataset.customerRouteKind === 'days' ? 'trip length' : 'interest profile';
+      activateCustomerRoute(route, `Loaded saved ${kind} route artifact: ${route?.label || route?.id || ''}`);
+    });
+  });
+  if (defaultRoute) {
+    target.querySelector(`[data-customer-route-id="${CSS.escape(defaultRoute.id)}"]`)?.classList.add('active');
+  }
+}
+
 window.renderDashboardMetrics = renderDashboardMetrics;
 window.bindDashboardShellControls = bindDashboardShellControls;
 window.renderActiveStopDetail = renderActiveStopDetail;
@@ -5030,147 +5345,15 @@ window.renderHotelChoices = renderHotelChoices;
 window.renderNatureExplore = renderNatureExplore;
 window.renderDebugSummary = renderDebugSummary;
 window.renderInterestPreview = renderInterestPreview;
+window.renderCustomerControls = renderCustomerControls;
 """,
         written,
     )
 
-    index_path = root / "index.html"
-    _write_text_asset(
-        index_path,
-        """<!doctype html>
-<html lang="en">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Weather-Aware Itinerary Dashboard</title>
-  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
-  <link rel="stylesheet" href="assets/style.css" />
-</head>
-<body>
-  <div id="map"></div>
-  <div id="diagnostic-panel" class="diagnostic-panel" role="status" aria-live="polite"></div>
-  <aside class="weather-chip" aria-label="Current weather preview">
-    <span class="weather-sun" aria-hidden="true"></span>
-    <span>
-      <span class="weather-temp">62°F</span>
-      <span class="weather-city">Clear · San Francisco</span>
-    </span>
-  </aside>
-  <aside class="map-side-panels" aria-label="Map context controls">
-    <section class="map-card" aria-label="Map layers">
-      <h2>Map layers</h2>
-      <label><input type="checkbox" checked data-map-layer-toggle="terrain" /> Terrain</label>
-      <label><input type="checkbox" checked data-map-layer-toggle="roads" /> Roads</label>
-      <label><input type="checkbox" checked data-map-layer-toggle="labels" /> Labels</label>
-      <label><input type="checkbox" checked data-map-layer-toggle="weather_risk" /> Weather risk</label>
-    </section>
-    <section class="map-card" aria-label="Weather risk legend">
-      <h2>Weather risk (7-day)</h2>
-      <div class="risk-row"><span class="risk-dot risk-low"></span>Low (0 - 0.25)</div>
-      <div class="risk-row"><span class="risk-dot risk-mid"></span>Moderate (0.25 - 0.5)</div>
-      <div class="risk-row"><span class="risk-dot risk-high"></span>High (0.5 - 0.75)</div>
-      <div class="risk-row"><span class="risk-dot risk-very"></span>Very high (0.75 - 1)</div>
-    </section>
-  </aside>
-  <aside class="map-legend" aria-label="Route legend">
-    <div class="legend-item"><span class="legend-line"></span>Optimized route</div>
-    <div class="legend-item"><span class="legend-line alt"></span>Alternative route</div>
-    <div class="legend-item"><span class="legend-hotel">H</span>Selected hotel</div>
-    <div class="legend-item"><span class="legend-dot risk-low"></span>Nature / park spot</div>
-    <div class="legend-item"><span class="risk-dot risk-high"></span>Hotel candidate</div>
-    <div class="legend-item"><span class="legend-star">*</span>Must-see stop</div>
-    <div class="legend-item"><span class="legend-line preview"></span>Playback trail</div>
-    <div class="legend-item"><span class="legend-dot"></span>Route stop</div>
-  </aside>
-  <section class="dashboard-panel">
-    <div id="dashboard-drag-handle" class="dashboard-header">
-      <div class="dashboard-mark" aria-hidden="true">
-        <svg viewBox="0 0 48 48" width="30" height="30" focusable="false">
-          <path d="M5 34 19 10l8 14 5-8 11 18H5Z" fill="currentColor" opacity=".95"/>
-          <path d="M5 38c8-5 16-5 24 0 5 3 10 3 14 0" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round"/>
-        </svg>
-      </div>
-      <div class="dashboard-title-block">
-        <h1>Weather-Aware Itinerary</h1>
-        <div id="dashboard-subtitle" class="dashboard-subtitle">Loading scenario</div>
-      </div>
-      <button id="dashboard-collapse" type="button">Collapse</button>
-    </div>
-    <div id="dashboard-content">
-      <details class="dashboard-section" open>
-        <summary>Dashboard summary</summary>
-        <div id="metrics"></div>
-        <div class="interest-note"><a href="evaluation.html">Open evaluation dashboard</a></div>
-      </details>
-      <details class="dashboard-section" open>
-        <summary>Route & layers</summary>
-        <div class="filter-row">
-          <label><input type="checkbox" data-layer-toggle="default_route" checked /> Saved optimized route</label>
-          <label><input type="checkbox" data-layer-toggle="selected_hotels" checked /> Selected hotels</label>
-          <label><input type="checkbox" data-layer-toggle="hotel_candidates" /> Hotel candidates</label>
-          <label><input type="checkbox" data-layer-toggle="nature_candidates" /> National park candidates</label>
-          <label><input type="checkbox" data-layer-toggle="live_preview" /> Preview only route</label>
-        </div>
-        <div id="quick-actions" class="quick-actions"></div>
-        <div id="route-selector" class="route-selector"></div>
-      </details>
-      <details class="dashboard-section" open>
-        <summary>Playback</summary>
-        <div class="summary-list"><b>Route:</b> <span id="playback-route-label">Loading...</span></div>
-        <div class="playback-controls">
-          <button id="playback-restart" type="button" aria-label="Restart route playback">|&lt;</button>
-          <button id="playback-prev" type="button" aria-label="Previous stop">&lt;&lt;</button>
-          <button id="playback-play" type="button" aria-label="Play route animation">Play</button>
-          <button id="playback-pause" type="button" aria-label="Pause route animation">Pause</button>
-          <button id="playback-next" type="button" aria-label="Next stop">&gt;&gt;</button>
-        </div>
-        <div class="playback-controls">
-          <select id="playback-speed" aria-label="Playback speed">
-            <option value="1600">Slow</option>
-            <option value="900" selected>Normal</option>
-            <option value="420">Fast</option>
-          </select>
-          <label><input id="playback-follow" type="checkbox" checked /> Follow marker</label>
-        </div>
-        <div class="playback-progress"><span id="playback-progress-bar"></span></div>
-        <div id="playback-current-stop" class="status"></div>
-      </details>
-      <details class="dashboard-section" open>
-        <summary>Active stop details</summary>
-        <div id="active-stop-detail"></div>
-      </details>
-      <details class="dashboard-section">
-        <summary>City details</summary>
-        <div id="city-details"></div>
-      </details>
-      <details class="dashboard-section">
-        <summary>Hotel choices</summary>
-        <div id="hotel-choices"></div>
-      </details>
-      <details class="dashboard-section">
-        <summary>Nature explore</summary>
-        <div id="nature-explore"></div>
-      </details>
-      <details class="dashboard-section" open>
-        <summary>Interest bars</summary>
-        <div id="interest-preview"></div>
-      </details>
-      <details class="dashboard-section">
-        <summary>Debug summary</summary>
-        <div id="debug-summary"></div>
-      </details>
-      <div id="dashboard-status" class="status"></div>
-    </div>
-  </section>
-  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
-  <script src="assets/data_loader.js"></script>
-  <script src="assets/dashboard.js"></script>
-  <script src="assets/map_controls.js"></script>
-</body>
-</html>
-""",
-        written,
-    )
+    research_html = _dashboard_page_html("research")
+    _write_text_asset(root / "index.html", research_html, written)
+    _write_text_asset(root / "research.html", research_html, written)
+    _write_text_asset(root / "customer.html", _dashboard_page_html("customer"), written)
     return written
 
 
@@ -5263,6 +5446,8 @@ def export_map_artifacts(
             evaluation_metrics,
         )
         artifacts["full_interactive_dashboard"] = dashboard_root / "index.html"
+        artifacts["full_research_dashboard"] = dashboard_root / "research.html"
+        artifacts["full_customer_dashboard"] = dashboard_root / "customer.html"
         artifacts["evaluation_dashboard"] = dashboard_root / "evaluation.html"
         route_notes = {}
         for record in route_records:
@@ -5284,7 +5469,17 @@ def export_map_artifacts(
                 artifact_type = "full_dashboard_index"
                 route_count = len(route_records)
                 marker_count = len(points)
-                notes = "modular_dashboard_entrypoint"
+                notes = "research_dashboard_entrypoint;compat_index"
+            elif path.name == "research.html":
+                artifact_type = "full_research_dashboard"
+                route_count = len(route_records)
+                marker_count = len(points)
+                notes = "explicit_research_dashboard_entrypoint"
+            elif path.name == "customer.html":
+                artifact_type = "full_customer_dashboard"
+                route_count = len([record for record in route_records if record.get("customer_visible")])
+                marker_count = len(points)
+                notes = "customer_dashboard_entrypoint"
             elif path.suffix == ".geojson":
                 artifact_type = "route_geojson"
                 route_count = 1

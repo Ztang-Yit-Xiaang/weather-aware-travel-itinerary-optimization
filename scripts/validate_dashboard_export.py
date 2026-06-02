@@ -90,6 +90,8 @@ def validate(figure_dir: Path, output_dir: Path) -> tuple[list[str], list[str]]:
 
     lightweight = figure_dir / "lightweight_share_map.html"
     index_html = dashboard_root / "index.html"
+    research_html = dashboard_root / "research.html"
+    customer_html = dashboard_root / "customer.html"
     style_css = assets / "style.css"
     map_js = assets / "map_controls.js"
     dashboard_js = assets / "dashboard.js"
@@ -120,6 +122,8 @@ def validate(figure_dir: Path, output_dir: Path) -> tuple[list[str], list[str]]:
     for path, label in [
         (lightweight, "lightweight share map"),
         (index_html, "full dashboard index"),
+        (research_html, "research dashboard HTML"),
+        (customer_html, "customer dashboard HTML"),
         (style_css, "dashboard CSS"),
         (map_js, "map controls JS"),
         (dashboard_js, "dashboard JS"),
@@ -181,6 +185,21 @@ def validate(figure_dir: Path, output_dir: Path) -> tuple[list[str], list[str]]:
         if "checked readonly" in html:
             errors.append(f"Dashboard index still contains decorative readonly layer checkboxes: {index_html}")
 
+    if research_html.exists():
+        html = research_html.read_text(encoding="utf-8", errors="replace")
+        for token in ["Research/Test dashboard", "route-selector", "evaluation.html", "Debug summary"]:
+            if token not in html:
+                errors.append(f"Research dashboard missing required research-mode token {token!r}: {research_html}")
+
+    if customer_html.exists():
+        html = customer_html.read_text(encoding="utf-8", errors="replace")
+        for token in ["Customer trip planner", "Plan your trip", "customer-trip-controls", "Trip summary"]:
+            if token not in html:
+                errors.append(f"Customer dashboard missing required customer-mode token {token!r}: {customer_html}")
+        for token in ["evaluation.html", "Open evaluation dashboard", "Debug summary", "route-selector", "Route & layers"]:
+            if token in html:
+                errors.append(f"Customer dashboard exposes research-only token {token!r}: {customer_html}")
+
     if evaluation_html.exists():
         html = evaluation_html.read_text(encoding="utf-8", errors="replace")
         for token in ["Method Evaluation Dashboard", "assets/evaluation_metrics.js", "Method Comparison", "Solver Tradeoffs"]:
@@ -217,6 +236,8 @@ def validate(figure_dir: Path, output_dir: Path) -> tuple[list[str], list[str]]:
             "buildWeatherRiskLayer",
             "data-map-layer-toggle",
             "numbered-route-stop",
+            "renderCustomerControls(index)",
+            "customer-trip-controls",
             "dashboardLogError",
         ]:
             if token not in js:
@@ -243,6 +264,8 @@ def validate(figure_dir: Path, output_dir: Path) -> tuple[list[str], list[str]]:
             "window.setTimeout(buildLivePreviewRoute",
             "Browser preview is approximate",
             "data-toggle-hotel-candidates",
+            "renderCustomerControls",
+            "customer_visible",
         ]:
             if token not in js:
                 errors.append(f"Dashboard panel JS missing required V2 token {token!r}: {dashboard_js}")
@@ -311,6 +334,9 @@ def validate(figure_dir: Path, output_dir: Path) -> tuple[list[str], list[str]]:
                     "geojson_js",
                     "pois",
                     "pois_js",
+                    "customer_visible",
+                    "research_only",
+                    "customer_control_group",
                 ]:
                     if required_key not in route:
                         errors.append(f"Route {route_id or '<missing id>'} missing {required_key}: {route_index_path}")

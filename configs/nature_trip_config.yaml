@@ -31,6 +31,13 @@ nature:
 map:
   require_matching_artifact_metadata: true
 
+map_dashboard:
+  export_modes: [customer, research]
+  default_mode: research
+  customer_day_options: auto
+  customer_hide_research_controls: true
+  customer_allow_preference_export: true
+
 transport:
   airport_gateways:
     San Francisco:

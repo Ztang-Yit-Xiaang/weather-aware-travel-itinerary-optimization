@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 from pathlib import Path
 from typing import Any
 
@@ -12,7 +13,7 @@ import pandas as pd
 import requests
 
 from .config import TripConfig
-from .region_scenarios import get_nature_region_definitions, get_scenario_definition, scenario_summary_rows
+from .region_scenarios import get_nature_region_definitions, get_route_options, get_scenario_definition, scenario_summary_rows
 from .request_schema import INTEREST_AXES, normalize_interest_weights, preset_to_interest_weights
 
 NATURE_POI_COLUMNS = [
@@ -71,6 +72,84 @@ NATURE_KEYWORDS = "park|beach|trail|hiking|viewpoint|scenic|reserve|forest|canyo
 CITY_KEYWORDS = "downtown|market|shopping|restaurant|strip|theatre|theater|nightlife|pier|wharf|city|urban"
 CULTURE_KEYWORDS = "museum|gallery|arts|theatre|theater|aquarium|zoo|observatory|garden|campus|library"
 HISTORY_KEYWORDS = "historic|history|heritage|monument|mission|fort|landmark|memorial|archaeological"
+NON_VISIT_POI_PATTERNS = (
+    "construction",
+    "contractor",
+    "home service",
+    "home services",
+    "kitchen",
+    "cabinet",
+    "plumb",
+    "hvac",
+    "roof",
+    "electrician",
+    "mover",
+    "self storage",
+    "airport shuttle",
+    "shuttle",
+    "limo",
+    "limousine",
+    "taxi",
+    "medical transport",
+    "rv dealer",
+    "water purification",
+    "real estate",
+    "insurance",
+    "accounting",
+    "law office",
+)
+VISIT_POI_PATTERNS = (
+    "national park",
+    "state park",
+    "park",
+    "museum",
+    "gallery",
+    "landmark",
+    "historic",
+    "history",
+    "viewpoint",
+    "scenic",
+    "hiking",
+    "trail",
+    "beach",
+    "bridge",
+    "observatory",
+    "garden",
+    "aquarium",
+    "zoo",
+    "theater",
+    "theatre",
+    "courthouse",
+    "campus",
+    "winery",
+    "tour",
+)
+STRONG_VISIT_POI_PATTERNS = (
+    "national park",
+    "state park",
+    "park",
+    "museum",
+    "gallery",
+    "landmark",
+    "historic",
+    "viewpoint",
+    "scenic",
+    "hiking",
+    "trail",
+    "beach",
+    "bridge",
+    "observatory",
+    "botanical garden",
+    "aquarium",
+    "zoo",
+    "theater",
+    "theatre",
+    "courthouse",
+    "campus",
+    "whale watching",
+    "walking tour",
+    "historical tour",
+)
 
 
 def interest_enabled(config: TripConfig) -> bool:
@@ -97,6 +176,44 @@ def _numeric(frame: pd.DataFrame, column: str, default: float = 0.0) -> pd.Serie
     if column in frame.columns:
         return pd.to_numeric(frame[column], errors="coerce").fillna(default).astype(float)
     return pd.Series(default, index=frame.index, dtype=float)
+
+
+def mark_itinerary_eligible(poi_df: pd.DataFrame) -> pd.DataFrame:
+    """Mark plausible visit stops and flag local-service/business rows for preview exclusion."""
+    output = poi_df.copy()
+    if output.empty:
+        output["itinerary_eligible"] = pd.Series(dtype=bool)
+        output["itinerary_exclusion_reason"] = pd.Series(dtype=str)
+        return output
+    text = pd.Series("", index=output.index)
+    for column in ["name", "category", "source_list", "city", "nature_region", "social_reason"]:
+        if column in output.columns:
+            text = text + " " + output[column].fillna("").astype(str)
+    lowered = text.str.lower()
+    non_visit_pattern = "|".join(re.escape(pattern) for pattern in NON_VISIT_POI_PATTERNS)
+    visit_pattern = "|".join(re.escape(pattern) for pattern in VISIT_POI_PATTERNS)
+    strong_visit_pattern = "|".join(re.escape(pattern) for pattern in STRONG_VISIT_POI_PATTERNS)
+    non_visit = lowered.str.contains(non_visit_pattern, regex=True, na=False)
+    visit = lowered.str.contains(visit_pattern, regex=True, na=False)
+    strong_visit = lowered.str.contains(strong_visit_pattern, regex=True, na=False)
+    protected = pd.Series(False, index=output.index)
+    for column in ["social_must_go", "is_national_park", "is_state_park", "is_protected_area"]:
+        if column in output.columns:
+            protected = protected | output[column].fillna(False).astype(str).str.lower().isin({"1", "true", "yes"})
+    if "source_list" in output.columns:
+        protected = protected | output["source_list"].fillna("").astype(str).str.contains(
+            "curated|nps_api", case=False, regex=True, na=False
+        )
+    existing = (
+        output["itinerary_eligible"].fillna(True).astype(str).str.lower().isin({"1", "true", "yes"})
+        if "itinerary_eligible" in output.columns
+        else pd.Series(True, index=output.index)
+    )
+    eligible = existing & (~non_visit | strong_visit | protected)
+    output["itinerary_eligible"] = eligible
+    output["itinerary_exclusion_reason"] = ""
+    output.loc[~eligible, "itinerary_exclusion_reason"] = "non_visit_business_category"
+    return output
 
 
 def _bool_from_column(frame: pd.DataFrame, column: str) -> pd.Series:
@@ -228,7 +345,7 @@ def infer_interest_attributes(poi_df: pd.DataFrame, config: TripConfig | None = 
 #              - lambda_season * seasonality_risk_i
 #              - lambda_detour * detour_minutes_i
 def compute_interest_adjusted_values(poi_df: pd.DataFrame, config: TripConfig) -> pd.DataFrame:
-    output = infer_interest_attributes(poi_df, config)
+    output = mark_itinerary_eligible(infer_interest_attributes(poi_df, config))
     if output.empty:
         return output
 
@@ -502,8 +619,163 @@ def route_interest_metrics(route_df: pd.DataFrame, config: TripConfig) -> dict[s
     }
 
 
+def _airport_gateway(config: TripConfig, city: str) -> dict[str, Any] | None:
+    gateways = config.get("transport", "airport_gateways", {})
+    if not isinstance(gateways, dict):
+        return None
+    raw = gateways.get(city)
+    if not isinstance(raw, dict):
+        return None
+    try:
+        return {
+            "city": city,
+            "code": str(raw.get("code", "")),
+            "name": str(raw.get("name", "")),
+            "lat": float(raw.get("latitude")),
+            "lon": float(raw.get("longitude")),
+            "type": "airport_endpoint",
+        }
+    except Exception:
+        return None
+
+
+def _route_option_profile_score(option: dict[str, Any], profile: str) -> float:
+    label = str(option.get("label", "")).lower()
+    sequence = [str(city).lower() for city in option.get("sequence", [])]
+    seq_text = " ".join(sequence)
+    los_angeles_visits = sum(city == "los angeles" for city in sequence)
+    score = 0.0
+    if profile == "city_heavy":
+        score += 4.0 if "santa barbara" in seq_text else 0.0
+        score += 2.5 if "monterey" in seq_text else 0.0
+        score += 1.5 if "big sur" in seq_text else 0.0
+        score -= 3.0 if any(city in seq_text for city in ["mariposa", "three rivers", "yosemite", "sequoia"]) else 0.0
+        score -= 2.0 * max(0, los_angeles_visits - 1)
+        score += 2.0 if "city" in label or "coastal" in label or "coast" in label else 0.0
+    elif profile == "nature_heavy":
+        score += 4.0 if "mariposa" in seq_text or "yosemite" in seq_text else 0.0
+        score += 4.0 if "three rivers" in seq_text or "sequoia" in seq_text else 0.0
+        score += 2.0 if "sierra" in label or "national parks" in label else 0.0
+    else:
+        score += 2.0 if "santa barbara" in seq_text or "monterey" in seq_text else 0.0
+        score += 1.0 if "mariposa" in seq_text else 0.0
+        score -= 1.0 * max(0, los_angeles_visits - 1)
+    return score
+
+
+def _preview_route_option(config: TripConfig, profile: str | None = None) -> dict[str, Any]:
+    scenario_id = str(config.get("trip", "scenario", "california_coast"))
+    starts = {str(city) for city in config.get("trip", "start_city_options", [])}
+    ends = {str(city) for city in config.get("trip", "end_city_options", [])}
+    route_options = [
+        option
+        for option in get_route_options(scenario_id)
+        if (not starts or option.get("gateway_start") in starts)
+        and (not ends or option.get("gateway_end") in ends)
+    ]
+    if not route_options:
+        return {}
+    profile = str(profile or config.get("interest", "mode", config.get("trip", "interest_profile", ""))).lower()
+    return sorted(route_options, key=lambda option: _route_option_profile_score(option, profile), reverse=True)[0]
+
+
+def _preview_route_graph(frame: pd.DataFrame, config: TripConfig, profile: str | None = None) -> dict[str, Any]:
+    starts = {str(city) for city in config.get("trip", "start_city_options", [])}
+    ends = {str(city) for city in config.get("trip", "end_city_options", [])}
+    route_option = _preview_route_option(config, profile)
+    sequence = [str(city) for city in route_option.get("sequence", [])]
+    segments = []
+    for idx, (start_city, end_city) in enumerate(zip(sequence[:-1], sequence[1:], strict=False), start=1):
+        allowed = [start_city, end_city]
+        candidate_ids = []
+        if not frame.empty:
+            for row in frame.itertuples(index=False):
+                city = str(getattr(row, "city", ""))
+                text = f"{getattr(row, 'name', '')} {city} {getattr(row, 'nature_region', '')}".lower()
+                if city.lower() in [value.lower() for value in allowed] or any(token.lower() in text for token in allowed):
+                    candidate_ids.append(str(getattr(row, "name", "")).lower().replace(" ", "_"))
+        segments.append(
+            {
+                "segment_index": idx,
+                "start_city": start_city,
+                "end_city": end_city,
+                "allowed_cities": allowed,
+                "candidate_ids": sorted(set(candidate_ids)),
+                "stop_limit": 1 if idx > 1 else 2,
+            }
+        )
+    start_city = sequence[0] if sequence else next(iter(starts), "")
+    end_city = sequence[-1] if sequence else next(iter(ends), "")
+    return {
+        "route_option_label": route_option.get("label", ""),
+        "sequence": sequence,
+        "start_endpoint": _airport_gateway(config, start_city),
+        "end_endpoint": _airport_gateway(config, end_city),
+        "segments": segments,
+        "required_anchors": list(config.get("nature", "required_selected_anchors_for_nature_heavy", []) or []),
+    }
+
+
+def _interest_profile_config(config: TripConfig, profile: str) -> TripConfig:
+    return TripConfig(
+        data={
+            **config.to_dict(),
+            "trip": {**config.section("trip"), "interest_profile": profile},
+            "interest": {
+                **config.section("interest"),
+                "enabled": True,
+                "mode": profile,
+                "weights": preset_to_interest_weights(profile, config.get("interest", "presets", {})),
+            },
+        },
+        source_path=config.source_path,
+    )
+
+
+def _preview_candidate_row(row: Any) -> dict[str, Any]:
+    return {
+        "name": str(getattr(row, "name", "")),
+        "id": str(getattr(row, "name", "")).lower().replace(" ", "_"),
+        "city": str(getattr(row, "city", "")),
+        "lat": float(getattr(row, "latitude", np.nan)),
+        "lon": float(getattr(row, "longitude", np.nan)),
+        "description": str(getattr(row, "description", "")),
+        "image_url": str(getattr(row, "image_url", "")),
+        "website_url": str(getattr(row, "website_url", "")),
+        "source_url": str(getattr(row, "source_url", "")),
+        "source_confidence": float(
+            pd.to_numeric(
+                pd.Series([getattr(row, "source_confidence", getattr(row, "data_confidence", 0.0))]),
+                errors="coerce",
+            )
+            .fillna(0.0)
+            .iloc[0]
+        ),
+        "final_poi_value": float(getattr(row, "final_poi_value", 0.0) or 0.0),
+        "nature": float(getattr(row, "nature_score", 0.0) or 0.0),
+        "city_axis": float(getattr(row, "city_score", 0.0) or 0.0),
+        "culture": float(getattr(row, "culture_score", 0.0) or 0.0),
+        "history": float(getattr(row, "history_score", 0.0) or 0.0),
+        "park_bonus": float(getattr(row, "park_bonus", 0.0) or 0.0),
+        "weather_sensitivity": float(getattr(row, "weather_sensitivity", 0.0) or 0.0),
+        "weather_risk": float(getattr(row, "weather_risk", 0.15) or 0.15),
+        "seasonality_risk": float(getattr(row, "seasonality_risk", 0.0) or 0.0),
+        "detour_minutes": float(getattr(row, "detour_minutes", 0.0) or 0.0),
+        "source_list": str(getattr(row, "source_list", "")),
+        "category": str(getattr(row, "category", "")),
+        "park_type": str(getattr(row, "park_type", "")),
+        "nature_region": str(getattr(row, "nature_region", "")),
+        "interest_fit": float(getattr(row, "interest_fit", 0.0) or 0.0),
+        "interest_adjusted_value": float(getattr(row, "interest_adjusted_value", 0.0) or 0.0),
+        "interest_delta": float(getattr(row, "interest_delta", 0.0) or 0.0),
+        "itinerary_eligible": bool(getattr(row, "itinerary_eligible", True)),
+    }
+
+
 def build_interest_bar_preview(enriched_df: pd.DataFrame, config: TripConfig) -> dict[str, Any]:
     frame = compute_interest_adjusted_values(enriched_df, config)
+    if "itinerary_eligible" in frame.columns:
+        frame = frame[frame["itinerary_eligible"].fillna(True).astype(bool)].copy()
     weights = interest_weights_from_config(config)
     top_n = int(config.get("interest", "preview_top_n", 12))
     if frame.empty:
@@ -513,36 +785,30 @@ def build_interest_bar_preview(enriched_df: pd.DataFrame, config: TripConfig) ->
         preview = (
             frame.sort_values(["interest_delta", "interest_adjusted_value"], ascending=False).head(max(1, top_n)).copy()
         )
+        pool = (
+            frame.sort_values(["interest_adjusted_value", "final_poi_value"], ascending=False)
+            .head(max(80, top_n * 10))
+            .copy()
+        )
         route_mix = {axis: float(_numeric(preview, f"{axis}_score").mean()) for axis in INTEREST_AXES}
-        rows = []
-        for row in preview.itertuples(index=False):
-            rows.append(
-                {
-                    "name": str(getattr(row, "name", "")),
-                    "city": str(getattr(row, "city", "")),
-                    "lat": float(getattr(row, "latitude", np.nan)),
-                    "lon": float(getattr(row, "longitude", np.nan)),
-                    "final_poi_value": float(getattr(row, "final_poi_value", 0.0) or 0.0),
-                    "nature": float(getattr(row, "nature_score", 0.0) or 0.0),
-                    "city_axis": float(getattr(row, "city_score", 0.0) or 0.0),
-                    "culture": float(getattr(row, "culture_score", 0.0) or 0.0),
-                    "history": float(getattr(row, "history_score", 0.0) or 0.0),
-                    "park_bonus": float(getattr(row, "park_bonus", 0.0) or 0.0),
-                    "weather_sensitivity": float(getattr(row, "weather_sensitivity", 0.0) or 0.0),
-                    "weather_risk": float(getattr(row, "weather_risk", 0.15) or 0.15),
-                    "seasonality_risk": float(getattr(row, "seasonality_risk", 0.0) or 0.0),
-                    "detour_minutes": float(getattr(row, "detour_minutes", 0.0) or 0.0),
-                    "source_list": str(getattr(row, "source_list", "")),
-                    "park_type": str(getattr(row, "park_type", "")),
-                    "nature_region": str(getattr(row, "nature_region", "")),
-                    "interest_fit": float(getattr(row, "interest_fit", 0.0) or 0.0),
-                    "interest_adjusted_value": float(getattr(row, "interest_adjusted_value", 0.0) or 0.0),
-                    "interest_delta": float(getattr(row, "interest_delta", 0.0) or 0.0),
-                }
-            )
+        rows = [_preview_candidate_row(row) for row in preview.itertuples(index=False)]
+        pool_rows = [_preview_candidate_row(row) for row in pool.itertuples(index=False)]
+    presets = config.get("interest", "presets", {}) or {}
+    export_profiles = config.get(
+        "interest", "export_profiles", ["nature_heavy", "balanced_interest", "city_heavy"]
+    )
+    if isinstance(export_profiles, str):
+        export_profiles = [part.strip() for part in export_profiles.split(",") if part.strip()]
+    preset_weights = {profile: preset_to_interest_weights(profile, presets) for profile in export_profiles}
+    preview_route_graphs = {
+        profile: _preview_route_graph(frame, _interest_profile_config(config, profile), profile)
+        for profile in export_profiles
+    }
     return {
         "enabled": interest_enabled(config),
         "weights": weights,
+        "preset_weights": preset_weights,
+        "saved_profile_match_threshold": float(config.get("interest", "preview_saved_profile_match_threshold", 0.12)),
         "lambdas": {
             "lambda_fit": float(config.get("interest", "lambda_fit", 0.65)),
             "lambda_park": float(config.get("interest", "lambda_park", 0.35)),
@@ -555,8 +821,104 @@ def build_interest_bar_preview(enriched_df: pd.DataFrame, config: TripConfig) ->
             for axis in INTEREST_AXES
         ],
         "top_boosted_pois": rows,
+        "preview_candidates": pool_rows if not frame.empty else rows,
         "route_mix": route_mix,
+        "preview_route_graph": _preview_route_graph(frame, config),
+        "preview_route_graphs": preview_route_graphs,
     }
+
+
+def _profile_route_rows(frame: pd.DataFrame, config: TripConfig, profile: str) -> pd.DataFrame:
+    graph = _preview_route_graph(frame, config, profile)
+    if frame.empty:
+        return pd.DataFrame()
+    selected_rows = []
+    seen: set[str] = set()
+    sequence_index = 1
+    for segment in graph.get("segments", []):
+        allowed = [str(city).lower() for city in segment.get("allowed_cities", [])]
+        segment_frame = frame.copy()
+        text = pd.Series("", index=segment_frame.index)
+        for column in ["name", "city", "nature_region", "category"]:
+            if column in segment_frame.columns:
+                text = text + " " + segment_frame[column].fillna("").astype(str).str.lower()
+        if allowed:
+            segment_frame = segment_frame[text.apply(lambda value: any(city in value for city in allowed))]
+        if segment_frame.empty:
+            continue
+        segment_frame = segment_frame.sort_values(
+            ["interest_adjusted_value", "final_poi_value"], ascending=False
+        ).copy()
+        limit = int(segment.get("stop_limit", 1) or 1)
+        picked = []
+        start_city = str(segment.get("start_city", "")).lower()
+        end_city = str(segment.get("end_city", "")).lower()
+        segment_text = text.loc[segment_frame.index]
+
+        def pick_from(mask: pd.Series, max_pick: int = 1) -> None:
+            nonlocal picked
+            if len(picked) >= limit:
+                return
+            for _, row in segment_frame[mask].iterrows():
+                key = str(row.get("name", "")).strip().lower()
+                if not key or key in seen:
+                    continue
+                seen.add(key)
+                picked.append(row)
+                if len(picked) >= limit or len(picked) >= max_pick:
+                    break
+
+        if sequence_index == 1 and start_city:
+            pick_from(segment_text.str.contains(re.escape(start_city), regex=True, na=False), max_pick=1)
+        if end_city:
+            pick_from(segment_text.str.contains(re.escape(end_city), regex=True, na=False), max_pick=limit)
+        if len(picked) < limit:
+            pick_from(pd.Series(True, index=segment_frame.index), max_pick=limit)
+        for local_order, row in enumerate(picked, start=1):
+            record = row.to_dict()
+            record.update(
+                {
+                    "comparison_type": "interest_profile",
+                    "comparison_label": f"Saved {profile.replace('_', ' ').title()} Route",
+                    "method": "artifact_interest_profile",
+                    "method_display_name": "Artifact-backed Interest Profile",
+                    "interest_profile": profile,
+                    "profile": profile,
+                    "trip_days": int(config.get("trip", "trip_days", 7)),
+                    "day": int(segment.get("segment_index", sequence_index)),
+                    "stop_order": local_order,
+                    "route_sequence_index": sequence_index,
+                    "segment_index": int(segment.get("segment_index", sequence_index)),
+                    "attraction_name": row.get("name", ""),
+                    "overnight_city": row.get("city", ""),
+                    "route_start_city": segment.get("start_city", ""),
+                    "route_end_city": segment.get("end_city", ""),
+                    "allowed_cities": ", ".join(segment.get("allowed_cities", [])),
+                    "route_start_airport_code": (graph.get("start_endpoint") or {}).get("code", "")
+                    if sequence_index == 1
+                    else "",
+                    "route_start_name": (graph.get("start_endpoint") or {}).get("name", "")
+                    if sequence_index == 1
+                    else "",
+                    "route_start_latitude": (graph.get("start_endpoint") or {}).get("lat", np.nan)
+                    if sequence_index == 1
+                    else np.nan,
+                    "route_start_longitude": (graph.get("start_endpoint") or {}).get("lon", np.nan)
+                    if sequence_index == 1
+                    else np.nan,
+                }
+            )
+            if sequence_index == 1:
+                record["route_start_kind"] = "airport"
+            selected_rows.append(record)
+            sequence_index += 1
+    if selected_rows:
+        selected_rows[-1]["route_end_airport_code"] = (graph.get("end_endpoint") or {}).get("code", "")
+        selected_rows[-1]["route_end_name"] = (graph.get("end_endpoint") or {}).get("name", "")
+        selected_rows[-1]["route_end_latitude"] = (graph.get("end_endpoint") or {}).get("lat", np.nan)
+        selected_rows[-1]["route_end_longitude"] = (graph.get("end_endpoint") or {}).get("lon", np.nan)
+        selected_rows[-1]["route_end_kind"] = "airport"
+    return pd.DataFrame(selected_rows)
 
 
 def write_interest_catalog_artifacts(enriched_df: pd.DataFrame, output_dir: str | Path, config: TripConfig) -> None:
@@ -580,20 +942,15 @@ def write_interest_catalog_artifacts(enriched_df: pd.DataFrame, output_dir: str 
     pd.DataFrame([metrics]).to_csv(output_dir / "production_nature_metric_summary.csv", index=False)
 
     comparison_rows = []
+    interest_route_frames = []
+    export_profiles = config.get("interest", "export_profiles", ["nature_heavy", "balanced_interest", "city_heavy"])
+    if isinstance(export_profiles, str):
+        export_profiles = [part.strip() for part in export_profiles.split(",") if part.strip()]
     for preset in config.get("interest", "presets", {}).keys():
-        preset_config = TripConfig(
-            data={
-                **config.to_dict(),
-                "interest": {
-                    **config.section("interest"),
-                    "enabled": True,
-                    "weights": preset_to_interest_weights(preset, config.get("interest", "presets", {})),
-                    "mode": preset,
-                },
-            },
-            source_path=config.source_path,
-        )
+        preset_config = _interest_profile_config(config, preset)
         preset_frame = compute_interest_adjusted_values(enriched_df, preset_config)
+        if "itinerary_eligible" in preset_frame.columns:
+            preset_frame = preset_frame[preset_frame["itinerary_eligible"].fillna(True).astype(bool)].copy()
         top = preset_frame.sort_values("interest_adjusted_value", ascending=False).head(
             max(1, int(config.trip_days) * 3)
         )
@@ -608,7 +965,29 @@ def write_interest_catalog_artifacts(enriched_df: pd.DataFrame, output_dir: str 
                 "top_scenic_score": float(_numeric(top, "scenic_score").sum()) if not top.empty else 0.0,
             }
         )
+        if preset in export_profiles:
+            route_rows = _profile_route_rows(preset_frame, preset_config, preset)
+            if not route_rows.empty:
+                interest_route_frames.append(route_rows)
     pd.DataFrame(comparison_rows).to_csv(output_dir / "production_interest_profile_comparison.csv", index=False)
+    interest_route_stops = (
+        pd.concat(interest_route_frames, ignore_index=True, sort=False) if interest_route_frames else pd.DataFrame()
+    )
+    interest_route_stops.to_csv(output_dir / "production_interest_route_stops.csv", index=False)
+    route_comparison_rows = []
+    for profile, group in (
+        interest_route_stops.groupby("interest_profile", dropna=False) if not interest_route_stops.empty else []
+    ):
+        route_comparison_rows.append(
+            {
+                "interest_profile": profile,
+                "selected_stop_count": int(len(group)),
+                "selected_nature_stops": int(_numeric(group, "nature_score").ge(0.35).sum()),
+                "objective_value": float(_numeric(group, "interest_adjusted_value").sum()),
+                "route_sequence": " -> ".join(group.get("city", pd.Series(dtype=str)).fillna("").astype(str)),
+            }
+        )
+    pd.DataFrame(route_comparison_rows).to_csv(output_dir / "production_interest_route_comparison.csv", index=False)
     pd.DataFrame(scenario_summary_rows()).to_csv(output_dir / "production_scenario_comparison.csv", index=False)
 
 

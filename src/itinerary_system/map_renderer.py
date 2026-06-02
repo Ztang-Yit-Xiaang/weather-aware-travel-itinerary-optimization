@@ -17,7 +17,7 @@ from . import map_exporter
 from ._legacy import import_legacy_module
 from .artifact_metadata import artifact_metadata_matches
 from .config import TripConfig
-from .experiment_runner import prepare_comparison_dashboard_outputs
+from .experiment_runner import _write_route_sequence_audit, prepare_comparison_dashboard_outputs
 
 REQUIRED_METHODS = {
     "hierarchical_gurobi_pipeline",
@@ -510,6 +510,33 @@ def _inject_final_focus_script(html_path: Path, focus_points: list[list[float]])
         html_path.write_text(html, encoding="utf-8")
 
 
+def _artifact_backed_day_plan(output_dir: Path, config: TripConfig) -> pd.DataFrame:
+    path = output_dir / "production_method_route_stops.csv"
+    if not path.exists():
+        return pd.DataFrame()
+    try:
+        frame = pd.read_csv(path)
+    except Exception:
+        return pd.DataFrame()
+    if frame.empty:
+        return frame
+    configured_days = int(_config_get(config, "trip", "trip_days", default=7))
+    if "method" in frame.columns:
+        preferred = frame[frame["method"].astype(str).eq("hierarchical_bandit_gurobi_repair")].copy()
+        if not preferred.empty:
+            frame = preferred
+    if "trip_days" in frame.columns:
+        day_filtered = frame[
+            pd.to_numeric(frame["trip_days"], errors="coerce").fillna(-1).astype(int).eq(configured_days)
+        ].copy()
+        if not day_filtered.empty:
+            frame = day_filtered
+    sort_cols = [column for column in ["day", "stop_order", "route_sequence_index"] if column in frame.columns]
+    if sort_cols:
+        frame = frame.sort_values(sort_cols).reset_index(drop=True)
+    return frame
+
+
 def build_map(
     context: dict,
     config: TripConfig,
@@ -539,6 +566,16 @@ def build_map(
         output_path=output_path,
         run_live_routing=bool(_config_get(config, "enrichment", "run_live_apis", default=False)),
     )
+    artifact_day_plan = _artifact_backed_day_plan(Path(merged_context["OUTPUT_DIR"]), config)
+    if not artifact_day_plan.empty:
+        day_plan_df = artifact_day_plan
+        day_plan_df.to_csv(Path(merged_context["OUTPUT_DIR"]) / "production_day_plan.csv", index=False)
+        _write_route_sequence_audit(
+            output_dir=Path(merged_context["OUTPUT_DIR"]),
+            route_stops_df=day_plan_df,
+            config=config,
+            day_plan_df=day_plan_df,
+        )
 
     if returned_html_path is not None:
         html_path = Path(returned_html_path)

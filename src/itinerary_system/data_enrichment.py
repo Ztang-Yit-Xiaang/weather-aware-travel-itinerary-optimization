@@ -26,6 +26,7 @@ from .nature_catalog import (
     compute_interest_adjusted_values,
     ensure_nature_columns,
     load_nps_or_curated_nature_pois,
+    mark_itinerary_eligible,
     write_interest_catalog_artifacts,
 )
 from .region_scenarios import all_scenario_coordinates, get_route_options, scenario_enrichment_city_universe
@@ -56,8 +57,64 @@ OPEN_ENRICHED_POI_COLUMNS = [
     "data_uncertainty",
     "final_poi_value",
     "social_reason",
+    "description",
+    "image_url",
+    "website_url",
+    "source_url",
+    "source_confidence",
+    "detail_source",
+    "itinerary_eligible",
+    "itinerary_exclusion_reason",
     *NATURE_POI_COLUMNS,
 ]
+
+CURATED_PLACE_DETAIL_FALLBACKS = {
+    "stanford university main quad": {
+        "description": "Historic Stanford campus core with sandstone arcades, courtyards, and strong Bay Area cultural value.",
+        "image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Stanford_University_Main_Quad_May_2011_001.jpg",
+        "source_url": "https://www.stanford.edu/",
+    },
+    "golden gate bridge": {
+        "description": "Iconic San Francisco suspension bridge and viewpoint with high scenic and history value.",
+        "image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Golden_Gate_Bridge_as_seen_from_Battery_East.jpg",
+        "source_url": "https://www.goldengate.org/bridge/",
+    },
+    "bixby creek bridge viewpoint": {
+        "description": "Big Sur coastal viewpoint centered on the Bixby Creek Bridge and Pacific Coast Highway scenery.",
+        "image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Bixby_Bridge_Big_Sur_California.jpg",
+        "source_url": "https://www.parks.ca.gov/?page_id=570",
+    },
+    "yosemite national park": {
+        "description": "Sierra Nevada national park known for Yosemite Valley, granite cliffs, waterfalls, and landmark hiking scenery.",
+        "image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Yosemite_Valley_from_Tunnel_View,_widescreen.jpg",
+        "source_url": "https://www.nps.gov/yose/index.htm",
+    },
+    "sequoia national park": {
+        "description": "National park protecting giant sequoia groves and Sierra Nevada mountain landscapes.",
+        "image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/General_Sherman_Tree_in_Sequoia_National_Park.jpg",
+        "source_url": "https://www.nps.gov/seki/index.htm",
+    },
+    "kings canyon national park": {
+        "description": "Sierra Nevada national park with deep granite canyon scenery, forests, and high-country wilderness access.",
+        "image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Kings_Canyon_National_Park_-_Zumwalt_Meadow.jpg",
+        "source_url": "https://www.nps.gov/seki/index.htm",
+    },
+    "griffith observatory": {
+        "description": "Los Angeles observatory and hilltop viewpoint combining city views, science exhibits, and Griffith Park access.",
+        "image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Griffith_Observatory_2015.jpg",
+        "source_url": "https://griffithobservatory.org/",
+    },
+    "hollywood walk of fame": {
+        "description": "Hollywood boulevard landmark with entertainment-history value and dense Los Angeles visitor context.",
+        "image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Hollywood_Walk_of_Fame,_Los_Angeles,_California.jpg",
+        "source_url": "https://walkoffame.com/",
+    },
+    "santa barbara county courthouse": {
+        "description": "Spanish Colonial Revival civic landmark in Santa Barbara with architecture, history, and viewpoint value.",
+        "image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Santa_Barbara_County_Courthouse,_Santa_Barbara,_California.jpg",
+        "source_url": "https://www.countyofsb.org/1065/Courthouse",
+    },
+}
 
 HOTEL_TYPE_PRICE_PRIOR = {
     "hotel": 150.0,
@@ -74,6 +131,81 @@ HOTEL_TYPE_RATING_PRIOR = {
     "guest_house": 4.2,
     "apartment": 4.1,
 }
+
+CURATED_FALLBACK_HOTELS = [
+    {
+        "city": "San Francisco",
+        "name": "Hotel Zephyr San Francisco",
+        "latitude": 37.8070,
+        "longitude": -122.4141,
+        "type": "hotel",
+        "rating_score": 4.1,
+        "website_url": "https://www.hotelzephyrsf.com/",
+    },
+    {
+        "city": "Mariposa",
+        "name": "Best Western Plus Yosemite Way Station Motel",
+        "latitude": 37.4895,
+        "longitude": -119.9662,
+        "type": "motel",
+        "rating_score": 3.8,
+        "website_url": "https://www.bestwestern.com/",
+    },
+    {
+        "city": "Oakhurst",
+        "name": "Yosemite Southgate Hotel & Suites",
+        "latitude": 37.3285,
+        "longitude": -119.6499,
+        "type": "hotel",
+        "rating_score": 3.9,
+        "website_url": "https://www.yosemitesouthgate.com/",
+    },
+    {
+        "city": "Fresno",
+        "name": "DoubleTree by Hilton Fresno Convention Center",
+        "latitude": 36.7338,
+        "longitude": -119.7840,
+        "type": "hotel",
+        "rating_score": 3.9,
+        "website_url": "https://www.hilton.com/",
+    },
+    {
+        "city": "Three Rivers",
+        "name": "Comfort Inn & Suites Sequoia Kings Canyon",
+        "latitude": 36.4488,
+        "longitude": -118.9018,
+        "type": "hotel",
+        "rating_score": 3.7,
+        "website_url": "https://www.choicehotels.com/",
+    },
+    {
+        "city": "Los Angeles",
+        "name": "The LINE LA",
+        "latitude": 34.0628,
+        "longitude": -118.3009,
+        "type": "hotel",
+        "rating_score": 4.0,
+        "website_url": "https://www.thelinehotel.com/los-angeles/",
+    },
+    {
+        "city": "Monterey",
+        "name": "Portola Hotel & Spa at Monterey Bay",
+        "latitude": 36.6022,
+        "longitude": -121.8947,
+        "type": "hotel",
+        "rating_score": 4.1,
+        "website_url": "https://www.portolahotel.com/",
+    },
+    {
+        "city": "Santa Barbara",
+        "name": "Hotel Milo Santa Barbara",
+        "latitude": 34.4106,
+        "longitude": -119.6918,
+        "type": "hotel",
+        "rating_score": 3.9,
+        "website_url": "https://www.hotelmilosantabarbara.com/",
+    },
+]
 
 
 def _project_cache_dir(output_dir: str | Path) -> Path:
@@ -140,6 +272,75 @@ def _hotel_price_proxy(city: str, lodging_type: str, config: TripConfig) -> floa
     )
     type_prior = HOTEL_TYPE_PRICE_PRIOR.get(str(lodging_type), HOTEL_TYPE_PRICE_PRIOR["hotel"])
     return round(0.65 * float(city_prior) + 0.35 * type_prior, 2)
+
+
+def _curated_hotel_fallback_rows(city_names: list[str], existing: pd.DataFrame, config: TripConfig) -> tuple[pd.DataFrame, pd.DataFrame]:
+    existing = existing.copy() if isinstance(existing, pd.DataFrame) else pd.DataFrame()
+    existing_cities = (
+        set(existing.get("city", pd.Series(dtype=str)).dropna().astype(str).str.lower())
+        if not existing.empty and "city" in existing.columns
+        else set()
+    )
+    target_cities = {str(city).lower() for city in city_names}
+    rows = []
+    audit_rows = []
+    for hotel in CURATED_FALLBACK_HOTELS:
+        city = str(hotel["city"])
+        city_key = city.lower()
+        should_use = city_key in target_cities and city_key not in existing_cities
+        audit_rows.append(
+            {
+                "city": city,
+                "hotel_name": hotel["name"],
+                "fallback_used": bool(should_use),
+                "fallback_reason": "no_open_hotel_rows_for_city" if should_use else "open_or_existing_hotel_rows_present",
+                "source": "curated_open_web_hotel_fallback",
+                "source_confidence": 0.55,
+            }
+        )
+        if not should_use:
+            continue
+        lodging_type = str(hotel.get("type", "hotel"))
+        nightly_price = _hotel_price_proxy(city, lodging_type, config)
+        rows.append(
+            {
+                "name": hotel["name"],
+                "city": city,
+                "latitude": float(hotel["latitude"]),
+                "longitude": float(hotel["longitude"]),
+                "type": lodging_type,
+                "source": "curated_open_web_hotel_fallback",
+                "source_list": "curated_open_web_hotel_fallback",
+                "source_confidence": 0.55,
+                "fallback_reason": "no_open_hotel_rows_for_city",
+                "rating_score": float(hotel.get("rating_score", HOTEL_TYPE_RATING_PRIOR.get(lodging_type, 4.0))),
+                "review_count": 0,
+                "nightly_price": nightly_price,
+                "price_source": "city_type_prior_curated_fallback",
+                "price_estimated": True,
+                "experience_score": float(hotel.get("rating_score", HOTEL_TYPE_RATING_PRIOR.get(lodging_type, 4.0))),
+                "value_score": round(
+                    float(hotel.get("rating_score", HOTEL_TYPE_RATING_PRIOR.get(lodging_type, 4.0)))
+                    / max(nightly_price, 1.0)
+                    * 100.0,
+                    3,
+                ),
+                "website_url": hotel.get("website_url", ""),
+                "source_url": hotel.get("website_url", ""),
+                "osm_tags": "{}",
+            }
+        )
+    fallback_df = pd.DataFrame(rows)
+    audit_df = pd.DataFrame(audit_rows)
+    if existing.empty:
+        combined = fallback_df
+    elif fallback_df.empty:
+        combined = existing
+    else:
+        combined = pd.concat([existing, fallback_df], ignore_index=True, sort=False)
+    if not combined.empty:
+        combined = combined.drop_duplicates(subset=["city", "name"], keep="first").reset_index(drop=True)
+    return combined, audit_df
 
 
 def _source_score_from_tags(tags: dict[str, Any]) -> float:
@@ -254,6 +455,11 @@ def _overpass_elements_to_pois(city: str, elements: list[dict], source_status: s
                 "highway": tags.get("highway"),
                 "wikidata": tags.get("wikidata", ""),
                 "wikipedia": tags.get("wikipedia", ""),
+                "website_url": tags.get("website") or tags.get("url") or "",
+                "source_url": tags.get("website") or tags.get("url") or "",
+                "image_url": tags.get("image") or tags.get("wikimedia_commons") or "",
+                "description": tags.get("description") or tags.get("inscription") or "",
+                "detail_source": "openstreetmap_tags",
                 "osm_tags": json.dumps(tags, sort_keys=True),
                 "source_score": _source_score_from_tags(tags),
             }
@@ -318,6 +524,11 @@ def build_open_osm_catalogs(
     )
 
     if not bool(config.get("enrichment", "use_osm", True)):
+        if bool(config.get("hotels", "use_curated_fallback", True)):
+            existing_hotel, hotel_fallback_audit = _curated_hotel_fallback_rows(city_names, existing_hotel, config)
+            hotel_fallback_audit.to_csv(output_dir / "production_hotel_fallback_audit.csv", index=False)
+            if not existing_hotel.empty:
+                existing_hotel.to_csv(output_dir / "production_city_hotel_catalog.csv", index=False)
         return (
             existing_poi,
             existing_hotel,
@@ -356,10 +567,17 @@ def build_open_osm_catalogs(
         if any(not frame.empty for frame in hotel_frames)
         else existing_hotel
     )
+    if bool(config.get("hotels", "use_curated_fallback", True)):
+        hotel_catalog, hotel_fallback_audit = _curated_hotel_fallback_rows(city_names, hotel_catalog, config)
+    else:
+        hotel_fallback_audit = pd.DataFrame(
+            [{"fallback_used": False, "fallback_reason": "disabled_by_config", "source": "curated_open_web_hotel_fallback"}]
+        )
     if not poi_catalog.empty:
         poi_catalog.to_csv(output_dir / "production_city_poi_catalog.csv", index=False)
     if not hotel_catalog.empty:
         hotel_catalog.to_csv(output_dir / "production_city_hotel_catalog.csv", index=False)
+    hotel_fallback_audit.to_csv(output_dir / "production_hotel_fallback_audit.csv", index=False)
     return poi_catalog, hotel_catalog, pd.DataFrame(audit_rows)
 
 
@@ -429,6 +647,22 @@ def enrich_with_wikidata_wikipedia(
             page_title = wiki_payload.get("title") or title
             if page_title and not output.at[idx, "wikipedia_title"]:
                 output.at[idx, "wikipedia_title"] = page_title
+            extract = str(wiki_payload.get("extract", "") or "").strip()
+            if extract and not str(output.at[idx, "description"] or "").strip():
+                output.at[idx, "description"] = extract
+            thumbnail = wiki_payload.get("thumbnail", {}) if isinstance(wiki_payload.get("thumbnail", {}), dict) else {}
+            image_url = str(thumbnail.get("source", "") or "").strip()
+            if image_url and not str(output.at[idx, "image_url"] or "").strip():
+                output.at[idx, "image_url"] = image_url
+            content_urls = wiki_payload.get("content_urls", {}) if isinstance(wiki_payload.get("content_urls", {}), dict) else {}
+            desktop = content_urls.get("desktop", {}) if isinstance(content_urls.get("desktop", {}), dict) else {}
+            page_url = str(desktop.get("page", "") or "").strip()
+            if page_url:
+                if not str(output.at[idx, "source_url"] or "").strip():
+                    output.at[idx, "source_url"] = page_url
+                if not str(output.at[idx, "website_url"] or "").strip():
+                    output.at[idx, "website_url"] = page_url
+                output.at[idx, "detail_source"] = wiki_status
             # Free, deterministic popularity proxy when live pageviews are not used.
             if wiki_payload.get("pageid") or page_title:
                 output.at[idx, "wikipedia_pageview_score"] = max(
@@ -548,13 +782,65 @@ def _ensure_open_columns(enriched_df: pd.DataFrame) -> pd.DataFrame:
                     "wikidata_id",
                     "wikipedia_title",
                     "social_reason",
+                    "description",
+                    "image_url",
+                    "website_url",
+                    "source_url",
+                    "detail_source",
                     "park_type",
                     "nature_region",
                     "reason_selected",
+                    "itinerary_exclusion_reason",
                 }
                 else 0.0
             )
+            if column == "itinerary_eligible":
+                output[column] = True
     return ensure_nature_columns(output)
+
+
+def _apply_place_detail_fallbacks(enriched_df: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame]:
+    output = _ensure_open_columns(enriched_df)
+    rows = []
+    if output.empty:
+        return output, pd.DataFrame()
+    for idx, row in output.iterrows():
+        name_key = _safe_name(str(row.get("name", ""))).replace("_", " ").strip()
+        fallback = CURATED_PLACE_DETAIL_FALLBACKS.get(name_key)
+        source = str(row.get("detail_source", "") or "").strip()
+        missing_description = not str(row.get("description", "") or "").strip()
+        missing_image = not str(row.get("image_url", "") or "").strip()
+        missing_source = not str(row.get("source_url", row.get("website_url", "")) or "").strip()
+        if fallback:
+            if missing_description:
+                output.at[idx, "description"] = fallback["description"]
+            if missing_image:
+                output.at[idx, "image_url"] = fallback["image_url"]
+            if missing_source:
+                output.at[idx, "source_url"] = fallback["source_url"]
+                output.at[idx, "website_url"] = fallback["source_url"]
+            if not source or source in {"0", "0.0"}:
+                output.at[idx, "detail_source"] = "curated_open_web_fallback"
+        elif missing_description:
+            output.at[idx, "description"] = (
+                f"{row.get('name', 'This stop')} is included from the enriched candidate catalog for "
+                f"{row.get('city', 'the active route')}."
+            )
+            output.at[idx, "detail_source"] = source or "deterministic_catalog_fallback"
+        confidence = pd.to_numeric(pd.Series([row.get("data_confidence", 0.2)]), errors="coerce").fillna(0.2).iloc[0]
+        output.at[idx, "source_confidence"] = max(float(confidence), 0.45 if fallback else 0.25)
+        rows.append(
+            {
+                "name": row.get("name", ""),
+                "city": row.get("city", ""),
+                "description_present": bool(str(output.at[idx, "description"]).strip()),
+                "image_present": bool(str(output.at[idx, "image_url"]).strip()),
+                "source_url_present": bool(str(output.at[idx, "source_url"]).strip()),
+                "detail_source": output.at[idx, "detail_source"],
+                "used_curated_fallback": bool(fallback and (missing_description or missing_image or missing_source)),
+            }
+        )
+    return output, pd.DataFrame(rows)
 
 
 def _numeric_series(frame: pd.DataFrame, column: str, default: float = 0.0) -> pd.Series:
@@ -710,6 +996,29 @@ def _write_candidate_audit(enriched_df: pd.DataFrame, output_dir: Path, config: 
     return audit
 
 
+def _write_excluded_poi_category_audit(enriched_df: pd.DataFrame, output_dir: Path) -> pd.DataFrame:
+    columns = ["itinerary_exclusion_reason", "category", "source_list", "excluded_count", "example_names"]
+    if enriched_df.empty or "itinerary_eligible" not in enriched_df.columns:
+        audit = pd.DataFrame(columns=columns)
+        audit.to_csv(output_dir / "production_excluded_poi_category_audit.csv", index=False)
+        return audit
+    excluded = enriched_df[~enriched_df["itinerary_eligible"].fillna(True).astype(bool)].copy()
+    if excluded.empty:
+        audit = pd.DataFrame(columns=columns)
+        audit.to_csv(output_dir / "production_excluded_poi_category_audit.csv", index=False)
+        return audit
+    audit = (
+        excluded.groupby(["itinerary_exclusion_reason", "category", "source_list"], dropna=False)
+        .agg(
+            excluded_count=("name", "count"),
+            example_names=("name", lambda values: " | ".join(values.dropna().astype(str).head(5))),
+        )
+        .reset_index()
+    )
+    audit.to_csv(output_dir / "production_excluded_poi_category_audit.csv", index=False)
+    return audit
+
+
 def scenario_route_fit_metrics(lat: float, lon: float, config: TripConfig) -> tuple[float, float]:
     return _scenario_route_metrics(
         lat,
@@ -749,9 +1058,15 @@ def build_enriched_catalog(
         enriched_df = pd.concat([enriched_df, _ensure_open_columns(nature_seed_df)], ignore_index=True, sort=False)
         enriched_df = enriched_df.drop_duplicates(subset=["name", "latitude", "longitude"]).reset_index(drop=True)
     enriched_df, wiki_audit_df = enrich_with_wikidata_wikipedia(enriched_df, output_dir, config)
+    enriched_df, place_detail_audit_df = _apply_place_detail_fallbacks(enriched_df)
+    place_detail_audit_df.to_csv(output_dir / "production_place_detail_audit.csv", index=False)
     enriched_df = _ensure_open_columns(_recompute_value_columns(enriched_df, config))
     enriched_df, utility_scores_df, utility_audit_df = apply_utility_models(enriched_df, output_dir, config)
     enriched_df = compute_interest_adjusted_values(enriched_df, config)
+    enriched_df = mark_itinerary_eligible(enriched_df)
+    enriched_df, place_detail_audit_df = _apply_place_detail_fallbacks(enriched_df)
+    place_detail_audit_df.to_csv(output_dir / "production_place_detail_audit.csv", index=False)
+    excluded_poi_audit_df = _write_excluded_poi_category_audit(enriched_df, output_dir)
     ltr_audit_df = learning_to_rank_audit(enriched_df, config)
     enriched_df[OPEN_ENRICHED_POI_COLUMNS].to_csv(output_dir / "production_enriched_poi_catalog.csv", index=False)
     write_interest_catalog_artifacts(enriched_df, output_dir, config)
@@ -798,8 +1113,14 @@ def build_enriched_catalog(
         osm_audit_df.assign(audit_source="open_osm"),
         nps_audit_df.assign(audit_source="open_nps_or_curated_nature") if not nps_audit_df.empty else pd.DataFrame(),
         wiki_audit_df.assign(audit_source="open_wikidata_wikipedia") if not wiki_audit_df.empty else pd.DataFrame(),
+        place_detail_audit_df.assign(audit_type="place_details", audit_source="open_place_details")
+        if not place_detail_audit_df.empty
+        else pd.DataFrame(),
         weather_df.assign(audit_type="open_meteo", audit_source="open_meteo"),
         utility_audit_df.assign(audit_source="utility_model") if not utility_audit_df.empty else pd.DataFrame(),
+        excluded_poi_audit_df.assign(audit_type="poi_eligibility", audit_source="itinerary_eligibility")
+        if not excluded_poi_audit_df.empty
+        else pd.DataFrame(),
         ltr_audit_df.assign(audit_source="learning_to_rank"),
     ]
     audit_df = pd.concat([part for part in audit_parts if not part.empty], ignore_index=True, sort=False)
@@ -833,6 +1154,8 @@ def build_enriched_catalog(
             "production_utility_model_audit_df": utility_audit_df,
             "learning_to_rank_audit_df": ltr_audit_df,
             "production_candidate_audit_by_city_category_source_df": candidate_audit_df,
+            "production_excluded_poi_category_audit_df": excluded_poi_audit_df,
+            "production_place_detail_audit_df": place_detail_audit_df,
             "social_signal_snapshots_df": social_signal_snapshots_df,
             "open_meteo_context_df": weather_df,
         }

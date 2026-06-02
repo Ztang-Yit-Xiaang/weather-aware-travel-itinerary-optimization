@@ -30,6 +30,7 @@ from itinerary_system.diversity import mmr_select_candidates, submodular_diversi
 from itinerary_system.experiment_runner import _ensure_required_anchor_stops, _write_route_anchor_audit
 from itinerary_system.hierarchical_gurobi import candidate_plans, solve_hierarchical_trip_with_gurobi
 from itinerary_system.map_exporter import export_map_artifacts
+from itinerary_system.multi_objective_route import solve_multi_objective_route
 from itinerary_system.nature_catalog import (
     build_interest_bar_preview,
     compute_interest_adjusted_values,
@@ -130,6 +131,57 @@ class ConfigurableItinerarySystemTests(unittest.TestCase):
         preset = preset_to_interest_weights("nature_heavy")
         self.assertAlmostEqual(sum(preset.values()), 1.0)
         self.assertGreater(preset["nature"], preset["city"])
+
+    def test_small_route_solver_uses_open_path_start_and_end_depots(self):
+        config = load_trip_config(
+            CONFIG_PATH,
+            overrides={
+                "optimization": {
+                    "max_pois_per_day": 2,
+                    "candidate_pool_size": 2,
+                    "gurobi_time_limit_seconds": 5,
+                },
+                "multi_objective": {
+                    "use_epsilon_constraints": False,
+                    "secondary_travel_penalty": 0.0,
+                },
+            },
+        )
+        candidates = pd.DataFrame(
+            [
+                {
+                    "name": "Near start",
+                    "city": "Test City",
+                    "latitude": 0.0,
+                    "longitude": 0.1,
+                    "category": "park",
+                    "final_poi_value": 10.0,
+                    "social_score": 0.0,
+                    "weather_risk": 0.0,
+                },
+                {
+                    "name": "Near end",
+                    "city": "Test City",
+                    "latitude": 0.0,
+                    "longitude": 0.2,
+                    "category": "park",
+                    "final_poi_value": 10.0,
+                    "social_score": 0.0,
+                    "weather_risk": 0.0,
+                },
+            ]
+        )
+
+        result = solve_multi_objective_route(
+            candidates,
+            config,
+            start_depot=(0.0, 0.0),
+            end_depot=(0.0, 0.3),
+            candidate_size=2,
+        )
+
+        self.assertEqual(result["selected_pois"], ["Near start", "Near end"])
+        self.assertLess(result["total_travel_minutes"], 70.0)
 
     def test_missing_nature_columns_are_filled_safely(self):
         frame = pd.DataFrame(
@@ -622,6 +674,8 @@ class ConfigurableItinerarySystemTests(unittest.TestCase):
         self.assertIn("top_boosted_pois", preview)
         self.assertIn("bar", preview)
         self.assertIn("park_bonus", preview["top_boosted_pois"][0])
+        self.assertIn("preview_route_graph", preview)
+        self.assertIn("segments", preview["preview_route_graph"])
 
         with temporary_directory() as tmpdir:
             write_interest_catalog_artifacts(frame, tmpdir, config)

@@ -117,6 +117,8 @@ def solve_enriched_route_with_gurobi(
     config: TripConfig,
     *,
     depot: tuple[float, float] | None = None,
+    start_depot: tuple[float, float] | None = None,
+    end_depot: tuple[float, float] | None = None,
     candidate_size: int | None = None,
 ) -> dict[str, Any]:
     """Solve a small enriched-POI route problem with Gurobi, fallback heuristic.
@@ -128,6 +130,8 @@ def solve_enriched_route_with_gurobi(
         candidate_df,
         config,
         depot=depot,
+        start_depot=start_depot,
+        end_depot=end_depot,
         candidate_size=candidate_size,
         route_id="bandit_selected_epsilon_route",
     )

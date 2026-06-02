@@ -25,6 +25,8 @@ hotels:
   allow_visit_city_without_hotel: true
   charge_hotel_only_for_overnight_base: true
   hotel_price_fallback: 150
+  use_curated_fallback: true
+  hide_placeholder_hotels: true
 
 enrichment:
   run_live_apis: false
@@ -118,6 +120,8 @@ interest:
   lambda_balance: 0.20
   use_balance_objective: false
   preview_top_n: 12
+  export_profiles: [nature_heavy, balanced_interest, city_heavy]
+  preview_saved_profile_match_threshold: 0.12
 
 nature:
   enabled: true

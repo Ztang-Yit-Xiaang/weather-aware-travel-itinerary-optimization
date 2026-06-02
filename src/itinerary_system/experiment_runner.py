@@ -31,6 +31,8 @@ PRODUCTION_ARTIFACT_FILES = [
     "production_day_plan.csv",
     "production_route_anchor_audit.csv",
     "production_dataset_completeness_audit.csv",
+    "production_route_sequence_audit.csv",
+    "production_place_detail_audit.csv",
 ]
 
 REQUIRED_DASHBOARD_ANCHORS = {
@@ -403,6 +405,181 @@ def _normalized_route_stops(frame: pd.DataFrame) -> pd.DataFrame:
     return output.sort_values(["day", "stop_order", "attraction_name"], ascending=[True, True, True]).reset_index(
         drop=True
     )
+
+
+def _place_key(value: object) -> str:
+    return re.sub(r"[^a-z0-9]+", " ", str(value or "").lower()).strip()
+
+
+def _airport_gateway(config: TripConfig, city: str) -> dict | None:
+    gateways = config.get("transport", "airport_gateways", {})
+    if not isinstance(gateways, dict):
+        return None
+    raw = gateways.get(city) or gateways.get(str(city))
+    if not isinstance(raw, dict):
+        return None
+    try:
+        return {
+            "code": str(raw.get("code", "")).strip(),
+            "name": str(raw.get("name", "")).strip() or f"{city} airport",
+            "latitude": float(raw.get("latitude")),
+            "longitude": float(raw.get("longitude")),
+        }
+    except Exception:
+        return None
+
+
+def _route_allowed_cities(overnight_city: str, pass_through_cities: list[str] | str | None) -> list[str]:
+    if isinstance(pass_through_cities, str):
+        pass_items = [part.strip() for part in pass_through_cities.replace("|", ";").split(";") if part.strip()]
+    else:
+        pass_items = [str(item).strip() for item in (pass_through_cities or []) if str(item).strip()]
+    allowed = []
+    for city in [*pass_items, str(overnight_city or "").strip()]:
+        if city and city not in allowed:
+            allowed.append(city)
+    return allowed
+
+
+def _row_allowed_cities(row: pd.Series) -> list[str]:
+    return _route_allowed_cities(str(row.get("overnight_city", row.get("city", ""))), row.get("pass_through_cities", ""))
+
+
+def _stop_in_allowed_segment(row: pd.Series) -> tuple[bool, str]:
+    city = str(row.get("city", "")).strip()
+    allowed = _row_allowed_cities(row)
+    if not city:
+        return False, "selected stop has no city"
+    if city.lower() in {item.lower() for item in allowed}:
+        return True, ""
+    return False, f"{city} is outside allowed segment cities: {', '.join(allowed) or 'none'}"
+
+
+def _annotate_route_sequence(route_df: pd.DataFrame, trip: dict, config: TripConfig) -> pd.DataFrame:
+    if route_df.empty:
+        return route_df.copy()
+    output = _normalized_route_stops(route_df).copy()
+    gateway_start = str(trip.get("gateway_start", output.get("gateway_start", pd.Series([""])).iloc[0]) or "")
+    gateway_end = str(trip.get("gateway_end", output.get("gateway_end", pd.Series([""])).iloc[0]) or "")
+    start_airport = _airport_gateway(config, gateway_start)
+    end_airport = _airport_gateway(config, gateway_end)
+    min_day = int(output["day"].min())
+    max_day = int(output["day"].max())
+    output["segment_index"] = output["day"].astype(int)
+    output["allowed_cities"] = output.apply(lambda row: "; ".join(_row_allowed_cities(row)), axis=1)
+    output["route_start_kind"] = np.where(output["day"].astype(int).eq(min_day), "airport", "hotel")
+    output["route_end_kind"] = np.where(output["day"].astype(int).eq(max_day), "airport", "hotel")
+    output["route_start_airport_code"] = ""
+    output["route_end_airport_code"] = ""
+    if start_airport is not None:
+        first_mask = output["day"].astype(int).eq(min_day)
+        output.loc[first_mask, "route_start_city"] = gateway_start
+        output.loc[first_mask, "route_start_name"] = start_airport["name"]
+        output.loc[first_mask, "route_start_latitude"] = start_airport["latitude"]
+        output.loc[first_mask, "route_start_longitude"] = start_airport["longitude"]
+        output.loc[first_mask, "route_start_airport_code"] = start_airport["code"]
+    if end_airport is not None:
+        last_mask = output["day"].astype(int).eq(max_day)
+        output.loc[last_mask, "route_end_city"] = gateway_end
+        output.loc[last_mask, "route_end_name"] = end_airport["name"]
+        output.loc[last_mask, "route_end_latitude"] = end_airport["latitude"]
+        output.loc[last_mask, "route_end_longitude"] = end_airport["longitude"]
+        output.loc[last_mask, "route_end_airport_code"] = end_airport["code"]
+    violation_results = output.apply(_stop_in_allowed_segment, axis=1)
+    output["sequence_violation_flag"] = [not item[0] for item in violation_results]
+    output["sequence_violation_reason"] = [item[1] for item in violation_results]
+    output["route_sequence_index"] = range(1, len(output) + 1)
+    return output
+
+
+def _write_route_sequence_audit(
+    *,
+    output_dir: Path,
+    route_stops_df: pd.DataFrame,
+    config: TripConfig,
+    day_plan_df: pd.DataFrame | None = None,
+) -> pd.DataFrame:
+    rows: list[dict] = []
+    preferred = route_stops_df.copy() if not route_stops_df.empty else pd.DataFrame()
+    if not preferred.empty and "method" in preferred.columns:
+        method_mask = preferred["method"].astype(str).eq("hierarchical_bandit_gurobi_repair")
+        if method_mask.any():
+            preferred = preferred[method_mask].copy()
+    configured_days = int(config.get("trip", "trip_days", 0) or 0)
+    if configured_days and not preferred.empty and "trip_days" in preferred.columns:
+        day_mask = pd.to_numeric(preferred["trip_days"], errors="coerce").fillna(0).astype(int).eq(configured_days)
+        if day_mask.any():
+            preferred = preferred[day_mask].copy()
+    if preferred.empty:
+        preferred = route_stops_df.copy()
+    preferred = _normalized_route_stops(preferred) if not preferred.empty else preferred
+    start_city = next(iter(config.get("trip", "start_city_options", []) or []), "")
+    end_city = next(iter(config.get("trip", "end_city_options", []) or []), "")
+    start_airport = _airport_gateway(config, str(start_city))
+    end_airport = _airport_gateway(config, str(end_city))
+
+    def add_check(name: str, passed: bool, details: str = "") -> None:
+        rows.append(
+            {
+                "check": name,
+                "passed": bool(passed),
+                "details": details,
+                "selected_method": "hierarchical_bandit_gurobi_repair" if not preferred.empty else "",
+            }
+        )
+
+    add_check("route_stops_present", not preferred.empty, f"rows={len(preferred)}")
+    if not preferred.empty:
+        first = preferred.iloc[0]
+        last = preferred.iloc[-1]
+        add_check(
+            "starts_at_configured_airport",
+            bool(start_airport)
+            and str(first.get("route_start_airport_code", "")).upper() == str(start_airport.get("code", "")).upper(),
+            str(first.get("route_start_name", "")),
+        )
+        add_check(
+            "ends_at_configured_airport",
+            bool(end_airport)
+            and str(last.get("route_end_airport_code", "")).upper() == str(end_airport.get("code", "")).upper(),
+            str(last.get("route_end_name", "")),
+        )
+        duplicate_names = (
+            preferred["attraction_name"].fillna("").astype(str).map(_place_key).replace("", np.nan).dropna()
+        )
+        duplicates = sorted(duplicate_names[duplicate_names.duplicated()].unique().tolist())
+        add_check("no_duplicate_selected_pois", not duplicates, "; ".join(duplicates))
+        violation_series = preferred["sequence_violation_flag"].astype(bool) if "sequence_violation_flag" in preferred.columns else pd.Series(False, index=preferred.index)
+        violation_frame = preferred[violation_series].copy()
+        add_check(
+            "selected_city_in_allowed_segment",
+            violation_frame.empty,
+            " | ".join(violation_frame.get("sequence_violation_reason", pd.Series(dtype=str)).astype(str).tolist()[:6]),
+        )
+        cities = preferred["city"].fillna("").astype(str).tolist()
+        los_indices = [idx for idx, city in enumerate(cities) if city.lower() == "los angeles"]
+        santa_after_la = any(city.lower() == "santa barbara" for idx, city in enumerate(cities) if los_indices and idx > min(los_indices))
+        add_check(
+            "no_la_to_santa_barbara_backtrack",
+            not santa_after_la,
+            "Santa Barbara appears after Los Angeles" if santa_after_la else "",
+        )
+        long_drive_rows = preferred[
+            pd.to_numeric(preferred.get("drive_minutes_to_next_base", 0.0), errors="coerce").fillna(0.0)
+            > float(config.get("time", "max_intercity_drive_minutes_per_day", 360))
+        ]
+        add_check("max_drive_threshold", long_drive_rows.empty, f"violations={len(long_drive_rows)}")
+    if day_plan_df is not None and not day_plan_df.empty and not preferred.empty:
+        day_names = day_plan_df.get("attraction_name", day_plan_df.get("name", pd.Series(dtype=str))).fillna("").astype(str).map(_place_key)
+        route_names = preferred.get("attraction_name", pd.Series(dtype=str)).fillna("").astype(str).map(_place_key)
+        add_check(
+            "day_plan_matches_selected_route",
+            list(day_names[day_names.ne("")]) == list(route_names[route_names.ne("")]),
+            f"day_plan_rows={len(day_names)} route_rows={len(route_names)}",
+        )
+    audit = pd.DataFrame(rows)
+    audit.to_csv(output_dir / "production_route_sequence_audit.csv", index=False)
+    return audit
 
 
 def _route_metrics_from_stops(frame: pd.DataFrame) -> dict:
@@ -884,6 +1061,21 @@ def _comparison_route_stop_columns() -> list[str]:
         "route_type",
         "status",
         "notes",
+        "segment_index",
+        "route_sequence_index",
+        "allowed_cities",
+        "route_start_kind",
+        "route_end_kind",
+        "route_start_airport_code",
+        "route_end_airport_code",
+        "sequence_violation_flag",
+        "sequence_violation_reason",
+        "description",
+        "image_url",
+        "website_url",
+        "source_url",
+        "source_confidence",
+        "detail_source",
         *NATURE_POI_COLUMNS,
     ]
 
@@ -1228,6 +1420,7 @@ def _candidate_bundle_for_hierarchical_day(
     overnight_city: str,
     hotel,
     used_names_by_city: dict,
+    used_place_keys: set[str] | None,
     pass_through_cities: list[str],
     strategy_name: str,
     max_candidates: int,
@@ -1248,8 +1441,14 @@ def _candidate_bundle_for_hierarchical_day(
         catalog = blueprint_trip_map._city_poi_catalog(context, city_name).copy()
         if catalog.empty:
             continue
+        if "city" in catalog.columns:
+            catalog = catalog[catalog["city"].fillna("").astype(str).str.lower().eq(str(city_name).lower())].copy()
+        if catalog.empty:
+            continue
         used_names = used_names_by_city.setdefault(city_name, set())
         catalog = catalog[~catalog["name"].astype(str).isin(used_names)].copy()
+        if used_place_keys is not None and not catalog.empty:
+            catalog = catalog[~catalog["name"].astype(str).map(_place_key).isin(used_place_keys)].copy()
         if catalog.empty:
             continue
         scored = _score_daily_candidate_pool(
@@ -1420,6 +1619,7 @@ def _solve_small_gurobi_day_route(
     remaining_budget: float,
     max_stops: int,
     route_start: tuple[float, float],
+    route_end: tuple[float, float],
 ) -> tuple[pd.DataFrame, dict]:
     if candidate_pool.empty:
         return pd.DataFrame(), {
@@ -1443,7 +1643,8 @@ def _solve_small_gurobi_day_route(
     route_result = solve_enriched_route_with_gurobi(
         candidate_pool,
         day_config,
-        depot=route_start,
+        start_depot=route_start,
+        end_depot=route_end,
         candidate_size=len(candidate_pool),
     )
     selected_names = [str(name) for name in route_result.get("selected_pois", []) if str(name).strip()]
@@ -1512,6 +1713,12 @@ def _build_route_rows_from_selected(
     output["social_reason"] = output["social_reason"].fillna("") if "social_reason" in output.columns else ""
     output["final_poi_value"] = _numeric_column(output, "final_poi_value", fallback_column="source_score")
     output["route_fit"] = _numeric_column(output, "route_fit", fallback_column="corridor_fit")
+    output["description"] = output.get("description", "")
+    output["image_url"] = output.get("image_url", "")
+    output["website_url"] = output.get("website_url", "")
+    output["source_url"] = output.get("source_url", output.get("website_url", ""))
+    output["source_confidence"] = _numeric_column(output, "source_confidence", fallback_column="data_confidence")
+    output["detail_source"] = output.get("detail_source", output.get("source_list", "unknown"))
     output["route_start_city"] = previous_city
     output["route_start_name"] = route_start_name
     output["route_start_latitude"] = route_start_latitude
@@ -1917,6 +2124,12 @@ def _route_stop_from_required_candidate(
         "final_poi_value": "final_poi_value",
         "route_fit": "route_fit",
         "corridor_fit": "route_fit",
+        "description": "description",
+        "image_url": "image_url",
+        "website_url": "website_url",
+        "source_url": "source_url",
+        "source_confidence": "source_confidence",
+        "detail_source": "detail_source",
     }
     for source_column, target_column in candidate_to_route_columns.items():
         if source_column in candidate.index:
@@ -2097,6 +2310,7 @@ def _hierarchical_method_route_outputs(
     route_frames = []
     day_statuses = []
     day_gaps = []
+    used_place_keys: set[str] = set()
     total_solve_seconds = 0.0
     total_objective = 0.0
     notes = []
@@ -2171,6 +2385,7 @@ def _hierarchical_method_route_outputs(
                 overnight_city=city,
                 hotel=hotel,
                 used_names_by_city=used_names_by_city,
+                used_place_keys=used_place_keys,
                 pass_through_cities=pass_through_cities,
                 strategy_name=strategy_name,
                 max_candidates=candidate_size,
@@ -2198,6 +2413,7 @@ def _hierarchical_method_route_outputs(
                     remaining_budget=day_route_budget,
                     max_stops=stops_per_day,
                     route_start=(route_start_latitude, route_start_longitude),
+                    route_end=(route_end_latitude, route_end_longitude),
                 )
                 route_type_label = f"{route_type}_small_gurobi_repair"
             else:
@@ -2210,21 +2426,38 @@ def _hierarchical_method_route_outputs(
                 )
                 route_type_label = f"{route_type}_hierarchical_greedy"
 
-            if selected_df.empty and not poi_catalog.empty:
-                selected_df = poi_catalog.head(1).copy()
+            if selected_df.empty:
+                fallback_pool = candidate_pool.copy()
+                if fallback_pool.empty and not poi_catalog.empty:
+                    fallback_pool = poi_catalog.copy()
+                    if "city" in fallback_pool.columns:
+                        allowed_for_day = {str(item).lower() for item in _route_allowed_cities(city, pass_through_cities)}
+                        fallback_pool = fallback_pool[
+                            fallback_pool["city"].fillna("").astype(str).str.lower().isin(allowed_for_day)
+                        ].copy()
+                    if used_place_keys is not None and "name" in fallback_pool.columns:
+                        fallback_pool = fallback_pool[
+                            ~fallback_pool["name"].astype(str).map(_place_key).isin(used_place_keys)
+                        ].copy()
+                selected_df = fallback_pool.head(1).copy()
+            if selected_df.empty:
+                notes.append(f"Day {day_number} had no sequence-compatible POI candidates.")
+            elif selected_df.shape[0] == 1 and str(day_result.get("solver_status", "")).upper() in {"FAILED", ""}:
                 selected_df["attraction_name"] = selected_df.get("name", "selected stop")
                 day_result.setdefault("solver_status", "FALLBACK")
                 notes.append(
-                    f"Day {day_number} fell back to the top-ranked city POI because no feasible route was returned."
+                    f"Day {day_number} fell back to the top-ranked sequence-compatible POI because no feasible route was returned."
                 )
 
             selected_cost = _estimated_route_stop_cost(selected_df)
             remaining_route_budget = max(0.0, float(remaining_route_budget) - float(selected_cost))
 
             for row in selected_df.itertuples(index=False):
-                used_names_by_city.setdefault(str(getattr(row, "city", city)), set()).add(
-                    str(getattr(row, "name", getattr(row, "attraction_name", "")))
-                )
+                selected_name = str(getattr(row, "name", getattr(row, "attraction_name", "")))
+                used_names_by_city.setdefault(str(getattr(row, "city", city)), set()).add(selected_name)
+                key = _place_key(selected_name)
+                if key:
+                    used_place_keys.add(key)
 
             solver_status = str(day_result.get("solver_status", "UNKNOWN"))
             route_frames.append(
@@ -2283,6 +2516,7 @@ def _hierarchical_method_route_outputs(
         config=config,
     )
     notes.extend(required_anchor_notes)
+    route_df = _annotate_route_sequence(route_df, trip, config)
     status = "FAILED"
     if not route_df.empty:
         lowered_statuses = [str(day_status).lower() for day_status in day_statuses]
@@ -2869,6 +3103,11 @@ def _write_route_matrix_compatibility_artifacts(
     _write_route_anchor_audit(
         output_dir=output_dir,
         enriched_df=enriched_df,
+        route_stops_df=method_subset if not method_subset.empty else pd.DataFrame(),
+        config=config,
+    )
+    _write_route_sequence_audit(
+        output_dir=output_dir,
         route_stops_df=method_subset if not method_subset.empty else pd.DataFrame(),
         config=config,
     )
@@ -3665,6 +3904,11 @@ def build_production_method_comparison(
     _write_route_anchor_audit(
         output_dir=output_dir,
         enriched_df=enriched_df,
+        route_stops_df=route_stops_df,
+        config=config,
+    )
+    _write_route_sequence_audit(
+        output_dir=output_dir,
         route_stops_df=route_stops_df,
         config=config,
     )

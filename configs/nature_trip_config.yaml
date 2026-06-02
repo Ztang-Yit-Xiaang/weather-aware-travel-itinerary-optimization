@@ -11,6 +11,12 @@ interest:
   mode: nature_heavy
   use_balance_objective: false
   preview_top_n: 12
+  export_profiles: [nature_heavy, balanced_interest, city_heavy]
+  preview_saved_profile_match_threshold: 0.12
+
+hotels:
+  use_curated_fallback: true
+  hide_placeholder_hotels: true
 
 nature:
   enabled: true
@@ -24,6 +30,19 @@ nature:
 
 map:
   require_matching_artifact_metadata: true
+
+transport:
+  airport_gateways:
+    San Francisco:
+      code: SFO
+      name: San Francisco International Airport
+      latitude: 37.6213
+      longitude: -122.3790
+    Los Angeles:
+      code: LAX
+      name: Los Angeles International Airport
+      latitude: 33.9416
+      longitude: -118.4085
 
 bandit:
   arms:

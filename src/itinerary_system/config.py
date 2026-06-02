@@ -40,6 +40,24 @@ DEFAULT_CONFIG = {
         "hotel_price_fallback": 150,
         "preferred_hotels": {},
         "preferred_hotel_bonus": 3.0,
+        "use_curated_fallback": True,
+        "hide_placeholder_hotels": True,
+    },
+    "transport": {
+        "airport_gateways": {
+            "San Francisco": {
+                "code": "SFO",
+                "name": "San Francisco International Airport",
+                "latitude": 37.6213,
+                "longitude": -122.3790,
+            },
+            "Los Angeles": {
+                "code": "LAX",
+                "name": "Los Angeles International Airport",
+                "latitude": 33.9416,
+                "longitude": -118.4085,
+            },
+        }
     },
     "enrichment": {
         "run_live_apis": False,
@@ -120,6 +138,8 @@ DEFAULT_CONFIG = {
         "lambda_balance": 0.20,
         "use_balance_objective": False,
         "preview_top_n": 12,
+        "export_profiles": ["nature_heavy", "balanced_interest", "city_heavy"],
+        "preview_saved_profile_match_threshold": 0.12,
     },
     "nature": {
         "enabled": True,

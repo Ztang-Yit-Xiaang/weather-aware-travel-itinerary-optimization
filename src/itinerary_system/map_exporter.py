@@ -18,8 +18,13 @@ from .region_scenarios import get_scenario_definition
 DEFAULT_DASHBOARD_ROUTE_ID = "selected_route"
 DEFAULT_DASHBOARD_METHOD = "hierarchical_bandit_gurobi_repair"
 CONTRACT_VERSION = "core-route-index-v1"
-PLAYABLE_ROUTE_FAMILIES = {"selected", "route_matrix", "trip_length", "method"}
+PLAYABLE_ROUTE_FAMILIES = {"selected", "route_matrix", "trip_length", "method", "interest_profile"}
 MARKER_ONLY_ROUTE_FAMILIES = {"hotel", "nature", "must_go"}
+PLACEHOLDER_HOTEL_PATTERNS = (
+    "lodging candidate pending",
+    "city_center_placeholder",
+    "base marker",
+)
 
 
 def _safe_float(value: Any, default: float = 0.0) -> float:
@@ -47,6 +52,11 @@ def _safe_bool(value: Any) -> bool:
     return str(value).strip().lower() in {"1", "true", "yes", "y"}
 
 
+def _is_placeholder_hotel_name(value: Any) -> bool:
+    text = _safe_str(value).strip().lower()
+    return bool(text) and any(pattern in text for pattern in PLACEHOLDER_HOTEL_PATTERNS)
+
+
 def _route_name(row: pd.Series) -> str:
     for column in ["attraction_name", "name", "hotel_name"]:
         value = _safe_str(row.get(column, ""))
@@ -63,7 +73,9 @@ def _selected_rows(route_df: pd.DataFrame, max_routes: int = 1) -> pd.DataFrame:
         route_keys = list(frame["route_key"].dropna().astype(str).unique())[:max_routes]
         if route_keys:
             frame = frame[frame["route_key"].astype(str).isin(route_keys)].copy()
-    sort_cols = [column for column in ["trip_days", "day", "stop_order"] if column in frame.columns]
+    sort_cols = [
+        column for column in ["trip_days", "route_sequence_index", "day", "stop_order"] if column in frame.columns
+    ]
     return frame.sort_values(sort_cols).reset_index(drop=True) if sort_cols else frame.reset_index(drop=True)
 
 
@@ -71,7 +83,9 @@ def _sort_route_rows(route_df: pd.DataFrame) -> pd.DataFrame:
     if route_df is None or route_df.empty:
         return pd.DataFrame()
     sort_cols = [
-        column for column in ["trip_days", "day", "stop_order", "attraction_name"] if column in route_df.columns
+        column
+        for column in ["trip_days", "route_sequence_index", "day", "stop_order", "attraction_name"]
+        if column in route_df.columns
     ]
     return route_df.sort_values(sort_cols).reset_index(drop=True) if sort_cols else route_df.reset_index(drop=True)
 
@@ -161,7 +175,7 @@ def _quick_groups(route_df: pd.DataFrame, *, family: str, selector_group: str) -
     trip_days = _route_trip_days(route_df)
     if trip_days:
         groups.append(f"days_{trip_days}")
-    for column in ["profile", "traveler_profile", "interest_profile", "method"]:
+    for column in ["interest_profile", "profile", "traveler_profile", "method"]:
         value = _first_nonempty(route_df, [column])
         if value:
             groups.append(_slug(value))
@@ -203,6 +217,7 @@ def _route_record(
                 "trip_days": _route_trip_days(route_df),
                 "method": _first_nonempty(route_df, ["method"]),
                 "profile": _first_nonempty(route_df, ["profile", "traveler_profile"]),
+                "interest_profile": _first_nonempty(route_df, ["interest_profile", "profile"]),
                 "comparison_label": _first_nonempty(route_df, ["comparison_label"]),
             }
         )
@@ -308,7 +323,7 @@ def _why_selected(row: pd.Series) -> str:
     return "Shown for route context or candidate comparison; not counted as a saved optimized stop unless it appears in the selected route layer."
 
 
-def _point_records(route_df: pd.DataFrame) -> list[dict[str, Any]]:
+def _point_records(route_df: pd.DataFrame, *, selected_poi: bool = True) -> list[dict[str, Any]]:
     records = []
     for _, row in route_df.iterrows():
         lat = _safe_float(row.get("latitude", row.get("hotel_latitude", 0.0)))
@@ -324,6 +339,8 @@ def _point_records(route_df: pd.DataFrame) -> list[dict[str, Any]]:
         source_confidence = _source_confidence(row)
         weather_risk = _weather_risk(row)
         expected_duration = _expected_duration_minutes(row)
+        route_sequence_index = int(_safe_float(row.get("route_sequence_index", 0), 0.0))
+        display_sequence_index = route_sequence_index if route_sequence_index > 0 else (len(records) + 1 if selected_poi else 0)
         records.append(
             {
                 "name": _route_name(row),
@@ -365,14 +382,171 @@ def _point_records(route_df: pd.DataFrame) -> list[dict[str, Any]]:
                 "status": _safe_str(row.get("status", "")),
                 "notes": _safe_str(row.get("notes", "")),
                 "drive_minutes_to_next_base": _safe_float(row.get("drive_minutes_to_next_base", 0.0)),
+                "segment_index": int(_safe_float(row.get("segment_index", row.get("day", 0)), 0.0)),
+                "route_sequence_index": route_sequence_index,
+                "display_sequence_index": display_sequence_index,
+                "selected_stop_index": display_sequence_index,
+                "node_kind": "selected_poi" if selected_poi else "candidate_poi",
+                "is_selected_poi": bool(selected_poi),
+                "is_hotel_node": False,
+                "is_airport_endpoint": False,
+                "allowed_cities": _safe_str(row.get("allowed_cities", "")),
+                "route_start_kind": _safe_str(row.get("route_start_kind", "")),
+                "route_end_kind": _safe_str(row.get("route_end_kind", "")),
+                "route_start_city": _safe_str(row.get("route_start_city", "")),
+                "route_end_city": _safe_str(row.get("route_end_city", "")),
+                "route_start_airport_code": _safe_str(row.get("route_start_airport_code", "")),
+                "route_end_airport_code": _safe_str(row.get("route_end_airport_code", "")),
+                "route_start_name": _safe_str(row.get("route_start_name", "")),
+                "route_start_lat": _safe_float(row.get("route_start_latitude", 0.0)),
+                "route_start_lon": _safe_float(row.get("route_start_longitude", 0.0)),
+                "route_end_name": _safe_str(row.get("route_end_name", "")),
+                "route_end_lat": _safe_float(row.get("route_end_latitude", 0.0)),
+                "route_end_lon": _safe_float(row.get("route_end_longitude", 0.0)),
+                "sequence_violation_flag": _safe_bool(row.get("sequence_violation_flag", False)),
+                "sequence_violation_reason": _safe_str(row.get("sequence_violation_reason", "")),
                 "reason_selected": _safe_str(row.get("reason_selected", "")),
                 "why_selected": _why_selected(row),
                 "why_not_selected": _safe_str(row.get("why_not_selected", "")),
                 "description": _point_description(row),
+                "image_url": _safe_str(row.get("image_url", "")),
+                "website_url": _safe_str(row.get("website_url", "")),
+                "source_url": _safe_str(row.get("source_url", row.get("website_url", ""))),
+                "detail_source": _safe_str(row.get("detail_source", "")),
                 "expected_duration_minutes": expected_duration,
             }
         )
     return records
+
+
+def _airport_endpoint_from_point(point: dict[str, Any], *, side: str) -> dict[str, Any] | None:
+    lat = _safe_float(point.get(f"route_{side}_lat", 0.0))
+    lon = _safe_float(point.get(f"route_{side}_lon", 0.0))
+    code = _safe_str(point.get(f"route_{side}_airport_code", ""))
+    name = _safe_str(point.get(f"route_{side}_name", ""))
+    if not (lat and lon and code):
+        return None
+    city_lookup = {
+        "SFO": "San Francisco",
+        "LAX": "Los Angeles",
+    }
+    return {
+        "name": name or code,
+        "city": city_lookup.get(code, _safe_str(point.get("city", ""))),
+        "city_or_anchor": name or code,
+        "lat": lat,
+        "lon": lon,
+        "day": point.get("day", 0) if side == "start" else point.get("trip_days", point.get("day", 0)),
+        "stop_order": 0 if side == "start" else 999,
+        "type": "airport_endpoint",
+        "category": "airport_endpoint",
+        "description": f"{name or code} is the {'starting' if side == 'start' else 'ending'} airport endpoint for this route.",
+        "why_selected": "Airport endpoint from the configured trip gateway; not counted as a selected POI.",
+        "expected_duration_minutes": 0,
+        "weather_risk": 0.0,
+        "display_utility": 0.0,
+        "final_poi_value": 0.0,
+        "interest_adjusted_value": 0.0,
+        "source_confidence": 1.0,
+        "is_route_endpoint": True,
+        "route_endpoint_side": side,
+        "airport_code": code,
+        "route_sequence_index": 0,
+        "display_sequence_index": code,
+        "selected_stop_index": 0,
+        "node_kind": "airport",
+        "is_selected_poi": False,
+        "is_hotel_node": False,
+        "is_airport_endpoint": True,
+    }
+
+
+def _route_node_key(point: dict[str, Any]) -> tuple[str, str, int, int]:
+    return (
+        _safe_str(point.get("node_kind", point.get("type", ""))).lower(),
+        _safe_str(point.get("name", point.get("hotel_name", ""))).lower(),
+        int(round(_safe_float(point.get("lat", 0.0)) * 10000)),
+        int(round(_safe_float(point.get("lon", 0.0)) * 10000)),
+    )
+
+
+def _append_unique_route_node(nodes: list[dict[str, Any]], node: dict[str, Any] | None) -> None:
+    if not node or not node.get("lat") or not node.get("lon"):
+        return
+    if nodes and _route_node_key(nodes[-1]) == _route_node_key(node):
+        return
+    nodes.append(node)
+
+
+def _hotel_node_from_point(point: dict[str, Any], *, side: str) -> dict[str, Any] | None:
+    lat = _safe_float(point.get(f"route_{side}_lat", 0.0))
+    lon = _safe_float(point.get(f"route_{side}_lon", 0.0))
+    name = _safe_str(point.get(f"route_{side}_name", ""))
+    kind = _safe_str(point.get(f"route_{side}_kind", "")).lower()
+    if point.get(f"route_{side}_airport_code") or "airport" in kind:
+        return None
+    if side == "end" and (not name or not lat or not lon):
+        name = _safe_str(point.get("hotel_name", ""))
+        lat = _safe_float(point.get("hotel_lat", 0.0))
+        lon = _safe_float(point.get("hotel_lon", 0.0))
+        kind = "hotel"
+    if not name or not lat or not lon or _is_placeholder_hotel_name(name):
+        return None
+    city = _safe_str(point.get(f"route_{side}_city", point.get("overnight_city") or point.get("city")))
+    return {
+        "name": name,
+        "hotel_name": name,
+        "city": city,
+        "city_or_anchor": city or name,
+        "lat": lat,
+        "lon": lon,
+        "day": point.get("day", 0),
+        "stop_order": -1 if side == "start" else 998,
+        "category": "selected_hotel",
+        "type": "selected_hotel",
+        "description": f"{name} is the selected overnight/base lodging node for {city or 'this route segment'}.",
+        "why_selected": "Selected overnight/base hotel from the optimizer route segment; not counted as a selected POI.",
+        "expected_duration_minutes": 0,
+        "weather_risk": _safe_float(point.get("weather_risk", 0.0)),
+        "display_utility": 0.0,
+        "final_poi_value": 0.0,
+        "interest_adjusted_value": 0.0,
+        "source_confidence": _safe_float(point.get("source_confidence", 0.5), 0.5),
+        "route_sequence_index": 0,
+        "display_sequence_index": "H",
+        "selected_stop_index": 0,
+        "node_kind": "hotel",
+        "is_route_endpoint": False,
+        "is_selected_poi": False,
+        "is_hotel_node": True,
+        "is_airport_endpoint": False,
+        "route_endpoint_side": side,
+    }
+
+
+def _playback_points_with_endpoints(points: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    if not points:
+        return []
+    playback: list[dict[str, Any]] = []
+    ordered_points = list(points)
+    start_endpoint = _airport_endpoint_from_point(ordered_points[0], side="start")
+    end_endpoint = _airport_endpoint_from_point(ordered_points[-1], side="end")
+    _append_unique_route_node(playback, start_endpoint)
+    days = sorted({int(_safe_float(point.get("day", 0), 0.0)) for point in ordered_points})
+    if not days:
+        days = [0]
+    for day in days:
+        day_points = [
+            point for point in ordered_points if int(_safe_float(point.get("day", 0), 0.0)) == day
+        ]
+        if not day_points:
+            continue
+        _append_unique_route_node(playback, _hotel_node_from_point(day_points[0], side="start"))
+        for point in day_points:
+            _append_unique_route_node(playback, point)
+        _append_unique_route_node(playback, _hotel_node_from_point(day_points[-1], side="end"))
+    _append_unique_route_node(playback, end_endpoint)
+    return playback
 
 
 def _project_cache_dir(output_dir: Path) -> Path:
@@ -536,14 +710,15 @@ def _route_geojson(
             {
                 "type": "Feature",
                 "geometry": {"type": "Point", "coordinates": [point["lon"], point["lat"]]},
-                "properties": {**point, "stop_order": index},
+                "properties": {**point, "stop_order": point.get("stop_order") or index},
             }
         )
     if draw_line and len(points) >= 2:
+        line_points = _playback_points_with_endpoints(points)
         if output_dir is not None:
-            coordinates, geometry_source, road_aligned = _cached_route_geometry(points, output_dir)
+            coordinates, geometry_source, road_aligned = _cached_route_geometry(line_points, output_dir)
         else:
-            coordinates = [[point["lon"], point["lat"]] for point in points]
+            coordinates = [[point["lon"], point["lat"]] for point in line_points]
             geometry_source = "straight_line_fallback_no_output_dir"
             road_aligned = False
         features.append(
@@ -745,6 +920,8 @@ def _candidate_record_from_csv(
     frame = _read_csv_if_present(output_dir / filename)
     if frame.empty:
         return
+    if "itinerary_eligible" in frame.columns:
+        frame = frame[frame["itinerary_eligible"].fillna(True).astype(str).str.lower().isin({"1", "true", "yes"})].copy()
     if nature_only:
         mask = pd.Series(False, index=frame.index)
         for column in ["is_nature", "is_national_park", "is_state_park", "is_protected_area", "is_scenic_viewpoint"]:
@@ -760,7 +937,7 @@ def _candidate_record_from_csv(
             frame = frame.sort_values(sort_cols, ascending=False)
     elif "candidate_rank" in frame.columns:
         frame = frame.sort_values("candidate_rank")
-    points = _point_records(frame.head(max_points))
+    points = _point_records(frame.head(max_points), selected_poi=False)
     if not points:
         return
     record = _route_record(
@@ -811,7 +988,7 @@ def _playback_data(route_records: list[dict[str, Any]], route_pois: dict[str, li
         if not record.get("playable"):
             continue
         route_id = str(record["id"])
-        stops = route_pois.get(route_id, [])
+        stops = _playback_points_with_endpoints(route_pois.get(route_id, []))
         playable = [
             {
                 "name": point.get("name", "Stop"),
@@ -821,6 +998,10 @@ def _playback_data(route_records: list[dict[str, Any]], route_pois: dict[str, li
                 "lon": point.get("lon"),
                 "day": point.get("day", 0),
                 "stop_order": point.get("stop_order", index + 1),
+                "route_sequence_index": point.get("route_sequence_index", 0),
+                "display_sequence_index": point.get("display_sequence_index", point.get("route_sequence_index", "")),
+                "selected_stop_index": point.get("selected_stop_index", point.get("route_sequence_index", 0)),
+                "node_kind": point.get("node_kind", "selected_poi"),
                 "category": point.get("category", ""),
                 "type": point.get("type", point.get("category", "")),
                 "nature_region": point.get("nature_region", ""),
@@ -838,6 +1019,16 @@ def _playback_data(route_records: list[dict[str, Any]], route_pois: dict[str, li
                 "final_poi_value": point.get("final_poi_value", 0.0),
                 "display_utility": point.get("display_utility", point.get("final_poi_value", 0.0)),
                 "optimization_value_source": point.get("optimization_value_source", "final_poi_value"),
+                "image_url": point.get("image_url", ""),
+                "website_url": point.get("website_url", ""),
+                "source_url": point.get("source_url", ""),
+                "detail_source": point.get("detail_source", ""),
+                "is_route_endpoint": bool(point.get("is_route_endpoint", False)),
+                "is_selected_poi": bool(point.get("is_selected_poi", False)),
+                "is_hotel_node": bool(point.get("is_hotel_node", False)),
+                "is_airport_endpoint": bool(point.get("is_airport_endpoint", point.get("is_route_endpoint", False))),
+                "route_endpoint_side": point.get("route_endpoint_side", ""),
+                "airport_code": point.get("airport_code", ""),
             }
             for index, point in enumerate(stops)
             if point.get("lat") and point.get("lon")
@@ -864,6 +1055,8 @@ def _city_details(
     }
     for record in route_records:
         for point in route_pois.get(str(record["id"]), []):
+            if point.get("is_route_endpoint"):
+                continue
             city = _safe_str(point.get("city") or point.get("overnight_city"))
             if not city:
                 continue
@@ -948,10 +1141,13 @@ def _hotel_choices(output_dir: Path) -> dict[str, Any]:
         frame = frame.sort_values(sort_cols)
     for _, row in frame.iterrows():
         city = _safe_str(row.get("city", "Unknown city")) or "Unknown city"
+        hotel_name = _safe_str(row.get("hotel_name", "Hotel"))
+        if _is_placeholder_hotel_name(hotel_name):
+            continue
         cities.setdefault(city, []).append(
             {
                 "city": city,
-                "hotel_name": _safe_str(row.get("hotel_name", "Hotel")),
+                "hotel_name": hotel_name,
                 "candidate_rank": int(_safe_float(row.get("candidate_rank", 0), 0.0)),
                 "selected": _safe_bool(row.get("selected", False)),
                 "selected_for_city": _safe_str(row.get("selected_for_city", "")),
@@ -965,18 +1161,42 @@ def _hotel_choices(output_dir: Path) -> dict[str, Any]:
                 "selected_hotel_reason": _safe_str(row.get("selected_hotel_reason", "")),
             }
         )
-    return {"available": True, "cities": cities}
+    return {"available": bool(cities), "cities": cities}
 
 
 def _selected_hotels(points: list[dict[str, Any]], hotel_choices: dict[str, Any]) -> dict[str, Any]:
-    """Selected hotel markers come from optimizer route stops first, then debug-selected candidates."""
+    """Selected hotel markers come from debug-selected real hotels, then route-stop lodging nodes."""
     hotels: dict[tuple[str, str], dict[str, Any]] = {}
+
+    for city, candidates in (hotel_choices.get("cities", {}) if isinstance(hotel_choices, dict) else {}).items():
+        for candidate in candidates:
+            if not candidate.get("selected"):
+                continue
+            hotel_name = _safe_str(candidate.get("hotel_name", ""))
+            lat = _safe_float(candidate.get("lat", 0.0))
+            lon = _safe_float(candidate.get("lon", 0.0))
+            if not hotel_name or _is_placeholder_hotel_name(hotel_name) or not lat or not lon:
+                continue
+            key = (str(city).lower(), hotel_name.lower())
+            hotels.setdefault(
+                key,
+                {
+                    **candidate,
+                    "city": city,
+                    "name": hotel_name,
+                    "lat": lat,
+                    "lon": lon,
+                    "selected": True,
+                    "status": "selected_by_optimizer",
+                },
+            )
+
     for point in points:
         hotel_name = _safe_str(point.get("hotel_name", ""))
         lat = _safe_float(point.get("hotel_lat", 0.0))
         lon = _safe_float(point.get("hotel_lon", 0.0))
         city = _safe_str(point.get("overnight_city") or point.get("city"))
-        if not hotel_name or not lat or not lon:
+        if not hotel_name or _is_placeholder_hotel_name(hotel_name) or not lat or not lon:
             continue
         key = (city.lower(), hotel_name.lower())
         hotels.setdefault(
@@ -995,29 +1215,6 @@ def _selected_hotels(points: list[dict[str, Any]], hotel_choices: dict[str, Any]
                 "status": "selected_by_optimizer",
             },
         )
-
-    for city, candidates in (hotel_choices.get("cities", {}) if isinstance(hotel_choices, dict) else {}).items():
-        for candidate in candidates:
-            if not candidate.get("selected"):
-                continue
-            hotel_name = _safe_str(candidate.get("hotel_name", ""))
-            lat = _safe_float(candidate.get("lat", 0.0))
-            lon = _safe_float(candidate.get("lon", 0.0))
-            if not hotel_name or not lat or not lon:
-                continue
-            key = (str(city).lower(), hotel_name.lower())
-            hotels.setdefault(
-                key,
-                {
-                    **candidate,
-                    "city": city,
-                    "name": hotel_name,
-                    "lat": lat,
-                    "lon": lon,
-                    "selected": True,
-                    "status": "selected_by_optimizer",
-                },
-            )
 
     items = sorted(hotels.values(), key=lambda item: (str(item.get("city", "")), str(item.get("hotel_name", ""))))
     return {"available": bool(items), "items": items}
@@ -1246,7 +1443,21 @@ def _build_dashboard_payloads(
         configured_days=configured_days,
     )
 
-    lookup = _city_coordinate_lookup(selected, matrix, trip_lengths, methods, route_df)
+    interest_routes = _read_csv_if_present(output_dir / "production_interest_route_stops.csv")
+    _add_grouped_route_records(
+        frame=interest_routes,
+        output_dir=output_dir,
+        group_column="interest_profile",
+        records=records,
+        route_geojsons=route_geojsons,
+        route_pois=route_pois,
+        family="interest_profile",
+        selector_group="interest_profiles",
+        id_prefix="interest_profile",
+        max_records=8,
+    )
+
+    lookup = _city_coordinate_lookup(selected, matrix, trip_lengths, methods, interest_routes, route_df)
     _context_route_records(
         output_dir=output_dir,
         lookup=lookup,
@@ -2298,6 +2509,22 @@ input[type="checkbox"] {
   transform: translateY(-1px);
 }
 
+.airport-route-endpoint {
+  display: grid;
+  place-items: center;
+  min-width: 38px;
+  height: 24px;
+  padding: 0 7px;
+  border: 2px solid #fff;
+  border-radius: 999px;
+  background: #12324a;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 900;
+  line-height: 1;
+  box-shadow: 0 2px 0 rgba(15,23,42,.22), 0 8px 20px rgba(15,23,42,.22);
+}
+
 .map-text-label {
   width: auto !important;
   height: auto !important;
@@ -2483,6 +2710,14 @@ input[type="checkbox"] {
   background:
     linear-gradient(180deg, rgba(5, 31, 43, .10), rgba(5, 31, 43, .42)),
     url("https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=600&q=80") center/cover;
+}
+
+.stop-visual img {
+  display: block;
+  width: 100%;
+  height: 112px;
+  object-fit: cover;
+  border-radius: inherit;
 }
 
 .detail-card.active-stop-card {
@@ -2982,6 +3217,7 @@ const FAMILY_STYLES = {
   route_matrix: { color: '#2f6fdd', fill: '#7eb6ff', weight: 3, dashArray: '7 7' },
   trip_length: { color: '#7c4dd8', fill: '#bba7ff', weight: 3, dashArray: '4 7' },
   method: { color: '#f9735b', fill: '#ffba8e', weight: 3, dashArray: '2 7' },
+  interest_profile: { color: '#0f766e', fill: '#5eead4', weight: 4, dashArray: '10 8' },
   context: { color: '#66788a', fill: '#aab8c4', weight: 2, dashArray: '9 8' },
   hotel: { color: '#6d4fd7', fill: '#d8cffd', weight: 1.5, dashArray: null },
   must_go: { color: '#d92652', fill: '#ff8aa4', weight: 1.5, dashArray: null },
@@ -3022,7 +3258,7 @@ function isPlayableRoute(routeRecord) {
   if (!routeRecord) return false;
   if (routeRecord.id === 'live_preview') return livePreviewPlaybackStops.length > 1;
   if (routeRecord.playable === false || routeRecord.marker_only === true) return false;
-  return ['selected', 'route_matrix', 'trip_length', 'method'].includes(routeRecord.family);
+  return ['selected', 'route_matrix', 'trip_length', 'method', 'interest_profile'].includes(routeRecord.family);
 }
 
 function firstPlayableRouteId() {
@@ -3058,7 +3294,8 @@ function updatePlaybackProgress() {
   if (progress) progress.style.width = `${Math.max(0, Math.min(100, pct))}%`;
   if (label) {
     const stop = stops[playbackStopIndex];
-    label.textContent = stop ? `${playbackStopIndex + 1}/${stops.length} · ${stop.name || 'Stop'} · ${stop.city || ''}` : 'No playable route loaded.';
+    const ordinal = stop ? routePointOrdinal(stop, playbackStopIndex) : '';
+    label.textContent = stop ? `${ordinal}/${stops.length} · ${stop.name || 'Stop'} · ${stop.city || ''}` : 'No playable route loaded.';
   }
 }
 
@@ -3197,10 +3434,20 @@ function routeLineStyle(routeRecord) {
 
 function markerPopup(point, index, routeRecord) {
   const candidateFamilies = ['hotel', 'nature', 'must_go', 'context'];
-  const selectionState = candidateFamilies.includes(routeRecord?.family) ? 'Candidate/context marker - not a selected route stop' : 'Saved optimized route stop';
+  const isEndpoint = Boolean(point?.is_route_endpoint);
+  const isHotelNode = Boolean(point?.is_hotel_node || point?.node_kind === 'hotel');
+  const selectionState = isEndpoint
+    ? 'Airport endpoint - not counted as a selected POI'
+    : (isHotelNode
+      ? 'Selected overnight/base hotel - not counted as a selected POI'
+    : (routeRecord?.family === 'live_preview'
+      ? 'Preview only - not written to optimizer artifacts'
+      : (candidateFamilies.includes(routeRecord?.family) ? 'Candidate/context marker - not a selected route stop' : 'Saved optimized route stop')));
   const label = routeRecord?.family === 'hotel' || routeRecord?.family === 'nature'
     ? (point.name || point.hotel_name || routeRecord.label)
-    : `${index + 1}. ${point.name || 'Stop'}`;
+    : (isEndpoint ? `${point.airport_code || 'Airport'} · ${point.name || 'Airport'}`
+      : (isHotelNode ? `H · ${point.name || point.hotel_name || 'Hotel'}`
+        : `${routePointOrdinal(point, index)}. ${point.name || 'Stop'}`));
   const day = point.day ? `Day ${point.day}<br>` : '';
   const displayUtility = Number(point.display_utility ?? point.interest_adjusted_value ?? point.final_poi_value);
   const finalValue = Number(point.final_poi_value);
@@ -3217,11 +3464,32 @@ function markerPopup(point, index, routeRecord) {
 function pointToMarker(point, index, routeRecord) {
   const style = FAMILY_STYLES[routeRecord?.family] || FAMILY_STYLES.selected;
   const candidateMarker = ['hotel', 'must_go', 'nature', 'context'].includes(routeRecord?.family);
+  if (point?.is_route_endpoint) {
+    const marker = L.marker([Number(point.lat), Number(point.lon)], {
+      icon: L.divIcon({
+        className: 'airport-route-endpoint',
+        html: `<span>${point.airport_code || 'AP'}</span>`,
+        iconSize: null,
+        iconAnchor: [19, 12],
+        popupAnchor: [0, -14]
+      }),
+      zIndexOffset: routeRecord?.default ? 720 : 430
+    });
+    marker.bindPopup(markerPopup(point, index, routeRecord));
+    marker.on('click', () => {
+      if (isPlayableRoute(routeRecord)) {
+        activePlaybackRouteId = routeRecord?.id || activePlaybackRouteId;
+        playbackStopIndex = index;
+        setPlaybackStop(index, false);
+      }
+    });
+    return marker;
+  }
   if (!candidateMarker) {
     const marker = L.marker([Number(point.lat), Number(point.lon)], {
       icon: L.divIcon({
         className: 'numbered-route-stop',
-        html: `<span>${index + 1}</span>`,
+        html: `<span>${routePointOrdinal(point, index)}</span>`,
         iconSize: [30, 30],
         iconAnchor: [15, 15],
         popupAnchor: [0, -16]
@@ -3424,8 +3692,21 @@ function loadedCandidatePois(routeId) {
   return Array.isArray(loaded?.pois) ? loaded.pois : [];
 }
 
+function routePointOrdinal(point, index) {
+  if (point?.is_route_endpoint || point?.is_airport_endpoint) return point.airport_code || 'AP';
+  if (point?.is_hotel_node || point?.node_kind === 'hotel') return 'H';
+  return point?.display_sequence_index
+    || point?.route_sequence_index
+    || point?.selected_stop_index
+    || point?.stop_order
+    || index + 1;
+}
+
 function labelPointHtml(point, index, selected = false) {
-  const prefix = selected ? `${index + 1}. ` : '';
+  const ordinal = routePointOrdinal(point, index);
+  const prefix = selected && !point?.is_route_endpoint && !point?.is_airport_endpoint && !point?.is_hotel_node
+    ? `${ordinal}. `
+    : (point?.is_route_endpoint || point?.is_airport_endpoint || point?.is_hotel_node ? `${ordinal} ` : '');
   return `${prefix}${point.name || point.hotel_name || point.nature_region || 'Place'}`;
 }
 
@@ -3445,15 +3726,15 @@ function addTextLabel(group, point, className, html) {
 
 function buildLabelLayer() {
   const group = L.layerGroup();
-  selectedContextStops().slice(0, 24).forEach((point, index) => {
+  selectedContextStops().filter(point => point?.is_selected_poi || point?.is_route_endpoint || point?.is_airport_endpoint || point?.is_hotel_node).slice(0, 32).forEach((point, index) => {
     addTextLabel(group, point, 'selected-label', labelPointHtml(point, index, true));
   });
+  if (!activeRouteIds.has('nature_candidates')) return group;
   const naturePoints = [
     ...loadedCandidatePois('nature_candidates'),
-    ...(Array.isArray(window.dashboardNatureExplore?.items) ? window.dashboardNatureExplore.items : [])
   ];
   const seen = new Set();
-  naturePoints.slice(0, 80).forEach(point => {
+  naturePoints.slice(0, 32).forEach(point => {
     const key = `${point.name || point.nature_region || ''}:${point.lat}:${point.lon}`;
     if (seen.has(key)) return;
     seen.add(key);
@@ -3656,22 +3937,37 @@ function drawLivePreviewRoute(points, weights = {}) {
     setDashboardStatus('No preview candidates with coordinates were available.', true);
     return;
   }
-  livePreviewPlaybackStops = drawable.map((point, index) => ({
-    ...point,
-    name: point.name || `Preview stop ${index + 1}`,
-    city: point.city || point.nature_region || '',
-    day: point.day || index + 1,
-    stop_order: index + 1,
-    type: point.type || point.category || point.park_type || (point.nature_region ? 'nature_candidate' : 'preview_candidate'),
-    category: point.category || point.type || point.park_type || (point.nature_region ? 'nature_candidate' : 'preview_candidate'),
-    description: point.description || `${point.name || 'Preview stop'} is a browser-only preview candidate from exported POI data.`,
-    why_selected: 'Preview only - rerun pipeline to save. This stop is not written back to optimizer artifacts.',
-    expected_duration_minutes: point.expected_duration_minutes || 75,
-    weather_risk: Number(point.weather_risk || 0.15),
-    source_confidence: Number(point.source_confidence || point.data_confidence || 0.5),
-    display_utility: Number(point.preview_score || point.display_utility || point.final_poi_value || 0),
-    optimization_value_source: 'browser_preview_score'
-  }));
+  let previewStopNumber = 0;
+  livePreviewPlaybackStops = drawable.map((point, index) => {
+    const isEndpoint = Boolean(point.is_route_endpoint);
+    if (!isEndpoint) previewStopNumber += 1;
+    const stopNumber = isEndpoint ? (point.stop_order || (point.route_endpoint_side === 'start' ? 0 : 999)) : previewStopNumber;
+    return {
+      ...point,
+      name: point.name || (isEndpoint ? point.airport_code || 'Airport endpoint' : `Preview stop ${stopNumber}`),
+      city: point.city || point.nature_region || '',
+      day: point.day || Math.max(1, stopNumber || index + 1),
+      stop_order: stopNumber,
+      type: isEndpoint ? 'airport_endpoint' : (point.type || point.category || point.park_type || (point.nature_region ? 'nature_candidate' : 'preview_candidate')),
+      category: isEndpoint ? 'airport_endpoint' : (point.category || point.type || point.park_type || (point.nature_region ? 'nature_candidate' : 'preview_candidate')),
+      description: point.description || `${point.name || 'Preview stop'} is a browser-only preview candidate from exported POI data.`,
+      why_selected: isEndpoint
+        ? 'Preview airport endpoint from the exported segment graph; not counted as a selected POI.'
+        : 'Preview only - rerun pipeline to save. This stop is not written back to optimizer artifacts.',
+      expected_duration_minutes: point.expected_duration_minutes || 75,
+      weather_risk: Number(point.weather_risk || 0.15),
+      source_confidence: Number(point.source_confidence || point.data_confidence || 0.5),
+      display_utility: Number(point.preview_score || point.display_utility || point.final_poi_value || 0),
+      optimization_value_source: isEndpoint ? 'configured_airport_endpoint' : 'browser_preview_score',
+      route_sequence_index: isEndpoint ? 0 : stopNumber,
+      display_sequence_index: isEndpoint ? (point.airport_code || 'AP') : stopNumber,
+      selected_stop_index: isEndpoint ? 0 : stopNumber,
+      node_kind: isEndpoint ? 'airport' : 'preview_poi',
+      is_airport_endpoint: isEndpoint,
+      is_selected_poi: false,
+      is_hotel_node: false
+    };
+  });
   livePreviewRouteRecord = {
     id: 'live_preview',
     label: 'Preview only - rerun pipeline to save',
@@ -3682,7 +3978,7 @@ function drawLivePreviewRoute(points, weights = {}) {
     marker_only: false
   };
   livePreviewLayer = L.layerGroup();
-  const latLngs = drawable.map(point => [Number(point.lat), Number(point.lon)]);
+  const latLngs = livePreviewPlaybackStops.map(point => [Number(point.lat), Number(point.lon)]);
   if (latLngs.length > 1) {
     L.polyline(latLngs, {
       color: '#f9735b',
@@ -3693,18 +3989,38 @@ function drawLivePreviewRoute(points, weights = {}) {
       className: 'route-line live-preview-line'
     }).addTo(livePreviewLayer);
   }
-  drawable.forEach((point, index) => {
-    const marker = L.circleMarker([Number(point.lat), Number(point.lon)], {
-      radius: 6,
-      color: '#c94b35',
-      fillColor: '#ffb199',
-      fillOpacity: 0.88,
-      weight: 2
-    });
+  livePreviewPlaybackStops.forEach((point, index) => {
+    let marker = null;
+    if (point.is_route_endpoint) {
+      marker = L.marker([Number(point.lat), Number(point.lon)], {
+        icon: L.divIcon({
+          className: 'airport-route-endpoint',
+          html: `<span>${point.airport_code || 'AP'}</span>`,
+          iconSize: null,
+          iconAnchor: [19, 12],
+          popupAnchor: [0, -14]
+        }),
+        zIndexOffset: 710
+      });
+    } else {
+      marker = L.circleMarker([Number(point.lat), Number(point.lon)], {
+        radius: 6,
+        color: '#c94b35',
+        fillColor: '#ffb199',
+        fillOpacity: 0.88,
+        weight: 2
+      });
+    }
     const score = Number(point.preview_score);
+    const label = point.is_route_endpoint ? `${point.airport_code || 'Airport'} · ${point.name || 'Airport'}` : `Preview ${routePointOrdinal(point, index)}. ${point.name || 'Candidate'}`;
     marker.bindPopup(
-      `<b>Preview ${index + 1}. ${point.name || 'Candidate'}</b><br>${point.city || point.nature_region || ''}<br>Preview score: ${Number.isFinite(score) ? score.toFixed(2) : 'n/a'}<br>Browser preview is approximate; Run All recomputes the real optimized route.`
+      `<b>${label}</b><br>${point.city || point.nature_region || ''}<br>Preview score: ${Number.isFinite(score) ? score.toFixed(2) : 'n/a'}<br>Browser preview is approximate; Run All recomputes the real optimized route.`
     );
+    marker.on('click', () => {
+      playbackStopIndex = index;
+      setActivePlaybackRoute('live_preview', false);
+      setPlaybackStop(index, false);
+    });
     marker.addTo(livePreviewLayer);
   });
   livePreviewLayer.addTo(dashboardMap);
@@ -3722,8 +4038,9 @@ function drawLivePreviewRoute(points, weights = {}) {
   }
   updateLayerToggleState();
   const naturePct = Math.round((Number(weights.nature) || 0) * 100);
+  const sequenceStatus = weights.__sequence_feasible === false ? ' Sequence infeasible or missing segment candidates.' : ' Sequence feasible.';
   setActivePlaybackRoute('live_preview', true);
-  setDashboardStatus(`Preview only - rerun pipeline to save. Browser-side route rebuilt (${naturePct}% nature).`);
+  setDashboardStatus(`Preview only - rerun pipeline to save. Browser-side route rebuilt (${naturePct}% nature).${sequenceStatus}`, weights.__sequence_feasible === false);
 }
 
 function clearLivePreviewRoute(updateStatus = true) {
@@ -3985,6 +4302,8 @@ window.activeRouteIds = activeRouteIds;
 window.toggleRoute = toggleRoute;
 window.toggleSelectedHotels = toggleSelectedHotels;
 window.toggleHotelCandidates = toggleHotelCandidates;
+window.showOnlyRoute = showOnlyRoute;
+window.setActivePlaybackRoute = setActivePlaybackRoute;
 window.runQuickAction = runQuickAction;
 window.showRouteGroup = showRouteGroup;
 window.zoomVisibleRoutes = fitVisibleRoutes;
@@ -4052,6 +4371,15 @@ function compactValue(value, digits = 2) {
   return Number.isFinite(number) ? number.toFixed(digits) : '';
 }
 
+function escapeHtml(value) {
+  return String(value ?? '')
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#39;');
+}
+
 function bindDashboardShellControls() {
   const panel = document.querySelector('.dashboard-panel');
   const handle = document.getElementById('dashboard-drag-handle');
@@ -4102,7 +4430,7 @@ function renderActiveStopDetail(stop, routeRecord, playbackMeta = {}) {
   }
   const rows = [
     ['Route', routeRecord?.label || ''],
-    ['Playback', playbackMeta.total ? `${playbackMeta.index + 1} of ${playbackMeta.total}` : ''],
+    ['Playback', playbackMeta.total ? `${routePointOrdinal(stop, playbackMeta.index || 0)} of ${playbackMeta.total}` : ''],
     ['Day', stop.day || ''],
     ['City', stop.city || ''],
     ['City/anchor', stop.city_or_anchor || ''],
@@ -4123,19 +4451,27 @@ function renderActiveStopDetail(stop, routeRecord, playbackMeta = {}) {
     ['Source', stop.source_list || '']
   ].filter(([, value]) => value !== '' && value !== undefined && value !== null);
   const keyRows = rows.filter(([key]) => ['City/anchor', 'Type', 'Expected duration', 'Weather risk', 'Source confidence', 'Optimizer value', 'Nature score', 'Scenic score'].includes(key));
+  const imageUrl = String(stop.image_url || '').trim();
+  const visual = imageUrl
+    ? `<div class="stop-visual" role="img" aria-label="${escapeHtml(stop.name || 'Place')} image"><img src="${escapeHtml(imageUrl)}" alt="${escapeHtml(stop.name || 'Place')}"></div>`
+    : '<div class="stop-visual" role="img" aria-label="Scenic landscape preview"></div>';
+  const sourceLink = stop.source_url || stop.website_url
+    ? `<div class="detail-copy"><b>Source</b><a href="${escapeHtml(stop.source_url || stop.website_url)}" target="_blank" rel="noopener">${escapeHtml(stop.detail_source || stop.source_url || stop.website_url)}</a></div>`
+    : '';
   target.innerHTML = `
     <div class="detail-card active-stop-card">
-      <div class="stop-visual" role="img" aria-label="Scenic landscape preview"></div>
+      ${visual}
       <div class="active-stop-body">
         <div class="active-stop-title-row">
-          <strong>${stop.name || 'Stop'}</strong>
+          <strong>${escapeHtml(stop.name || 'Stop')}</strong>
           <span class="day-pill">Day ${stop.day || playbackMeta.index + 1 || 1}</span>
         </div>
         <div class="active-stop-grid">
-          ${keyRows.map(([key, value]) => `<div><b>${key}</b>${value}</div>`).join('')}
+          ${keyRows.map(([key, value]) => `<div><b>${escapeHtml(key)}</b>${escapeHtml(value)}</div>`).join('')}
         </div>
-        <div class="detail-copy"><b>Description</b>${stop.description || 'No description exported.'}</div>
-        <div class="detail-copy"><b>Why selected</b>${stop.why_selected || stop.reason_selected || 'Selection reason was not exported.'}</div>
+        <div class="detail-copy"><b>Description</b>${escapeHtml(stop.description || 'No description exported.')}</div>
+        <div class="detail-copy"><b>Why selected</b>${escapeHtml(stop.why_selected || stop.reason_selected || 'Selection reason was not exported.')}</div>
+        ${sourceLink}
       </div>
     </div>
   `;
@@ -4370,6 +4706,36 @@ function normalizeInterestBarValues(raw) {
   return Object.fromEntries(axes.map(axis => [axis, Math.max(0, Number(raw[axis]) || 0) / total]));
 }
 
+function nearestInterestProfile(preview, weights) {
+  const presets = preview?.preset_weights || {};
+  const threshold = Number(preview?.saved_profile_match_threshold ?? 0.12);
+  let best = { profile: '', distance: Number.POSITIVE_INFINITY, threshold, weights: null };
+  Object.entries(presets).forEach(([profile, presetWeights]) => {
+    const distance = ['nature', 'city', 'culture', 'history']
+      .reduce((sum, axis) => sum + Math.abs(Number(weights[axis] || 0) - Number(presetWeights?.[axis] || 0)), 0);
+    if (distance < best.distance) best = { profile, distance, threshold, weights: presetWeights };
+  });
+  best.matched = Boolean(best.profile) && best.distance <= threshold;
+  return best;
+}
+
+function savedInterestProfileRoute(profile) {
+  const routes = Array.isArray(window.dashboardRouteIndex?.routes) ? window.dashboardRouteIndex.routes : [];
+  return routes.find(route =>
+    route.family === 'interest_profile'
+    && String(route.interest_profile || route.profile || '').toLowerCase() === String(profile || '').toLowerCase()
+  );
+}
+
+function previewGraphForWeights(preview, weights) {
+  const match = nearestInterestProfile(preview, weights);
+  const graphs = preview?.preview_route_graphs || {};
+  return {
+    match,
+    graph: graphs[match.profile] || preview?.preview_route_graph || {}
+  };
+}
+
 function previewItemAxis(item, axis) {
   if (axis === 'city') return Number(item.city_axis ?? item.city ?? item.city_score ?? 0);
   return Number(item[axis] ?? item[`${axis}_score`] ?? 0);
@@ -4460,6 +4826,8 @@ function renderInterestPreview(preview) {
       if (node) node.textContent = `${Math.round(normalized[axis] * 100)}%`;
     });
     const routeMix = preview.route_mix || {};
+    const profileMatch = nearestInterestProfile(preview, normalized);
+    const savedProfile = savedInterestProfileRoute(profileMatch.profile);
     const routeError = axes.reduce((sum, axis) => {
       const mixValue = Number(routeMix[axis] ?? routeMix[`${axis}_score`] ?? 0);
       return sum + Math.abs((normalized[axis] || 0) - mixValue);
@@ -4469,10 +4837,11 @@ function renderInterestPreview(preview) {
     if (matchNode) {
       matchNode.innerHTML = `
         <div><b>Saved route match:</b> ${compactValue(routeScore, 2)}</div>
-        <div><b>Route state:</b> Preview only - rerun pipeline to save</div>
+        <div><b>Closest saved profile:</b> ${profileMatch.profile || 'none'}${profileMatch.matched && savedProfile ? ' (available)' : ''}</div>
+        <div><b>Route state:</b> ${profileMatch.matched && savedProfile ? 'Saved optimized profile route available' : 'Preview only - rerun pipeline to save'}</div>
       `;
     }
-    const candidates = (preview.top_boosted_pois || [])
+    const candidates = (preview.preview_candidates || preview.top_boosted_pois || [])
       .map(item => ({ ...item, preview_score: previewScore(item, normalized, preview.lambdas || {}) }))
       .sort((a, b) => b.preview_score - a.preview_score)
     .filter(item => candidateAllowedByWeights(item, normalized))
@@ -4490,8 +4859,38 @@ function renderInterestPreview(preview) {
     axis,
     Number(target.querySelector(`[data-interest-axis="${axis}"]`)?.value || 0)
   ])));
+  const previewId = item => String(item.id || item.poi_id || item.place_id || item.name || '')
+    .toLowerCase()
+    .trim()
+    .replace(/\\s+/g, '_');
+  const itemCityText = item => `${item.name || ''} ${item.city || ''} ${item.city_or_anchor || ''} ${item.nature_region || ''} ${item.category || ''}`.toLowerCase();
+  const endpointPoint = (endpoint, side) => endpoint && Number.isFinite(Number(endpoint.lat)) && Number.isFinite(Number(endpoint.lon))
+    ? {
+        name: endpoint.name || endpoint.code || 'Airport endpoint',
+        city: endpoint.city || '',
+        city_or_anchor: endpoint.name || endpoint.code || '',
+        lat: Number(endpoint.lat),
+        lon: Number(endpoint.lon),
+        day: side === 'start' ? 1 : Number(window.dashboardMetrics?.trip_days || 0) || 1,
+        stop_order: side === 'start' ? 0 : 999,
+        type: 'airport_endpoint',
+        category: 'airport_endpoint',
+        is_route_endpoint: true,
+        is_airport_endpoint: true,
+        is_selected_poi: false,
+        is_hotel_node: false,
+        node_kind: 'airport',
+        display_sequence_index: endpoint.code || 'AP',
+        selected_stop_index: 0,
+        route_sequence_index: 0,
+        route_endpoint_side: side,
+        airport_code: endpoint.code || ''
+      }
+    : null;
   const rankedPreviewCandidates = weights => {
-    const previewItems = Array.isArray(preview.top_boosted_pois) ? preview.top_boosted_pois : [];
+    const previewItems = Array.isArray(preview.preview_candidates)
+      ? preview.preview_candidates
+      : (Array.isArray(preview.top_boosted_pois) ? preview.top_boosted_pois : []);
     const natureItems = Array.isArray(window.dashboardNatureExplore?.items) ? window.dashboardNatureExplore.items : [];
     const merged = [...previewItems, ...natureItems];
     const seen = new Set();
@@ -4507,11 +4906,80 @@ function renderInterestPreview(preview) {
       .map(item => ({ ...item, preview_score: previewScore(item, weights, preview.lambdas || {}) }))
       .sort((a, b) => b.preview_score - a.preview_score);
   };
+  const candidatesForSegment = (ranked, segment, seenKeys) => {
+    const candidateIds = new Set((segment.candidate_ids || []).map(value => String(value).toLowerCase()));
+    const allowed = (segment.allowed_cities || [])
+      .map(value => String(value).toLowerCase())
+      .filter(Boolean);
+    return ranked.filter(item => {
+      const key = `${item.name || ''}:${item.lat}:${item.lon}`.toLowerCase();
+      if (seenKeys.has(key)) return false;
+      const text = itemCityText(item);
+      const id = previewId(item);
+      if (candidateIds.has(id)) return true;
+      return allowed.some(city => text.includes(city));
+    });
+  };
+  const buildSegmentOrderedPreview = weights => {
+    const ranked = rankedPreviewCandidates(weights);
+    const graphSelection = previewGraphForWeights(preview, weights);
+    const previewGraph = graphSelection.graph || {};
+    const segments = Array.isArray(previewGraph.segments) ? previewGraph.segments : [];
+    const route = [];
+    const missing = [];
+    const seen = new Set();
+    const start = endpointPoint(previewGraph.start_endpoint, 'start');
+    const end = endpointPoint(previewGraph.end_endpoint, 'end');
+    if (start) route.push(start);
+    if (!segments.length) {
+      ranked.slice(0, Math.max(2, Math.min(10, Number(window.dashboardMetrics?.selected_stop_count || 8)))).forEach(item => route.push(item));
+      if (end) route.push(end);
+      return { route, sequenceFeasible: false, missingSegments: ['no segment graph exported'] };
+    }
+    segments.forEach(segment => {
+      const limit = Math.max(1, Number(segment.stop_limit || 1));
+      const picked = candidatesForSegment(ranked, segment, seen).slice(0, limit);
+      if (!picked.length) {
+        missing.push(`${segment.start_city || '?'} to ${segment.end_city || '?'}`);
+      }
+      picked.forEach(item => {
+        const key = `${item.name || ''}:${item.lat}:${item.lon}`.toLowerCase();
+        seen.add(key);
+        route.push({
+          ...item,
+          segment_index: segment.segment_index,
+          allowed_cities: (segment.allowed_cities || []).join(', ')
+        });
+      });
+    });
+    if (end) route.push(end);
+    return { route, sequenceFeasible: missing.length === 0, missingSegments: missing };
+  };
   const buildLivePreviewRoute = () => {
     const weights = currentWeights();
-    const maxStops = Math.max(2, Math.min(10, Number(window.dashboardMetrics?.selected_stop_count || 8)));
-    const candidates = rankedPreviewCandidates(weights).slice(0, maxStops);
-    if (!candidates.length) {
+    const profileMatch = nearestInterestProfile(preview, weights);
+    const savedProfileRoute = profileMatch.matched ? savedInterestProfileRoute(profileMatch.profile) : null;
+    if (savedProfileRoute && window.showOnlyRoute) {
+      window.showOnlyRoute(savedProfileRoute);
+      if (window.clearLivePreviewRoute) window.clearLivePreviewRoute(false);
+      const matchNode = target.querySelector('#interest-route-match');
+      if (matchNode) {
+        matchNode.innerHTML = `
+          <div><b>Saved profile route:</b> ${savedProfileRoute.label || profileMatch.profile}</div>
+          <div><b>Profile distance:</b> ${compactValue(profileMatch.distance, 2)} (threshold ${compactValue(profileMatch.threshold, 2)})</div>
+          <div><b>Route state:</b> Saved optimized route artifact</div>
+        `;
+      }
+      const status = document.getElementById('dashboard-status');
+      if (status) {
+        status.textContent = `Loaded saved ${profileMatch.profile} route artifact.`;
+        status.style.color = '#0a6b53';
+      }
+      return;
+    }
+    const previewRoute = buildSegmentOrderedPreview(weights);
+    const candidates = previewRoute.route;
+    if (!candidates.filter(item => !item.is_route_endpoint).length) {
       const status = document.getElementById('dashboard-status');
       if (status) {
         status.textContent = 'No exported POI/nature candidates with coordinates are available for the live preview route.';
@@ -4519,7 +4987,9 @@ function renderInterestPreview(preview) {
       }
       return;
     }
-    if (window.drawLivePreviewRoute) window.drawLivePreviewRoute(candidates, weights);
+    if (window.drawLivePreviewRoute) {
+      window.drawLivePreviewRoute(candidates, { ...weights, __sequence_feasible: previewRoute.sequenceFeasible });
+    }
     const matchNode = target.querySelector('#interest-route-match');
     const score = candidates.reduce((sum, item) => sum + Number(item.preview_score || 0), 0);
     const natureStops = candidates.filter(item => {
@@ -4533,8 +5003,9 @@ function renderInterestPreview(preview) {
     if (matchNode) {
       matchNode.innerHTML = `
         <div><b>Preview route score:</b> ${compactValue(score)}</div>
-        <div><b>Preview stops:</b> ${candidates.length}</div>
+        <div><b>Preview stops:</b> ${candidates.filter(item => !item.is_route_endpoint).length}</div>
         <div><b>Preview nature stops:</b> ${natureStops}</div>
+        <div><b>Sequence:</b> ${previewRoute.sequenceFeasible ? 'feasible' : `needs rerun / missing ${previewRoute.missingSegments.join('; ')}`}</div>
         <div><b>Route state:</b> Preview only - rerun pipeline to save</div>
       `;
     }

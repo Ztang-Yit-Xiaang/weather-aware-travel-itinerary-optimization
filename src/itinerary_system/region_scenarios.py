@@ -378,6 +378,13 @@ SCENARIOS: dict[str, ScenarioDefinition] = {
                 ["Yosemite National Park", "Sequoia National Park", "Kings Canyon National Park"],
             ),
             _route_option(
+                "City coastal corridor",
+                "San Francisco",
+                "Los Angeles",
+                ["San Francisco", "Monterey", "Big Sur", "Santa Barbara", "Los Angeles"],
+                ["Big Sur", "Central Coast Beaches", "Santa Monica Mountains"],
+            ),
+            _route_option(
                 "Coast and southern desert nature",
                 "San Francisco",
                 "Los Angeles",

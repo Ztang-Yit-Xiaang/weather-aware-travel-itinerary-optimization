@@ -73,21 +73,30 @@ def _weather_risk(row: pd.Series) -> float:
 
 
 def route_stats(
-    selected: list[int], pois: pd.DataFrame, depot: tuple[float, float], config: TripConfig
+    selected: list[int],
+    pois: pd.DataFrame,
+    start_depot: tuple[float, float],
+    config: TripConfig,
+    *,
+    end_depot: tuple[float, float] | None = None,
 ) -> dict[str, float]:
+    end_depot = end_depot or start_depot
     if not selected:
+        direct_travel = travel_minutes(start_depot, end_depot) if start_depot != end_depot else 0.0
         return {
             "total_value": 0.0,
-            "total_travel_minutes": 0.0,
+            "total_travel_minutes": float(direct_travel),
             "total_visit_minutes": 0.0,
-            "total_time_minutes": 0.0,
+            "total_time_minutes": float(direct_travel),
             "total_cost": 0.0,
             "total_detour_minutes": 0.0,
             "total_weather_risk": 0.0,
             "diversity_score": 0.0,
         }
     points = (
-        [depot] + [(float(pois.loc[idx, "latitude"]), float(pois.loc[idx, "longitude"])) for idx in selected] + [depot]
+        [start_depot]
+        + [(float(pois.loc[idx, "latitude"]), float(pois.loc[idx, "longitude"])) for idx in selected]
+        + [end_depot]
     )
     travel = sum(travel_minutes(left, right) for left, right in zip(points[:-1], points[1:], strict=False))
     visit = sum(visit_minutes(pois.loc[idx]) for idx in selected)
@@ -124,13 +133,18 @@ def _constraints(config: TripConfig, max_pois: int) -> dict[str, float]:
 
 
 def _greedy_epsilon_repair(
-    candidate_df: pd.DataFrame, config: TripConfig, depot: tuple[float, float]
+    candidate_df: pd.DataFrame,
+    config: TripConfig,
+    start_depot: tuple[float, float],
+    *,
+    end_depot: tuple[float, float] | None = None,
 ) -> dict[str, Any]:
     max_pois = int(config.get("optimization", "max_pois_per_day", 4))
     constraints = _constraints(config, max_pois)
+    end_depot = end_depot or start_depot
     pois = candidate_df.reset_index(drop=True).copy()
     if pois.empty:
-        stats = route_stats([], pois, depot, config)
+        stats = route_stats([], pois, start_depot, config, end_depot=end_depot)
         return {
             "solver_status": "heuristic_epsilon_repair_empty",
             "selected_indices": [],
@@ -150,39 +164,53 @@ def _greedy_epsilon_repair(
         axis=1,
     )
     selected: list[int] = []
-    for idx in pois.sort_values("repair_score", ascending=False).index.tolist():
-        trial = selected + [int(idx)]
-        stats = route_stats(trial, pois, depot, config)
-        if len(trial) > max_pois:
-            continue
-        if stats["total_time_minutes"] > constraints["time_budget"]:
-            continue
-        if stats["total_cost"] > constraints["daily_hard_budget"]:
-            continue
-        if stats["total_detour_minutes"] > constraints["epsilon_detour"]:
-            continue
-        if stats["total_weather_risk"] > constraints["epsilon_weather"]:
-            continue
-        selected = trial
-    stats = route_stats(selected, pois, depot, config)
+    current = start_depot
+    remaining = pois.sort_values("repair_score", ascending=False).index.tolist()
+    while remaining and len(selected) < max_pois:
+        ranked: list[tuple[float, int]] = []
+        for idx in remaining:
+            point = (float(pois.loc[idx, "latitude"]), float(pois.loc[idx, "longitude"]))
+            travel_from_current = travel_minutes(current, point)
+            travel_to_end = travel_minutes(point, end_depot)
+            ranked.append((float(pois.loc[idx, "repair_score"]) - 0.006 * travel_from_current - 0.003 * travel_to_end, int(idx)))
+        accepted_idx: int | None = None
+        for _, idx in sorted(ranked, reverse=True):
+            trial = selected + [int(idx)]
+            stats = route_stats(trial, pois, start_depot, config, end_depot=end_depot)
+            if stats["total_time_minutes"] > constraints["time_budget"]:
+                continue
+            if stats["total_cost"] > constraints["daily_hard_budget"]:
+                continue
+            if stats["total_detour_minutes"] > constraints["epsilon_detour"]:
+                continue
+            if stats["total_weather_risk"] > constraints["epsilon_weather"]:
+                continue
+            accepted_idx = int(idx)
+            break
+        if accepted_idx is None:
+            break
+        selected.append(accepted_idx)
+        current = (float(pois.loc[accepted_idx, "latitude"]), float(pois.loc[accepted_idx, "longitude"]))
+        remaining = [idx for idx in remaining if int(idx) != accepted_idx]
+    stats = route_stats(selected, pois, start_depot, config, end_depot=end_depot)
+    # The loop maintains feasibility, but keep the explicit objective construction close to the solver contract.
     objective = (
         stats["total_value"]
         + float(config.get("multi_objective", "diversity_bonus_weight", 0.12)) * stats["diversity_score"]
         - float(config.get("multi_objective", "secondary_travel_penalty", 0.005)) * stats["total_travel_minutes"]
-    )
-    feasible = bool(
-        stats["total_time_minutes"] <= constraints["time_budget"]
-        and stats["total_cost"] <= constraints["daily_hard_budget"]
-        and stats["total_detour_minutes"] <= constraints["epsilon_detour"]
-        and stats["total_weather_risk"] <= constraints["epsilon_weather"]
-        and stats["diversity_score"] + 1e-9 >= constraints["min_diversity"]
     )
     return {
         "solver_status": "heuristic_epsilon_repair",
         "selected_indices": selected,
         "selected_pois": pois.loc[selected, "name"].astype(str).tolist() if selected else [],
         "objective_value": float(objective),
-        "feasible": feasible,
+        "feasible": bool(
+            stats["total_time_minutes"] <= constraints["time_budget"]
+            and stats["total_cost"] <= constraints["daily_hard_budget"]
+            and stats["total_detour_minutes"] <= constraints["epsilon_detour"]
+            and stats["total_weather_risk"] <= constraints["epsilon_weather"]
+            and stats["diversity_score"] + 1e-9 >= constraints["min_diversity"]
+        ),
         "optimality_gap": math.nan,
         **stats,
     }
@@ -193,13 +221,24 @@ def solve_multi_objective_route(
     config: TripConfig,
     *,
     depot: tuple[float, float] | None = None,
+    start_depot: tuple[float, float] | None = None,
+    end_depot: tuple[float, float] | None = None,
     candidate_size: int | None = None,
     route_id: str = "epsilon_gurobi_route",
 ) -> dict[str, Any]:
     """Solve a bandit-selected small route with explicit epsilon constraints."""
     start = time.perf_counter()
+    if start_depot is None:
+        start_depot = depot
+    if end_depot is None:
+        end_depot = depot or start_depot
     if candidate_df.empty:
-        result = _greedy_epsilon_repair(candidate_df, config, depot or (0.0, 0.0))
+        result = _greedy_epsilon_repair(
+            candidate_df,
+            config,
+            start_depot or (0.0, 0.0),
+            end_depot=end_depot or start_depot or (0.0, 0.0),
+        )
         result["runtime_seconds"] = time.perf_counter() - start
         result["route_id"] = route_id
         return result
@@ -213,8 +252,10 @@ def solve_multi_objective_route(
         .head(max_candidates)
         .reset_index(drop=True)
     )
-    if depot is None:
-        depot = (float(pois["latitude"].mean()), float(pois["longitude"].mean()))
+    if start_depot is None:
+        start_depot = (float(pois["latitude"].mean()), float(pois["longitude"].mean()))
+    if end_depot is None:
+        end_depot = start_depot
     max_pois = min(int(config.get("optimization", "max_pois_per_day", 4)), len(pois))
     constraints = _constraints(config, max_pois)
     values = [poi_value(pois.loc[i], config) for i in range(len(pois))]
@@ -222,12 +263,19 @@ def solve_multi_objective_route(
     costs = [_poi_cost(pois.loc[i], config) for i in range(len(pois))]
     detours = [float(pois.loc[i].get("detour_minutes", 0.0) or 0.0) for i in range(len(pois))]
     weather = [_weather_risk(pois.loc[i]) for i in range(len(pois))]
-    points = [depot] + [(float(pois.loc[i, "latitude"]), float(pois.loc[i, "longitude"])) for i in range(len(pois))]
+    start_node = 0
+    end_node = len(pois) + 1
+    poi_nodes = list(range(1, len(pois) + 1))
+    points = (
+        [start_depot]
+        + [(float(pois.loc[i, "latitude"]), float(pois.loc[i, "longitude"])) for i in range(len(pois))]
+        + [end_depot]
+    )
     travel = {
         (i, j): travel_minutes(points[i], points[j])
-        for i in range(len(pois) + 1)
-        for j in range(len(pois) + 1)
-        if i != j
+        for i in range(len(pois) + 2)
+        for j in range(len(pois) + 2)
+        if i != j and i != end_node and j != start_node
     }
 
     try:
@@ -242,14 +290,23 @@ def solve_multi_objective_route(
         x = model.addVars(n, vtype=GRB.BINARY, name="visit")
         y = model.addVars(travel.keys(), vtype=GRB.BINARY, name="arc")
         u = model.addVars(range(1, n + 1), lb=0.0, ub=float(n), vtype=GRB.CONTINUOUS, name="order")
+        z = model.addVar(vtype=GRB.BINARY, name="route_active")
 
         model.addConstr(gp.quicksum(x[i] for i in range(n)) <= max_pois, name="max_pois")
-        model.addConstr(gp.quicksum(y[0, j] for j in range(1, n + 1)) <= 1, name="leave_depot")
-        model.addConstr(gp.quicksum(y[i, 0] for i in range(1, n + 1)) <= 1, name="return_depot")
+        model.addConstr(gp.quicksum(x[i] for i in range(n)) <= max_pois * z, name="active_if_any_visit")
+        model.addConstr(gp.quicksum(x[i] for i in range(n)) >= z, name="visit_if_active")
+        model.addConstr(gp.quicksum(y[start_node, j] for j in poi_nodes + [end_node]) == z, name="leave_start")
+        model.addConstr(gp.quicksum(y[i, end_node] for i in [start_node] + poi_nodes) == z, name="enter_end")
         for i in range(n):
             node = i + 1
-            model.addConstr(gp.quicksum(y[node, j] for j in range(n + 1) if j != node) == x[i], name=f"out_{i}")
-            model.addConstr(gp.quicksum(y[j, node] for j in range(n + 1) if j != node) == x[i], name=f"in_{i}")
+            model.addConstr(
+                gp.quicksum(y[node, j] for j in poi_nodes + [end_node] if j != node) == x[i],
+                name=f"out_{i}",
+            )
+            model.addConstr(
+                gp.quicksum(y[j, node] for j in [start_node] + poi_nodes if j != node) == x[i],
+                name=f"in_{i}",
+            )
             model.addConstr(u[node] <= n * x[i], name=f"order_active_{i}")
         for i in range(1, n + 1):
             for j in range(1, n + 1):
@@ -307,7 +364,7 @@ def solve_multi_objective_route(
         selected = [i for i in range(n) if x[i].X > 0.5]
         route_arcs = [(i, j) for (i, j) in travel if y[i, j].X > 0.5]
         ordered = []
-        current = 0
+        current = start_node
         guard = 0
         while route_arcs and guard <= n + 1:
             guard += 1
@@ -317,12 +374,12 @@ def solve_multi_objective_route(
             edge = next_edges[0]
             _, nxt = edge
             route_arcs.remove(edge)
-            if nxt == 0:
+            if nxt == end_node:
                 break
             ordered.append(nxt - 1)
             current = nxt
         selected = ordered or selected
-        stats = route_stats(selected, pois, depot, config)
+        stats = route_stats(selected, pois, start_depot, config, end_depot=end_depot)
         result = {
             "solver_status": f"gurobi_status_{int(model.Status)}",
             "selected_indices": selected,
@@ -339,7 +396,7 @@ def solve_multi_objective_route(
             **stats,
         }
     except Exception as exc:
-        result = _greedy_epsilon_repair(pois, config, depot)
+        result = _greedy_epsilon_repair(pois, config, start_depot, end_depot=end_depot)
         result["solver_status"] = f"{result['solver_status']}_after_gurobi_error:{type(exc).__name__}"
 
     result["runtime_seconds"] = float(time.perf_counter() - start)

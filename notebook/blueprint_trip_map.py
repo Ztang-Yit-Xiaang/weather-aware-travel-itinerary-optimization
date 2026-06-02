@@ -747,8 +747,9 @@ def _city_hotel_catalog(context, city):
     if not cached_osm.empty:
         city_rows = cached_osm[cached_osm["city"].astype(str).str.lower().eq(city.lower())].copy()
         if not city_rows.empty:
-            city_rows["rating_score"] = _numeric_catalog_series(city_rows, "stars", 0)
-            city_rows["nightly_price"] = np.nan
+            rating_fallback = _numeric_catalog_series(city_rows, "stars", 0)
+            city_rows["rating_score"] = _numeric_catalog_series(city_rows, "rating_score", rating_fallback)
+            city_rows["nightly_price"] = pd.to_numeric(city_rows.get("nightly_price", np.nan), errors="coerce")
             city_rows["source"] = city_rows.get("source", "openstreetmap_overpass_cache")
             type_priority = {"hotel": 0, "motel": 1, "guest_house": 2, "hostel": 3, "apartment": 4}
             city_rows["type_priority"] = city_rows.get("type", "hotel").map(type_priority).fillna(5)
@@ -6599,8 +6600,11 @@ def build_production_trip_map(context, output_path=None, run_live_routing=None):
         trip_map.fit_bounds(bounds_points, padding=(40, 40))
 
     if run_live:
-        with cache_path.open("w", encoding="utf-8") as handle:
-            json.dump(route_cache, handle)
+        try:
+            with cache_path.open("w", encoding="utf-8") as handle:
+                json.dump(route_cache, handle)
+        except PermissionError as exc:
+            print(f"Road route cache write skipped: {exc}")
 
     trip_map.save(str(output_path))
     return trip_map, day_plan_df, output_path

@@ -116,7 +116,15 @@ def main() -> int:
 
     enriched = _read_csv(output_dir / "production_enriched_poi_catalog.csv")
     route_stops = _read_csv(output_dir / "production_method_route_stops.csv")
+    day_plan = _read_csv(output_dir / "production_day_plan.csv")
+    sequence_audit = _read_csv(output_dir / "production_route_sequence_audit.csv")
     anchor_audit = _read_csv(output_dir / "production_dataset_completeness_audit.csv")
+    hotel_debug = _read_csv(output_dir / "production_hotel_selection_debug.csv")
+    selected_hotels_path = assets_dir / "selected_hotels.json"
+    selected_route_pois_path = assets_dir / "pois" / "selected_route_pois.json"
+    playback_path = assets_dir / "playback_data.json"
+    interest_routes = _read_csv(output_dir / "production_interest_route_stops.csv")
+    excluded_poi_audit = _read_csv(output_dir / "production_excluded_poi_category_audit.csv")
     if anchor_audit.empty:
         anchor_audit = _read_csv(output_dir / "production_route_anchor_audit.csv")
     metadata = read_artifact_metadata(output_dir)
@@ -135,6 +143,8 @@ def main() -> int:
     print(f"artifact_metadata_scenario: {metadata.get('scenario', 'missing')}")
     print(f"artifact_metadata_interest: {metadata.get('interest_mode', 'missing')}")
     print(f"artifact_metadata_timestamp_utc: {metadata.get('timestamp_utc', 'missing')}")
+    print(f"interest_profile_routes: {sorted(interest_routes.get('interest_profile', pd.Series(dtype=str)).dropna().astype(str).unique()) if not interest_routes.empty else 'missing'}")
+    print(f"excluded_poi_category_audit_rows: {len(excluded_poi_audit)}")
 
     if not enriched.empty:
         group_cols = [col for col in ["city", "nature_region", "category", "source_list"] if col in enriched.columns]
@@ -156,6 +166,11 @@ def main() -> int:
         else 0
     )
     print(f"selected_nature_stop_count: {selected_nature}")
+    if not sequence_audit.empty:
+        print("route_sequence_audit:")
+        print(sequence_audit.to_string(index=False))
+    else:
+        print("route_sequence_audit: missing")
 
     failures = []
     required_selected = _required_selected_anchors(config)
@@ -211,8 +226,85 @@ def main() -> int:
         )
     print(f"ui_default_route_matches_selected_data: {ui_matches}")
 
+    placeholder_pattern = "lodging candidate pending|city_center_placeholder"
+    if not hotel_debug.empty and "hotel_name" in hotel_debug.columns:
+        placeholder_hotels = hotel_debug["hotel_name"].fillna("").astype(str).str.contains(
+            placeholder_pattern, case=False, regex=True, na=False
+        )
+        print(f"placeholder_selected_hotels: {int((placeholder_hotels & hotel_debug.get('selected', pd.Series(False, index=hotel_debug.index)).map(lambda value: _truthy(value, False))).sum())}")
+        if (placeholder_hotels & hotel_debug.get("selected", pd.Series(False, index=hotel_debug.index)).map(lambda value: _truthy(value, False))).any():
+            failures.append("selected hotel artifacts contain lodging placeholder rows")
+    if selected_hotels_path.exists():
+        try:
+            selected_hotels_payload = json.loads(selected_hotels_path.read_text(encoding="utf-8"))
+            names = [str(item.get("hotel_name", "")) for item in selected_hotels_payload.get("items", [])]
+            if any("lodging candidate pending" in name.lower() for name in names):
+                failures.append("dashboard selected_hotels.json contains lodging placeholder rows")
+        except Exception as exc:
+            failures.append(f"could not read selected_hotels.json: {type(exc).__name__}")
+
+    if selected_route_pois_path.exists():
+        try:
+            poi_payload = json.loads(selected_route_pois_path.read_text(encoding="utf-8"))
+            display_numbers = [
+                int(item.get("display_sequence_index"))
+                for item in poi_payload
+                if str(item.get("display_sequence_index", "")).strip().isdigit()
+            ]
+            print(f"selected_display_sequence_numbers: {display_numbers}")
+            if len(display_numbers) != len(set(display_numbers)):
+                failures.append("selected POI display sequence labels are not unique")
+        except Exception as exc:
+            failures.append(f"could not read selected_route_pois.json: {type(exc).__name__}")
+    if playback_path.exists():
+        try:
+            playback_payload = json.loads(playback_path.read_text(encoding="utf-8"))
+            selected_route = playback_payload.get("routes", {}).get("selected_route", {})
+            playback_stops = selected_route.get("stops", [])
+            selected_poi_numbers = [
+                int(item.get("display_sequence_index"))
+                for item in playback_stops
+                if item.get("is_selected_poi") and str(item.get("display_sequence_index", "")).strip().isdigit()
+            ]
+            hotel_nodes = [item for item in playback_stops if item.get("is_hotel_node")]
+            print(f"playback_selected_poi_numbers: {selected_poi_numbers}")
+            print(f"playback_hotel_node_count: {len(hotel_nodes)}")
+            if len(selected_poi_numbers) != len(set(selected_poi_numbers)):
+                failures.append("playback selected POI labels are not unique")
+        except Exception as exc:
+            failures.append(f"could not read playback_data.json: {type(exc).__name__}")
+    required_profiles = {"nature_heavy", "balanced_interest", "city_heavy"}
+    exported_profiles = set(
+        interest_routes.get("interest_profile", pd.Series(dtype=str)).dropna().astype(str)
+    ) if not interest_routes.empty else set()
+    if not required_profiles.issubset(exported_profiles):
+        failures.append(f"missing exported interest profile routes: {sorted(required_profiles - exported_profiles)}")
+
     if not metadata_fresh:
         failures.append("artifact metadata is stale or missing")
+    if sequence_audit.empty:
+        failures.append("route sequence audit is missing")
+    elif "passed" in sequence_audit.columns:
+        failed_sequence = sequence_audit[~sequence_audit["passed"].map(lambda value: _truthy(value, False))]
+        for _, row in failed_sequence.iterrows():
+            failures.append(f"route sequence audit failed: {row.get('check', 'unknown')} {row.get('details', '')}")
+    if not selected.empty and "sequence_violation_flag" in selected.columns:
+        selected_violations = selected[selected["sequence_violation_flag"].map(lambda value: _truthy(value, False))]
+        if not selected_violations.empty:
+            failures.append("selected route contains stops outside their allowed segment")
+    if not selected.empty and not day_plan.empty:
+        selected_names = (
+            selected.get("attraction_name", pd.Series(dtype=str)).fillna("").astype(str).str.lower().str.strip()
+        )
+        day_names = (
+            day_plan.get("attraction_name", day_plan.get("name", pd.Series(dtype=str)))
+            .fillna("")
+            .astype(str)
+            .str.lower()
+            .str.strip()
+        )
+        if list(selected_names[selected_names.ne("")]) != list(day_names[day_names.ne("")]):
+            failures.append("production_day_plan.csv does not match selected method route stops")
     if not bool(la_selected or la_gateway):
         failures.append("Los Angeles is neither selected nor used as gateway/base")
     if not ui_matches:

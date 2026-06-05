@@ -32,3 +32,4 @@ results/outputs/production_scenario_comparison.csv
 results/outputs/production_map_artifact_size_report.csv
 results/quality/
 dataset/
+report/

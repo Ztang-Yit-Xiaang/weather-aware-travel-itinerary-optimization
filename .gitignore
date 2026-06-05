@@ -17,10 +17,6 @@ results/yelp_accommodation_cache.json
 results/cache/
 results/cache/nps_*.json
 results/cache/nps_parks_*.json
-results/figures/*.html
-results/figures/production_hierarchical_trip_map.html
-results/figures/lightweight_share_map.html
-results/figures/full_interactive_dashboard/
 results/outputs/*.csv
 results/outputs/*.json
 results/outputs/*.html

@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Weather-Aware Itinerary Dashboard</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+  <link rel="stylesheet" href="assets/style.css" />
+</head>
+<body class="dashboard-shell" data-dashboard-mode="research">
+  <div id="map"></div>
+  <div id="diagnostic-panel" class="diagnostic-panel" role="status" aria-live="polite"></div>
+  <aside class="weather-chip" aria-label="Current weather preview">
+    <span class="weather-sun" aria-hidden="true"></span>
+    <span>
+      <span class="weather-temp">62°F</span>
+      <span class="weather-city">Clear · San Francisco</span>
+    </span>
+  </aside>
+  <aside class="map-side-panels" aria-label="Map context controls">
+    <section class="map-card" aria-label="Map layers">
+      <h2>Map layers</h2>
+      <label><input type="checkbox" checked data-map-layer-toggle="terrain" /> Terrain</label>
+      <label><input type="checkbox" checked data-map-layer-toggle="roads" /> Roads</label>
+      <label><input type="checkbox" checked data-map-layer-toggle="labels" /> Labels</label>
+      <label><input type="checkbox" checked data-map-layer-toggle="weather_risk" /> Weather risk</label>
+    </section>
+    <section class="map-card" aria-label="Weather risk legend">
+      <h2>Weather risk (7-day)</h2>
+      <div class="risk-row"><span class="risk-dot risk-low"></span>Low (0 - 0.25)</div>
+      <div class="risk-row"><span class="risk-dot risk-mid"></span>Moderate (0.25 - 0.5)</div>
+      <div class="risk-row"><span class="risk-dot risk-high"></span>High (0.5 - 0.75)</div>
+      <div class="risk-row"><span class="risk-dot risk-very"></span>Very high (0.75 - 1)</div>
+    </section>
+  </aside>
+  <aside class="map-legend" aria-label="Route legend">
+    <div class="legend-item"><span class="legend-line"></span>Optimized route</div>
+    <div class="legend-item"><span class="legend-line alt"></span>Alternative route</div>
+    <div class="legend-item"><span class="legend-hotel">H</span>Selected hotel</div>
+    <div class="legend-item"><span class="legend-dot risk-low"></span>Nature / park spot</div>
+    <div class="legend-item"><span class="risk-dot risk-high"></span>Hotel candidate</div>
+    <div class="legend-item"><span class="legend-star">*</span>Must-see stop</div>
+    <div class="legend-item"><span class="legend-line preview"></span>Playback trail</div>
+    <div class="legend-item"><span class="legend-dot"></span>Route stop</div>
+  </aside>
+  <section class="dashboard-panel">
+    <div id="dashboard-drag-handle" class="dashboard-header">
+      <div class="dashboard-mark" aria-hidden="true">
+        <svg viewBox="0 0 48 48" width="30" height="30" focusable="false">
+          <path d="M5 34 19 10l8 14 5-8 11 18H5Z" fill="currentColor" opacity=".95"/>
+          <path d="M5 38c8-5 16-5 24 0 5 3 10 3 14 0" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round"/>
+        </svg>
+      </div>
+      <div class="dashboard-title-block">
+        <h1>Weather-Aware Itinerary</h1>
+        <div id="dashboard-subtitle" class="dashboard-subtitle">Loading scenario</div>
+        <div id="dashboard-mode-label" class="dashboard-mode-label">Research/Test dashboard</div>
+      </div>
+      <button id="dashboard-mode-toggle" type="button">Customer mode</button>
+      <button id="dashboard-collapse" type="button">Collapse</button>
+    </div>
+    <div id="dashboard-content">
+      <details class="dashboard-section" open data-mode-section="customer">
+        <summary>Plan your trip</summary>
+        <div id="customer-trip-controls"></div>
+      </details>
+      <details class="dashboard-section" open>
+        <summary>
+          <span data-mode-section="customer">Trip summary</span>
+          <span data-mode-section="research">Dashboard summary</span>
+        </summary>
+        <div id="metrics"></div>
+        <div class="interest-note" data-mode-section="customer">Customer choices load saved route artifacts or clearly labeled browser previews. They do not overwrite optimizer results.</div>
+        <div class="interest-note" data-mode-section="research"><a href="evaluation.html">Open evaluation dashboard</a></div>
+      </details>
+      <details class="dashboard-section" open data-mode-section="research">
+        <summary>Route & layers</summary>
+        <div class="filter-row">
+          <label><input type="checkbox" data-layer-toggle="default_route" checked /> Saved optimized route</label>
+          <label><input type="checkbox" data-layer-toggle="selected_hotels" checked /> Selected hotels</label>
+          <label><input type="checkbox" data-layer-toggle="hotel_candidates" /> Hotel candidates</label>
+          <label><input type="checkbox" data-layer-toggle="nature_candidates" /> National park candidates</label>
+          <label><input type="checkbox" data-layer-toggle="live_preview" /> Preview only route</label>
+        </div>
+        <div id="quick-actions" class="quick-actions"></div>
+        <div id="route-selector" class="route-selector"></div>
+      </details>
+      <details class="dashboard-section" open>
+        <summary>Playback</summary>
+        <div class="summary-list"><b>Route:</b> <span id="playback-route-label">Loading...</span></div>
+        <div class="playback-controls">
+          <button id="playback-restart" type="button" aria-label="Restart route playback">|&lt;</button>
+          <button id="playback-prev" type="button" aria-label="Previous stop">&lt;&lt;</button>
+          <button id="playback-play" type="button" aria-label="Play route animation">Play</button>
+          <button id="playback-pause" type="button" aria-label="Pause route animation">Pause</button>
+          <button id="playback-next" type="button" aria-label="Next stop">&gt;&gt;</button>
+        </div>
+        <div class="playback-controls">
+          <select id="playback-speed" aria-label="Playback speed">
+            <option value="1600">Slow</option>
+            <option value="900" selected>Normal</option>
+            <option value="420">Fast</option>
+          </select>
+          <label><input id="playback-follow" type="checkbox" checked /> Follow marker</label>
+        </div>
+        <div class="playback-progress"><span id="playback-progress-bar"></span></div>
+        <div id="playback-current-stop" class="status"></div>
+      </details>
+      <details class="dashboard-section" open>
+        <summary>Active stop details</summary>
+        <div id="active-stop-detail"></div>
+      </details>
+      <details class="dashboard-section" open>
+        <summary>Hotel choices</summary>
+        <div id="hotel-choices"></div>
+      </details>
+      <details class="dashboard-section" open>
+        <summary>Interest bars</summary>
+        <div id="interest-preview"></div>
+      </details>
+      <details class="dashboard-section" data-mode-section="research">
+        <summary>City details</summary>
+        <div id="city-details"></div>
+      </details>
+      <details class="dashboard-section" data-mode-section="research">
+        <summary>Nature explore</summary>
+        <div id="nature-explore"></div>
+      </details>
+      <details class="dashboard-section" data-mode-section="research">
+        <summary>Debug summary</summary>
+        <div id="debug-summary"></div>
+      </details>
+      <div id="dashboard-status" class="status"></div>
+    </div>
+  </section>
+  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+  <script src="assets/data_loader.js"></script>
+  <script src="assets/dashboard.js"></script>
+  <script src="assets/map_controls.js"></script>
+</body>
+</html>

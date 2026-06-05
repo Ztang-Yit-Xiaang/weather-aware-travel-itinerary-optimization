@@ -1,0 +1,1012 @@
+window.DASHBOARD_CITY_DETAILS = {
+  "available": true,
+  "cities": [
+    {
+      "city": "Mariposa",
+      "route_ids": [
+        "context__fastest_inter_city_route",
+        "hotel_candidates",
+        "interest_profile__nature_heavy",
+        "method__hierarchical_greedy_baseline",
+        "method__hierarchical_gurobi_pipeline",
+        "must_go_candidates",
+        "nature_candidates",
+        "route_matrix__d7_bandit_repair_balanced",
+        "route_matrix__d7_bandit_repair_explorer",
+        "route_matrix__d7_bandit_repair_relaxed",
+        "route_matrix__d7_greedy_balanced",
+        "route_matrix__d7_greedy_explorer",
+        "route_matrix__d7_greedy_relaxed",
+        "route_matrix__d7_gurobi_balanced",
+        "route_matrix__d7_gurobi_explorer",
+        "route_matrix__d7_gurobi_relaxed",
+        "route_matrix__d9_bandit_repair_balanced",
+        "route_matrix__d9_bandit_repair_explorer",
+        "route_matrix__d9_bandit_repair_relaxed",
+        "route_matrix__d9_greedy_balanced",
+        "route_matrix__d9_greedy_explorer",
+        "route_matrix__d9_greedy_relaxed",
+        "route_matrix__d9_gurobi_balanced",
+        "route_matrix__d9_gurobi_explorer",
+        "route_matrix__d9_gurobi_relaxed",
+        "selected_route",
+        "trip_length__12",
+        "trip_length__7",
+        "trip_length__9"
+      ],
+      "days": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "selected_stops": [
+        {
+          "name": "Yosemite National Park",
+          "day": 3,
+          "category": "national_park",
+          "lat": 37.8651,
+          "lon": -119.5383,
+          "route_label": "Method \u00b7 Hierarchical + Bandit + Small Gurobi Repair",
+          "route_family": "selected",
+          "utility": 1.957252468078294,
+          "optimization_value_source": "interest_adjusted_value",
+          "source_list": "curated_nature_region_seed"
+        },
+        {
+          "name": "Yosemite National Park",
+          "day": 3,
+          "category": "national_park",
+          "lat": 37.8651,
+          "lon": -119.5383,
+          "route_label": "7-Day \u00b7 Gurobi \u00b7 Relaxed",
+          "route_family": "route_matrix",
+          "utility": 1.957252468078294,
+          "optimization_value_source": "interest_adjusted_value",
+          "source_list": "curated_nature_region_seed"
+        },
+        {
+          "name": "Yosemite National Park",
+          "day": 3,
+          "category": "national_park",
+          "lat": 37.8651,
+          "lon": -119.5383,
+          "route_label": "7-Day \u00b7 Gurobi \u00b7 Balanced",
+          "route_family": "route_matrix",
+          "utility": 1.957252468078294,
+          "optimization_value_source": "interest_adjusted_value",
+          "source_list": "curated_nature_region_seed"
+        },
+        {
+          "name": "Yosemite National Park",
+          "day": 3,
+          "category": "national_park",
+          "lat": 37.8651,
+          "lon": -119.5383,
+          "route_label": "7-Day \u00b7 Gurobi \u00b7 Explorer",
+          "route_family": "route_matrix",
+          "utility": 1.957252468078294,
+          "optimization_value_source": "interest_adjusted_value",
+          "source_list": "curated_nature_region_seed"
+        },
+        {
+          "name": "Yosemite National Park",
+          "day": 2,
+          "category": "national_park",
+          "lat": 37.8651,
+          "lon": -119.5383,
+          "route_label": "7-Day \u00b7 Greedy \u00b7 Relaxed",
+          "route_family": "route_matrix",
+          "utility": 1.957252468078294,
+          "optimization_value_source": "interest_adjusted_value",
+          "source_list": "curated_nature_region_seed"
+        },
+        {
+          "name": "Yosemite National Park",
+          "day": 2,
+          "category": "national_park",
+          "lat": 37.8651,
+          "lon": -119.5383,
+          "route_label": "7-Day \u00b7 Greedy \u00b7 Balanced",
+          "route_family": "route_matrix",
+          "utility": 1.957252468078294,
+          "optimization_value_source": "interest_adjusted_value",
+          "source_list": "curated_nature_region_seed"
+        },
+        {
+          "name": "Yosemite National Park",
+          "day": 2,
+          "category": "national_park",
+          "lat": 37.8651,
+          "lon": -119.5383,
+          "route_label": "7-Day \u00b7 Greedy \u00b7 Explorer",
+          "route_family": "route_matrix",
+          "utility": 1.957252468078294,
+          "optimization_value_source": "interest_adjusted_value",
+          "source_list": "curated_nature_region_seed"
+        },
+        {
+          "name": "Yosemite National Park",
+          "day": 3,
+          "category": "national_park",
+          "lat": 37.8651,
+          "lon": -119.5383,
+          "route_label": "7-Day \u00b7 Bandit + Small Gurobi \u00b7 Relaxed",
+          "route_family": "route_matrix",
+          "utility": 1.957252468078294,
+          "optimization_value_source": "interest_adjusted_value",
+          "source_list": "curated_nature_region_seed"
+        },
+        {
+          "name": "Yosemite National Park",
+          "day": 3,
+          "category": "national_park",
+          "lat": 37.8651,
+          "lon": -119.5383,
+          "route_label": "7-Day \u00b7 Bandit + Small Gurobi \u00b7 Balanced",
+          "route_family": "route_matrix",
+          "utility": 1.957252468078294,
+          "optimization_value_source": "interest_adjusted_value",
+          "source_list": "curated_nature_region_seed"
+        },
+        {
+          "name": "Yosemite National Park",
+          "day": 3,
+          "category": "national_park",
+          "lat": 37.8651,
+          "lon": -119.5383,
+          "route_label": "7-Day \u00b7 Bandit + Small Gurobi \u00b7 Explorer",
+          "route_family": "route_matrix",
+          "utility": 1.957252468078294,
+          "optimization_value_source": "interest_adjusted_value",
+          "source_list": "curated_nature_region_seed"
+        }
+      ],
+      "hotels": [
+        "Best Western Plus Yosemite Way Station Motel"
+      ],
+      "hotel_alternative_count": 1,
+      "selected_hotel": "Best Western Plus Yosemite Way Station Motel",
+      "nature_score": 0.6,
+      "scenic_score": 0.18,
+      "lat": 37.8651,
+      "lon": -119.5383
+    },
+    {
+      "city": "Monterey",
+      "route_ids": [
+        "hotel_candidates",
+        "interest_profile__balanced_interest",
+        "interest_profile__city_heavy",
+        "must_go_candidates",
+        "nature_candidates"
+      ],
+      "days": [
+        1,
+        2
+      ],
+      "selected_stops": [
+        {
+          "name": "Bixby Creek Bridge Viewpoint",
+          "day": 1,
+          "category": "social_must_go:viewpoint",
+          "lat": 36.3715,
+          "lon": -121.9018,
+          "route_label": "Saved Balanced Interest Route",
+          "route_family": "interest_profile",
+          "utility": 1.6263263080872006,
+          "optimization_value_source": "interest_adjusted_value",
+          "source_list": "curated_social_must_go"
+        },
+        {
+          "name": "Big Sur",
+          "day": 2,
+          "category": "coastal_scenic_region",
+          "lat": 36.2704,
+          "lon": -121.8081,
+          "route_label": "Saved Balanced Interest Route",
+          "route_family": "interest_profile",
+          "utility": 1.0718407458279453,
+          "optimization_value_source": "interest_adjusted_value",
+          "source_list": "curated_nature_region_seed"
+        },
+        {
+          "name": "Bixby Creek Bridge Viewpoint",
+          "day": 1,
+          "category": "social_must_go:viewpoint",
+          "lat": 36.3715,
+          "lon": -121.9018,
+          "route_label": "Saved City Heavy Route",
+          "route_family": "interest_profile",
+          "utility": 1.5905763080872006,
+          "optimization_value_source": "interest_adjusted_value",
+          "source_list": "curated_social_must_go"
+        },
+        {
+          "name": "Big Sur",
+          "day": 2,
+          "category": "coastal_scenic_region",
+          "lat": 36.2704,
+          "lon": -121.8081,
+          "route_label": "Saved City Heavy Route",
+          "route_family": "interest_profile",
+          "utility": 1.0360907458279454,
+          "optimization_value_source": "interest_adjusted_value",
+          "source_list": "curated_nature_region_seed"
+        }
+      ],
+      "hotels": [
+        "Portola Hotel & Spa at Monterey Bay"
+      ],
+      "hotel_alternative_count": 1,
+      "selected_hotel": "",
+      "nature_score": 0.55,
+      "scenic_score": 0.865,
+      "lat": 36.3715,
+      "lon": -121.9018
+    },
+    {
+      "city": "San Francisco",
+      "route_ids": [
+        "context__fastest_inter_city_route",
+        "context__scenic_ca_1_pch_route_with_stanford_detour",
+        "hotel_candidates",
+        "interest_profile__balanced_interest",
+        "interest_profile__city_heavy",
+        "interest_profile__nature_heavy",
+        "method__hierarchical_greedy_baseline",
+        "method__hierarchical_gurobi_pipeline",
+        "must_go_candidates",
+        "nature_candidates",
+        "route_matrix__d7_bandit_repair_balanced",
+        "route_matrix__d7_bandit_repair_explorer",
+        "route_matrix__d7_bandit_repair_relaxed",
+        "route_matrix__d7_greedy_balanced",
+        "route_matrix__d7_greedy_explorer",
+        "route_matrix__d7_greedy_relaxed",
+        "route_matrix__d7_gurobi_balanced",
+        "route_matrix__d7_gurobi_explorer",
+        "route_matrix__d7_gurobi_relaxed",
+        "route_matrix__d9_bandit_repair_balanced",
+        "route_matrix__d9_bandit_repair_explorer",
+        "route_matrix__d9_bandit_repair_relaxed",
+        "route_matrix__d9_greedy_balanced",
+        "route_matrix__d9_greedy_explorer",
+        "route_matrix__d9_greedy_relaxed",
+        "route_matrix__d9_gurobi_balanced",
+        "route_matrix__d9_gurobi_explorer",
+        "route_matrix__d9_gurobi_relaxed",
+        "selected_route",
+        "trip_length__12",
+        "trip_length__7",
+        "trip_length__9"
+      ],
+      "days": [
+        1,
+        2
+      ],
+      "selected_stops": [
+        {
+          "name": "Golden Gate Bridge",
+          "day": 1,
+          "category": "social_must_go:landmark",
+          "lat": 37.8199,
+          "lon": -122.4783,
+          "route_label": "Method \u00b7 Hierarchical + Bandit + Small Gurobi Repair",
+          "route_family": "selected",
+          "utility": 1.461970749926771,
+          "optimization_value_source": "interest_adjusted_value",
+          "source_list": "curated_social_must_go"
+        },
+        {
+          "name": "Stanford University Main Quad",
+          "day": 1,
+          "category": "social_must_go:campus",
+          "lat": 37.4275,
+          "lon": -122.1697,
+          "route_label": "Method \u00b7 Hierarchical + Bandit + Small Gurobi Repair",
+          "route_family": "selected",
+          "utility": 1.7296110025613345,
+          "optimization_value_source": "interest_adjusted_value",
+          "source_list": "curated_social_must_go"
+        },
+        {
+          "name": "Golden Gate Bridge",
+          "day": 1,
+          "category": "social_must_go:landmark",
+          "lat": 37.8199,
+          "lon": -122.4783,
+          "route_label": "7-Day \u00b7 Gurobi \u00b7 Relaxed",
+          "route_family": "route_matrix",
+          "utility": 1.461970749926771,
+          "optimization_value_source": "interest_adjusted_value",
+          "source_list": "curated_social_must_go"
+        },
+        {
+          "name": "Stanford University Main Quad",
+          "day": 2,
+          "category": "social_must_go:campus",
+          "lat": 37.4275,
+          "lon": -122.1697,
+          "route_label": "7-Day \u00b7 Gurobi \u00b7 Relaxed",
+          "route_family": "route_matrix",
+          "utility": 1.7296110025613345,
+          "optimization_value_source": "interest_adjusted_value",
+          "source_list": "curated_social_must_go"
+        },
+        {
+          "name": "Golden Gate Bridge",
+          "day": 1,
+          "category": "social_must_go:landmark",
+          "lat": 37.8199,
+          "lon": -122.4783,
+          "route_label": "7-Day \u00b7 Gurobi \u00b7 Balanced",
+          "route_family": "route_matrix",
+          "utility": 1.461970749926771,
+          "optimization_value_source": "interest_adjusted_value",
+          "source_list": "curated_social_must_go"
+        },
+        {
+          "name": "Stanford University Main Quad",
+          "day": 2,
+          "category": "social_must_go:campus",
+          "lat": 37.4275,
+          "lon": -122.1697,
+          "route_label": "7-Day \u00b7 Gurobi \u00b7 Balanced",
+          "route_family": "route_matrix",
+          "utility": 1.7296110025613345,
+          "optimization_value_source": "interest_adjusted_value",
+          "source_list": "curated_social_must_go"
+        },
+        {
+          "name": "Golden Gate Bridge",
+          "day": 1,
+          "category": "social_must_go:landmark",
+          "lat": 37.8199,
+          "lon": -122.4783,
+          "route_label": "7-Day \u00b7 Gurobi \u00b7 Explorer",
+          "route_family": "route_matrix",
+          "utility": 1.461970749926771,
+          "optimization_value_source": "interest_adjusted_value",
+          "source_list": "curated_social_must_go"
+        },
+        {
+          "name": "Stanford University Main Quad",
+          "day": 2,
+          "category": "social_must_go:campus",
+          "lat": 37.4275,
+          "lon": -122.1697,
+          "route_label": "7-Day \u00b7 Gurobi \u00b7 Explorer",
+          "route_family": "route_matrix",
+          "utility": 1.7296110025613345,
+          "optimization_value_source": "interest_adjusted_value",
+          "source_list": "curated_social_must_go"
+        },
+        {
+          "name": "Golden Gate Bridge",
+          "day": 1,
+          "category": "social_must_go:landmark",
+          "lat": 37.8199,
+          "lon": -122.4783,
+          "route_label": "7-Day \u00b7 Greedy \u00b7 Relaxed",
+          "route_family": "route_matrix",
+          "utility": 1.461970749926771,
+          "optimization_value_source": "interest_adjusted_value",
+          "source_list": "curated_social_must_go"
+        },
+        {
+          "name": "Stanford University Main Quad",
+          "day": 1,
+          "category": "social_must_go:campus",
+          "lat": 37.4275,
+          "lon": -122.1697,
+          "route_label": "7-Day \u00b7 Greedy \u00b7 Relaxed",
+          "route_family": "route_matrix",
+          "utility": 1.7296110025613345,
+          "optimization_value_source": "interest_adjusted_value",
+          "source_list": "curated_social_must_go"
+        }
+      ],
+      "hotels": [
+        "Hotel Zephyr San Francisco"
+      ],
+      "hotel_alternative_count": 1,
+      "selected_hotel": "Hotel Zephyr San Francisco",
+      "nature_score": 0.2,
+      "scenic_score": 0.76,
+      "lat": 37.8199,
+      "lon": -122.4783
+    },
+    {
+      "city": "Santa Barbara",
+      "route_ids": [
+        "hotel_candidates",
+        "interest_profile__balanced_interest",
+        "interest_profile__city_heavy",
+        "must_go_candidates",
+        "nature_candidates"
+      ],
+      "days": [
+        3
+      ],
+      "selected_stops": [
+        {
+          "name": "Stearns Wharf",
+          "day": 3,
+          "category": "Public Services & Government, Landmarks & Historical Buildings, Local Flavor, Restaurants, Tours, Shopping, Shopping Centers, Seafood, Hotels & Travel, Boat Tours",
+          "lat": 34.4100137734,
+          "lon": -119.6855497819,
+          "route_label": "Saved Balanced Interest Route",
+          "route_family": "interest_profile",
+          "utility": 1.7492803869185176,
+          "optimization_value_source": "interest_adjusted_value",
+          "source_list": "curated_social_must_go|yelp"
+        },
+        {
+          "name": "Stearns Wharf",
+          "day": 3,
+          "category": "Public Services & Government, Landmarks & Historical Buildings, Local Flavor, Restaurants, Tours, Shopping, Shopping Centers, Seafood, Hotels & Travel, Boat Tours",
+          "lat": 34.4100137734,
+          "lon": -119.6855497819,
+          "route_label": "Saved City Heavy Route",
+          "route_family": "interest_profile",
+          "utility": 1.8305303869185177,
+          "optimization_value_source": "interest_adjusted_value",
+          "source_list": "curated_social_must_go|yelp"
+        }
+      ],
+      "hotels": [
+        "Hotel Milo Santa Barbara"
+      ],
+      "hotel_alternative_count": 1,
+      "selected_hotel": "",
+      "nature_score": 0.6,
+      "scenic_score": 0.18,
+      "lat": 34.4100137734,
+      "lon": -119.6855497819
+    },
+    {
+      "city": "Three Rivers",
+      "route_ids": [
+        "context__fastest_inter_city_route",
+        "hotel_candidates",
+        "interest_profile__nature_heavy",
+        "method__hierarchical_greedy_baseline",
+        "method__hierarchical_gurobi_pipeline",
+        "must_go_candidates",
+        "nature_candidates",
+        "route_matrix__d7_bandit_repair_balanced",
+        "route_matrix__d7_bandit_repair_explorer",
+        "route_matrix__d7_bandit_repair_relaxed",
+        "route_matrix__d7_greedy_balanced",
+        "route_matrix__d7_greedy_explorer",
+        "route_matrix__d7_greedy_relaxed",
+        "route_matrix__d7_gurobi_balanced",
+        "route_matrix__d7_gurobi_explorer",
+        "route_matrix__d7_gurobi_relaxed",
+        "route_matrix__d9_bandit_repair_balanced",
+        "route_matrix__d9_bandit_repair_explorer",
+        "route_matrix__d9_bandit_repair_relaxed",
+        "route_matrix__d9_greedy_balanced",
+        "route_matrix__d9_greedy_explorer",
+        "route_matrix__d9_greedy_relaxed",
+        "route_matrix__d9_gurobi_balanced",
+        "route_matrix__d9_gurobi_explorer",
+        "route_matrix__d9_gurobi_relaxed",
+        "selected_route",
+        "trip_length__12",
+        "trip_length__7",
+        "trip_length__9"
+      ],
+      "days": [
+        3,
+        4,
+        5,
+        6,
+        7,
+        8
+      ],
+      "selected_stops": [
+        {
+          "name": "Sequoia National Park",
+          "day": 4,
+          "category": "national_park",
+          "lat": 36.4864,
+          "lon": -118.5658,
+          "route_label": "Method \u00b7 Hierarchical + Bandit + Small Gurobi Repair",
+          "route_family": "selected",
+          "utility": 1.957252468078294,
+          "optimization_value_source": "interest_adjusted_value",
+          "source_list": "curated_nature_region_seed"
+        },
+        {
+          "name": "Sequoia National Park",
+          "day": 4,
+          "category": "national_park",
+          "lat": 36.4864,
+          "lon": -118.5658,
+          "route_label": "7-Day \u00b7 Gurobi \u00b7 Relaxed",
+          "route_family": "route_matrix",
+          "utility": 1.957252468078294,
+          "optimization_value_source": "interest_adjusted_value",
+          "source_list": "curated_nature_region_seed"
+        },
+        {
+          "name": "Sequoia National Park",
+          "day": 4,
+          "category": "national_park",
+          "lat": 36.4864,
+          "lon": -118.5658,
+          "route_label": "7-Day \u00b7 Gurobi \u00b7 Balanced",
+          "route_family": "route_matrix",
+          "utility": 1.957252468078294,
+          "optimization_value_source": "interest_adjusted_value",
+          "source_list": "curated_nature_region_seed"
+        },
+        {
+          "name": "Sequoia National Park",
+          "day": 4,
+          "category": "national_park",
+          "lat": 36.4864,
+          "lon": -118.5658,
+          "route_label": "7-Day \u00b7 Gurobi \u00b7 Explorer",
+          "route_family": "route_matrix",
+          "utility": 1.957252468078294,
+          "optimization_value_source": "interest_adjusted_value",
+          "source_list": "curated_nature_region_seed"
+        },
+        {
+          "name": "Sequoia National Park",
+          "day": 4,
+          "category": "national_park",
+          "lat": 36.4864,
+          "lon": -118.5658,
+          "route_label": "7-Day \u00b7 Greedy \u00b7 Relaxed",
+          "route_family": "route_matrix",
+          "utility": 1.957252468078294,
+          "optimization_value_source": "interest_adjusted_value",
+          "source_list": "curated_nature_region_seed"
+        },
+        {
+          "name": "Sequoia National Park",
+          "day": 4,
+          "category": "national_park",
+          "lat": 36.4864,
+          "lon": -118.5658,
+          "route_label": "7-Day \u00b7 Greedy \u00b7 Balanced",
+          "route_family": "route_matrix",
+          "utility": 1.957252468078294,
+          "optimization_value_source": "interest_adjusted_value",
+          "source_list": "curated_nature_region_seed"
+        },
+        {
+          "name": "Sequoia National Park",
+          "day": 4,
+          "category": "national_park",
+          "lat": 36.4864,
+          "lon": -118.5658,
+          "route_label": "7-Day \u00b7 Greedy \u00b7 Explorer",
+          "route_family": "route_matrix",
+          "utility": 1.957252468078294,
+          "optimization_value_source": "interest_adjusted_value",
+          "source_list": "curated_nature_region_seed"
+        },
+        {
+          "name": "Sequoia National Park",
+          "day": 4,
+          "category": "national_park",
+          "lat": 36.4864,
+          "lon": -118.5658,
+          "route_label": "7-Day \u00b7 Bandit + Small Gurobi \u00b7 Relaxed",
+          "route_family": "route_matrix",
+          "utility": 1.957252468078294,
+          "optimization_value_source": "interest_adjusted_value",
+          "source_list": "curated_nature_region_seed"
+        },
+        {
+          "name": "Sequoia National Park",
+          "day": 4,
+          "category": "national_park",
+          "lat": 36.4864,
+          "lon": -118.5658,
+          "route_label": "7-Day \u00b7 Bandit + Small Gurobi \u00b7 Balanced",
+          "route_family": "route_matrix",
+          "utility": 1.957252468078294,
+          "optimization_value_source": "interest_adjusted_value",
+          "source_list": "curated_nature_region_seed"
+        },
+        {
+          "name": "Sequoia National Park",
+          "day": 4,
+          "category": "national_park",
+          "lat": 36.4864,
+          "lon": -118.5658,
+          "route_label": "7-Day \u00b7 Bandit + Small Gurobi \u00b7 Explorer",
+          "route_family": "route_matrix",
+          "utility": 1.957252468078294,
+          "optimization_value_source": "interest_adjusted_value",
+          "source_list": "curated_nature_region_seed"
+        }
+      ],
+      "hotels": [
+        "Comfort Inn & Suites Sequoia Kings Canyon"
+      ],
+      "hotel_alternative_count": 1,
+      "selected_hotel": "Comfort Inn & Suites Sequoia Kings Canyon",
+      "nature_score": 0.8,
+      "scenic_score": 0.24,
+      "lat": 36.4864,
+      "lon": -118.5658
+    },
+    {
+      "city": "Los Angeles",
+      "route_ids": [
+        "context__fastest_inter_city_route",
+        "context__scenic_ca_1_pch_route_with_stanford_detour",
+        "hotel_candidates",
+        "interest_profile__balanced_interest",
+        "interest_profile__city_heavy",
+        "interest_profile__nature_heavy",
+        "method__hierarchical_greedy_baseline",
+        "method__hierarchical_gurobi_pipeline",
+        "must_go_candidates",
+        "nature_candidates",
+        "route_matrix__d7_bandit_repair_balanced",
+        "route_matrix__d7_bandit_repair_explorer",
+        "route_matrix__d7_bandit_repair_relaxed",
+        "route_matrix__d7_greedy_balanced",
+        "route_matrix__d7_greedy_explorer",
+        "route_matrix__d7_greedy_relaxed",
+        "route_matrix__d7_gurobi_balanced",
+        "route_matrix__d7_gurobi_explorer",
+        "route_matrix__d7_gurobi_relaxed",
+        "route_matrix__d9_bandit_repair_balanced",
+        "route_matrix__d9_bandit_repair_explorer",
+        "route_matrix__d9_bandit_repair_relaxed",
+        "route_matrix__d9_greedy_balanced",
+        "route_matrix__d9_greedy_explorer",
+        "route_matrix__d9_greedy_relaxed",
+        "route_matrix__d9_gurobi_balanced",
+        "route_matrix__d9_gurobi_explorer",
+        "route_matrix__d9_gurobi_relaxed",
+        "selected_route",
+        "trip_length__12",
+        "trip_length__7",
+        "trip_length__9"
+      ],
+      "days": [
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12
+      ],
+      "selected_stops": [
+        {
+          "name": "Griffith Observatory",
+          "day": 5,
+          "category": "social_must_go:viewpoint",
+          "lat": 34.1184,
+          "lon": -118.3004,
+          "route_label": "Method \u00b7 Hierarchical + Bandit + Small Gurobi Repair",
+          "route_family": "selected",
+          "utility": 1.3349832922332583,
+          "optimization_value_source": "interest_adjusted_value",
+          "source_list": "curated_social_must_go"
+        },
+        {
+          "name": "Hollywood Walk of Fame",
+          "day": 6,
+          "category": "social_must_go:landmark",
+          "lat": 34.1016,
+          "lon": -118.3269,
+          "route_label": "Method \u00b7 Hierarchical + Bandit + Small Gurobi Repair",
+          "route_family": "selected",
+          "utility": 1.170367082411397,
+          "optimization_value_source": "interest_adjusted_value",
+          "source_list": "curated_social_must_go"
+        },
+        {
+          "name": "TCL Chinese Theatre",
+          "day": 7,
+          "category": "social_must_go:landmark",
+          "lat": 34.102,
+          "lon": -118.3409,
+          "route_label": "Method \u00b7 Hierarchical + Bandit + Small Gurobi Repair",
+          "route_family": "selected",
+          "utility": 1.1691079529202737,
+          "optimization_value_source": "interest_adjusted_value",
+          "source_list": "curated_social_must_go"
+        },
+        {
+          "name": "Hollywood Walk of Fame",
+          "day": 5,
+          "category": "social_must_go:landmark",
+          "lat": 34.1016,
+          "lon": -118.3269,
+          "route_label": "7-Day \u00b7 Gurobi \u00b7 Relaxed",
+          "route_family": "route_matrix",
+          "utility": 1.170367082411397,
+          "optimization_value_source": "interest_adjusted_value",
+          "source_list": "curated_social_must_go"
+        },
+        {
+          "name": "TCL Chinese Theatre",
+          "day": 6,
+          "category": "social_must_go:landmark",
+          "lat": 34.102,
+          "lon": -118.3409,
+          "route_label": "7-Day \u00b7 Gurobi \u00b7 Relaxed",
+          "route_family": "route_matrix",
+          "utility": 1.1691079529202737,
+          "optimization_value_source": "interest_adjusted_value",
+          "source_list": "curated_social_must_go"
+        },
+        {
+          "name": "Griffith Observatory",
+          "day": 7,
+          "category": "social_must_go:viewpoint",
+          "lat": 34.1184,
+          "lon": -118.3004,
+          "route_label": "7-Day \u00b7 Gurobi \u00b7 Relaxed",
+          "route_family": "route_matrix",
+          "utility": 1.3349832922332583,
+          "optimization_value_source": "interest_adjusted_value",
+          "source_list": "curated_social_must_go"
+        },
+        {
+          "name": "Hollywood Walk of Fame",
+          "day": 5,
+          "category": "social_must_go:landmark",
+          "lat": 34.1016,
+          "lon": -118.3269,
+          "route_label": "7-Day \u00b7 Gurobi \u00b7 Balanced",
+          "route_family": "route_matrix",
+          "utility": 1.170367082411397,
+          "optimization_value_source": "interest_adjusted_value",
+          "source_list": "curated_social_must_go"
+        },
+        {
+          "name": "TCL Chinese Theatre",
+          "day": 6,
+          "category": "social_must_go:landmark",
+          "lat": 34.102,
+          "lon": -118.3409,
+          "route_label": "7-Day \u00b7 Gurobi \u00b7 Balanced",
+          "route_family": "route_matrix",
+          "utility": 1.1691079529202737,
+          "optimization_value_source": "interest_adjusted_value",
+          "source_list": "curated_social_must_go"
+        },
+        {
+          "name": "Griffith Observatory",
+          "day": 7,
+          "category": "social_must_go:viewpoint",
+          "lat": 34.1184,
+          "lon": -118.3004,
+          "route_label": "7-Day \u00b7 Gurobi \u00b7 Balanced",
+          "route_family": "route_matrix",
+          "utility": 1.3349832922332583,
+          "optimization_value_source": "interest_adjusted_value",
+          "source_list": "curated_social_must_go"
+        },
+        {
+          "name": "Hollywood Walk of Fame",
+          "day": 5,
+          "category": "social_must_go:landmark",
+          "lat": 34.1016,
+          "lon": -118.3269,
+          "route_label": "7-Day \u00b7 Gurobi \u00b7 Explorer",
+          "route_family": "route_matrix",
+          "utility": 1.170367082411397,
+          "optimization_value_source": "interest_adjusted_value",
+          "source_list": "curated_social_must_go"
+        }
+      ],
+      "hotels": [
+        "The LINE LA"
+      ],
+      "hotel_alternative_count": 1,
+      "selected_hotel": "The LINE LA",
+      "nature_score": 0.55,
+      "scenic_score": 0.865,
+      "lat": 34.1184,
+      "lon": -118.3004
+    },
+    {
+      "city": "Eureka",
+      "route_ids": [
+        "nature_candidates"
+      ],
+      "days": [],
+      "selected_stops": [],
+      "hotels": [],
+      "hotel_alternative_count": 0,
+      "selected_hotel": "",
+      "nature_score": 0.6,
+      "scenic_score": 0.18,
+      "lat": 41.2132,
+      "lon": -124.0046
+    },
+    {
+      "city": "Fresno",
+      "route_ids": [
+        "hotel_candidates"
+      ],
+      "days": [],
+      "selected_stops": [],
+      "hotels": [
+        "DoubleTree by Hilton Fresno Convention Center"
+      ],
+      "hotel_alternative_count": 1,
+      "selected_hotel": "",
+      "nature_score": 0.0,
+      "scenic_score": 0.0,
+      "lat": 36.7338,
+      "lon": -119.784
+    },
+    {
+      "city": "Las Vegas",
+      "route_ids": [
+        "nature_candidates"
+      ],
+      "days": [],
+      "selected_stops": [],
+      "hotels": [],
+      "hotel_alternative_count": 0,
+      "selected_hotel": "",
+      "nature_score": 0.6,
+      "scenic_score": 0.18,
+      "lat": 36.5323,
+      "lon": -116.9325
+    },
+    {
+      "city": "Oakhurst",
+      "route_ids": [
+        "hotel_candidates"
+      ],
+      "days": [],
+      "selected_stops": [],
+      "hotels": [
+        "Yosemite Southgate Hotel & Suites"
+      ],
+      "hotel_alternative_count": 1,
+      "selected_hotel": "",
+      "nature_score": 0.0,
+      "scenic_score": 0.0,
+      "lat": 37.3285,
+      "lon": -119.6499
+    },
+    {
+      "city": "Palm Springs",
+      "route_ids": [
+        "must_go_candidates",
+        "nature_candidates"
+      ],
+      "days": [],
+      "selected_stops": [],
+      "hotels": [],
+      "hotel_alternative_count": 0,
+      "selected_hotel": "",
+      "nature_score": 0.6,
+      "scenic_score": 0.18,
+      "lat": 33.8734,
+      "lon": -115.901
+    },
+    {
+      "city": "Redding",
+      "route_ids": [
+        "nature_candidates"
+      ],
+      "days": [],
+      "selected_stops": [],
+      "hotels": [],
+      "hotel_alternative_count": 0,
+      "selected_hotel": "",
+      "nature_score": 0.6,
+      "scenic_score": 0.18,
+      "lat": 40.4977,
+      "lon": -121.4207
+    },
+    {
+      "city": "Soledad",
+      "route_ids": [
+        "must_go_candidates",
+        "nature_candidates"
+      ],
+      "days": [],
+      "selected_stops": [],
+      "hotels": [],
+      "hotel_alternative_count": 0,
+      "selected_hotel": "",
+      "nature_score": 0.6,
+      "scenic_score": 0.18,
+      "lat": 36.4906,
+      "lon": -121.1825
+    },
+    {
+      "city": "South Lake Tahoe",
+      "route_ids": [
+        "nature_candidates"
+      ],
+      "days": [],
+      "selected_stops": [],
+      "hotels": [],
+      "hotel_alternative_count": 0,
+      "selected_hotel": "",
+      "nature_score": 0.55,
+      "scenic_score": 0.165,
+      "lat": 39.0968,
+      "lon": -120.0324
+    }
+  ],
+  "intercity_legs": [
+    {
+      "route_layer": "Fastest inter-city route",
+      "leg_order": 1,
+      "from": "San Francisco",
+      "to": "Stanford University Main Quad",
+      "estimated_drive_minutes": 45.3,
+      "route_type": "fastest_intercity_route",
+      "geometry_source": "cached-osrm"
+    },
+    {
+      "route_layer": "Fastest inter-city route",
+      "leg_order": 2,
+      "from": "Stanford University Main Quad",
+      "to": "Mariposa",
+      "estimated_drive_minutes": 161.4,
+      "route_type": "fastest_intercity_route",
+      "geometry_source": "straight-line-fallback"
+    },
+    {
+      "route_layer": "Fastest inter-city route",
+      "leg_order": 3,
+      "from": "Mariposa",
+      "to": "Fresno",
+      "estimated_drive_minutes": 70.1,
+      "route_type": "fastest_intercity_route",
+      "geometry_source": "straight-line-fallback"
+    },
+    {
+      "route_layer": "Fastest inter-city route",
+      "leg_order": 4,
+      "from": "Fresno",
+      "to": "Three Rivers",
+      "estimated_drive_minutes": 70.9,
+      "route_type": "fastest_intercity_route",
+      "geometry_source": "straight-line-fallback"
+    },
+    {
+      "route_layer": "Fastest inter-city route",
+      "leg_order": 5,
+      "from": "Three Rivers",
+      "to": "Los Angeles",
+      "estimated_drive_minutes": 225.6,
+      "route_type": "fastest_intercity_route",
+      "geometry_source": "straight-line-fallback"
+    },
+    {
+      "route_layer": "Scenic CA-1 / PCH route with Stanford detour",
+      "leg_order": 1,
+      "from": "San Francisco",
+      "to": "Stanford University Main Quad",
+      "estimated_drive_minutes": 61.3,
+      "route_type": "scenic_ca1_pch_with_stanford_detour",
+      "geometry_source": "cached-osrm"
+    },
+    {
+      "route_layer": "Scenic CA-1 / PCH route with Stanford detour",
+      "leg_order": 2,
+      "from": "Stanford University Main Quad",
+      "to": "Los Angeles",
+      "estimated_drive_minutes": 646.8,
+      "route_type": "scenic_ca1_pch_with_stanford_detour",
+      "geometry_source": "cached-osrm"
+    }
+  ]
+};

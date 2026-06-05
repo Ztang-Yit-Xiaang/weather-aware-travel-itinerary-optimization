@@ -1,0 +1,73 @@
+{
+  "available": true,
+  "items": [
+    {
+      "city": "Los Angeles",
+      "hotel_name": "The LINE LA",
+      "candidate_rank": 1,
+      "selected": true,
+      "selected_for_city": "The LINE LA",
+      "lat": 34.0628,
+      "lon": -118.3009,
+      "source": "curated_open_web_hotel_fallback",
+      "hotel_score": 1.8620442393384489,
+      "rating_component": 4.0,
+      "mean_distance_to_selected_stops_km": 5.599754225897507,
+      "mean_distance_to_must_go_km": 5.599754225897506,
+      "selected_hotel_reason": "selected route base",
+      "name": "The LINE LA",
+      "status": "selected_by_optimizer"
+    },
+    {
+      "city": "Mariposa",
+      "hotel_name": "Best Western Plus Yosemite Way Station Motel",
+      "candidate_rank": 1,
+      "selected": true,
+      "selected_for_city": "Best Western Plus Yosemite Way Station Motel",
+      "lat": 37.4895,
+      "lon": -119.9662,
+      "source": "curated_open_web_hotel_fallback",
+      "hotel_score": -7.322904550628528,
+      "rating_component": 3.8,
+      "mean_distance_to_selected_stops_km": 56.23835861460293,
+      "mean_distance_to_must_go_km": 56.23835861460293,
+      "selected_hotel_reason": "selected route base",
+      "name": "Best Western Plus Yosemite Way Station Motel",
+      "status": "selected_by_optimizer"
+    },
+    {
+      "city": "San Francisco",
+      "hotel_name": "Hotel Zephyr San Francisco",
+      "candidate_rank": 1,
+      "selected": true,
+      "selected_for_city": "Hotel Zephyr San Francisco",
+      "lat": 37.807,
+      "lon": -122.4141,
+      "source": "curated_open_web_hotel_fallback",
+      "hotel_score": -1.879142559526455,
+      "rating_component": 4.1,
+      "mean_distance_to_selected_stops_km": 26.57856977514697,
+      "mean_distance_to_must_go_km": 26.57856977514697,
+      "selected_hotel_reason": "selected route base",
+      "name": "Hotel Zephyr San Francisco",
+      "status": "selected_by_optimizer"
+    },
+    {
+      "city": "Three Rivers",
+      "hotel_name": "Comfort Inn & Suites Sequoia Kings Canyon",
+      "candidate_rank": 1,
+      "selected": true,
+      "selected_for_city": "Comfort Inn & Suites Sequoia Kings Canyon",
+      "lat": 36.4488,
+      "lon": -118.9018,
+      "source": "curated_open_web_hotel_fallback",
+      "hotel_score": -3.8013627435281294,
+      "rating_component": 3.7,
+      "mean_distance_to_selected_stops_km": 30.402793255440724,
+      "mean_distance_to_must_go_km": 44.07604272480072,
+      "selected_hotel_reason": "selected route base",
+      "name": "Comfort Inn & Suites Sequoia Kings Canyon",
+      "status": "selected_by_optimizer"
+    }
+  ]
+}

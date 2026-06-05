@@ -9,9 +9,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
-  pages: write
-  id-token: write
+  contents: write
 
 concurrency:
   group: pages
@@ -19,19 +17,32 @@ concurrency:
 
 jobs:
   deploy:
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
 
     steps:
       - uses: actions/checkout@v4
 
-      - uses: actions/configure-pages@v5
+      - name: Publish dashboard to gh-pages
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
-      - uses: actions/upload-pages-artifact@v3
-        with:
-          path: results/figures/full_interactive_dashboard
+          rm -rf /tmp/dashboard-pages
+          mkdir -p /tmp/dashboard-pages
+          cp -R results/figures/full_interactive_dashboard/. /tmp/dashboard-pages/
+          touch /tmp/dashboard-pages/.nojekyll
 
-      - id: deployment
-        uses: actions/deploy-pages@v4
+          git fetch origin gh-pages || true
+          if git show-ref --verify --quiet refs/remotes/origin/gh-pages; then
+            git switch --force-create gh-pages origin/gh-pages
+          else
+            git switch --orphan gh-pages
+          fi
+
+          find . -mindepth 1 -maxdepth 1 ! -name .git -exec rm -rf {} +
+          cp -R /tmp/dashboard-pages/. .
+
+          git add .
+          git commit -m "Deploy dashboard site" || exit 0
+          git push origin gh-pages

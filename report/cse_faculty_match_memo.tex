@@ -1,0 +1,224 @@
+\documentclass[11pt,a4paper]{article}
+
+\usepackage[margin=1in]{geometry}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{lmodern}
+\usepackage{hyperref}
+\usepackage{array}
+
+\hypersetup{
+    colorlinks=true,
+    linkcolor=black,
+    citecolor=black,
+    urlcolor=blue
+}
+
+\linespread{1.06}
+\emergencystretch=2em
+
+\title{\vspace{-1.2em}Potential UMN Faculty Matches\\
+\large Weather-Aware Human-Centered Itinerary Optimization}
+\author{[Your Name]}
+\date{June 2026}
+
+\begin{document}
+
+\maketitle
+
+\section*{Project Fit Summary}
+
+\noindent This project sits at the intersection of four areas:
+
+\begin{itemize}
+    \item human-centered AI and explainable decision support;
+    \item recommender systems and personalized planning;
+    \item interactive visualization of model tradeoffs and route alternatives;
+    \item spatial data science, routing, and geospatial data integration.
+\end{itemize}
+
+\noindent The best supervisor match depends on which contribution is emphasized. If the paper is framed around user agency, explanation, and interaction with optimization, Human-Centered Computing faculty are the strongest fit. If the paper is framed around route data, nationwide geospatial scaling, and spatial AI, spatial computing faculty may be a better fit. If the paper is framed as a recommendation/optimization model, recommender-systems and data-mining faculty are relevant. Because the project also touches transportation, route planning, human factors, and operations research, faculty in Civil, Environmental, and Geo- Engineering, Mechanical Engineering, Data Science, and Industrial and Systems Engineering are also worth considering.
+
+\section*{Project Materials to Share}
+
+\noindent The current project is available at:
+
+\begin{center}
+\href{https://github.com/Ztang-Yit-Xiaang/weather-aware-travel-itinerary-optimization}{\texttt{github.com/Ztang-Yit-Xiaang/weather-aware-travel-itinerary-optimization}}
+\end{center}
+
+\noindent The most accessible framing is to describe it as a working route-planning research tool: it collects place, hotel, weather, and route context; scores candidate destinations; uses optimization and route repair to build multi-day itineraries; and exports customer, research, and evaluation dashboards that make the result inspectable. The future direction is nationwide planning with agent-assisted data discovery, while keeping the route-generation step controlled by transparent optimization methods.
+
+\section*{How to Use This Memo}
+
+\noindent The same project can sound very different depending on who receives it:
+
+\begin{itemize}
+    \item For HCI and human-AI faculty, emphasize user agency, explanation, trust, and interaction with optimization.
+    \item For recommender-systems faculty, emphasize preference elicitation, route recommendation, and evaluation beyond ranked lists.
+    \item For visualization faculty, emphasize the customer/research/evaluation dashboard split, map-layer inspection, route playback, and method tradeoff views.
+    \item For spatial/GIS faculty, emphasize heterogeneous geospatial data, nationwide scaling, route graphs, and data provenance.
+    \item For transportation faculty, emphasize mobility decision support, spatiotemporal data, route constraints, and network uncertainty.
+    \item For ISyE/optimization faculty, emphasize stochastic/robust optimization, data-quality contracts, and decision support under uncertainty.
+\end{itemize}
+
+\section*{Highest-Priority Matches}
+
+\subsection*{1. Prof. Harmanpreet Kaur}
+
+\noindent \textbf{Why she fits:} Prof. Kaur's CSE profile lists human-centered AI, explainability and interpretability, and hybrid intelligence systems as research areas.\footnote{\url{https://cse.umn.edu/cs/harmanpreet-kaur}} This is a very close match if the project is framed around how travelers understand, trust, and adjust optimization-based itinerary recommendations.
+
+\noindent \textbf{Best angle to approach:} ``I am building a decision-support system where agents help with data preparation, but optimization generates the route. I want to study how users interpret explanations, uncertainty, and control in this hybrid system.''
+
+\noindent \textbf{Possible paper venues:} CHI, IUI, CSCW-adjacent human-AI interaction venues, or other HCI venues depending on study design.
+
+\subsection*{2. Prof. Joseph Konstan}
+
+\noindent \textbf{Why he fits:} Prof. Konstan's CSE profile says his work lies broadly in HCI and that much of it relates to recommender systems and improving personalization for better user experience.\footnote{\url{https://cse.umn.edu/node/143216}} GroupLens is also described by CSE as taking a human-centered approach to AI and recommender systems.\footnote{\url{https://cse.umn.edu/cs/news/grouplens-human-centered-approach-ai}}
+
+\noindent \textbf{Best angle to approach:} ``This is a recommender system where the recommendation is not a ranked list but a constrained, explainable itinerary. I want to study preference elicitation, user control, and evaluation of route recommendations.''
+
+\noindent \textbf{Possible paper venues:} RecSys, UMAP, IUI, CHI if the user study is strong.
+
+\subsection*{3. Prof. Loren Terveen}
+
+\noindent \textbf{Why he fits:} Prof. Terveen lists HCI, social computing, recommender systems, user interface design, location-based systems, and web search/information management among his specialties.\footnote{\url{https://www-users.cse.umn.edu/~terveen/}} This is useful if the project becomes a location-based recommender/interface paper.
+
+\noindent \textbf{Best angle to approach:} ``The project combines location-based recommendation, route planning, and interactive controls for preference expression. I would value guidance on the HCI/recommender framing and study design.''
+
+\noindent \textbf{Possible paper venues:} RecSys, UMAP, IUI, CHI.
+
+\section*{Strong Secondary Matches}
+
+\subsection*{4. Prof. Qianwen Wang}
+
+\noindent \textbf{Why she fits:} Prof. Wang's profile says she creates interactive visualization tools that help humans interpret AI and generate insights from data, including AI explanations and real-time user feedback integrated into AI models.\footnote{\url{https://cse.umn.edu/cs/qianwen-wang}} This is a strong fit if the core artifact becomes an interactive dashboard for route tradeoffs.
+
+\noindent \textbf{Best angle to approach:} ``I want to visualize why an optimizer selected or skipped destinations, how weather and budget affect the route, and how users can provide feedback through sliders or interest bars.''
+
+\noindent \textbf{Possible paper venues:} VIS, EuroVis, CHI, IUI, visual analytics venues.
+
+\subsection*{5. Prof. Zhu-Tian Chen}
+
+\noindent \textbf{Why he fits:} Prof. Chen's profile describes research on augmenting human intelligence in everyday activities through data visualization, HCI, AR/VR, visual computing, and human-AI interaction.\footnote{\url{https://cse.umn.edu/cs/zhu-tian-chen}} CSE also describes his work as exploring how AI can help humans collaborate and make decisions in physical-world settings.\footnote{\url{https://cse.umn.edu/cs/news/leveraging-ai-real-world-spaces-augmented-reality}}
+
+\noindent \textbf{Best angle to approach:} ``Travel planning is an everyday decision task. I want to study how data and AI can augment route decisions in a real-world spatial context.''
+
+\noindent \textbf{Possible paper venues:} CHI, IUI, VIS, spatial/AR interaction venues if the interface becomes spatially rich.
+
+\section*{Spatial Data and Scaling Matches}
+
+\subsection*{6. Prof. Shashi Shekhar}
+
+\noindent \textbf{Why he fits:} Prof. Shekhar's CSE profile lists spatial computing, spatial data science, spatial data mining, spatial databases, and GIS. It also notes scalable algorithms for eco-routing and evacuation route planning.\footnote{\url{https://cse.umn.edu/cs/shashi-shekhar}} This is the strongest fit if the project becomes a nationwide spatial computing/routing paper rather than primarily an HCI paper.
+
+\noindent \textbf{Best angle to approach:} ``The long-term system is nationwide, weather-aware, and route-constrained. I need guidance on spatial data quality, routing scalability, and how to frame the optimization/geospatial contribution.''
+
+\noindent \textbf{Possible paper venues:} ACM SIGSPATIAL, GIScience, spatial data science venues, transportation/spatial decision-support venues.
+
+\subsection*{7. Prof. Yao-Yi Chiang}
+
+\noindent \textbf{Why he fits:} Prof. Chiang's CSE profile says he builds algorithms and intelligent systems for discovering, collecting, fusing, and analyzing heterogeneous spatial data.\footnote{\url{https://cse.umn.edu/cs/yao-yi-chiang}} This is highly relevant to the future agent-assisted dataset discovery and nationwide data-fusion part of the project.
+
+\noindent \textbf{Best angle to approach:} ``The future system needs to discover, fuse, and audit heterogeneous geospatial data sources for trip planning before the optimizer runs.''
+
+\noindent \textbf{Possible paper venues:} ACM SIGSPATIAL, GeoAI, spatial data integration, data science venues.
+
+\section*{Transportation and Civil Engineering Matches}
+
+\subsection*{8. Prof. Seongjin Choi}
+
+\noindent \textbf{Why he fits:} Prof. Choi's profile lists urban mobility data analytics, spatiotemporal data modeling, deep learning and AI, connected automated vehicles, and cooperative ITS. It also says his work uses data analytics to optimize urban mobility and improve sustainable transportation systems.\footnote{\url{https://cse.umn.edu/dsi/seongjin-choi}} This is a strong fit if the project becomes more transportation-data and mobility-system oriented.
+
+\noindent \textbf{Best angle to approach:} ``The project uses spatiotemporal data, weather/context signals, and optimization to generate travel plans. I would value advice on transportation-data validity and mobility-system framing.''
+
+\noindent \textbf{Possible paper venues:} Transportation Research Part C, IEEE ITSC, TRB, urban mobility data science venues.
+
+\subsection*{9. Prof. Alireza Khani}
+
+\noindent \textbf{Why he fits:} Prof. Khani's profile says he uses network modeling and optimization techniques for public transit systems, autonomous mobility-on-demand, and electric fleets.\footnote{\url{https://cse.umn.edu/node/137491}} His research on dynamic transit networks and rider behavior is relevant to route choice and multimodal planning.
+
+\noindent \textbf{Best angle to approach:} ``The project currently focuses on tourist itinerary routes, but the long-term version could connect with multimodal travel planning, transit access, and route optimization under uncertainty.''
+
+\noindent \textbf{Possible paper venues:} Transportation Research Part C, TRB, INFORMS transportation workshops, mobility-on-demand venues.
+
+\subsection*{10. Prof. Michael Levin}
+
+\noindent \textbf{Why he fits:} UMN CEGE materials describe Prof. Levin's work on connected autonomous vehicles, traffic flow theory, intelligent transportation systems, transportation network modeling, and optimization of traffic controls and policies.\footnote{\url{https://cse.umn.edu/node/81371}}\footnote{\url{https://cse.umn.edu/cege/news/avs-and-intersections}} This is relevant if the project evolves toward traffic/network optimization rather than only attraction planning.
+
+\noindent \textbf{Best angle to approach:} ``The technical core is a route-planning and network-decision problem with user preferences and contextual constraints. I would value feedback on transportation-network modeling.''
+
+\noindent \textbf{Possible paper venues:} Transportation networks, ITS, traffic optimization, and applied mobility venues.
+
+\subsection*{11. Prof. Raphael Stern}
+
+\noindent \textbf{Why he fits:} The Stern Research Group studies transportation data, sensing, and control using civil engineering, computer science, statistics, and control theory, with a guiding question of how data can improve transportation-system management.\footnote{\url{https://stern.cege.umn.edu/group}} This is relevant if the project becomes a data-driven transportation decision-support tool.
+
+\noindent \textbf{Best angle to approach:} ``I am trying to connect data-driven route planning with user-facing decision support and could use advice on transportation data, uncertainty, and evaluation.''
+
+\noindent \textbf{Possible paper venues:} IEEE ITSC, Transportation Research Part C, transportation data/control venues.
+
+\subsection*{12. Prof. Gary Davis}
+
+\noindent \textbf{Why he fits:} Prof. Davis's CTS profile lists causal inference, impact assessment in traffic safety, Bayesian statistical methods, and optimization methods for traffic engineering and transportation planning.\footnote{\url{https://www.cts.umn.edu/faculty/gary-davis}} This is relevant if the project emphasizes uncertainty modeling and decision support.
+
+\noindent \textbf{Best angle to approach:} ``The project has uncertain weather, congestion, and source-quality signals. I would value advice on statistical validity, Bayesian framing, and transportation decision-support evaluation.''
+
+\noindent \textbf{Possible paper venues:} Transportation safety, decision-support, Bayesian transportation modeling venues.
+
+\section*{Mechanical Engineering / Human Factors Match}
+
+\subsection*{13. Prof. Nichole Morris}
+
+\noindent \textbf{Why she fits:} Prof. Morris's profile emphasizes human-centered engineering, inclusive design, infrastructure, human-machine interfaces, transportation safety, driver behavior, pedestrian safety, and human factors design.\footnote{\url{https://cse.umn.edu/me/nichole-morris}} The HumanFIRST Lab also focuses on driver-centered transportation systems and usable intelligent transportation systems.\footnote{\url{https://experts.umn.edu/en/organisations/humanfirst-laboratory/}} This is a strong non-CS fit if the paper becomes about human factors in route guidance and travel decision support.
+
+\noindent \textbf{Best angle to approach:} ``I am building a human-facing travel decision-support system and want to evaluate whether users understand route guidance, uncertainty, and safety/weather/context tradeoffs.''
+
+\noindent \textbf{Possible paper venues:} Human Factors, Transportation Research Part F, CHI/IUI if the interface contribution is central.
+
+\section*{Algorithmic / Recommender Method Matches}
+
+\subsection*{14. Prof. George Karypis}
+
+\noindent \textbf{Why he fits:} Prof. Karypis' CSE profile lists data mining, recommender systems, learning analytics, and high-performance computing as research interests, with emphasis on novel algorithms and practical software tools.\footnote{\url{https://cse.umn.edu/cs/george-karypis}} This is useful if the project becomes more about scalable recommendation, candidate selection, and hybrid optimization.
+
+\noindent \textbf{Best angle to approach:} ``I am developing candidate-selection and routing-repair methods for itinerary recommendation, and I need guidance on modeling, benchmarking, and scalable evaluation.''
+
+\noindent \textbf{Possible paper venues:} RecSys, KDD/workshops, applied data mining, recommender systems venues.
+
+\section*{Industrial and Systems Engineering / Optimization Matches}
+
+\subsection*{15. Prof. Liyan Xie}
+
+\noindent \textbf{Why she fits:} Prof. Xie's page says her research lies at the interface of statistics, optimization, and machine learning, inspired by engineering applications.\footnote{\url{https://liyanxie.github.io/}} This is a strong fit for advice on statistical/optimization rigor, uncertainty, and how to make the pipeline publishable beyond a demo.
+
+\noindent \textbf{Best angle to approach:} ``The project combines uncertain data sources, predictive components, and optimization-based routing. I would value guidance on data flexibility, model validity, and paper venue strategy.''
+
+\noindent \textbf{Possible paper venues:} INFORMS/OR, applied ML/optimization, decision-support, or interdisciplinary HCI/AI venues depending on framing.
+
+\subsection*{16. Prof. Zhaosong Lu}
+
+\noindent \textbf{Why he fits:} Prof. Lu's homepage lists theoretical foundations and algorithms for hierarchical, distributed, robust, and stochastic optimization, plus the intersection of optimization and statistics for data science and AI/ML.\footnote{\url{https://zhaosong-lu.github.io/}} This is relevant if the project becomes more about robust/stochastic optimization for scalable route planning.
+
+\noindent \textbf{Best angle to approach:} ``I am using hierarchical route decomposition and small optimization repairs, but I need a stronger framework for robust/stochastic optimization under data uncertainty.''
+
+\noindent \textbf{Possible paper venues:} Optimization, INFORMS, ML/optimization workshops, robust/stochastic optimization venues.
+
+\section*{Recommended Outreach Order}
+
+\begin{enumerate}
+    \item \textbf{Start with Prof. Xie} for methodological advice on data flexibility, uncertainty, optimization/statistics framing, and venue strategy.
+    \item \textbf{Contact Prof. Kaur} if the project is mainly human-AI interaction, explanation, trust, and agency.
+    \item \textbf{Consider Prof. Konstan or Prof. Terveen} if the project is mainly recommender systems and user-centered personalization.
+    \item \textbf{Consider Prof. Wang or Prof. Chen} if the dashboard/visual explanation interface becomes the central contribution.
+    \item \textbf{Consider Prof. Shekhar or Prof. Chiang} if the nationwide spatial-data and routing problem becomes the core contribution.
+    \item \textbf{Consider Prof. Choi, Khani, Levin, Stern, or Davis} if the project is reframed as transportation/mobility decision support.
+    \item \textbf{Consider Prof. Morris} if the study becomes human factors and transportation interface evaluation.
+    \item \textbf{Consider Prof. Karypis or Prof. Lu} if the main contribution becomes scalable recommendation, candidate selection, robust optimization, or stochastic optimization.
+\end{enumerate}
+
+\section*{Suggested Short Email Paragraph}
+
+\noindent I am developing a weather-aware itinerary planning system that combines open-data enrichment, preference modeling, and optimization-based route generation. I am interested in turning the system into a publishable research project, possibly around human-AI decision support, explainable recommender systems, or spatial data-driven route planning. The key distinction is that lightweight agents may assist with early-stage data discovery and organization, but the actual routes are generated by transparent optimization methods. I would appreciate your advice on whether this direction overlaps with your research group and what publication venue or study design might be most appropriate.
+
+\end{document}

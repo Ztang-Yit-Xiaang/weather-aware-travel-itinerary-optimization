@@ -32,6 +32,8 @@ Validate dashboard exports:
 python scripts/validate_dashboard_export.py
 ```
 
+This validator now checks the multi-page dashboard contract: `index.html`, `customer.html`, `research.html`, `evaluation.html`, evaluation metrics assets, map-layer toggles, saved-route labels, preview-only labels, and richer route metadata.
+
 Validate the nature-aware route pipeline:
 
 ```bash
@@ -43,6 +45,13 @@ Serve the generated dashboard:
 ```bash
 python scripts/serve_dashboard.py
 ```
+
+When the server starts, inspect the newest dashboard pages under `results/figures/full_interactive_dashboard/`:
+
+- `customer.html` for the cleaner trip-planner view;
+- `research.html` for route layers, city details, nature exploration, and debug panels;
+- `evaluation.html` for method-comparison charts and solver tradeoffs;
+- `index.html` when you want the default full dashboard with mode toggle.
 
 Run the production notebook with the nature config:
 
@@ -86,6 +95,16 @@ Before committing generated files, ask:
 
 Screenshots for docs are okay when they make the project easier to understand.
 
+README screenshots should live in `docs/assets/` so they render on GitHub. Report-only screenshots can live under `report/figures/`, but remember that `report/` is ignored by default unless a file is intentionally tracked.
+
+Dashboard artifact changes should keep these contracts synchronized:
+
+- saved optimized routes must be labeled separately from preview-only browser routes;
+- customer-visible routes should be marked with `customer_visible`;
+- research/debug routes should be marked with `research_only`;
+- selected POIs should carry fields such as `why_selected`, `source_confidence`, `weather_risk`, and `expected_duration_minutes`;
+- method-evaluation data should include status labels and notes rather than only scores.
+
 ## Agent-Assisted Workflow
 
 AI coding agents are welcome here, but large changes should start with a short plan. A good plan should state:
@@ -112,7 +131,7 @@ Before opening a PR or sharing a patch:
 ## Good First Contribution Areas
 
 - Better data-source adapters and provenance fields.
-- Clearer dashboard labels for saved optimized routes versus preview-only routes.
+- Clearer customer/research/evaluation dashboard flows.
 - Smaller, more reliable validation fixtures.
 - Documentation that helps a new user open the dashboard quickly.
 - Route explanation fields such as why selected, why skipped, and source confidence.

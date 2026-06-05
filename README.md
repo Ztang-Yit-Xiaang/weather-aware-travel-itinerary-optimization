@@ -13,7 +13,7 @@
 
 </div>
 
-![Full dashboard preview](report/figures/full_dashboard_screenshot.png)
+![Full dashboard preview](docs/assets/full_dashboard_preview.png)
 
 ## Why This Tool?
 
@@ -32,8 +32,10 @@ This project turns those questions into a working research prototype. It collect
 - Build multi-day California trip plans with city, scenic, and nature-aware stops.
 - Compare route strategies such as hierarchical Gurobi, greedy baselines, and hybrid bandit + small Gurobi repair.
 - Switch between 7-day, 9-day, and 12-day route artifacts.
-- Inspect selected hotels, candidate hotels, route variants, and optional context layers.
+- Use a customer-facing trip planner view for quick inspection and a research/test view for deeper debugging.
+- Inspect selected hotels, candidate hotels, route variants, map layers, playback, active stop details, city details, nature exploration, and debug summaries.
 - Preview interest profiles across nature, city, culture, and history.
+- Compare method metrics in a separate evaluation dashboard.
 - Export lightweight maps for sharing and larger dashboards for research/debugging.
 - Keep data-source uncertainty visible through enrichment and validation artifacts.
 
@@ -45,11 +47,20 @@ The fastest way to see the project is to serve the generated dashboard locally:
 python scripts/serve_dashboard.py
 ```
 
-Then open the URL printed in the terminal. The main generated dashboard is:
+Then open the URL printed in the terminal. The newest generated dashboard folder is:
 
 ```text
-results/figures/full_interactive_dashboard/index.html
+results/figures/full_interactive_dashboard/
 ```
+
+Useful entry points:
+
+| Page | Use It For |
+| --- | --- |
+| `index.html` | Full map dashboard with customer/research mode toggle |
+| `customer.html` | Cleaner customer-facing trip planner view |
+| `research.html` | Research/test view with route layers, city details, nature exploration, and debug panels |
+| `evaluation.html` | Static method-comparison dashboard |
 
 The lightweight share map can also be opened directly:
 
@@ -88,18 +99,20 @@ If you use the Gurobi routes, make sure a valid local Gurobi license is availabl
 
 ## Current Demo Data
 
-The current generated artifacts focus on California coast / statewide-style travel planning.
+The current generated artifacts focus on a California Statewide Nature demo with a Los Angeles to San Francisco corridor.
 
 | Artifact | Current Snapshot |
 | --- | --- |
 | Candidate catalog | 228 city/place candidates across San Diego, Los Angeles, Santa Barbara, San Luis Obispo, Monterey, Santa Cruz, and San Francisco |
-| Default route method | Hierarchical + Bandit + Small Gurobi Repair |
-| Selected route | 16 stops, Los Angeles to San Francisco |
-| Budget snapshot | About 2041.80 used from a 2213.14 buffered trip budget |
+| Dashboard scenario | California Statewide Nature, nature-heavy interest profile |
+| Customer dashboard route | 7-day saved route artifact with 7 visible stops |
+| Default route method | Method · Hierarchical + Bandit + Small Gurobi Repair |
+| Method CSV snapshot | The method comparison CSV reports 16 selected attractions for the hybrid repair method and about 2041.80 used from a 2213.14 buffered trip budget |
+| Route index | 32 route records, including 7 customer-visible options and 25 research-only records |
 | Route variants | 7-day, 9-day, and 12-day comparison artifacts |
-| Validation summary | `production_map_validation_summary.json` reports 97 PASS checks |
+| Validation summary | `python scripts/validate_dashboard_export.py` passes; `production_map_validation_summary.json` reports 97 PASS checks |
 
-The method comparison artifacts are intentionally research-facing. For example, the greedy baseline may score well on some utility components but can violate budget expectations, while the hybrid bandit + Gurobi repair route is designed to keep the route compact, inspectable, and feasible enough for dashboard review.
+The method comparison artifacts are intentionally research-facing. For example, the evaluation dashboard compares hierarchical Gurobi, hierarchical greedy, and bandit + repair artifacts and keeps solver/status labels visible instead of hiding fallback behavior.
 
 ## How It Works
 
@@ -117,7 +130,7 @@ Plain-English version:
 2. It scores places by value, interest fit, scenic/nature signals, detour cost, and data confidence.
 3. It proposes route structures across cities and trip lengths.
 4. It uses optimization and heuristic repair to produce usable day-by-day route artifacts.
-5. It exports a dashboard so a person can inspect the route, not just trust a black-box answer.
+5. It exports customer, research, and evaluation dashboards so a person can inspect the route, not just trust a black-box answer.
 
 ## Interest Profiles
 
@@ -126,7 +139,7 @@ The planner separates **pace** from **interest**:
 - Pace: relaxed, balanced, explorer.
 - Interest: nature, city, culture, history.
 
-Saved profile artifacts currently include balanced, nature-heavy, city-heavy, culture-heavy, and history-heavy score comparisons. Browser-side interest controls are previews; true optimized route changes come from rerunning the Python pipeline.
+Saved profile artifacts currently include balanced, nature-heavy, city-heavy, culture-heavy, and history-heavy score comparisons. Browser-side interest controls are clearly labeled previews; true optimized route changes come from rerunning the Python pipeline.
 
 ## Project Structure
 
@@ -156,7 +169,7 @@ weather-aware-travel-itinerary-optimization/
 
 ## Limitations
 
-- The dashboard is static. Sliders and browser controls can preview or switch saved route artifacts, but they do not rerun Gurobi in the browser.
+- The dashboard is a static export. Customer controls can switch saved artifacts or show preview-only routes, but they do not rerun Gurobi in the browser.
 - Generated artifacts can become stale after config or code changes. Re-run the pipeline before using the maps as final evidence.
 - Live data sources may fall back to cached or curated data. The audit files are part of the research story, not noise to hide.
 - Nationwide travel planning is a roadmap. The current strongest demo is California-focused; national-scale routing needs stronger data adapters, route graph generation, and validation.

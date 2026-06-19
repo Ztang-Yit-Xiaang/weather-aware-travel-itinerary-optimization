@@ -50,3 +50,6 @@ report/figures/*
 !report/figures/full_dashboard_screenshot.png
 !report/figures/lightweight_share_map_screenshot.png
 !report/figures/production_route_map_screenshot.png
+
+# Python package metadata
+*.egg-info/

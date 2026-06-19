@@ -11,6 +11,7 @@ window.DASHBOARD_CITY_DETAILS = {
         "method__hierarchical_gurobi_pipeline",
         "must_go_candidates",
         "nature_candidates",
+        "nature_site_routes",
         "route_matrix__d7_bandit_repair_balanced",
         "route_matrix__d7_bandit_repair_explorer",
         "route_matrix__d7_bandit_repair_relaxed",
@@ -179,7 +180,8 @@ window.DASHBOARD_CITY_DETAILS = {
         "interest_profile__balanced_interest",
         "interest_profile__city_heavy",
         "must_go_candidates",
-        "nature_candidates"
+        "nature_candidates",
+        "nature_site_routes"
       ],
       "days": [
         1,
@@ -475,6 +477,7 @@ window.DASHBOARD_CITY_DETAILS = {
         "method__hierarchical_gurobi_pipeline",
         "must_go_candidates",
         "nature_candidates",
+        "nature_site_routes",
         "route_matrix__d7_bandit_repair_balanced",
         "route_matrix__d7_bandit_repair_explorer",
         "route_matrix__d7_bandit_repair_relaxed",
@@ -885,7 +888,8 @@ window.DASHBOARD_CITY_DETAILS = {
       "city": "Palm Springs",
       "route_ids": [
         "must_go_candidates",
-        "nature_candidates"
+        "nature_candidates",
+        "nature_site_routes"
       ],
       "days": [],
       "selected_stops": [],

@@ -180,6 +180,13 @@ async function loadNatureExplore() {
   });
 }
 
+async function loadNatureSiteRoutes() {
+  return loadDashboardAsset('nature site routes', 'assets/nature_site_routes.json', {
+    script: 'assets/nature_site_routes.js',
+    globalName: 'DASHBOARD_NATURE_SITE_ROUTES'
+  });
+}
+
 async function loadRouteGeoJson(routeRecord) {
   return loadDashboardAsset(`route ${routeRecord.id}`, routeRecord.geojson, {
     script: routeRecord.geojson_js,
@@ -209,6 +216,7 @@ window.loadCityDetails = loadCityDetails;
 window.loadSelectedHotels = loadSelectedHotels;
 window.loadHotelChoices = loadHotelChoices;
 window.loadNatureExplore = loadNatureExplore;
+window.loadNatureSiteRoutes = loadNatureSiteRoutes;
 window.loadRouteGeoJson = loadRouteGeoJson;
 window.loadPoiJson = loadPoiJson;
 window.showDashboardDiagnostic = showDashboardDiagnostic;

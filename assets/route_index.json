@@ -859,6 +859,28 @@
       "customer_visible": false,
       "research_only": true,
       "customer_control_group": "research"
+    },
+    {
+      "id": "nature_site_routes",
+      "label": "Nature site routes",
+      "default": false,
+      "optional": true,
+      "family": "nature_detail",
+      "selector_group": "nature_details",
+      "geojson": "assets/routes/nature_site_routes.geojson",
+      "geojson_js": "assets/routes/nature_site_routes.js",
+      "pois": "assets/pois/nature_site_routes_pois.json",
+      "pois_js": "assets/pois/nature_site_routes_pois.js",
+      "quick_groups": [
+        "nature_detail",
+        "nature_details",
+        "candidates"
+      ],
+      "playable": false,
+      "marker_only": false,
+      "customer_visible": true,
+      "research_only": false,
+      "customer_control_group": "nature_site_routes"
     }
   ]
 }

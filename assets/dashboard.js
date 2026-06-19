@@ -129,6 +129,74 @@ function bindDashboardShellControls() {
   });
 }
 
+function natureSiteKey(...parts) {
+  const text = parts.filter(Boolean).join(' ').toLowerCase();
+  if (text.includes('yosemite')) return 'yosemite';
+  if (text.includes('sequoia')) return 'sequoia';
+  if (text.includes('kings canyon')) return 'kings_canyon';
+  if (text.includes('joshua')) return 'joshua_tree';
+  if (text.includes('big sur') || text.includes('bixby') || text.includes('pfeiffer')) return 'big_sur';
+  return text.replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '').slice(0, 80);
+}
+
+function natureRoutesForPlace(place) {
+  const routes = Array.isArray(window.dashboardNatureSiteRoutes?.routes) ? window.dashboardNatureSiteRoutes.routes : [];
+  if (!routes.length || !place) return [];
+  const key = natureSiteKey(place.site_id, place.name, place.nature_region, place.city_or_anchor, place.city);
+  return routes.filter(route => {
+    const routeKey = natureSiteKey(route.site_id, route.site_name, route.nature_region, route.city);
+    return routeKey === key || key.includes(routeKey) || routeKey.includes(key);
+  }).slice(0, 4);
+}
+
+function natureRouteTypeLabel(value) {
+  return String(value || 'nature route').replaceAll('_', ' ');
+}
+
+function natureRouteCardsHtml(routes, { research = false } = {}) {
+  if (!routes.length) return '';
+  return `
+    <div class="detail-copy nature-site-route-block">
+      <b>Inside this site</b>
+      <div class="nature-route-list">
+        ${routes.map(route => `
+          <div class="nature-route-mini-card">
+            <strong>${escapeHtml(route.route_name || route.name || 'Nature route')}</strong>
+            <div>${escapeHtml(natureRouteTypeLabel(route.route_type))} · ${compactValue(route.distance_km)} km · ${Math.round(Number(route.duration_minutes || 0)) || 'n/a'} min · ${escapeHtml(route.difficulty || 'easy')}</div>
+            <div>Route score ${compactValue(route.route_score)} · Confidence ${compactValue(route.source_confidence)}</div>
+            ${research ? `<div>Source: ${escapeHtml(route.source || '')}${route.fallback_used ? ' · fallback' : ''}</div>` : ''}
+            <div class="nature-route-actions">
+              <button type="button" data-show-nature-site-route="${escapeHtml(route.route_id || '')}">Show route</button>
+              <button type="button" data-focus-nature-site-route="${escapeHtml(route.route_id || '')}" data-lat="${escapeHtml(route.lat || '')}" data-lon="${escapeHtml(route.lon || '')}">Focus</button>
+              ${route.source_url ? `<a href="${escapeHtml(route.source_url)}" target="_blank" rel="noopener">Open source</a>` : ''}
+            </div>
+          </div>
+        `).join('')}
+      </div>
+    </div>
+  `;
+}
+
+function bindNatureRouteButtons(root = document) {
+  root.querySelectorAll('[data-show-nature-site-route]').forEach(button => {
+    button.addEventListener('click', () => {
+      if (window.toggleRoute) window.toggleRoute('nature_site_routes', true, false);
+      const routeId = button.dataset.showNatureSiteRoute;
+      const route = (window.dashboardNatureSiteRoutes?.routes || []).find(item => item.route_id === routeId);
+      if (route && window.focusDashboardLocation) {
+        window.focusDashboardLocation(route.lat, route.lon, route.route_name || route.site_name || 'Nature site route');
+      }
+    });
+  });
+  root.querySelectorAll('[data-focus-nature-site-route]').forEach(button => {
+    button.addEventListener('click', () => {
+      if (window.focusDashboardLocation) {
+        window.focusDashboardLocation(button.dataset.lat, button.dataset.lon, 'Nature site route');
+      }
+    });
+  });
+}
+
 function renderActiveStopDetail(stop, routeRecord, playbackMeta = {}) {
   const target = document.getElementById('active-stop-detail');
   if (!target) return;
@@ -166,6 +234,7 @@ function renderActiveStopDetail(stop, routeRecord, playbackMeta = {}) {
   const sourceLink = stop.source_url || stop.website_url
     ? `<div class="detail-copy"><b>Source</b><a href="${escapeHtml(stop.source_url || stop.website_url)}" target="_blank" rel="noopener">${escapeHtml(stop.detail_source || stop.source_url || stop.website_url)}</a></div>`
     : '';
+  const insideRoutes = natureRoutesForPlace(stop);
   target.innerHTML = `
     <div class="detail-card active-stop-card">
       ${visual}
@@ -179,10 +248,12 @@ function renderActiveStopDetail(stop, routeRecord, playbackMeta = {}) {
         </div>
         <div class="detail-copy"><b>Description</b>${escapeHtml(stop.description || 'No description exported.')}</div>
         <div class="detail-copy"><b>Why selected</b>${escapeHtml(stop.why_selected || stop.reason_selected || 'Selection reason was not exported.')}</div>
+        ${natureRouteCardsHtml(insideRoutes, { research: document.body.dataset.dashboardMode !== 'customer' })}
         ${sourceLink}
       </div>
     </div>
   `;
+  bindNatureRouteButtons(target);
 }
 
 function renderCityDetails(payload) {
@@ -380,10 +451,13 @@ function renderNatureExplore(payload) {
         <strong>${item.name}</strong>
         <div>${item.city || item.nature_region || ''} · ${item.park_type || item.category || ''}</div>
         <div>Nature/scenic/hiking: ${compactValue(item.nature_score)} / ${compactValue(item.scenic_score)} / ${compactValue(item.hiking_score)}</div>
+        <div>Internal routes: ${item.internal_route_count || natureRoutesForPlace(item).length || 0} · Best score ${compactValue(item.best_internal_route_score)}</div>
         <div>Weather sensitivity: ${compactValue(item.weather_sensitivity)} · Season risk: ${compactValue(item.seasonality_risk)}</div>
         <div>${item.source_list || ''}</div>
+        ${natureRouteCardsHtml(natureRoutesForPlace(item).slice(0, 2), { research: document.body.dataset.dashboardMode !== 'customer' })}
       </div>
     `).join('');
+    bindNatureRouteButtons(target);
   };
   target.querySelectorAll('[data-nature-filter]').forEach(input => input.addEventListener('change', renderCards));
   target.querySelector('[data-show-nature-layer]')?.addEventListener('click', () => {

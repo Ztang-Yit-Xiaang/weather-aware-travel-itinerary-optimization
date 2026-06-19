@@ -108,7 +108,7 @@ The current generated artifacts focus on a California Statewide Nature demo with
 | Customer dashboard route | 7-day saved route artifact with 7 visible stops |
 | Default route method | Method · Hierarchical + Bandit + Small Gurobi Repair |
 | Method CSV snapshot | The method comparison CSV reports 16 selected attractions for the hybrid repair method and about 2041.80 used from a 2213.14 buffered trip budget |
-| Route index | 32 route records, including 7 customer-visible options and 25 research-only records |
+| Route index | 33 route records, including 8 customer-visible options and 25 research-only records |
 | Route variants | 7-day, 9-day, and 12-day comparison artifacts |
 | Validation summary | `python scripts/validate_dashboard_export.py` passes; `production_map_validation_summary.json` reports 97 PASS checks |
 
@@ -156,6 +156,21 @@ weather-aware-travel-itinerary-optimization/
 ```
 
 ## Documentation
+
+### Literature Review
+
+Start with the onboarding guide, then use the reading cards and matrix before opening the full evidence bank.
+
+| Literature Document | Read It For |
+| --- | --- |
+| [Literature onboarding guide](docs/literature_onboarding_guide.md) | First read for the project problem, four research areas, terminology, research gap, roadmap, and next study scope |
+| [Core paper reading cards](docs/core_paper_reading_cards.md) | Eight-paper reading spine with what to read, what to skim, and how each paper supports the project |
+| [Project-literature evidence matrix](docs/project_literature_evidence_matrix.md) | Feature-by-feature map from current implementation status to supporting papers and remaining novelty |
+| [Related work outline](docs/related_work_outline.md) | Future paper structure for Tourist Trip Design, personalization, LLM/solver planning, and explainable decision support |
+| [Literature deep read study report](docs/literature_deep_read_study_report.md) | Detailed evidence bank for all local PDFs; use after the onboarding guide, not as the first read |
+| [Recent papers quick index](docs/recent_papers_2023_2026_addendum.md) | Short index of the 2023-2026 papers integrated into the deep report |
+
+### Project And Engineering Docs
 
 | Document | What It Covers |
 | --- | --- |

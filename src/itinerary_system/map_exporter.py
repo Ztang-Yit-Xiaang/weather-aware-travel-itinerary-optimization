@@ -20,11 +20,12 @@ DEFAULT_DASHBOARD_METHOD = "hierarchical_bandit_gurobi_repair"
 CONTRACT_VERSION = "core-route-index-v1"
 PLAYABLE_ROUTE_FAMILIES = {"selected", "route_matrix", "trip_length", "method", "interest_profile"}
 MARKER_ONLY_ROUTE_FAMILIES = {"hotel", "nature", "must_go"}
-CUSTOMER_ROUTE_FAMILIES = {"selected", "trip_length", "interest_profile"}
+CUSTOMER_ROUTE_FAMILIES = {"selected", "trip_length", "interest_profile", "nature_detail"}
 CUSTOMER_CONTROL_GROUPS = {
     "selected": "saved_route",
     "trip_length": "trip_days",
     "interest_profile": "interest",
+    "nature_detail": "nature_site_routes",
 }
 PLACEHOLDER_HOTEL_PATTERNS = (
     "lodging candidate pending",
@@ -387,6 +388,14 @@ def _point_records(route_df: pd.DataFrame, *, selected_poi: bool = True) -> list
                 "weather_risk": weather_risk,
                 "seasonality_risk": _safe_float(row.get("seasonality_risk", 0.0)),
                 "park_type": _safe_str(row.get("park_type", "")),
+                "internal_route_count": int(_safe_float(row.get("internal_route_count", 0.0))),
+                "best_internal_route_score": _safe_float(row.get("best_internal_route_score", 0.0)),
+                "best_internal_route_distance_km": _safe_float(row.get("best_internal_route_distance_km", 0.0)),
+                "best_internal_route_duration_minutes": _safe_float(
+                    row.get("best_internal_route_duration_minutes", 0.0)
+                ),
+                "internal_route_confidence": _safe_float(row.get("internal_route_confidence", 0.0)),
+                "internal_route_source": _safe_str(row.get("internal_route_source", "")),
                 "route_type": _safe_str(row.get("route_type", "")),
                 "status": _safe_str(row.get("status", "")),
                 "notes": _safe_str(row.get("notes", "")),
@@ -961,6 +970,150 @@ def _candidate_record_from_csv(
     _add_dashboard_record(records, route_geojsons, route_pois, record, points, output_dir=output_dir)
 
 
+def _nature_site_route_assets(output_dir: Path) -> tuple[dict[str, Any], list[dict[str, Any]], dict[str, Any]]:
+    routes = _read_csv_if_present(output_dir / "production_nature_site_routes.csv")
+    points = _read_csv_if_present(output_dir / "production_nature_site_route_points.csv")
+    audit = _read_csv_if_present(output_dir / "production_nature_site_route_audit.csv")
+    if routes.empty or points.empty or "route_id" not in routes.columns or "route_id" not in points.columns:
+        audit_items = []
+        if not audit.empty:
+            audit_items = [
+                {
+                    "site_id": _safe_str(row.get("site_id", "")),
+                    "site_name": _safe_str(row.get("site_name", "")),
+                    "route_count": int(_safe_float(row.get("route_count", 0))),
+                    "source_status": _safe_str(row.get("source_status", "")),
+                    "missing_reason": _safe_str(row.get("missing_reason", "")),
+                }
+                for _, row in audit.iterrows()
+            ]
+        return (
+            {"type": "FeatureCollection", "features": []},
+            [],
+            {
+                "available": False,
+                "routes": [],
+                "sites": {},
+                "audit": audit_items,
+                "message": "No production_nature_site_routes.csv artifact found.",
+            },
+        )
+
+    route_by_id = {str(row.get("route_id", "")): row for _, row in routes.iterrows()}
+    features: list[dict[str, Any]] = []
+    pois: list[dict[str, Any]] = []
+    payload_routes: list[dict[str, Any]] = []
+    for route_id, group in points.groupby(points["route_id"].fillna("").astype(str), sort=False):
+        if not route_id or route_id not in route_by_id:
+            continue
+        group = group.sort_values("point_order") if "point_order" in group.columns else group
+        coords = [
+            [_safe_float(row.get("longitude")), _safe_float(row.get("latitude"))]
+            for _, row in group.iterrows()
+            if _safe_float(row.get("latitude")) and _safe_float(row.get("longitude"))
+        ]
+        if len(coords) < 2:
+            continue
+        route = route_by_id[route_id]
+        props = {
+            "route_id": route_id,
+            "name": _safe_str(route.get("route_name", route_id)),
+            "route_name": _safe_str(route.get("route_name", route_id)),
+            "site_id": _safe_str(route.get("site_id", "")),
+            "site_name": _safe_str(route.get("site_name", "")),
+            "city": _safe_str(route.get("city", "")),
+            "nature_region": _safe_str(route.get("nature_region", "")),
+            "lat": _safe_float(route.get("latitude", 0.0)),
+            "lon": _safe_float(route.get("longitude", 0.0)),
+            "route_type": _safe_str(route.get("route_type", "")),
+            "distance_km": _safe_float(route.get("distance_km", 0.0)),
+            "duration_minutes": int(_safe_float(route.get("duration_minutes", 0.0))),
+            "difficulty": _safe_str(route.get("difficulty", "")),
+            "route_score": _safe_float(route.get("route_score", 0.0)),
+            "source_confidence": _safe_float(route.get("source_confidence", 0.0)),
+            "source": _safe_str(route.get("source", "")),
+            "source_url": _safe_str(route.get("source_url", "")),
+            "description": _safe_str(route.get("description", "")),
+            "fallback_used": _safe_bool(route.get("fallback_used", False)),
+        }
+        features.append(
+            {
+                "type": "Feature",
+                "geometry": {"type": "LineString", "coordinates": coords},
+                "properties": {**props, "role": "nature_site_route"},
+            }
+        )
+        first_lon, first_lat = coords[0]
+        pois.append(
+            {
+                "name": props["name"],
+                "city": props["city"],
+                "city_or_anchor": props["site_name"] or props["nature_region"] or props["city"],
+                "lat": first_lat,
+                "lon": first_lon,
+                "category": "nature_site_route",
+                "type": props["route_type"],
+                "node_kind": "nature_site_route",
+                "is_selected_poi": False,
+                "is_hotel_node": False,
+                "is_airport_endpoint": False,
+                "nature_region": props["nature_region"],
+                "site_id": props["site_id"],
+                "site_name": props["site_name"],
+                "route_id": route_id,
+                "route_name": props["name"],
+                "route_type": props["route_type"],
+                "distance_km": props["distance_km"],
+                "duration_minutes": props["duration_minutes"],
+                "difficulty": props["difficulty"],
+                "route_score": props["route_score"],
+                "source_confidence": props["source_confidence"],
+                "description": props["description"],
+                "why_selected": "Internal nature-site route detail; not counted as a selected itinerary stop.",
+                "source_url": props["source_url"],
+                "source_list": props["source"],
+            }
+        )
+        payload_routes.append({**props, "route_id": route_id, "point_count": len(coords)})
+
+    sites: dict[str, dict[str, Any]] = {}
+    for route in payload_routes:
+        site_key = route.get("site_id") or _slug(route.get("site_name", "nature_site"))
+        entry = sites.setdefault(
+            site_key,
+            {
+                "site_id": site_key,
+                "site_name": route.get("site_name", ""),
+                "city": route.get("city", ""),
+                "nature_region": route.get("nature_region", ""),
+                "routes": [],
+            },
+        )
+        entry["routes"].append(route)
+    audit_items = [
+        {
+            "site_id": _safe_str(row.get("site_id", "")),
+            "site_name": _safe_str(row.get("site_name", "")),
+            "route_count": int(_safe_float(row.get("route_count", 0))),
+            "source_status": _safe_str(row.get("source_status", "")),
+            "fallback_used": _safe_bool(row.get("fallback_used", False)),
+            "missing_reason": _safe_str(row.get("missing_reason", "")),
+        }
+        for _, row in audit.iterrows()
+    ] if not audit.empty else []
+    return (
+        {"type": "FeatureCollection", "features": features},
+        pois,
+        {
+            "available": bool(payload_routes),
+            "routes": payload_routes,
+            "sites": sites,
+            "audit": audit_items,
+            "filters": ["scenic_drive", "short_hike", "viewpoint_walk"],
+        },
+    )
+
+
 def _debug_summary(output_dir: Path) -> dict[str, Any]:
     frame = _read_csv_if_present(output_dir / "production_map_route_debug.csv")
     if frame.empty:
@@ -1285,6 +1438,14 @@ def _nature_explore(output_dir: Path) -> dict[str, Any]:
                 "seasonality_risk": _safe_float(row.get("seasonality_risk", 0.0)),
                 "park_type": _safe_str(row.get("park_type", "")),
                 "nature_region": _safe_str(row.get("nature_region", "")),
+                "internal_route_count": int(_safe_float(row.get("internal_route_count", 0.0))),
+                "best_internal_route_score": _safe_float(row.get("best_internal_route_score", 0.0)),
+                "best_internal_route_distance_km": _safe_float(row.get("best_internal_route_distance_km", 0.0)),
+                "best_internal_route_duration_minutes": _safe_float(
+                    row.get("best_internal_route_duration_minutes", 0.0)
+                ),
+                "internal_route_confidence": _safe_float(row.get("internal_route_confidence", 0.0)),
+                "internal_route_source": _safe_str(row.get("internal_route_source", "")),
                 "interest_fit": _safe_float(row.get("interest_fit", 0.0)),
                 "park_bonus": _safe_float(row.get("park_bonus", 0.0)),
                 "final_poi_value": final_poi_value,
@@ -1511,6 +1672,24 @@ def _build_dashboard_payloads(
         max_points=120,
         nature_only=True,
     )
+    nature_site_geojson, nature_site_pois, _nature_site_payload = _nature_site_route_assets(output_dir)
+    if nature_site_geojson.get("features") and nature_site_pois:
+        record = _route_record(
+            "nature_site_routes",
+            "Nature site routes",
+            default=False,
+            optional=True,
+            family="nature_detail",
+            selector_group="nature_details",
+            extra={
+                "playable": False,
+                "marker_only": False,
+                "quick_groups": ["nature_detail", "nature_details", "candidates"],
+            },
+        )
+        records.append(record)
+        route_geojsons["nature_site_routes"] = nature_site_geojson
+        route_pois["nature_site_routes"] = nature_site_pois
 
     anchor_audit = _anchor_audit_payload(output_dir)
     artifact_metadata = read_artifact_metadata(output_dir)
@@ -1656,6 +1835,8 @@ def _clear_stale_dashboard_assets(assets: Path, routes_dir: Path, pois_dir: Path
         "hotel_choices.js",
         "nature_explore.json",
         "nature_explore.js",
+        "nature_site_routes.json",
+        "nature_site_routes.js",
         "evaluation_metrics.json",
         "evaluation_metrics.js",
         "data_loader.js",
@@ -2027,6 +2208,7 @@ def _dashboard_page_html(mode: str) -> str:
           <label><input type="checkbox" data-layer-toggle="selected_hotels" checked /> Selected hotels</label>
           <label><input type="checkbox" data-layer-toggle="hotel_candidates" /> Hotel candidates</label>
           <label><input type="checkbox" data-layer-toggle="nature_candidates" /> National park candidates</label>
+          <label><input type="checkbox" data-layer-toggle="nature_site_routes" /> Nature site routes</label>
           <label><input type="checkbox" data-layer-toggle="live_preview" /> Preview only route</label>
         </div>
         <div id="quick-actions" class="quick-actions"></div>
@@ -2069,7 +2251,7 @@ def _dashboard_page_html(mode: str) -> str:
         <summary>City details</summary>
         <div id="city-details"></div>
       </details>
-      <details class="dashboard-section" data-mode-section="research">
+      <details class="dashboard-section">
         <summary>Nature explore</summary>
         <div id="nature-explore"></div>
       </details>
@@ -2102,6 +2284,7 @@ def _write_full_dashboard(
     selected_hotels: dict[str, Any],
     hotel_choices: dict[str, Any],
     nature_explore: dict[str, Any],
+    nature_site_routes: dict[str, Any],
     evaluation_metrics: dict[str, Any],
 ) -> list[Path]:
     assets = root / "assets"
@@ -2575,6 +2758,47 @@ input[type="checkbox"] {
 
 .interest-ranking {
   margin-top: 8px;
+}
+
+.nature-site-route-block {
+  margin-top: 9px;
+}
+
+.nature-route-list {
+  display: grid;
+  gap: 7px;
+  margin-top: 6px;
+}
+
+.nature-route-mini-card {
+  border: 1px solid rgba(47, 155, 79, .28);
+  border-radius: 7px;
+  padding: 8px;
+  background: rgba(238, 252, 241, .82);
+  color: #17364a;
+  font-size: 11px;
+  line-height: 1.35;
+}
+
+.nature-route-mini-card strong {
+  display: block;
+  margin-bottom: 4px;
+  color: var(--forest-dark);
+  font-size: 12px;
+}
+
+.nature-route-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+  margin-top: 7px;
+}
+
+.nature-route-actions a {
+  color: var(--forest-dark);
+  font-weight: 800;
+  text-decoration: none;
 }
 
 .summary-list {
@@ -3164,6 +3388,16 @@ input[type="checkbox"] {
     nature_js_path = assets / "nature_explore.js"
     _write_text_asset(nature_js_path, _global_assignment("DASHBOARD_NATURE_EXPLORE", nature_explore), written)
 
+    nature_site_path = assets / "nature_site_routes.json"
+    _write_json_asset(nature_site_path, nature_site_routes, written)
+
+    nature_site_js_path = assets / "nature_site_routes.js"
+    _write_text_asset(
+        nature_site_js_path,
+        _global_assignment("DASHBOARD_NATURE_SITE_ROUTES", nature_site_routes),
+        written,
+    )
+
     route_index = {
         "contract_version": CONTRACT_VERSION,
         "routes": route_records,
@@ -3362,6 +3596,13 @@ async function loadNatureExplore() {
   });
 }
 
+async function loadNatureSiteRoutes() {
+  return loadDashboardAsset('nature site routes', 'assets/nature_site_routes.json', {
+    script: 'assets/nature_site_routes.js',
+    globalName: 'DASHBOARD_NATURE_SITE_ROUTES'
+  });
+}
+
 async function loadRouteGeoJson(routeRecord) {
   return loadDashboardAsset(`route ${routeRecord.id}`, routeRecord.geojson, {
     script: routeRecord.geojson_js,
@@ -3391,6 +3632,7 @@ window.loadCityDetails = loadCityDetails;
 window.loadSelectedHotels = loadSelectedHotels;
 window.loadHotelChoices = loadHotelChoices;
 window.loadNatureExplore = loadNatureExplore;
+window.loadNatureSiteRoutes = loadNatureSiteRoutes;
 window.loadRouteGeoJson = loadRouteGeoJson;
 window.loadPoiJson = loadPoiJson;
 window.showDashboardDiagnostic = showDashboardDiagnostic;
@@ -3437,6 +3679,7 @@ const FAMILY_STYLES = {
   hotel: { color: '#6d4fd7', fill: '#d8cffd', weight: 1.5, dashArray: null },
   must_go: { color: '#d92652', fill: '#ff8aa4', weight: 1.5, dashArray: null },
   nature: { color: '#247a32', fill: '#6ac659', weight: 1.5, dashArray: null },
+  nature_detail: { color: '#2f9b4f', fill: '#b9f6c9', weight: 3, dashArray: '3 7' },
   live_preview: { color: '#f9735b', fill: '#ffb199', weight: 5, dashArray: '3 12' }
 };
 
@@ -3648,7 +3891,7 @@ function routeLineStyle(routeRecord) {
 }
 
 function markerPopup(point, index, routeRecord) {
-  const candidateFamilies = ['hotel', 'nature', 'must_go', 'context'];
+  const candidateFamilies = ['hotel', 'nature', 'nature_detail', 'must_go', 'context'];
   const isEndpoint = Boolean(point?.is_route_endpoint);
   const isHotelNode = Boolean(point?.is_hotel_node || point?.node_kind === 'hotel');
   const selectionState = isEndpoint
@@ -3658,7 +3901,7 @@ function markerPopup(point, index, routeRecord) {
     : (routeRecord?.family === 'live_preview'
       ? 'Preview only - not written to optimizer artifacts'
       : (candidateFamilies.includes(routeRecord?.family) ? 'Candidate/context marker - not a selected route stop' : 'Saved optimized route stop')));
-  const label = routeRecord?.family === 'hotel' || routeRecord?.family === 'nature'
+  const label = routeRecord?.family === 'hotel' || routeRecord?.family === 'nature' || routeRecord?.family === 'nature_detail'
     ? (point.name || point.hotel_name || routeRecord.label)
     : (isEndpoint ? `${point.airport_code || 'Airport'} · ${point.name || 'Airport'}`
       : (isHotelNode ? `H · ${point.name || point.hotel_name || 'Hotel'}`
@@ -3678,7 +3921,7 @@ function markerPopup(point, index, routeRecord) {
 
 function pointToMarker(point, index, routeRecord) {
   const style = FAMILY_STYLES[routeRecord?.family] || FAMILY_STYLES.selected;
-  const candidateMarker = ['hotel', 'must_go', 'nature', 'context'].includes(routeRecord?.family);
+  const candidateMarker = ['hotel', 'must_go', 'nature', 'nature_detail', 'context'].includes(routeRecord?.family);
   if (point?.is_route_endpoint) {
     const marker = L.marker([Number(point.lat), Number(point.lon)], {
       icon: L.divIcon({
@@ -4090,6 +4333,7 @@ function updateLayerToggleState() {
     if (action === 'default_route') input.checked = activeRouteIds.has(defaultRoute(dashboardRouteIndex)?.id);
     if (action === 'hotel_candidates') input.checked = activeRouteIds.has('hotel_candidates');
     if (action === 'nature_candidates') input.checked = activeRouteIds.has('nature_candidates');
+    if (action === 'nature_site_routes') input.checked = activeRouteIds.has('nature_site_routes');
     if (action === 'live_preview') input.checked = Boolean(livePreviewLayer && dashboardMap?.hasLayer(livePreviewLayer));
   });
 }
@@ -4325,6 +4569,8 @@ function bindLayerToggles() {
         toggleHotelCandidates(checked);
       } else if (action === 'nature_candidates') {
         toggleRoute('nature_candidates', checked);
+      } else if (action === 'nature_site_routes') {
+        toggleRoute('nature_site_routes', checked);
       } else if (action === 'live_preview') {
         if (!checked) clearLivePreviewRoute();
         else if (livePreviewLayer && !dashboardMap.hasLayer(livePreviewLayer)) {
@@ -4459,10 +4705,15 @@ async function initMap() {
       dashboardLogError('nature explore load failed', error);
       return { available: false, items: [], message: error.message };
     });
+    const natureSiteRoutes = await loadNatureSiteRoutes().catch(error => {
+      dashboardLogError('nature site routes load failed', error);
+      return { available: false, routes: [], sites: {}, message: error.message };
+    });
     window.dashboardMetrics = metrics;
     window.dashboardRouteIndex = index;
     window.dashboardPlaybackData = playbackData;
     window.dashboardNatureExplore = natureExplore;
+    window.dashboardNatureSiteRoutes = natureSiteRoutes;
     window.dashboardSelectedHotels = selectedHotels;
     dashboardRouteIndex = index;
     dashboardPlaybackData = playbackData;
@@ -4677,6 +4928,74 @@ function bindDashboardShellControls() {
   });
 }
 
+function natureSiteKey(...parts) {
+  const text = parts.filter(Boolean).join(' ').toLowerCase();
+  if (text.includes('yosemite')) return 'yosemite';
+  if (text.includes('sequoia')) return 'sequoia';
+  if (text.includes('kings canyon')) return 'kings_canyon';
+  if (text.includes('joshua')) return 'joshua_tree';
+  if (text.includes('big sur') || text.includes('bixby') || text.includes('pfeiffer')) return 'big_sur';
+  return text.replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '').slice(0, 80);
+}
+
+function natureRoutesForPlace(place) {
+  const routes = Array.isArray(window.dashboardNatureSiteRoutes?.routes) ? window.dashboardNatureSiteRoutes.routes : [];
+  if (!routes.length || !place) return [];
+  const key = natureSiteKey(place.site_id, place.name, place.nature_region, place.city_or_anchor, place.city);
+  return routes.filter(route => {
+    const routeKey = natureSiteKey(route.site_id, route.site_name, route.nature_region, route.city);
+    return routeKey === key || key.includes(routeKey) || routeKey.includes(key);
+  }).slice(0, 4);
+}
+
+function natureRouteTypeLabel(value) {
+  return String(value || 'nature route').replaceAll('_', ' ');
+}
+
+function natureRouteCardsHtml(routes, { research = false } = {}) {
+  if (!routes.length) return '';
+  return `
+    <div class="detail-copy nature-site-route-block">
+      <b>Inside this site</b>
+      <div class="nature-route-list">
+        ${routes.map(route => `
+          <div class="nature-route-mini-card">
+            <strong>${escapeHtml(route.route_name || route.name || 'Nature route')}</strong>
+            <div>${escapeHtml(natureRouteTypeLabel(route.route_type))} · ${compactValue(route.distance_km)} km · ${Math.round(Number(route.duration_minutes || 0)) || 'n/a'} min · ${escapeHtml(route.difficulty || 'easy')}</div>
+            <div>Route score ${compactValue(route.route_score)} · Confidence ${compactValue(route.source_confidence)}</div>
+            ${research ? `<div>Source: ${escapeHtml(route.source || '')}${route.fallback_used ? ' · fallback' : ''}</div>` : ''}
+            <div class="nature-route-actions">
+              <button type="button" data-show-nature-site-route="${escapeHtml(route.route_id || '')}">Show route</button>
+              <button type="button" data-focus-nature-site-route="${escapeHtml(route.route_id || '')}" data-lat="${escapeHtml(route.lat || '')}" data-lon="${escapeHtml(route.lon || '')}">Focus</button>
+              ${route.source_url ? `<a href="${escapeHtml(route.source_url)}" target="_blank" rel="noopener">Open source</a>` : ''}
+            </div>
+          </div>
+        `).join('')}
+      </div>
+    </div>
+  `;
+}
+
+function bindNatureRouteButtons(root = document) {
+  root.querySelectorAll('[data-show-nature-site-route]').forEach(button => {
+    button.addEventListener('click', () => {
+      if (window.toggleRoute) window.toggleRoute('nature_site_routes', true, false);
+      const routeId = button.dataset.showNatureSiteRoute;
+      const route = (window.dashboardNatureSiteRoutes?.routes || []).find(item => item.route_id === routeId);
+      if (route && window.focusDashboardLocation) {
+        window.focusDashboardLocation(route.lat, route.lon, route.route_name || route.site_name || 'Nature site route');
+      }
+    });
+  });
+  root.querySelectorAll('[data-focus-nature-site-route]').forEach(button => {
+    button.addEventListener('click', () => {
+      if (window.focusDashboardLocation) {
+        window.focusDashboardLocation(button.dataset.lat, button.dataset.lon, 'Nature site route');
+      }
+    });
+  });
+}
+
 function renderActiveStopDetail(stop, routeRecord, playbackMeta = {}) {
   const target = document.getElementById('active-stop-detail');
   if (!target) return;
@@ -4714,6 +5033,7 @@ function renderActiveStopDetail(stop, routeRecord, playbackMeta = {}) {
   const sourceLink = stop.source_url || stop.website_url
     ? `<div class="detail-copy"><b>Source</b><a href="${escapeHtml(stop.source_url || stop.website_url)}" target="_blank" rel="noopener">${escapeHtml(stop.detail_source || stop.source_url || stop.website_url)}</a></div>`
     : '';
+  const insideRoutes = natureRoutesForPlace(stop);
   target.innerHTML = `
     <div class="detail-card active-stop-card">
       ${visual}
@@ -4727,10 +5047,12 @@ function renderActiveStopDetail(stop, routeRecord, playbackMeta = {}) {
         </div>
         <div class="detail-copy"><b>Description</b>${escapeHtml(stop.description || 'No description exported.')}</div>
         <div class="detail-copy"><b>Why selected</b>${escapeHtml(stop.why_selected || stop.reason_selected || 'Selection reason was not exported.')}</div>
+        ${natureRouteCardsHtml(insideRoutes, { research: document.body.dataset.dashboardMode !== 'customer' })}
         ${sourceLink}
       </div>
     </div>
   `;
+  bindNatureRouteButtons(target);
 }
 
 function renderCityDetails(payload) {
@@ -4928,10 +5250,13 @@ function renderNatureExplore(payload) {
         <strong>${item.name}</strong>
         <div>${item.city || item.nature_region || ''} · ${item.park_type || item.category || ''}</div>
         <div>Nature/scenic/hiking: ${compactValue(item.nature_score)} / ${compactValue(item.scenic_score)} / ${compactValue(item.hiking_score)}</div>
+        <div>Internal routes: ${item.internal_route_count || natureRoutesForPlace(item).length || 0} · Best score ${compactValue(item.best_internal_route_score)}</div>
         <div>Weather sensitivity: ${compactValue(item.weather_sensitivity)} · Season risk: ${compactValue(item.seasonality_risk)}</div>
         <div>${item.source_list || ''}</div>
+        ${natureRouteCardsHtml(natureRoutesForPlace(item).slice(0, 2), { research: document.body.dataset.dashboardMode !== 'customer' })}
       </div>
     `).join('');
+    bindNatureRouteButtons(target);
   };
   target.querySelectorAll('[data-nature-filter]').forEach(input => input.addEventListener('change', renderCards));
   target.querySelector('[data-show-nature-layer]')?.addEventListener('click', () => {
@@ -5424,6 +5749,7 @@ def export_map_artifacts(
     hotel_choices = _hotel_choices(output_dir)
     selected_hotels = _selected_hotels(points, hotel_choices)
     nature_explore = _nature_explore(output_dir)
+    _nature_site_geojson, _nature_site_pois, nature_site_routes = _nature_site_route_assets(output_dir)
     evaluation_metrics = _evaluation_metrics(output_dir)
     mode = str(config.get("map_export", "mode", "both")).lower()
 
@@ -5459,6 +5785,7 @@ def export_map_artifacts(
             selected_hotels,
             hotel_choices,
             nature_explore,
+            nature_site_routes,
             evaluation_metrics,
         )
         artifacts["full_interactive_dashboard"] = dashboard_root / "index.html"

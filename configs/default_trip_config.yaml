@@ -139,6 +139,19 @@ nature:
   protected_area_bonus: 0.35
   scenic_region_bonus: 0.30
 
+nature_detail_routes:
+  enabled: true
+  use_osm: true
+  use_nps_metadata: true
+  use_curated_fallback: true
+  route_types: [scenic_drive, short_hike, viewpoint_walk]
+  site_scope: all_nature_candidates
+  max_routes_per_site: 3
+  overpass_radius_meters: 25000
+  max_short_hike_km: 12
+  max_scenic_drive_km: 90
+  soft_score_weight: 0.06
+
 social:
   must_go_is_mandatory: false
   must_go_bonus_weight: 0.85

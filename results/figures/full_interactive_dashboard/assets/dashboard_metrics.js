@@ -15,7 +15,7 @@ window.DASHBOARD_METRICS = {
   "default_route_method": "hierarchical_bandit_gurobi_repair",
   "route_state_label": "Saved optimized route",
   "preview_state_label": "Preview only - rerun pipeline to save",
-  "artifact_metadata_fresh": true,
+  "artifact_metadata_fresh": false,
   "artifact_contract_version": "statewide-nature-artifacts-v1",
   "artifact_timestamp_utc": "2026-06-02T03:09:45.037771+00:00",
   "audit_ready": true,
@@ -154,8 +154,8 @@ window.DASHBOARD_METRICS = {
     "missing_count": 0,
     "warning_count": 0
   },
-  "route_record_count": 32,
-  "optional_record_count": 31,
+  "route_record_count": 33,
+  "optional_record_count": 32,
   "layer_families": [
     "context",
     "hotel",
@@ -163,6 +163,7 @@ window.DASHBOARD_METRICS = {
     "method",
     "must_go",
     "nature",
+    "nature_detail",
     "route_matrix",
     "selected",
     "trip_length"

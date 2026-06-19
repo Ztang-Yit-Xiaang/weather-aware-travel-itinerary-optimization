@@ -34,6 +34,7 @@ REQUIRED_ANCHORS = {
 }
 OPTIONAL_ANCHORS = {"Bixby Creek": ["bixby creek"]}
 ANCHORS = {**REQUIRED_ANCHORS, **OPTIONAL_ANCHORS}
+REQUIRED_INTERNAL_ROUTE_SITES = ["Yosemite", "Sequoia", "Kings Canyon", "Joshua Tree", "Big Sur"]
 ALLOWED_ROLES = {
     "selected_stop",
     "gateway",
@@ -63,6 +64,16 @@ def _contains_anchor(frame: pd.DataFrame, anchor: str, columns: list[str]) -> bo
             text = text + " " + frame[column].fillna("").astype(str)
     lowered = text.str.lower()
     return bool(lowered.str.contains("|".join(ANCHORS[anchor]), regex=True, na=False).any())
+
+
+def _contains_site_mask(frame: pd.DataFrame, site: str) -> pd.Series:
+    if frame.empty:
+        return pd.Series(dtype=bool)
+    patterns = list(ANCHORS.get(site, [site.lower()]))
+    patterns.append(site.lower().replace(" ", "_"))
+    normalized = frame.astype(str).apply(lambda column: column.str.lower().str.replace("_", " ", regex=False))
+    regex = "|".join({pattern.replace("_", " ") for pattern in patterns if pattern})
+    return normalized.apply(lambda column: column.str.contains(regex, regex=True, na=False)).any(axis=1)
 
 
 def _truthy(value, default: bool = False) -> bool:
@@ -125,6 +136,8 @@ def main() -> int:
     playback_path = assets_dir / "playback_data.json"
     interest_routes = _read_csv(output_dir / "production_interest_route_stops.csv")
     excluded_poi_audit = _read_csv(output_dir / "production_excluded_poi_category_audit.csv")
+    nature_site_routes = _read_csv(output_dir / "production_nature_site_routes.csv")
+    nature_site_route_audit = _read_csv(output_dir / "production_nature_site_route_audit.csv")
     if anchor_audit.empty:
         anchor_audit = _read_csv(output_dir / "production_route_anchor_audit.csv")
     metadata = read_artifact_metadata(output_dir)
@@ -145,6 +158,7 @@ def main() -> int:
     print(f"artifact_metadata_timestamp_utc: {metadata.get('timestamp_utc', 'missing')}")
     print(f"interest_profile_routes: {sorted(interest_routes.get('interest_profile', pd.Series(dtype=str)).dropna().astype(str).unique()) if not interest_routes.empty else 'missing'}")
     print(f"excluded_poi_category_audit_rows: {len(excluded_poi_audit)}")
+    print(f"nature_site_route_rows: {len(nature_site_routes)}")
 
     if not enriched.empty:
         group_cols = [col for col in ["city", "nature_region", "category", "source_list"] if col in enriched.columns]
@@ -173,6 +187,38 @@ def main() -> int:
         print("route_sequence_audit: missing")
 
     failures = []
+    print("nature_site_route_coverage:")
+    for site in REQUIRED_INTERNAL_ROUTE_SITES:
+        route_count = 0
+        selected_site = _contains_anchor(
+            selected,
+            site,
+            ["attraction_name", "name", "city", "overnight_city", "nature_region"],
+        )
+        missing_reason = ""
+        if not nature_site_route_audit.empty:
+            site_rows = nature_site_route_audit[_contains_site_mask(nature_site_route_audit, site)]
+            if not site_rows.empty:
+                route_counts = pd.to_numeric(site_rows.get("route_count", pd.Series(dtype=float)), errors="coerce").fillna(0)
+                route_count = int(route_counts.max()) if not route_counts.empty else 0
+                if "selected" in site_rows.columns:
+                    selected_site = bool(site_rows["selected"].map(lambda value: _truthy(value, False)).any()) or selected_site
+                missing_values = [
+                    str(value)
+                    for value in site_rows.get("missing_reason", pd.Series(dtype=str)).dropna().astype(str)
+                    if str(value).strip() and str(value).strip().lower() != "nan"
+                ]
+                missing_reason = missing_values[0] if route_count <= 0 and missing_values else ""
+        elif not nature_site_routes.empty:
+            site_rows = nature_site_routes[_contains_site_mask(nature_site_routes, site)]
+            route_count = int(len(site_rows))
+        print(
+            f"nature_site_route_status.{site}.routes: {route_count}; "
+            f"selected: {selected_site}; reason: {missing_reason or 'ok'}"
+        )
+        if selected_site and route_count <= 0 and not missing_reason:
+            failures.append(f"{site} is selected but lacks internal nature-site routes or an explicit missing reason")
+
     required_selected = _required_selected_anchors(config)
     for anchor in REQUIRED_ANCHORS:
         candidate = _contains_anchor(enriched, anchor, ["name", "city", "nature_region", "category"])

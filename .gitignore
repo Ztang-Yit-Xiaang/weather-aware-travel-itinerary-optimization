@@ -30,6 +30,9 @@ results/outputs/production_nature_metric_summary.csv
 results/outputs/production_nature_route_stops.csv
 results/outputs/production_scenario_comparison.csv
 results/outputs/production_map_artifact_size_report.csv
+results/figures/*.html
+results/figures/lightweight_share_map.html
+results/figures/full_interactive_dashboard/
 results/quality/
 dataset/
 report/*

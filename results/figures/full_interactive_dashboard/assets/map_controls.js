@@ -30,6 +30,7 @@ const FAMILY_STYLES = {
   hotel: { color: '#6d4fd7', fill: '#d8cffd', weight: 1.5, dashArray: null },
   must_go: { color: '#d92652', fill: '#ff8aa4', weight: 1.5, dashArray: null },
   nature: { color: '#247a32', fill: '#6ac659', weight: 1.5, dashArray: null },
+  nature_detail: { color: '#2f9b4f', fill: '#b9f6c9', weight: 3, dashArray: '3 7' },
   live_preview: { color: '#f9735b', fill: '#ffb199', weight: 5, dashArray: '3 12' }
 };
 
@@ -241,7 +242,7 @@ function routeLineStyle(routeRecord) {
 }
 
 function markerPopup(point, index, routeRecord) {
-  const candidateFamilies = ['hotel', 'nature', 'must_go', 'context'];
+  const candidateFamilies = ['hotel', 'nature', 'nature_detail', 'must_go', 'context'];
   const isEndpoint = Boolean(point?.is_route_endpoint);
   const isHotelNode = Boolean(point?.is_hotel_node || point?.node_kind === 'hotel');
   const selectionState = isEndpoint
@@ -251,7 +252,7 @@ function markerPopup(point, index, routeRecord) {
     : (routeRecord?.family === 'live_preview'
       ? 'Preview only - not written to optimizer artifacts'
       : (candidateFamilies.includes(routeRecord?.family) ? 'Candidate/context marker - not a selected route stop' : 'Saved optimized route stop')));
-  const label = routeRecord?.family === 'hotel' || routeRecord?.family === 'nature'
+  const label = routeRecord?.family === 'hotel' || routeRecord?.family === 'nature' || routeRecord?.family === 'nature_detail'
     ? (point.name || point.hotel_name || routeRecord.label)
     : (isEndpoint ? `${point.airport_code || 'Airport'} · ${point.name || 'Airport'}`
       : (isHotelNode ? `H · ${point.name || point.hotel_name || 'Hotel'}`
@@ -271,7 +272,7 @@ function markerPopup(point, index, routeRecord) {
 
 function pointToMarker(point, index, routeRecord) {
   const style = FAMILY_STYLES[routeRecord?.family] || FAMILY_STYLES.selected;
-  const candidateMarker = ['hotel', 'must_go', 'nature', 'context'].includes(routeRecord?.family);
+  const candidateMarker = ['hotel', 'must_go', 'nature', 'nature_detail', 'context'].includes(routeRecord?.family);
   if (point?.is_route_endpoint) {
     const marker = L.marker([Number(point.lat), Number(point.lon)], {
       icon: L.divIcon({
@@ -683,6 +684,7 @@ function updateLayerToggleState() {
     if (action === 'default_route') input.checked = activeRouteIds.has(defaultRoute(dashboardRouteIndex)?.id);
     if (action === 'hotel_candidates') input.checked = activeRouteIds.has('hotel_candidates');
     if (action === 'nature_candidates') input.checked = activeRouteIds.has('nature_candidates');
+    if (action === 'nature_site_routes') input.checked = activeRouteIds.has('nature_site_routes');
     if (action === 'live_preview') input.checked = Boolean(livePreviewLayer && dashboardMap?.hasLayer(livePreviewLayer));
   });
 }
@@ -918,6 +920,8 @@ function bindLayerToggles() {
         toggleHotelCandidates(checked);
       } else if (action === 'nature_candidates') {
         toggleRoute('nature_candidates', checked);
+      } else if (action === 'nature_site_routes') {
+        toggleRoute('nature_site_routes', checked);
       } else if (action === 'live_preview') {
         if (!checked) clearLivePreviewRoute();
         else if (livePreviewLayer && !dashboardMap.hasLayer(livePreviewLayer)) {
@@ -1052,10 +1056,15 @@ async function initMap() {
       dashboardLogError('nature explore load failed', error);
       return { available: false, items: [], message: error.message };
     });
+    const natureSiteRoutes = await loadNatureSiteRoutes().catch(error => {
+      dashboardLogError('nature site routes load failed', error);
+      return { available: false, routes: [], sites: {}, message: error.message };
+    });
     window.dashboardMetrics = metrics;
     window.dashboardRouteIndex = index;
     window.dashboardPlaybackData = playbackData;
     window.dashboardNatureExplore = natureExplore;
+    window.dashboardNatureSiteRoutes = natureSiteRoutes;
     window.dashboardSelectedHotels = selectedHotels;
     dashboardRouteIndex = index;
     dashboardPlaybackData = playbackData;

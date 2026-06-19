@@ -114,6 +114,8 @@ def validate(figure_dir: Path, output_dir: Path) -> tuple[list[str], list[str]]:
     hotel_js_path = assets / "hotel_choices.js"
     nature_path = assets / "nature_explore.json"
     nature_js_path = assets / "nature_explore.js"
+    nature_site_path = assets / "nature_site_routes.json"
+    nature_site_js_path = assets / "nature_site_routes.js"
     evaluation_html = dashboard_root / "evaluation.html"
     evaluation_path = assets / "evaluation_metrics.json"
     evaluation_js_path = assets / "evaluation_metrics.js"
@@ -146,6 +148,8 @@ def validate(figure_dir: Path, output_dir: Path) -> tuple[list[str], list[str]]:
         (hotel_js_path, "hotel choices JS fallback"),
         (nature_path, "nature explore JSON"),
         (nature_js_path, "nature explore JS fallback"),
+        (nature_site_path, "nature site routes JSON"),
+        (nature_site_js_path, "nature site routes JS fallback"),
         (evaluation_html, "evaluation dashboard HTML"),
         (evaluation_path, "evaluation metrics JSON"),
         (evaluation_js_path, "evaluation metrics JS fallback"),
@@ -174,6 +178,8 @@ def validate(figure_dir: Path, output_dir: Path) -> tuple[list[str], list[str]]:
         for token in ["Saved optimized route", "Preview only route", "evaluation.html"]:
             if token not in html:
                 errors.append(f"Dashboard index missing required truth-first UI label {token!r}: {index_html}")
+        if "Nature site routes" not in html:
+            errors.append(f"Dashboard index missing nature-site route layer label: {index_html}")
         for token in [
             'data-map-layer-toggle="terrain"',
             'data-map-layer-toggle="roads"',
@@ -245,6 +251,7 @@ def validate(figure_dir: Path, output_dir: Path) -> tuple[list[str], list[str]]:
             "toggleHotelCandidates",
             "drawLivePreviewRoute",
             "clearLivePreviewRoute",
+            "nature_site_routes",
             "Preview only - rerun pipeline to save",
             "initializeBaseMapLayers",
             "bindMapLayerToggles",
@@ -270,6 +277,8 @@ def validate(figure_dir: Path, output_dir: Path) -> tuple[list[str], list[str]]:
             "setPreferredHotel",
             "window.localStorage",
             "renderNatureExplore",
+            "natureRoutesForPlace",
+            "bindNatureRouteButtons",
             "data-show-nature-layer",
             "bindDashboardShellControls",
             "normalizeInterestBarValues",
@@ -305,6 +314,7 @@ def validate(figure_dir: Path, output_dir: Path) -> tuple[list[str], list[str]]:
             "loadSelectedHotels",
             "loadHotelChoices",
             "loadNatureExplore",
+            "loadNatureSiteRoutes",
             "loadRouteGeoJson",
             "loadPoiJson",
             "[dashboard-loader]",
@@ -333,6 +343,16 @@ def validate(figure_dir: Path, output_dir: Path) -> tuple[list[str], list[str]]:
                 errors.append(f"route_index.json must contain at least one route: {route_index_path}")
             if not any(isinstance(route, dict) and route.get("default") for route in routes):
                 errors.append(f"route_index.json must contain at least one default route: {route_index_path}")
+            nature_detail_routes = [
+                route
+                for route in routes
+                if isinstance(route, dict) and str(route.get("family", "")) == "nature_detail"
+            ]
+            if not nature_detail_routes:
+                errors.append(f"route_index.json must include non-playable nature_detail layer: {route_index_path}")
+            for route in nature_detail_routes:
+                if route.get("playable") is not False:
+                    errors.append(f"nature_detail route must be non-playable: {route_index_path}")
 
             for route in routes:
                 if not isinstance(route, dict):
@@ -468,6 +488,7 @@ def validate(figure_dir: Path, output_dir: Path) -> tuple[list[str], list[str]]:
         (selected_hotels_path, selected_hotels_js_path, "DASHBOARD_SELECTED_HOTELS", "selected hotels"),
         (hotel_path, hotel_js_path, "DASHBOARD_HOTEL_CHOICES", "hotel choices"),
         (nature_path, nature_js_path, "DASHBOARD_NATURE_EXPLORE", "nature explore"),
+        (nature_site_path, nature_site_js_path, "DASHBOARD_NATURE_SITE_ROUTES", "nature site routes"),
         (evaluation_path, evaluation_js_path, "DASHBOARD_EVALUATION_METRICS", "evaluation metrics"),
     ]:
         if json_path.exists():

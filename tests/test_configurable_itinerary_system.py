@@ -38,6 +38,11 @@ from itinerary_system.nature_catalog import (
     load_nps_or_curated_nature_pois,
     write_interest_catalog_artifacts,
 )
+from itinerary_system.nature_site_routes import (
+    apply_nature_site_route_score_bonus,
+    build_nature_site_route_artifacts,
+    parse_overpass_nature_site_routes,
+)
 from itinerary_system.region_scenarios import (
     get_nature_region_definitions,
     get_scenario_definition,
@@ -297,6 +302,102 @@ class ConfigurableItinerarySystemTests(unittest.TestCase):
 
         self.assertFalse(pois.empty)
         self.assertEqual(audit["status"].iloc[0], "nps_disabled_curated_fallback")
+
+    def test_overpass_nature_site_routes_parse_line_geometry(self):
+        config = load_trip_config(CONFIG_PATH)
+        site = pd.Series(
+            {
+                "_site_id": "yosemite",
+                "name": "Yosemite National Park",
+                "city": "Mariposa",
+                "nature_region": "Yosemite National Park",
+                "latitude": 37.8651,
+                "longitude": -119.5383,
+            }
+        )
+        elements = [
+            {
+                "type": "way",
+                "tags": {"name": "Valley Loop Trail", "route": "hiking", "website": "https://example.test/trail"},
+                "geometry": [
+                    {"lat": 37.748, "lon": -119.596},
+                    {"lat": 37.752, "lon": -119.592},
+                    {"lat": 37.754, "lon": -119.588},
+                ],
+            }
+        ]
+
+        routes, points = parse_overpass_nature_site_routes(elements, site, "overpass_route_cache", config)
+
+        self.assertEqual(len(routes), 1)
+        self.assertEqual(routes[0]["route_type"], "short_hike")
+        self.assertGreater(routes[0]["distance_km"], 0)
+        self.assertEqual(len(points), 3)
+        self.assertEqual(points[0]["route_id"], routes[0]["route_id"])
+
+    def test_curated_internal_routes_write_artifacts_when_live_apis_disabled(self):
+        config = load_trip_config(
+            CONFIG_PATH,
+            overrides={
+                "trip": {"scenario": "california_statewide_nature"},
+                "enrichment": {"run_live_apis": False},
+                "nature_detail_routes": {"enabled": True, "use_curated_fallback": True},
+            },
+        )
+        enriched = pd.DataFrame(
+            [
+                {
+                    "name": "Yosemite National Park",
+                    "city": "Mariposa",
+                    "nature_region": "Yosemite National Park",
+                    "latitude": 37.8651,
+                    "longitude": -119.5383,
+                    "category": "national_park",
+                    "is_nature": True,
+                    "is_national_park": True,
+                    "nature_score": 0.9,
+                    "final_poi_value": 0.8,
+                }
+            ]
+        )
+        with temporary_directory() as tmpdir:
+            output_dir = Path(tmpdir) / "outputs"
+            updated, routes, points, audit = build_nature_site_route_artifacts(enriched, output_dir, config)
+
+            self.assertTrue((output_dir / "production_nature_site_routes.csv").exists())
+            self.assertTrue((output_dir / "production_nature_site_route_points.csv").exists())
+            self.assertTrue((output_dir / "production_nature_site_route_audit.csv").exists())
+
+        self.assertFalse(routes.empty)
+        self.assertFalse(points.empty)
+        self.assertFalse(audit.empty)
+        self.assertGreater(updated["internal_route_count"].iloc[0], 0)
+        self.assertIn("curated_internal_route_fallback", set(routes["source"]))
+
+    def test_internal_route_score_bonus_is_bounded(self):
+        config = load_trip_config(
+            CONFIG_PATH,
+            overrides={
+                "interest": {"mode": "nature_heavy", "weights": {"nature": 0.55, "city": 0.2, "culture": 0.15, "history": 0.1}},
+                "nature_detail_routes": {"soft_score_weight": 0.06},
+            },
+        )
+        frame = pd.DataFrame(
+            [
+                {
+                    "name": "Sequoia National Park",
+                    "final_poi_value": 0.5,
+                    "best_internal_route_score": 1.0,
+                    "best_internal_route_duration_minutes": 90,
+                    "internal_route_source": "curated_internal_route_fallback",
+                }
+            ]
+        )
+
+        adjusted = apply_nature_site_route_score_bonus(frame, config)
+
+        self.assertGreater(adjusted["final_poi_value"].iloc[0], 0.5)
+        self.assertLessEqual(adjusted["internal_route_value_bonus"].iloc[0], 0.06 * 0.55 + 1e-9)
 
     def test_scenarios_have_expected_fallback_structure(self):
         california = get_scenario_definition("california_coast")
@@ -916,6 +1017,76 @@ class ConfigurableItinerarySystemTests(unittest.TestCase):
                 ]
             ).to_csv(output_dir / "production_enriched_poi_catalog.csv", index=False)
             pd.DataFrame(
+                [
+                    {
+                        "site_id": "yosemite",
+                        "site_name": "Yosemite Valley",
+                        "city": "Yosemite Valley",
+                        "nature_region": "Yosemite National Park",
+                        "latitude": 37.7456,
+                        "longitude": -119.5936,
+                        "route_id": "nature_site__yosemite__valley_loop",
+                        "route_name": "Yosemite Valley Loop",
+                        "route_type": "viewpoint_walk",
+                        "distance_km": 2.4,
+                        "duration_minutes": 55,
+                        "difficulty": "easy",
+                        "route_score": 0.82,
+                        "source_confidence": 0.58,
+                        "source": "curated_internal_route_fallback",
+                        "source_url": "https://www.nps.gov/yose/",
+                        "description": "Short internal Yosemite route for dashboard export testing.",
+                        "geometry_source": "curated_geometry",
+                        "fallback_used": True,
+                        "point_count": 2,
+                    }
+                ]
+            ).to_csv(output_dir / "production_nature_site_routes.csv", index=False)
+            pd.DataFrame(
+                [
+                    {
+                        "route_id": "nature_site__yosemite__valley_loop",
+                        "point_order": 1,
+                        "latitude": 37.7456,
+                        "longitude": -119.5936,
+                        "name": "Yosemite Valley Loop",
+                        "route_name": "Yosemite Valley Loop",
+                        "site_name": "Yosemite Valley",
+                        "nature_region": "Yosemite National Park",
+                        "route_type": "viewpoint_walk",
+                        "source_confidence": 0.58,
+                    },
+                    {
+                        "route_id": "nature_site__yosemite__valley_loop",
+                        "point_order": 2,
+                        "latitude": 37.7554,
+                        "longitude": -119.5963,
+                        "name": "Yosemite Valley Loop",
+                        "route_name": "Yosemite Valley Loop",
+                        "site_name": "Yosemite Valley",
+                        "nature_region": "Yosemite National Park",
+                        "route_type": "viewpoint_walk",
+                        "source_confidence": 0.58,
+                    },
+                ]
+            ).to_csv(output_dir / "production_nature_site_route_points.csv", index=False)
+            pd.DataFrame(
+                [
+                    {
+                        "site_id": "yosemite",
+                        "site_name": "Yosemite Valley",
+                        "city": "Yosemite Valley",
+                        "nature_region": "Yosemite National Park",
+                        "candidate": True,
+                        "selected": True,
+                        "route_count": 1,
+                        "source_status": "curated_internal_route_fallback",
+                        "fallback_used": True,
+                        "missing_reason": "",
+                    }
+                ]
+            ).to_csv(output_dir / "production_nature_site_route_audit.csv", index=False)
+            pd.DataFrame(
                 [{"route_key": "best", "layer_group": "selected", "method": "hierarchical_bandit_gurobi_repair"}]
             ).to_csv(output_dir / "production_map_route_debug.csv", index=False)
             (output_dir / "production_interest_bar_preview.json").write_text(
@@ -962,6 +1133,7 @@ class ConfigurableItinerarySystemTests(unittest.TestCase):
             selected_hotels_payload = json.loads((dashboard_root / "assets" / "selected_hotels.json").read_text())
             hotel_payload = json.loads((dashboard_root / "assets" / "hotel_choices.json").read_text())
             nature_payload = json.loads((dashboard_root / "assets" / "nature_explore.json").read_text())
+            nature_site_payload = json.loads((dashboard_root / "assets" / "nature_site_routes.json").read_text())
             generated_asset_names = {
                 path.relative_to(dashboard_root).as_posix()
                 for path in (dashboard_root / "assets").rglob("*")
@@ -991,6 +1163,7 @@ class ConfigurableItinerarySystemTests(unittest.TestCase):
         self.assertIn("Active stop details", index_html)
         self.assertIn("Hotel choices", index_html)
         self.assertIn("Nature explore", index_html)
+        self.assertIn("Nature site routes", index_html)
         self.assertIn("Interest bars", index_html)
         self.assertIn("Saved optimized route", index_html)
         self.assertIn("Preview only route", index_html)
@@ -1023,6 +1196,7 @@ class ConfigurableItinerarySystemTests(unittest.TestCase):
         self.assertIn(".playback-progress", style_css)
         self.assertIn(".hotel-card", style_css)
         self.assertIn(".nature-card", style_css)
+        self.assertIn(".nature-route-mini-card", style_css)
         self.assertIn(".interest-axis", style_css)
         self.assertIn('L.map("map"', map_js)
         self.assertIn("drawDefaultRoute", map_js)
@@ -1049,6 +1223,7 @@ class ConfigurableItinerarySystemTests(unittest.TestCase):
         self.assertIn("buildWeatherRiskLayer", map_js)
         self.assertIn("numbered-route-stop", map_js)
         self.assertIn("data-map-layer-toggle", map_js)
+        self.assertIn("nature_site_routes", map_js)
         self.assertIn("renderCustomerControls(index)", map_js)
         self.assertIn("window.dashboardMap", map_js)
         self.assertNotIn("alert(", map_js)
@@ -1062,6 +1237,9 @@ class ConfigurableItinerarySystemTests(unittest.TestCase):
         self.assertIn("Limited hotel data", dashboard_js)
         self.assertIn("window.localStorage", dashboard_js)
         self.assertIn("renderNatureExplore", dashboard_js)
+        self.assertIn("natureRoutesForPlace", dashboard_js)
+        self.assertIn("bindNatureRouteButtons", dashboard_js)
+        self.assertIn("Inside this site", dashboard_js)
         self.assertIn("data-show-nature-layer", dashboard_js)
         self.assertIn("bindDashboardShellControls", dashboard_js)
         self.assertIn("data-interest-axis", dashboard_js)
@@ -1094,6 +1272,7 @@ class ConfigurableItinerarySystemTests(unittest.TestCase):
         self.assertIn("loadSelectedHotels", loader_js)
         self.assertIn("loadHotelChoices", loader_js)
         self.assertIn("loadNatureExplore", loader_js)
+        self.assertIn("loadNatureSiteRoutes", loader_js)
         self.assertIn("[dashboard-loader]", loader_js)
         self.assertIn("[dashboard-assets]", loader_js)
         self.assertIn("[dashboard-error]", loader_js)
@@ -1115,6 +1294,10 @@ class ConfigurableItinerarySystemTests(unittest.TestCase):
         self.assertIn("assets/hotel_choices.js", generated_asset_names)
         self.assertIn("assets/nature_explore.json", generated_asset_names)
         self.assertIn("assets/nature_explore.js", generated_asset_names)
+        self.assertIn("assets/nature_site_routes.json", generated_asset_names)
+        self.assertIn("assets/nature_site_routes.js", generated_asset_names)
+        self.assertIn("assets/routes/nature_site_routes.geojson", generated_asset_names)
+        self.assertIn("assets/pois/nature_site_routes_pois.json", generated_asset_names)
         self.assertIn("assets/evaluation_metrics.json", generated_asset_names)
         self.assertIn("assets/evaluation_metrics.js", generated_asset_names)
         self.assertIn("assets/routes/selected_route.geojson", generated_asset_names)
@@ -1161,6 +1344,7 @@ class ConfigurableItinerarySystemTests(unittest.TestCase):
                 "hotel",
                 "must_go",
                 "nature",
+                "nature_detail",
             }.issubset(route_families),
             route_families,
         )
@@ -1179,6 +1363,9 @@ class ConfigurableItinerarySystemTests(unittest.TestCase):
         self.assertFalse(route_by_id["hotel_candidates"]["customer_visible"])
         self.assertTrue(route_by_id["hotel_candidates"]["research_only"])
         self.assertTrue(route_by_id["nature_candidates"]["marker_only"])
+        self.assertFalse(route_by_id["nature_site_routes"]["playable"])
+        self.assertFalse(route_by_id["nature_site_routes"]["marker_only"])
+        self.assertTrue(route_by_id["nature_site_routes"]["customer_visible"])
         self.assertTrue(route_by_id["must_go_candidates"]["marker_only"])
         self.assertTrue(any(route.get("customer_control_group") == "trip_days" for route in route_index["routes"]))
         self.assertTrue(any(route.get("customer_control_group") == "interest" for route in route_index["routes"]))
@@ -1209,6 +1396,7 @@ class ConfigurableItinerarySystemTests(unittest.TestCase):
         self.assertIn("selected_route", playback_payload["routes"])
         self.assertNotIn("hotel_candidates", playback_payload["routes"])
         self.assertNotIn("nature_candidates", playback_payload["routes"])
+        self.assertNotIn("nature_site_routes", playback_payload["routes"])
         self.assertNotIn("must_go_candidates", playback_payload["routes"])
         self.assertEqual(playback_payload["routes"]["selected_route"]["stops"][0]["name"], "Preferred Bandit Stop")
         self.assertIn("description", playback_payload["routes"]["selected_route"]["stops"][0])
@@ -1218,6 +1406,8 @@ class ConfigurableItinerarySystemTests(unittest.TestCase):
         self.assertTrue(hotel_payload["cities"]["San Francisco"][0]["hotel_name"])
         self.assertTrue(nature_payload["items"])
         self.assertEqual(nature_payload["items"][0]["name"], "Yosemite Valley")
+        self.assertTrue(nature_site_payload["available"])
+        self.assertEqual(nature_site_payload["routes"][0]["route_name"], "Yosemite Valley Loop")
         self.assertIn("share-map-data", share_html)
         self.assertIn("l.map('map'", share_html)
         self.assertIn("preferred bandit stop", share_html)
@@ -1270,14 +1460,78 @@ class ConfigurableItinerarySystemTests(unittest.TestCase):
         )
         with temporary_directory() as tmpdir:
             root = Path(tmpdir)
-            export_map_artifacts(route_df, output_dir=root / "outputs", figure_dir=root / "figures", config=config)
+            output_dir = root / "outputs"
+            output_dir.mkdir(parents=True, exist_ok=True)
+            pd.DataFrame(
+                [
+                    {
+                        "route_id": "nature_site__yosemite__valley_loop__1",
+                        "site_id": "yosemite",
+                        "site_name": "Yosemite National Park",
+                        "city": "Mariposa",
+                        "nature_region": "Yosemite National Park",
+                        "latitude": 37.7456,
+                        "longitude": -119.5936,
+                        "route_name": "Yosemite Valley Loop",
+                        "route_type": "scenic_drive",
+                        "distance_km": 18.0,
+                        "duration_minutes": 75,
+                        "difficulty": "easy",
+                        "source": "curated_internal_route_fallback",
+                        "source_url": "https://www.nps.gov/yose/index.htm",
+                        "source_confidence": 0.72,
+                        "route_score": 0.86,
+                        "fallback_used": True,
+                        "description": "Curated Yosemite Valley internal route detail.",
+                    }
+                ]
+            ).to_csv(output_dir / "production_nature_site_routes.csv", index=False)
+            pd.DataFrame(
+                [
+                    {
+                        "route_id": "nature_site__yosemite__valley_loop__1",
+                        "site_id": "yosemite",
+                        "site_name": "Yosemite National Park",
+                        "route_name": "Yosemite Valley Loop",
+                        "point_order": 1,
+                        "latitude": 37.7456,
+                        "longitude": -119.5936,
+                    },
+                    {
+                        "route_id": "nature_site__yosemite__valley_loop__1",
+                        "site_id": "yosemite",
+                        "site_name": "Yosemite National Park",
+                        "route_name": "Yosemite Valley Loop",
+                        "point_order": 2,
+                        "latitude": 37.7430,
+                        "longitude": -119.6020,
+                    },
+                ]
+            ).to_csv(output_dir / "production_nature_site_route_points.csv", index=False)
+            pd.DataFrame(
+                [
+                    {
+                        "site_id": "yosemite",
+                        "site_name": "Yosemite National Park",
+                        "city": "Mariposa",
+                        "nature_region": "Yosemite National Park",
+                        "candidate": True,
+                        "selected": True,
+                        "route_count": 1,
+                        "source_status": "curated_internal_route_fallback",
+                        "fallback_used": True,
+                        "missing_reason": "",
+                    }
+                ]
+            ).to_csv(output_dir / "production_nature_site_route_audit.csv", index=False)
+            export_map_artifacts(route_df, output_dir=output_dir, figure_dir=root / "figures", config=config)
             command = [
                 sys.executable,
                 str(REPO_ROOT / "scripts" / "validate_dashboard_export.py"),
                 "--figure-dir",
                 str(root / "figures"),
                 "--output-dir",
-                str(root / "outputs"),
+                str(output_dir),
             ]
             passed = subprocess.run(command, capture_output=True, text=True, check=False)
             self.assertEqual(passed.returncode, 0, passed.stdout + passed.stderr)

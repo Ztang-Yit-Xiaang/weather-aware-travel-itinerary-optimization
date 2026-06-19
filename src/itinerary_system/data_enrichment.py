@@ -29,6 +29,11 @@ from .nature_catalog import (
     mark_itinerary_eligible,
     write_interest_catalog_artifacts,
 )
+from .nature_site_routes import (
+    NATURE_SITE_ROUTE_METRIC_COLUMNS,
+    apply_nature_site_route_score_bonus,
+    build_nature_site_route_artifacts,
+)
 from .region_scenarios import all_scenario_coordinates, get_route_options, scenario_enrichment_city_universe
 from .utility_model import apply_utility_models, learning_to_rank_audit
 
@@ -65,6 +70,7 @@ OPEN_ENRICHED_POI_COLUMNS = [
     "detail_source",
     "itinerary_eligible",
     "itinerary_exclusion_reason",
+    *NATURE_SITE_ROUTE_METRIC_COLUMNS,
     *NATURE_POI_COLUMNS,
 ]
 
@@ -787,6 +793,7 @@ def _ensure_open_columns(enriched_df: pd.DataFrame) -> pd.DataFrame:
                     "website_url",
                     "source_url",
                     "detail_source",
+                    "internal_route_source",
                     "park_type",
                     "nature_region",
                     "reason_selected",
@@ -1061,7 +1068,11 @@ def build_enriched_catalog(
     enriched_df, place_detail_audit_df = _apply_place_detail_fallbacks(enriched_df)
     place_detail_audit_df.to_csv(output_dir / "production_place_detail_audit.csv", index=False)
     enriched_df = _ensure_open_columns(_recompute_value_columns(enriched_df, config))
+    enriched_df, nature_site_routes_df, nature_site_route_points_df, nature_site_route_audit_df = (
+        build_nature_site_route_artifacts(enriched_df, output_dir, config)
+    )
     enriched_df, utility_scores_df, utility_audit_df = apply_utility_models(enriched_df, output_dir, config)
+    enriched_df = apply_nature_site_route_score_bonus(enriched_df, config)
     enriched_df = compute_interest_adjusted_values(enriched_df, config)
     enriched_df = mark_itinerary_eligible(enriched_df)
     enriched_df, place_detail_audit_df = _apply_place_detail_fallbacks(enriched_df)
@@ -1118,6 +1129,9 @@ def build_enriched_catalog(
         else pd.DataFrame(),
         weather_df.assign(audit_type="open_meteo", audit_source="open_meteo"),
         utility_audit_df.assign(audit_source="utility_model") if not utility_audit_df.empty else pd.DataFrame(),
+        nature_site_route_audit_df.assign(audit_type="nature_site_routes", audit_source="open_osm_nps_curated")
+        if not nature_site_route_audit_df.empty
+        else pd.DataFrame(),
         excluded_poi_audit_df.assign(audit_type="poi_eligibility", audit_source="itinerary_eligibility")
         if not excluded_poi_audit_df.empty
         else pd.DataFrame(),
@@ -1156,6 +1170,9 @@ def build_enriched_catalog(
             "production_candidate_audit_by_city_category_source_df": candidate_audit_df,
             "production_excluded_poi_category_audit_df": excluded_poi_audit_df,
             "production_place_detail_audit_df": place_detail_audit_df,
+            "production_nature_site_routes_df": nature_site_routes_df,
+            "production_nature_site_route_points_df": nature_site_route_points_df,
+            "production_nature_site_route_audit_df": nature_site_route_audit_df,
             "social_signal_snapshots_df": social_signal_snapshots_df,
             "open_meteo_context_df": weather_df,
         }

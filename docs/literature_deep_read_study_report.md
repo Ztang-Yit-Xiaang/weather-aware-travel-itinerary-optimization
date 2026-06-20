@@ -118,6 +118,14 @@ Imagine a tourist has one day and twenty possible stops. They cannot visit all t
 
 This is the root citation for why the project is not just ranking attractions. Your route is a constrained selection-and-sequencing artifact, so the dashboard should expose skipped stops, travel budget, and objective tradeoffs.
 
+**Project Action Takeaway**
+
+- **Main goal**: Establish the Orienteering Problem (OP) and its major variants as a formal basis for selecting and sequencing valuable stops under a limited travel budget.
+- **Main limitation**: **Project-team inference** - this algorithm-centered survey predates modern personalization, weather context, and user-facing explanation; it cannot establish that travelers understand or prefer an optimized route.
+- **Publication use**: **Foundational citation** for the claim that itinerary construction is joint selection and sequencing rather than POI ranking alone. Our paper can extend this foundation with weather-aware comparison and inspectability, but should not cite it as evidence for interface effectiveness.
+- **Project-polishing action**: Show the route time budget, collected utility, and important skipped POIs together so the OP tradeoff is visible rather than hidden inside the solver.
+- **Current project status**: **partially implemented** - constrained selection and sequencing are implemented, while generalized skipped-POI explanations remain planned.
+
 ### 2. Gunawan, Lau, and Vansteenwegen (2016) - Orienteering Problem: A Survey of Recent Variants, Solution Approaches and Applications
 
 - **PDF**: `1-s2.0-S037722171630296X-main.pdf`
@@ -188,6 +196,14 @@ Classic OP says "pick stops under a time budget." This paper says real life is m
 **Project relevance**
 
 Use this to justify weather exposure, scenic route value, nature-region selection, and multi-day variants as legitimate extensions rather than ad hoc features.
+
+**Project Action Takeaway**
+
+- **Main goal**: Update the OP literature by organizing richer variants, solution approaches, and applications that move the model closer to real planning settings.
+- **Main limitation**: **Project-team inference** - the survey maps model variants but does not evaluate traveler-facing interaction, explanation, or control.
+- **Publication use**: **Foundational supporting citation** for treating time dependence, multiple routes, regions, and contextual constraints as recognized OP extensions. It does not prove that this project's particular combination is novel.
+- **Project-polishing action**: Document each added objective term and constraint as a named OP/TTDP extension, then expose its route-level effect in the comparison dashboard.
+- **Current project status**: **implemented** - the prototype includes multi-day routes, regions, hotels/base cities, weather risk, alternatives, and solver/fallback paths.
 
 ### 3. Ruiz-Meza and Montoya-Torres (2022) - A Systematic Literature Review for the Tourist Trip Design Problem
 
@@ -262,6 +278,14 @@ This paper is the map of the itinerary-planning math neighborhood. It tells you 
 
 This should be one of the core citations for your technical background. It helps avoid overclaiming algorithmic novelty and supports the pivot toward "rich, inspectable, human-centered TTDP."
 
+**Project Action Takeaway**
+
+- **Main goal**: Systematically organize Tourist Trip Design Problem (TTDP) extensions, solution techniques, data practices, and unresolved research directions.
+- **Main limitation**: **Project-team inference** - its operations-research scope gives limited treatment to explanation, user agency, and interface evaluation; some apparent TTDP gaps may already be studied in adjacent HCI or recommender literature.
+- **Publication use**: **Essential citation** for the technical field definition and for showing that many routing constraints are established prior work. Use it to locate the contribution at the intersection of rich TTDP and human-centered inspection, not to claim a new base formulation.
+- **Project-polishing action**: Add a formulation-to-interface table mapping each hard constraint and objective term to its dashboard representation and validation output.
+- **Current project status**: **implemented** - the repository supports constrained multi-day planning, but the complete human-centered inspection layer is only partially implemented.
+
 ### 4. Vu, Kergosien, Mendoza, and Desport (2022) - Branch-and-Check Approaches for the TTDP with Rich Constraints
 
 - **PDF**: `1-s2.0-S0305054821002963-main.pdf`
@@ -335,6 +359,14 @@ The solver first guesses which places to include. Then another checker asks, "Ca
 
 Your project can stand out by turning these hidden feasibility checks into visible explanations: why a stop was skipped, why a route was repaired, and which constraints blocked alternatives.
 
+**Project Action Takeaway**
+
+- **Main goal**: Develop exact branch-and-check and branch-and-solve approaches for a TTDP formulation with rich interdependent constraints.
+- **Main limitation**: **Project-team inference** - the experiments establish solver performance on designed instances, not traveler usefulness, explanation quality, or broad generalization beyond the tested formulation.
+- **Publication use**: **Essential algorithmic citation** for why rich TTDP constraints require explicit feasibility checking. Our differentiator can be making solver/fallback state and constraint consequences inspectable; this paper cannot support claims about those human outcomes.
+- **Project-polishing action**: Add reason codes for infeasibility and repair, including which budget, time, detour, weather, diversity, or lodging constraint blocked a requested stop.
+- **Current project status**: **partially implemented** - Gurobi-backed optimization, heuristic fallback, and status labels exist, while generalized constraint-block explanations are planned.
+
 ### 5. Halder, Lim, Chan, and Zhang (2024) - A Survey on Personalized Itinerary Recommendation
 
 - **PDF**: `1-s2.0-S1568494623012188-main.pdf`
@@ -407,6 +439,14 @@ This paper says travel recommendation has two jobs: recommend places the person 
 
 This is the best modern survey for explaining why your system needs both preference controls and route feasibility. It also directly supports explainability as a future direction.
 
+**Project Action Takeaway**
+
+- **Main goal**: Unify personalized itinerary recommendation research across optimization, conventional recommendation, and deep-learning approaches.
+- **Main limitation**: **Project-team inference** - the survey provides broad algorithmic coverage but does not specify or validate an interface-level model of agency, comparison, or revision.
+- **Publication use**: **Essential citation** for positioning the system between personalization and constrained planning and for motivating explainability as an open direction. It cannot demonstrate that this dashboard's controls improve decisions.
+- **Project-polishing action**: Connect every interest control to a visible utility change and route consequence, and clearly distinguish saved solver output from browser-only previews.
+- **Current project status**: **partially implemented** - interest profiles and preview controls exist, but browser changes do not rerun the optimizer and explanation coverage is incomplete.
+
 ### 6. Borras, Moreno, and Valls (2014) - Intelligent Tourism Recommender Systems: A Survey
 
 - **PDF**: `26959665_2309998766120001701.pdf`
@@ -477,6 +517,14 @@ This paper is about systems that help travelers decide what to do by filtering h
 **Project relevance**
 
 Use it for background, then differentiate your project: you do not only suggest places; you build feasible multi-day routes and expose optimization tradeoffs.
+
+**Project Action Takeaway**
+
+- **Main goal**: Survey intelligent tourism recommender systems by recommendation type, knowledge source, context, and system architecture.
+- **Main limitation**: **Project-team inference** - the 2014 review predates LLM agents and recent itinerary models and offers limited evidence about solver-backed route feasibility or modern explanation interfaces.
+- **Publication use**: **Foundational supporting citation** for tourism recommendation, context awareness, and choice-overload motivation. Use newer sources for current methods and do not use this survey to claim contemporary state of the art.
+- **Project-polishing action**: Make the distinction between recommending attractive places and constructing a feasible multi-day plan explicit in both the dashboard terminology and the paper's system diagram.
+- **Current project status**: **implemented** - the project combines recommendation signals with route construction, hotels/base cities, alternatives, and weather-aware constraints.
 
 ### 7. Yuan, Cong, Ma, Sun, and Magnenat-Thalmann (2013) - Time-Aware Point-of-Interest Recommendation
 
@@ -554,6 +602,14 @@ A coffee shop, museum, and bar are not equally attractive at every hour. This pa
 
 Use it to justify the broader principle: contextual variables change POI value. Your project extends this from time to weather, detour, seasonality, and outdoor exposure.
 
+**Project Action Takeaway**
+
+- **Main goal**: Improve POI recommendation by learning how user preferences and venue popularity vary across temporal states.
+- **Main limitation**: **Project-team inference** - the method predicts individual POI relevance from check-ins rather than producing a feasible multi-day itinerary; dataset bias and the absence of weather or interface evaluation limit transfer to this project.
+- **Publication use**: **Supporting citation** for the claim that context changes POI utility. The project can extend the context argument to weather exposure and detour burden, but this paper does not support route-feasibility or HCI claims.
+- **Project-polishing action**: Separate context-adjusted POI utility from route feasibility in the data model and dashboard, showing when weather lowers a stop's value versus when a hard constraint excludes it.
+- **Current project status**: **partially implemented** - context-adjusted utility and weather risk exist, but learned time-aware recommendation from check-in data does not.
+
 ### 8. Lim, Chan, Karunasekera, and Leckie (2017) - Personalized Itinerary Recommendation with Queuing Time Awareness
 
 - **PDF**: `3077136.3080778.pdf`
@@ -628,6 +684,14 @@ The best route is not just the route with the most popular rides. It is the rout
 
 This is one of the closest analogies to weather-aware planning. Replace "queue burden" with "weather exposure and outdoor risk," then expose that burden in the dashboard.
 
+**Project Action Takeaway**
+
+- **Main goal**: Recommend personalized attraction sequences while accounting for time-dependent queue burden as well as popularity and user interests.
+- **Main limitation**: **Author-reported limitation** - noisy geotagged photos can distort inferred visit sequences and queue estimates; **project-team inference** - the closed theme-park setting may not generalize to open-road, multi-day travel.
+- **Publication use**: **Supporting citation** and close methodological analogy for treating weather exposure as a time-varying burden. It cannot validate the project's weather model or claim equivalence between queues and weather risk.
+- **Project-polishing action**: Report weather-risk data quality and sensitivity alongside route utility, and test whether routes remain stable when risk estimates are perturbed.
+- **Current project status**: **implemented** - weather-risk scoring and constraints provide the analogous burden, although live queues and uncertainty sensitivity experiments are not implemented.
+
 ### 9. Horvitz (1999) - Principles of Mixed-Initiative User Interfaces
 
 - **PDF**: `302979.303030.pdf`
@@ -698,6 +762,14 @@ A good assistant should not grab the steering wheel all the time. It should know
 **Project relevance**
 
 This is a foundation for framing the itinerary dashboard as mixed initiative: the optimizer proposes and repairs, but the traveler inspects, critiques, and accepts.
+
+**Project Action Takeaway**
+
+- **Main goal**: Provide principles for deciding when an intelligent system should act, ask, defer, or return control in mixed-initiative interaction.
+- **Main limitation**: **Project-team inference** - the principles are illustrated in older scheduling and assistance domains rather than empirically validated for travel optimization interfaces.
+- **Publication use**: **Foundational HCI citation** for keeping the traveler in control of route acceptance and revision. It supports the design rationale, not a claim that the current prototype already achieves effective mixed initiative.
+- **Project-polishing action**: Turn route adaptation into a proposal-review-accept loop with explicit user critiques, reversible changes, and a visible explanation of what the system changed.
+- **Current project status**: **partially implemented** - users can inspect alternatives and preview preference changes, but durable critiques and solver-backed interactive revision are absent.
 
 ### 10. Amershi et al. (2019) - Guidelines for Human-AI Interaction
 
@@ -771,6 +843,14 @@ This paper is a checklist for not making AI feel magical in a bad way. Tell user
 
 Use these guidelines to audit the dashboard. Especially important: distinguish saved optimized routes from preview-only controls, expose uncertainty, and support correction.
 
+**Project Action Takeaway**
+
+- **Main goal**: Synthesize and validate general guidelines for designing interactions with AI-infused systems across the interaction lifecycle.
+- **Main limitation**: **Author-reported scope and project-team inference** - the guidelines are intentionally broad and some do not apply uniformly across products; they do not identify the best interface for constrained itinerary planning.
+- **Publication use**: **Essential design citation** for communicating system scope, uncertainty, correction, and failure states. It cannot establish that compliance with guidelines improves route decisions without a study.
+- **Project-polishing action**: Run a guideline audit covering saved versus preview-only routes, Gurobi versus fallback status, uncertain data, user correction, and recovery from infeasible requests.
+- **Current project status**: **partially implemented** - route-state, source-confidence, validation, and fallback signals exist, while correction and feedback loops remain limited.
+
 ### 11. Shneiderman (2020) - Human-Centered Artificial Intelligence: Reliable, Safe and Trustworthy
 
 - **PDF**: `Human-Centered Artificial Intelligence  Reliable  Safe   Trustworthy.pdf`
@@ -842,6 +922,14 @@ The goal is not to make the computer do everything. The goal is to let the compu
 **Project relevance**
 
 This gives the cleanest high-level framing: route optimization is automated, but preference setting, inspection, critique, and acceptance remain human-controlled.
+
+**Project Action Takeaway**
+
+- **Main goal**: Advocate human-centered artificial intelligence that combines high automation with high human control to achieve reliable, safe, and trustworthy systems.
+- **Main limitation**: **Project-team inference** - this is a broad normative framework rather than a travel-specific experiment, so it does not prove that any particular dashboard produces reliability or appropriate trust.
+- **Publication use**: **Foundational framing citation** for describing the optimizer as decision support under human control. It should not be used as empirical evidence that the prototype is trustworthy.
+- **Project-polishing action**: Preserve user authority at the final decision points and expose enough route state, constraints, and provenance for users to challenge automated choices.
+- **Current project status**: **partially implemented** - substantial inspection is available, while solver-backed user revisions and outcome evaluation are still missing.
 
 ### 12. Bucinca, Malaya, and Gajos (2021) - To Trust or to Think
 
@@ -916,6 +1004,14 @@ Just showing "why the AI thinks this" is not enough. Sometimes the interface mus
 
 Add route-comparison tasks and "inspect before accept" moments. For example: before accepting a route, show skipped high-value stops, weather risk, and driving burden.
 
+**Project Action Takeaway**
+
+- **Main goal**: Test whether cognitive forcing interventions reduce overreliance on AI recommendations and improve human-AI decision performance.
+- **Main limitation**: **Author-reported limitation** - the studies use one non-critical decision task, and effective forcing functions reduce perceived usability; effects can also differ across cognitive styles.
+- **Publication use**: **Essential trust-calibration citation** for arguing that explanation and friction should improve appropriate reliance, not maximize trust. It cannot predict the effect size in travel planning.
+- **Project-polishing action**: Add a lightweight compare-before-accept task that asks users to identify a route tradeoff, then evaluate decision accuracy, workload, usability, and calibration together.
+- **Current project status**: **planned** - route alternatives exist, but no cognitive-forcing workflow or calibrated-trust study has been implemented.
+
 ### 13. Heer and Shneiderman (2012) - Interactive Dynamics for Visual Analysis
 
 - **PDF**: `2133806.2133821.pdf`
@@ -989,6 +1085,14 @@ A useful dashboard is not just a picture. It lets users ask "show me this," "com
 
 Use this to justify the map dashboard as visual analytics: route layers, filters, route details, provenance, and comparison are research features.
 
+**Project Action Takeaway**
+
+- **Main goal**: Organize the interaction techniques that support iterative visual analysis, including selection, navigation, filtering, coordination, organization, and provenance.
+- **Main limitation**: **Project-team inference** - the taxonomy is not centered on AI or route optimization and relies mainly on design examples rather than controlled evidence for this domain.
+- **Publication use**: **Essential visual-analytics citation** for route comparison, linked views, and provenance as analytical interactions. It does not show that the current map design improves comprehension.
+- **Project-polishing action**: Add linked highlighting among map stops, metric rows, skipped candidates, weather evidence, and a persistent history of route comparisons.
+- **Current project status**: **implemented** - route layers, selectors, details, playback, and comparison views exist, while history/diff interaction can be strengthened.
+
 ### 14. Endert et al. (2017) - The State of the Art in Integrating Machine Learning into Visual Analytics
 
 - **PDF**: `Computer Graphics Forum - 2017 - Endert - The State of the Art in Integrating Machine Learning into Visual Analytics.pdf`
@@ -1061,6 +1165,14 @@ Instead of showing a model's answer and saying "trust me," visual analytics show
 **Project relevance**
 
 Your dashboard should make the optimization pipeline inspectable: objective terms, constraints, source quality, alternatives, and fallback behavior.
+
+**Project Action Takeaway**
+
+- **Main goal**: Survey how machine learning and visual analytics can be integrated so users can understand and steer computational models.
+- **Main limitation**: **Project-team inference** - its broad and largely qualitative synthesis does not directly address mathematical optimization or evaluate travel-route interfaces.
+- **Publication use**: **Supporting HCI citation** for exposing model state and supporting user steering. It offers design rationale, not evidence that the project's inspection controls are effective.
+- **Project-polishing action**: Present utility components, hard constraints, data confidence, solver status, and fallback behavior as linked model state rather than isolated debug fields.
+- **Current project status**: **partially implemented** - much of the state is exported, but the causal link from user input to solver outcome is not yet fully interactive or explained.
 
 ### 15. Sacha et al. (2017) - What You See Is What You Can Change
 
@@ -1136,6 +1248,14 @@ If the user cannot see what the system is using to decide, they cannot really ch
 
 This gives a headline design rule for the dashboard: expose weather risk, detour penalties, interest fit, and skipped regions as handles users can understand and adjust.
 
+**Project Action Takeaway**
+
+- **Main goal**: Argue that users can meaningfully steer a model only when the relevant model state is visible and represented through understandable interaction objects.
+- **Main limitation**: **Project-team inference** - the principle is developed for machine-learning visual analytics and is conceptual rather than validated for constrained route optimization.
+- **Publication use**: **Supporting design citation** for making route factors both visible and changeable. It cannot support claims about the usability or correctness of the project's controls.
+- **Project-polishing action**: Ensure every adjustable preference has a corresponding visible route metric and every displayed constraint exposes whether the user can change it.
+- **Current project status**: **partially implemented** - interest and method controls exist, but several visible route factors cannot trigger a saved solver-backed revision.
+
 ### 16. Kulesza, Stumpf, Burnett, and Kwan (2012) - Tell Me More?
 
 - **PDF**: `2207676.2207678.pdf`
@@ -1209,6 +1329,14 @@ If a recommender keeps choosing wrong things, users need to know what knobs matt
 **Project relevance**
 
 Add a study measure for route mental models: can users predict what happens when they increase nature preference or weather sensitivity?
+
+**Project Action Takeaway**
+
+- **Main goal**: Study how explanation completeness and soundness affect users' mental models and their ability to debug a personalized recommender.
+- **Main limitation**: **Project-team inference** - the study uses a music recommender and an older, relatively small system; transfer to route constraints and spatial reasoning requires validation.
+- **Publication use**: **Supporting explanation-evaluation citation** for measuring whether users can predict and correct system behavior. It does not show that more explanation is always better.
+- **Project-polishing action**: Add prediction questions to the study, such as what will happen when weather sensitivity rises or a must-go stop is added, and compare answers with actual route changes.
+- **Current project status**: **planned** - explanatory text exists, but route mental models and debugging performance have not been evaluated.
 
 ### 17. Tintarev and Masthoff (2007) - A Survey of Explanations in Recommender Systems
 
@@ -1284,6 +1412,14 @@ Before adding an explanation, ask: is this meant to help the user understand, co
 
 Use this to design explanation panels: "why selected," "why skipped," "what would change," and "what is uncertain" each serve different aims.
 
+**Project Action Takeaway**
+
+- **Main goal**: Classify the purposes of recommender explanations and show that explanation quality must be evaluated against its intended goal.
+- **Main limitation**: **Project-team inference** - the survey predates modern explainable AI, LLMs, and interactive map systems, and much of its evidence is example-based.
+- **Publication use**: **Foundational explanation citation** for separating transparency, scrutability, effectiveness, and trust-related goals. It cannot demonstrate that the proposed route explanations achieve those goals.
+- **Project-polishing action**: Give each explanation panel a declared user task and metric: understand selection, diagnose skipping, identify a feasible change, or judge uncertainty.
+- **Current project status**: **partially implemented** - basic why-selected text and nature-region reason codes exist; generalized why-skipped and what-would-change explanations are incomplete.
+
 ### 18. Knijnenburg et al. (2012) - Explaining the User Experience of Recommender Systems
 
 - **PDF**: `s11257-011-9118-4.pdf`
@@ -1355,6 +1491,14 @@ A recommender can be accurate and still feel bad. To evaluate it, measure what u
 
 Use this as the backbone for a user study: perceived control, explanation usefulness, trust calibration, workload, satisfaction, and final route choice.
 
+**Project Action Takeaway**
+
+- **Main goal**: Provide a framework connecting recommender-system characteristics, user perceptions, interaction behavior, personal characteristics, and situational context.
+- **Main limitation**: **Project-team inference** - the framework is broad and measurement-heavy rather than itinerary-specific, so a focused study must select constructs carefully.
+- **Publication use**: **Essential evaluation citation** for combining objective system measures with subjective experience and behavioral outcomes. It cannot substitute for collecting project-specific user evidence.
+- **Project-polishing action**: Pre-register a compact construct model linking explanation exposure to comprehension, perceived control, calibrated reliance, route revision quality, and final choice.
+- **Current project status**: **planned** - the dashboard and route metrics exist, but no controlled user study currently measures these constructs.
+
 ### 19. Chen and Pu (2012) - Critiquing-Based Recommenders
 
 - **PDF**: `s11257-011-9108-6.pdf`
@@ -1424,6 +1568,14 @@ Instead of asking users to specify everything upfront, show a recommendation and
 **Project relevance**
 
 This is central to a mixed-initiative route planner. A user should be able to critique: "less driving," "more outdoor stops," "avoid rainy hikes," or "include Yosemite."
+
+**Project Action Takeaway**
+
+- **Main goal**: Review critiquing-based recommenders in which users iteratively state directional preferences to refine recommendations.
+- **Main limitation**: **Project-team inference** - most reviewed systems operate in product or case-based domains where revisions do not require solving interdependent route constraints.
+- **Publication use**: **Essential mixed-initiative citation** for critique controls such as less driving, more nature, or lower risk. The project's research opportunity is validating critiques through a solver, which this survey does not provide.
+- **Project-polishing action**: Implement a small critique vocabulary that maps to auditable objective weights or constraints and reports infeasibility instead of silently ignoring a critique.
+- **Current project status**: **partially implemented** - interest previews support limited steering, but general critique-to-solver revision is not implemented.
 
 ### 20. TravelPlanner (Xie et al., 2024) - A Benchmark for Real-World Planning with Language Agents
 
@@ -1504,6 +1656,14 @@ LLMs can write nice itineraries, but this benchmark checks whether the plan actu
 
 This supports your solver-first architecture. LLMs may help collect preferences or explain plans, but feasibility should be validated by structured code and optimization.
 
+**Project Action Takeaway**
+
+- **Main goal**: Benchmark language agents on realistic multi-day travel planning with interdependent constraints, tools, and complete-plan evaluation.
+- **Main limitation**: **Project-team inference** - benchmark constraints and datasets simplify parts of open-world tourism and the work does not evaluate user-facing inspection or hybrid solver interfaces.
+- **Publication use**: **Essential modern benchmark citation** for the claim that fluent LLM output is not reliable evidence of plan feasibility. It does not compare against this project's optimizer or prove the dashboard is better than an LLM agent.
+- **Project-polishing action**: Add automated completeness and constraint checks to every exported route and display validation failures, missing fields, and fallback status next to the plan.
+- **Current project status**: **implemented** - structured optimization and dashboard-export validation exist; an LLM planning component is unsupported by current code.
+
 ### 21. Ju et al. (2024) - To the Globe (TTG): Towards Language-Driven Guaranteed Travel Planning
 
 - **PDF**: `2024.emnlp-demo.25.pdf`; duplicate local arXiv copy also exists as `2410.16456v1.pdf`
@@ -1583,6 +1743,14 @@ The LLM does not make the final plan by vibes. It converts the user's request in
 
 This is the strongest AI-agent bridge for your project. A publishable extension could let users type "more nature, less rain risk, keep driving under 4 hours/day" and compile that into route constraints and weights.
 
+**Project Action Takeaway**
+
+- **Main goal**: Translate natural-language travel requests into a symbolic optimization problem whose resulting itinerary satisfies the encoded constraints.
+- **Main limitation**: **Author-reported scope and project-team inference** - the system uses a limited schema and generated evaluation setting; any guarantee holds only after the request has been translated correctly into the symbolic model.
+- **Publication use**: **Essential hybrid-planning citation** for separating language understanding from formal feasibility. It cannot support a natural-language contribution in this project because no such translator is currently implemented.
+- **Project-polishing action**: Keep natural-language input out of the primary contribution unless a future parser exposes the generated constraints for user review and validates them before solving.
+- **Current project status**: **unsupported by current code** - solver-backed planning exists, but natural-language-to-symbolic translation does not.
+
 ## Recent Paper Deep Reads: 2023-2026
 
 ### 22. Chatti, Guesmi, and Muslim (2024) - Visualization for Recommendation Explainability
@@ -1609,6 +1777,14 @@ This is the strongest AI-agent bridge for your project. A publishable extension 
 **Teach-back**: if a recommender explains with a chart or map, the visual form should match what the user needs to understand or compare.
 **Project relevance**: use it to justify route diffs, skipped-stop visuals, weather-risk layers, and comparison panels as explanation mechanisms.
 
+**Project Action Takeaway**
+
+- **Main goal**: Systematically classify how visualization is used to explain recommender systems and identify gaps in theory, design, and evaluation.
+- **Main limitation**: **Project-team inference** - the taxonomy is not travel-specific and does not determine which map or route visualizations improve traveler decisions.
+- **Publication use**: **Essential visual-explanation citation** for treating maps, route differences, and metric comparisons as explanation mechanisms. It cannot establish explanation effectiveness without a user study.
+- **Project-polishing action**: Match each visual form to a task: route overlays for spatial change, aligned metrics for tradeoffs, and highlighted candidates for selection or skipping explanations.
+- **Current project status**: **partially implemented** - visual comparison and weather layers exist, while skipped-stop and route-difference explanations need stronger integration.
+
 ### 23. Ho, Lee, and Lim (2023) - BTRec: BERT-Based Trajectory Recommendation for Personalized Tours
 
 - **PDF**: `2310.19886v1.pdf`
@@ -1632,6 +1808,14 @@ This is the strongest AI-agent bridge for your project. A publishable extension 
 **From-memory summary**: BTRec predicts what POI a tourist is likely to visit next using a transformer-like trajectory model.
 **Teach-back**: it treats a trip like a sentence and POIs like words, then predicts the next good "word" in the itinerary.
 **Project relevance**: cite as a recent learned personalization baseline, while positioning your project as feasibility- and explanation-centered.
+
+**Project Action Takeaway**
+
+- **Main goal**: Predict personalized POI trajectories with a BERT-style sequence model that uses visit histories and demographic information.
+- **Main limitation**: **Project-team inference** - trajectory prediction does not enforce the project's hard time, lodging, budget, weather, and route-feasibility constraints, and historical trajectories may encode dataset-specific bias.
+- **Publication use**: **Supporting recent baseline citation** for learned sequence personalization. Use it to distinguish relevance prediction from feasible planning, not to claim the optimizer outperforms BTRec without a direct experiment.
+- **Project-polishing action**: Keep personalized POI utility modular so a learned trajectory score could later be added and evaluated against the current transparent scoring baseline.
+- **Current project status**: **unsupported by current code** - the project has interest-based scoring but no BERT trajectory model.
 
 ### 24. Ho and Lim (2023) - Utilizing Language Models for Tour Itinerary Recommendation
 
@@ -1657,6 +1841,14 @@ This is the strongest AI-agent bridge for your project. A publishable extension 
 **Teach-back**: language models can help understand trip sequences, but a valid trip still has to obey time and travel limits.
 **Project relevance**: use as a minor bridge citation for learned itinerary representations.
 
+**Project Action Takeaway**
+
+- **Main goal**: Explain how language-model representations can be adapted to tour itinerary recommendation while retaining links to operations research and recommender systems.
+- **Main limitation**: **Author-reported scope and project-team inference** - this short conceptual paper offers no substantial end-to-end experiment or formal guarantee.
+- **Publication use**: **Optional bridge citation** between itinerary recommendation and language-model sequence representations. It is too limited to anchor claims about LLM planning performance or solver integration.
+- **Project-polishing action**: Mention learned itinerary representations only as an extension path unless an implemented model and comparative evaluation are added.
+- **Current project status**: **unsupported by current code** - no language-model itinerary representation is currently used.
+
 ### 25. Zhang et al. (2024) - A Survey of Route Recommendations
 
 - **PDF**: `2403.00284v2.pdf`
@@ -1680,6 +1872,14 @@ This is the strongest AI-agent bridge for your project. A publishable extension 
 **From-memory summary**: route recommendation is a modern urban-computing field with methods from graph search to deep learning.
 **Teach-back**: it is the recent "map of the map-routing literature."
 **Project relevance**: cite when framing your work beyond tourism recommender systems and toward context-aware route decision support.
+
+**Project Action Takeaway**
+
+- **Main goal**: Organize modern route-recommendation algorithms, datasets, application domains, and open challenges across urban computing.
+- **Main limitation**: **Project-team inference** - its breadth limits depth on tourist decision-making, multi-day lodging, and user-facing route explanation.
+- **Publication use**: **Supporting field-map citation** for positioning the project as context-aware route decision support, not only tourism recommendation. It does not establish novelty for the project's particular route model.
+- **Project-polishing action**: State clearly which route-recommendation dimensions the prototype covers and which it omits, especially multimodality, live traffic, and learned trajectory models.
+- **Current project status**: **implemented** - the project recommends and compares routes, but not all route-recommendation modalities reviewed in the survey.
 
 ### 26. de la Rosa et al. (2024) - TRIP-PAL
 
@@ -1705,6 +1905,14 @@ This is the strongest AI-agent bridge for your project. A publishable extension 
 **Teach-back**: the LLM helps fill the menu; the planner decides what can actually fit on the plate.
 **Project relevance**: one of the best modern citations for your solver-backed route architecture.
 
+**Project Action Takeaway**
+
+- **Main goal**: Combine LLM-based travel knowledge with automated planning so generated itineraries are valid within a formal domain and maximize encoded utility.
+- **Main limitation**: **Author-reported limitation** - evaluation is limited to day planning with time discretized into 15-minute segments; **project-team inference** - success also depends on accurate domain extraction and does not address user-facing weather adaptation.
+- **Publication use**: **Essential hybrid-planning citation** for solver-backed feasibility within an encoded model. It supports the architecture choice but does not prove this project's multi-day routes are globally optimal or its explanations are useful.
+- **Project-polishing action**: Display the exact model scope behind every solver-status claim, including discretization, input provenance, omitted constraints, and fallback use.
+- **Current project status**: **partially implemented** - solver-backed and fallback planning exist, while the LLM knowledge-to-planner layer does not.
+
 ### 27. Markchom, Liang, and Ferryman (2024) - Review of Explainable Graph-Based Recommender Systems
 
 - **PDF**: `2408.00166v2.pdf`
@@ -1728,6 +1936,14 @@ This is the strongest AI-agent bridge for your project. A publishable extension 
 **From-memory summary**: graph recommenders can explain by showing paths, structures, or learned graph signals.
 **Teach-back**: if a system recommends a place because it is connected to your interests through a graph, it should show that path.
 **Project relevance**: optional citation for future graph-based "why this stop" explanation.
+
+**Project Action Takeaway**
+
+- **Main goal**: Review graph-based recommender architectures, explanation methods, explanation types, datasets, and evaluation practices.
+- **Main limitation**: **Project-team inference** - the review is relevant only if route, POI, hotel, and preference relationships are explicitly represented and evaluated as an explanation graph.
+- **Publication use**: **Optional citation** for a future graph-based explanation design. It should not be used to describe the current rule- and score-based explanation strings as graph explanations.
+- **Project-polishing action**: Defer graph explanations unless they materially improve provenance paths such as preference to utility component to selected stop to route consequence.
+- **Current project status**: **unsupported by current code** - no graph-based recommender or explanation model is implemented.
 
 ### 28. Chen et al. (2024) - Can We Rely on LLM Agents to Draft Long-Horizon Plans?
 
@@ -1753,6 +1969,14 @@ This is the strongest AI-agent bridge for your project. A publishable extension 
 **Teach-back**: asking another LLM to fix the first LLM is not enough unless something checks the result.
 **Project relevance**: supports explicit validation scripts and solver status in your dashboard.
 
+**Project Action Takeaway**
+
+- **Main goal**: Diagnose how prompting context, examples, feedback, and iterative refinement affect LLM agents on long-horizon travel plans.
+- **Main limitation**: **Project-team inference** - findings are benchmark- and agent-specific and do not establish the performance of symbolic optimizers or user-facing validation interfaces.
+- **Publication use**: **Supporting benchmark citation** for the claim that self-refinement and LLM feedback can remain unreliable without an external checker. It does not directly validate this project's checks.
+- **Project-polishing action**: Treat validation as a first-class artifact by retaining failed checks, repair reasons, solver/fallback state, and the final accepted route version.
+- **Current project status**: **partially implemented** - export validation and solver/fallback labels exist, but complete repair provenance is not yet exposed.
+
 ### 29. Chen et al. (2024) - TravelAgent
 
 - **PDF**: `2409.08069v1.pdf`
@@ -1776,6 +2000,14 @@ This is the strongest AI-agent bridge for your project. A publishable extension 
 **From-memory summary**: TravelAgent wraps LLMs with memory, tools, recommendations, and planning modules for personalized trips.
 **Teach-back**: it is an AI travel assistant that tries to remember preferences, search options, and assemble a trip.
 **Project relevance**: compare against it by emphasizing solver-backed feasibility, weather risk, and inspectable route alternatives.
+
+**Project Action Takeaway**
+
+- **Main goal**: Build an LLM travel assistant that combines preference memory, tools, recommendation, and route-planning modules for personalized itineraries.
+- **Main limitation**: **Project-team inference** - the system evidence is weaker than dedicated benchmarks for hard-constraint feasibility, and formal optimality or route-validity guarantees are not its central contribution.
+- **Publication use**: **Supporting system citation** for the breadth of agentic travel assistance. Use it as a contrast case for validated optimization and inspectable alternatives, not as a directly tested baseline unless its workflow is reproduced.
+- **Project-polishing action**: Make the prototype's narrower scope and stronger validation visible: structured inputs, explicit constraints, route metrics, weather risk, and solver/fallback labels.
+- **Current project status**: **unsupported by current code** - the repository does not implement an LLM assistant, memory, or autonomous tool-use workflow.
 
 ### 30. Wardatzky et al. (2025) - Whom do Explanations Serve?
 
@@ -1801,6 +2033,14 @@ This is the strongest AI-agent bridge for your project. A publishable extension 
 **Teach-back**: a route explanation that helps an expert planner may not help a casual traveler.
 **Project relevance**: include traveler type, planning confidence, weather-risk tolerance, and map familiarity in study measures.
 
+**Project Action Takeaway**
+
+- **Main goal**: Examine which user characteristics explanation studies report and test, and for whom recommender explanations are actually evaluated.
+- **Main limitation**: **Project-team inference** - the review informs study design but does not identify a universally effective travel explanation or route algorithm.
+- **Publication use**: **Supporting user-study citation** for measuring heterogeneity in explanation usefulness. It cannot support claims about this project's users until those characteristics are collected and analyzed.
+- **Project-polishing action**: Record planning experience, map familiarity, optimization familiarity, weather-risk tolerance, and confidence, then test whether treatment effects differ across these groups.
+- **Current project status**: **planned** - no user-characteristic study data are currently collected.
+
 ### 31. Espera et al. (2025) - +Tour
 
 - **PDF**: `2502.17345v2.pdf`
@@ -1824,6 +2064,14 @@ This is the strongest AI-agent bridge for your project. A publishable extension 
 **From-memory summary**: +Tour plans personalized itineraries while considering digital services tourists may use at POIs.
 **Teach-back**: it asks not only "where should you go?" but also "can the smart tourism service support what you will do there?"
 **Project relevance**: optional support for multi-objective itinerary planning and future service-aware constraints.
+
+**Project Action Takeaway**
+
+- **Main goal**: Jointly recommend personalized tourist itineraries and account for computing or communication resources needed by smart-tourism services.
+- **Main limitation**: **Author-reported future scope and project-team inference** - joint graph-neural itinerary and resource allocation remains future work, and the resource model is peripheral to the current weather-aware decision-support question.
+- **Publication use**: **Optional citation** for rich multi-objective itinerary constraints. It should not expand the paper's central framing unless service capacity becomes an implemented and evaluated constraint.
+- **Project-polishing action**: Keep service-resource constraints out of scope and use the paper only to illustrate how TTDP objectives can expand beyond attraction utility and travel time.
+- **Current project status**: **unsupported by current code** - no mobile-edge or digital-service resource allocation is modeled.
 
 ### 32. Banerjee et al. (2025) - SynthTRIPs
 
@@ -1849,6 +2097,14 @@ This is the strongest AI-agent bridge for your project. A publishable extension 
 **Teach-back**: it creates better fake travelers for testing travel recommenders.
 **Project relevance**: use it to generate participant scenarios: nature-heavy, budget-limited, weather-sensitive, low-driving, sustainability-aware.
 
+**Project Action Takeaway**
+
+- **Main goal**: Generate realistic, personalized, grounded, and sustainability-aware tourism queries for evaluating recommender systems.
+- **Main limitation**: **Author-reported limitation** - persona interpretation is subjective, sustainable intent may be underrepresented within mixed queries, and generation can favor common destinations.
+- **Publication use**: **Supporting experiment-design citation** for constructing diverse traveler scenarios. It evaluates query generation rather than route quality, so it cannot support itinerary-performance claims.
+- **Project-polishing action**: Build a small, manually reviewed scenario suite spanning risk tolerance, driving tolerance, nature interest, budget, must-go stops, and disruption severity.
+- **Current project status**: **planned** - route configurations exist, but no SynthTRIPs-style scenario generator or reviewed benchmark suite is implemented.
+
 ### 33. Ge, Liu, and Wang et al. (2025) - Vaiage
 
 - **PDF**: `2505.10922v1.pdf`
@@ -1872,6 +2128,14 @@ This is the strongest AI-agent bridge for your project. A publishable extension 
 **From-memory summary**: Vaiage is a multi-agent LLM travel planner with interactive map and budget interfaces.
 **Teach-back**: it splits travel planning among several AI specialists, then combines their outputs.
 **Project relevance**: compare as an LLM-agent system; your differentiator is validated optimization and inspectable weather-aware tradeoffs.
+
+**Project Action Takeaway**
+
+- **Main goal**: Coordinate specialized LLM agents to infer traveler intent, recommend options, and assemble interactive travel itineraries.
+- **Main limitation**: **Author-reported future scope and project-team inference** - long-term personalization, collaborative planning, and booking integration remain future work, while route-feasibility evidence is not equivalent to a formal solver guarantee.
+- **Publication use**: **Optional system citation** for agentic and interactive travel planning. Use it to contrast breadth with the project's narrower validated optimization, not to claim direct performance superiority.
+- **Project-polishing action**: Emphasize auditable inputs and route tradeoffs instead of adding a multi-agent layer that is not required by the primary research question.
+- **Current project status**: **unsupported by current code** - no multi-agent LLM architecture is present.
 
 ### 34. Santos et al. (2025) - CityHood
 
@@ -1897,6 +2161,14 @@ This is the strongest AI-agent bridge for your project. A publishable extension 
 **Teach-back**: it tells a traveler not only "go here," but "go here because these neighborhood features match you."
 **Project relevance**: use as a recent explainable travel UI citation; your extension is route feasibility and weather-aware alternatives.
 
+**Project Action Takeaway**
+
+- **Main goal**: Recommend cities or neighborhoods and explain how their features align with a traveler's interests.
+- **Main limitation**: **Project-team inference** - the short demo focuses on place-level recommendation and feature-based explanation rather than feasible multi-day route construction or controlled explanation evaluation.
+- **Publication use**: **Essential recent travel-interface citation** for interest-linked explanations. The project can extend from place fit to route consequences, but should not claim CityHood validates why-skipped or what-would-change explanations.
+- **Project-polishing action**: Tie each selected stop explanation to both interest fit and route feasibility, then add a contrast with the highest-value skipped alternative.
+- **Current project status**: **partially implemented** - basic why-selected text and interest scores exist, but contrastive route explanations are incomplete.
+
 ### 35. Banerjee et al. (2025) - Collab-Rec
 
 - **PDF**: `2508.15030v6.pdf`
@@ -1920,6 +2192,14 @@ This is the strongest AI-agent bridge for your project. A publishable extension 
 **From-memory summary**: Collab-Rec balances what the user likes, what is popular, and what is sustainable.
 **Teach-back**: instead of one recommender voice, it has several voices and a moderator.
 **Project relevance**: supports future route objectives for diversity, congestion avoidance, sustainability, and less over-touristed routes.
+
+**Project Action Takeaway**
+
+- **Main goal**: Balance personalization, popularity, and sustainability through specialist recommendation agents and a deterministic moderator.
+- **Main limitation**: **Project-team inference** - recommendation balance is not the same as route feasibility, and multi-agent outputs add dependencies that the current project does not validate.
+- **Publication use**: **Supporting or optional citation** for multi-objective and responsible-tourism framing. It cannot support claims about the current route optimizer's sustainability performance without explicit metrics and baselines.
+- **Project-polishing action**: If sustainability is retained, define one measurable route objective such as popularity dispersion or congestion avoidance rather than adding a vague sustainability score.
+- **Current project status**: **partially implemented** - diversity signals exist, but multi-agent moderation and validated sustainability objectives do not.
 
 ### 36. Karmakar et al. (2025) - TripTide
 
@@ -1945,6 +2225,14 @@ This is the strongest AI-agent bridge for your project. A publishable extension 
 **Teach-back**: if rain closes a hike or a flight is delayed, does the planner preserve the spirit of the trip or panic-rewrite everything?
 **Project relevance**: central citation for weather-aware replanning and route repair under uncertainty.
 
+**Project Action Takeaway**
+
+- **Main goal**: Benchmark whether travel planners adapt itineraries appropriately to step-, day-, and plan-level disruptions while respecting traveler tolerance and preserving unaffected content.
+- **Main limitation**: **Project-team inference** - the benchmark evaluates LLM-based adaptation rather than mathematical optimization and does not itself provide a user-facing explanation or controlled traveler study.
+- **Publication use**: **Essential disruption citation** for repair scope, responsiveness, and preservation of intent. It does not prove the current alternatives constitute live replanning or that they preserve intent better than a baseline.
+- **Project-polishing action**: Implement original-versus-weather-adjusted comparison with preserved-stop count, route edit distance, utility change, risk reduction, and an explanation of why each changed stop moved.
+- **Current project status**: **partially implemented** - weather-aware routes and alternatives exist, but live disruption handling and an explicit preservation-of-intent metric do not.
+
 ### 37. Zhang et al. (2026) - Revisiting the Travel Planning Capabilities of Large Language Models
 
 - **PDF**: `2605.03308v1.pdf`
@@ -1968,6 +2256,14 @@ This is the strongest AI-agent bridge for your project. A publishable extension 
 **From-memory summary**: it opens the black box of travel-agent failure into smaller skills.
 **Teach-back**: a bad itinerary might fail because the model misunderstood the request, used the wrong tool, chose bad POIs, or could not repair errors.
 **Project relevance**: supports your modular validation and explains why dashboard provenance matters.
+
+**Project Action Takeaway**
+
+- **Main goal**: Decompose travel-planning performance into atomic capabilities so researchers can diagnose where LLM systems fail.
+- **Main limitation**: **Project-team inference** - the diagnostic framework is centered on LLM agents and does not evaluate optimization-dashboard comprehension or solver quality.
+- **Publication use**: **Essential diagnostic citation** for modular validation rather than relying on one end-to-end success score. It cannot establish that the project's current validation modules are complete.
+- **Project-polishing action**: Organize validation into input interpretation, data retrieval, POI scoring, route feasibility, repair, explanation, and export checks with separate failure summaries.
+- **Current project status**: **partially implemented** - route/export checks and provenance fields exist, but capability-level failure reporting is incomplete.
 
 ### 38. Zhao et al. (2026) - TRACE
 
@@ -1993,6 +2289,14 @@ This is the strongest AI-agent bridge for your project. A publishable extension 
 **Teach-back**: a travel assistant should not just sound convincing; it should prove why a place fits and adapt when the traveler says no.
 **Project relevance**: use for accountable route explanations and evidence-backed skipped/selected reasoning.
 
+**Project Action Takeaway**
+
+- **Main goal**: Evaluate tourism conversational recommenders on recommendation accuracy, evidence grounding, and recovery after a user rejects a suggestion.
+- **Main limitation**: **Author-reported limitation** - parts of the evaluation rely on a single LLM judge, additional cross-judge checks remain future work, and the full Yelp-derived corpus is not independently redistributed; **project-team inference** - TRACE recommends POIs rather than solving routes.
+- **Publication use**: **Essential accountability citation** for evidence-backed rationale and rejection recovery. It cannot support claims that current source-confidence fields constitute citation-level grounding.
+- **Project-polishing action**: Link selected and skipped explanations to inspectable source fields, show confidence separately from preference fit, and log how a rejected POI changes the validated route.
+- **Current project status**: **partially implemented** - source confidence and rationale fields exist, while citation-level grounding and rejection recovery remain unimplemented.
+
 ### 39. Cheng et al. (2026) - GroupTravelBench
 
 - **PDF**: `2605.25200v2.pdf`
@@ -2017,6 +2321,14 @@ This is the strongest AI-agent bridge for your project. A publishable extension 
 **Teach-back**: planning for a group is harder because the planner must ask, negotiate, and be fair.
 **Project relevance**: optional future extension: group-aware interest bars and route compromise explanations.
 
+**Project Action Takeaway**
+
+- **Main goal**: Benchmark multi-turn travel planning for groups whose members have private, conflicting, and differently weighted preferences.
+- **Main limitation**: **Project-team inference** - group preference elicitation and fairness introduce a separate research problem beyond the current single-traveler dashboard and would substantially broaden the evaluation.
+- **Publication use**: **Optional future-work citation** for group negotiation and compromise explanations. It should not appear as evidence for current personalization or fairness capabilities.
+- **Project-polishing action**: Keep group planning out of the next study; design current preference and explanation schemas so multiple users could be added later without claiming support now.
+- **Current project status**: **unsupported by current code** - group preference elicitation, negotiation, and fairness metrics are absent.
+
 ### 40. Chen et al. (2026) - TravelEval
 
 - **PDF**: `2606.01046v1.pdf`
@@ -2040,6 +2352,14 @@ This is the strongest AI-agent bridge for your project. A publishable extension 
 **From-memory summary**: TravelEval says a travel plan should be graded across many dimensions, not just whether it sounds good.
 **Teach-back**: a nice itinerary fails if it breaks the budget, makes impossible jumps, or wastes the user's time.
 **Project relevance**: use its dimensions to define evaluation metrics for your system: compliance, temporal feasibility, spatial coherence, economy, utility, and context risk.
+
+**Project Action Takeaway**
+
+- **Main goal**: Provide multidimensional evaluation for complete LLM-generated travel plans rather than judging only fluency or surface plausibility.
+- **Main limitation**: **Project-team inference** - its evaluation target is LLM agents, not solver-backed dashboards, and benchmark dimensions still require operationalization for California route artifacts and weather adaptation.
+- **Publication use**: **Essential evaluation citation** for compliance, temporal feasibility, spatial coherence, economy, and utility as separate outcomes. It cannot show that this project performs well until those metrics are computed against baselines.
+- **Project-polishing action**: Create a reproducible evaluation table for every route alternative containing feasibility, travel time, budget, utility, weather risk, lodging completeness, runtime, and solver/fallback status.
+- **Current project status**: **partially implemented** - several route and validation metrics exist, but a complete benchmark-style comparison has not been run.
 
 ## Remaining Online Leads and External Context
 

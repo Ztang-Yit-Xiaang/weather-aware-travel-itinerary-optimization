@@ -4,6 +4,8 @@ This guide is the recommended starting point for a new researcher joining the we
 
 The detailed paper-by-paper evidence remains in `docs/literature_deep_read_study_report.md`. Use that file as a reference bank after you understand the field structure from this guide.
 
+Every paper entry in the evidence bank ends with a **Project Action Takeaway**. Read that compact block first when deciding whether a paper matters: **Main goal** states what the paper tried to accomplish; **Main limitation** separates author-reported constraints from project-team inference; **Publication use** identifies the defensible claim and citation role; **Project-polishing action** turns the paper into a concrete implementation or evaluation task; and **Current project status** prevents planned work from being mistaken for an implemented contribution. These blocks are navigation aids, not substitutes for the method, results, and critical-evaluation notes above them.
+
 ## 1. Project Problem In Plain Language
 
 Travel planning looks simple until the plan has to become real. A ranked list of attractions is not enough. A traveler also needs to know whether the locations can actually be visited in the available days, whether the route wastes too much driving time, where to stay overnight, whether outdoor stops are risky under bad weather, and what tradeoffs are being made when one place is selected instead of another.

@@ -2,7 +2,7 @@
 
 Prepared: 2026-06-17
 
-This file is only a quick index for the newer corpus. It intentionally avoids duplicating the long summaries already integrated into [docs/literature_deep_read_study_report.md](literature_deep_read_study_report.md).
+This file is only a quick index for the newer corpus. It intentionally avoids duplicating the long summaries already integrated into [docs/literature_deep_read_study_report.md](literature_deep_read_study_report.md). Each recent-paper entry in that evidence bank ends with a **Project Action Takeaway** covering the paper's main goal, limitation, publication use, concrete project-polishing action, and current implementation status.
 
 Recommended reading path:
 

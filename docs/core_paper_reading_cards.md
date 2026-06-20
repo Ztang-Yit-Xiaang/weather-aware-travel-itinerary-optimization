@@ -12,6 +12,9 @@ Personalized Travel Recommendation.
 **Local file:**  
 `reference/1-s2.0-S1568494623012188-main.pdf`
 
+**Main goal:**  
+Organize personalized itinerary recommendation across optimization, conventional recommendation, and deep-learning approaches.
+
 **Research problem:**  
 Personalized itinerary recommendation has been studied with many formulations, techniques, constraints, and data sources, making it hard for new researchers to understand the field.
 
@@ -25,7 +28,16 @@ The paper is a survey and taxonomy. It reviews personalized itinerary recommenda
 The paper shows that itinerary recommendation is broader than POI ranking: a system must select POIs and schedule them into a route while considering user preferences and many constraints.
 
 **Important limitation:**  
-It is primarily a literature survey. It does not provide a user-facing dashboard, weather-aware route adaptation, or evidence that users understand route tradeoffs better.
+**Project-team inference:** It is primarily a literature survey. It does not provide a user-facing dashboard, weather-aware route adaptation, or evidence that users understand route tradeoffs better.
+
+**Publication use:**  
+Essential citation for positioning the system between personalization and constrained planning. It cannot support claims that the current interface improves decisions.
+
+**Project-polishing action:**  
+Connect every interest control to a visible utility change and route consequence, while labeling browser previews separately from saved solver output.
+
+**Current implementation status:**  
+**partially implemented** - interest profiles and preview controls exist, but browser changes do not rerun the optimizer and explanations are incomplete.
 
 **Connection to our project:**  
 This paper supports the personalization layer: interest profiles, POI utility, itinerary recommendation, and the distinction between user preference and route feasibility.
@@ -50,6 +62,9 @@ Operations Research and Tourist Trip Design.
 **Local file:**  
 `reference/1-s2.0-S2214716022000069-main.pdf`
 
+**Main goal:**  
+Systematically organize TTDP extensions, objectives, solution methods, and future research directions.
+
 **Research problem:**  
 The Tourist Trip Design Problem (TTDP) literature contains many variants, objectives, and solution methods, and needs a systematic review to organize extensions and future research directions.
 
@@ -63,7 +78,16 @@ The paper conducts a systematic literature review and proposes a taxonomy of TTD
 The paper positions TTDP as a tourism-specific extension of the Orienteering Problem and shows that most practical trip design systems require richer constraints than the classic model.
 
 **Important limitation:**  
-The review is mostly algorithmic and operations-research oriented. It does not focus on user understanding, explainability, or mixed-initiative dashboard design.
+**Project-team inference:** The review is mostly algorithmic and operations-research oriented. It does not focus on user understanding, explainability, or mixed-initiative dashboard design.
+
+**Publication use:**  
+Essential citation for the technical field definition and for identifying established constraints that should not be presented as algorithmic novelty.
+
+**Project-polishing action:**  
+Map every modeled objective and constraint to a dashboard element, validation check, and carefully scoped paper claim.
+
+**Current implementation status:**  
+**implemented** - constrained multi-day planning is present, while its complete human-centered inspection layer remains partial.
 
 **Connection to our project:**  
 This is the main foundation for explaining why the project is a constrained route-planning system, not a ranked attraction list.
@@ -88,6 +112,9 @@ Operations Research and Tourist Trip Design.
 **Local file:**  
 `reference/1-s2.0-S0305054821002963-main.pdf`
 
+**Main goal:**  
+Solve a TTDP with rich interdependent constraints through exact branch-and-check and branch-and-solve methods.
+
 **Research problem:**  
 Realistic TTDP instances include not only budgets, opening hours, and trip duration, but also mandatory visits, limits on types of locations, and ordering constraints.
 
@@ -101,7 +128,16 @@ The paper proposes branch-and-check approaches. A master problem selects candida
 The method shows how separating selection and feasibility checking can handle richer tourism constraints more effectively than a simpler monolithic approach.
 
 **Important limitation:**  
-The paper is not about interface design or user explanations. It also does not address weather-aware replanning or trust calibration.
+**Project-team inference:** The computational study is not about interface design, weather-aware replanning, or trust calibration, and its findings are bounded by its formulation and test instances.
+
+**Publication use:**  
+Essential algorithmic citation for explicit feasibility checking under rich tourism constraints. It cannot support claims about traveler comprehension or explanation usefulness.
+
+**Project-polishing action:**  
+Expose which constraint caused exclusion or repair and distinguish Gurobi-backed results from heuristic fallback routes.
+
+**Current implementation status:**  
+**partially implemented** - solver/fallback paths and status labels exist, but generalized constraint-block explanations do not.
 
 **Connection to our project:**  
 It supports the claim that rich route constraints are real and technically hard. It also helps frame why solver/fallback status and feasibility labels matter to users.
@@ -126,6 +162,9 @@ LLM Travel-Planning Evaluation.
 **Local file:**  
 `reference/2606.01046v1.pdf`
 
+**Main goal:**  
+Evaluate complete LLM-generated travel plans across multiple dimensions rather than relying on fluency or isolated constraint checks.
+
 **Research problem:**  
 Existing LLM travel-planning benchmarks overemphasize constraint compliance and do not fully evaluate spatial, temporal, lodging, transportation, economy, and complete-plan quality.
 
@@ -139,7 +178,16 @@ The paper introduces TravelEval, a benchmark with a six-dimensional evaluation f
 TravelEval provides a richer vocabulary for evaluating complete travel plans and shows that LLM-powered agents should be assessed beyond surface fluency.
 
 **Important limitation:**  
-The local PDF appears as a recent arXiv-style paper; no peer-reviewed venue is verified from the local first pages. It evaluates LLM agents, not this project's dashboard directly.
+**Project-team inference:** The local PDF appears as a recent arXiv-style paper; no peer-reviewed venue is verified from the local first pages. It evaluates LLM agents, not this project's dashboard directly.
+
+**Publication use:**  
+Essential evaluation citation for separating compliance, temporality, spatiality, economy, and utility. It cannot establish the project's performance before those metrics are computed against baselines.
+
+**Project-polishing action:**  
+Produce one reproducible metric table per route covering feasibility, travel time, budget, utility, weather risk, lodging completeness, runtime, and solver/fallback status.
+
+**Current implementation status:**  
+**partially implemented** - several route and validation metrics exist, but no complete benchmark-style comparison has been run.
 
 **Connection to our project:**  
 It helps modernize the evaluation plan. Our project can borrow dimensions such as compliance, temporality, spatiality, economy, utility, and complete-plan assessment.
@@ -164,6 +212,9 @@ LLM and Solver-Backed Travel Planning.
 **Local file:**  
 `reference/2406.10196v1.pdf`
 
+**Main goal:**  
+Combine LLM-based travel knowledge with automated planning to produce valid, utility-aware plans within a formal model.
+
 **Research problem:**  
 LLM-only travel planners can generate fluent itineraries that fail to satisfy constraints or produce coherent high-quality plans.
 
@@ -177,7 +228,16 @@ TRIP-PAL uses LLMs to extract and translate travel information and user informat
 The paper reports that TRIP-PAL produces more valid and higher-utility travel plans than an LLM-only baseline in the tested scenarios.
 
 **Important limitation:**  
-The guarantee is only as strong as the formal planning model, extracted data, and planner assumptions. The local PDF appears as an arXiv-style paper; no venue is verified from the local first pages.
+**Author-reported limitation:** Evaluation is limited to day planning with time discretized into 15-minute segments. **Project-team inference:** The guarantee is only as strong as the formal model, extracted data, and planner assumptions. The local PDF appears arXiv-style, with no venue verified from its first pages.
+
+**Publication use:**  
+Essential hybrid-planning citation for formal feasibility within an encoded model. It cannot prove that this project's multi-day routes are globally optimal or its explanations are useful.
+
+**Project-polishing action:**  
+Display the modeled scope, omitted constraints, input provenance, solver result, and fallback path behind every validity claim.
+
+**Current implementation status:**  
+**partially implemented** - solver-backed planning exists, while the LLM knowledge-to-planner layer does not.
 
 **Connection to our project:**  
 It supports the hybrid argument: natural-language or LLM interfaces should compile into auditable constraints and solver-backed planning, not replace validation.
@@ -202,6 +262,9 @@ Weather, Disruptions, and Adaptive Replanning.
 **Local file:**  
 `reference/2510.21329v1.pdf`
 
+**Main goal:**  
+Benchmark adaptive travel planning under disruptions while measuring repair scope, responsiveness, and preservation of traveler intent.
+
 **Research problem:**  
 Most travel-planning benchmarks focus on generating an initial itinerary, but real trips face disruptions such as transit cancellations, weather-related closures, and overbooked attractions.
 
@@ -215,7 +278,16 @@ TripTide introduces disruption scenarios, severity levels, traveler tolerance pr
 The paper provides an evaluation framework for adaptive travel planning under disruptions and argues that replanning quality involves semantic, spatial, and sequential changes, not only feasibility.
 
 **Important limitation:**  
-The local PDF appears as a recent arXiv-style paper; no venue is verified from the local first pages. It benchmarks LLM responses rather than implementing this project's solver/dashboard design.
+**Project-team inference:** The local PDF appears as a recent arXiv-style paper; no venue is verified from the local first pages. It benchmarks LLM responses rather than implementing this project's solver/dashboard design.
+
+**Publication use:**  
+Essential disruption citation for preservation of intent and scoped repair. It does not prove that the project's current route alternatives constitute live replanning.
+
+**Project-polishing action:**  
+Compare original and weather-adjusted routes using preserved stops, edit distance, utility change, risk reduction, and explanations for changed stops.
+
+**Current implementation status:**  
+**partially implemented** - weather-aware alternatives exist, but live disruption handling and explicit intent-preservation metrics do not.
 
 **Connection to our project:**  
 It is the most direct paper for the next research stage: compare original and weather-adjusted itineraries, preserve intent, and measure what changed.
@@ -240,6 +312,9 @@ HCI, Explainability, and Mixed-Initiative Planning.
 **Local file:**  
 `reference/2305.11755v3.pdf`
 
+**Main goal:**  
+Classify visual explanations in recommender systems and connect explanation purposes to methods, formats, interaction, and evaluation.
+
 **Research problem:**  
 Explainable recommender systems need human-understandable rationales, and visual explanations have been studied across many aims, scopes, methods, and formats.
 
@@ -253,7 +328,16 @@ The paper systematically reviews visual explanation work in recommender systems 
 The paper provides a structure and design guidelines for visual explanations that can make recommender outputs more transparent and actionable.
 
 **Important limitation:**  
-It is a broad survey and not travel-specific. It does not provide a solver-backed route dashboard or test weather-aware itinerary explanations.
+**Project-team inference:** It is a broad survey and not travel-specific. It does not provide a solver-backed route dashboard or test weather-aware itinerary explanations.
+
+**Publication use:**  
+Essential citation for framing route overlays, weather layers, and aligned metrics as visual explanation. It cannot establish their effectiveness without a user study.
+
+**Project-polishing action:**  
+Assign each visual element a concrete explanation task, such as spatial comparison, tradeoff inspection, or skipped-stop diagnosis.
+
+**Current implementation status:**  
+**partially implemented** - visual route comparison exists, while route-difference and skipped-stop explanations need stronger integration.
 
 **Connection to our project:**  
 It supports the dashboard as an explanatory visualization, not just a map. Route metrics, weather-risk layers, provenance, and comparison tables can be framed as visual explanations.
@@ -278,6 +362,9 @@ HCI, Explainability, and Mixed-Initiative Planning.
 **Local file:**  
 `reference/2507.18778v1.pdf`
 
+**Main goal:**  
+Recommend cities and neighborhoods while explaining how regional features align with a traveler's interests.
+
 **Research problem:**  
 Location-based recommenders often suggest places without explaining why a city or neighborhood matches a user's interests.
 
@@ -291,7 +378,16 @@ CityHood models user interests from large-scale Google Places reviews enriched w
 The paper demonstrates an interactive explainable travel recommender that helps users explore city and neighborhood recommendations with visible reasoning.
 
 **Important limitation:**  
-The local PDF is a short system/demo-style paper. It recommends cities and neighborhoods, not multi-day constrained itineraries with hotels, route repair, weather risk, or solver validation.
+**Project-team inference:** The local PDF is a short system/demo-style paper. It recommends cities and neighborhoods, not multi-day constrained itineraries with hotels, route repair, weather risk, or solver validation.
+
+**Publication use:**  
+Essential recent travel-interface citation for interest-linked explanations. It does not validate contrastive route explanations or constrained itinerary construction.
+
+**Project-polishing action:**  
+Explain each selected stop through both interest fit and route feasibility, then contrast it with a high-value skipped alternative.
+
+**Current implementation status:**  
+**partially implemented** - interest scores and basic why-selected text exist, but contrastive explanations remain incomplete.
 
 **Connection to our project:**  
 It gives a travel-domain example of user-facing explainability. Our project can extend this idea from location explanation to route-tradeoff explanation.

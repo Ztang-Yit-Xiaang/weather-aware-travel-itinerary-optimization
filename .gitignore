@@ -10,6 +10,9 @@ __pycache__/
 .coverage
 .pytest_cache/
 .ruff_cache/
+.agents
+.codex
+.codex_tmp_pytest
 htmlcov/
 notebook/__pycache__/
 notebook/*_executed.ipynb

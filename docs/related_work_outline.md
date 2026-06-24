@@ -94,8 +94,8 @@ Position the project against recent LLM travel-planning work. The goal is not to
 
 1. LLMs make travel planning feel conversational and convenient.
 2. Recent benchmarks show that LLM-only travel plans can violate constraints, miss spatial or temporal details, mishandle lodging and transportation, or produce plausible but invalid itineraries.
-3. Hybrid systems such as TRIP-PAL and TTG show a more promising path: use language models to extract information or compile constraints, then use symbolic planning or mixed-integer optimization for validation and route construction.
-4. Evaluation is also becoming more complete: TravelEval argues for assessing full travel plans across accuracy, compliance, temporality, spatiality, economy, and utility.
+3. Hybrid systems such as TRIP-PAL, TTG, and LLMAP show a more promising path: use language models to extract information or compile constraints, then use symbolic planning, graph search, or mixed-integer optimization for validation and route construction. Logic-LM supplies a broader neuro-symbolic precedent for solver-error-guided correction of bad formalizations.
+4. Evaluation is also becoming more complete: TravelEval argues for assessing full travel plans across accuracy, compliance, temporality, spatiality, economy, and utility, while TripScore combines hard, soft, and preference criteria into an expert-calibrated reward.
 5. The current project already follows part of the hybrid logic by keeping route artifacts and solver/fallback status inspectable, even though it does not currently include a natural-language LLM layer.
 6. This creates a future path: natural-language preferences could be compiled into explicit, auditable constraints, but the current paper should focus on inspectable solver-backed planning rather than claiming an LLM agent.
 
@@ -104,13 +104,16 @@ Position the project against recent LLM travel-planning work. The goal is not to
 - Xie et al. (2024), "TravelPlanner: A Benchmark for Real-World Planning with Language Agents."
 - de la Rosa et al. (2024), "TRIP-PAL: Travel Planning with Guarantees by Combining Large Language Models and Automated Planners."
 - Ju et al. (2024), "To the Globe (TTG): Towards Language-Driven Guaranteed Travel Planning."
+- Yuan et al. (2025), "LLMAP: LLM-Assisted Multi-Objective Route Planning with User Preferences."
 - Chen et al. (2026), "TravelEval: A Comprehensive Benchmarking Framework for Evaluating LLM-Powered Travel Planning Agents."
+- Qu et al. (2025), "TripScore: Benchmarking and Rewarding Real-World Travel Planning with Fine-Grained Evaluation."
 
 **Optional citations**
 
 - Chen et al. (2024), "Can We Rely on LLM Agents to Draft Long-Horizon Plans?"
 - Chen et al. (2024), "TravelAgent."
 - Zhang et al. (2026), "Revisiting the Travel Planning Capabilities of Large Language Models."
+- Pan et al. (2023), "Logic-LM: Empowering Large Language Models with Symbolic Solvers for Faithful Logical Reasoning."
 - GroupTravelBench (2026) for group-planning complexity.
 
 **Claims that still require evidence**
@@ -119,6 +122,7 @@ Position the project against recent LLM travel-planning work. The goal is not to
 - That natural-language preferences are parsed into validated optimization constraints.
 - That solver-backed planning outperforms LLM-only planning in this repository.
 - That the planner provides formal guarantees beyond the implemented model and solver status.
+- That a unified itinerary reward is objective or sufficient without reporting its component metrics and calibration uncertainty.
 
 **How this subsection leads to our research gap**
 

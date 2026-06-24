@@ -2,7 +2,7 @@
 
 This guide is the recommended starting point for a new researcher joining the weather-aware travel itinerary optimization project. It explains the project in plain language, organizes the literature into four research areas, and points to the smaller set of papers that are worth reading first.
 
-The detailed paper-by-paper evidence remains in `docs/literature_deep_read_study_report.md`. Use that file as a reference bank after you understand the field structure from this guide.
+After this introduction, read the [integrated core literature review](core_paper_reading_cards.md) for the detailed eight-paper learning sequence. The full paper-by-paper evidence remains in `docs/literature_deep_read_study_report.md`; use that file as a reference bank after you understand the field structure and core papers.
 
 Every paper entry in the evidence bank ends with a **Project Action Takeaway**. Read that compact block first when deciding whether a paper matters: **Main goal** states what the paper tried to accomplish; **Main limitation** separates author-reported constraints from project-team inference; **Publication use** identifies the defensible claim and citation role; **Project-polishing action** turns the paper into a concrete implementation or evaluation task; and **Current project status** prevents planned work from being mistaken for an implemented contribution. These blocks are navigation aids, not substitutes for the method, results, and critical-evaluation notes above them.
 
@@ -287,6 +287,13 @@ Do not start by reading all papers. Start with a small spine:
 6. TripTide (2025), adaptive travel planning under disruptions.
 7. Chatti et al. (2024), visualization for recommendation explainability.
 8. CityHood (2025), explainable travel recommender system.
+
+Then complete the professor-recommended companion pass:
+
+1. LLMAP (2025), language parsing plus multi-objective graph route search.
+2. Logic-LM (2023), general LLM-to-symbolic formulation and solver-error refinement.
+3. TripScore (2025), fine-grained travel-plan evaluation and unified reward design.
+4. TTG (2024), using the existing EMNLP Demo entry; `2410.16456v1.pdf` is a duplicate arXiv copy, not a separate paper.
 
 Then read supporting HCI and explanation papers such as Horvitz on mixed initiative, Amershi et al. on human-AI guidelines, Bucinca et al. on overreliance and cognitive forcing, Tintarev and Masthoff on explanation goals, Knijnenburg et al. on user-experience evaluation, and Chen and Pu on critiquing-based recommenders.
 

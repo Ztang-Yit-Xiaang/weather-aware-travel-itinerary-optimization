@@ -1,6 +1,6 @@
 # Weather-Aware Itinerary Optimization Literature Deep Read
 
-> **Reader note:** This is the detailed evidence bank, not the recommended starting point. New readers should begin with [docs/literature_onboarding_guide.md](literature_onboarding_guide.md), then use [docs/core_paper_reading_cards.md](core_paper_reading_cards.md), [docs/project_literature_evidence_matrix.md](project_literature_evidence_matrix.md), and [docs/related_work_outline.md](related_work_outline.md) before returning here for full paper-by-paper notes.
+> **Reader note:** This is the detailed evidence bank, not the recommended starting point. New readers should begin with [docs/literature_onboarding_guide.md](literature_onboarding_guide.md), continue with the [integrated eight-paper literature review](core_paper_reading_cards.md), and then use [docs/project_literature_evidence_matrix.md](project_literature_evidence_matrix.md) and [docs/related_work_outline.md](related_work_outline.md) before returning here for full paper-by-paper notes.
 >
 > **Caution:** Several recent 2024-2026 PDFs are arXiv-style or demo/preprint papers in the local folder. Unless a venue is explicitly verified in the PDF entry, treat publication status as unverified and cite accordingly.
 
@@ -1667,6 +1667,7 @@ This supports your solver-first architecture. LLMs may help collect preferences 
 ### 21. Ju et al. (2024) - To the Globe (TTG): Towards Language-Driven Guaranteed Travel Planning
 
 - **PDF**: `2024.emnlp-demo.25.pdf`; duplicate local arXiv copy also exists as `2410.16456v1.pdf`
+- **Professor-recommended reference**: `2410.16456v1.pdf` is the arXiv copy of this same TTG paper and is not counted as a separate study.
 - **Online**: [arXiv:2410.16456](https://arxiv.org/abs/2410.16456)
 - **Topic**: LLM-to-symbolic travel planning with MILP guarantees.
 - **Main research question**: Can natural-language travel requests be translated into symbolic form and solved with MILP to produce guaranteed itineraries in real time?
@@ -2361,6 +2362,105 @@ This is the strongest AI-agent bridge for your project. A publishable extension 
 - **Project-polishing action**: Create a reproducible evaluation table for every route alternative containing feasibility, travel time, budget, utility, weather risk, lodging completeness, runtime, and solver/fallback status.
 - **Current project status**: **partially implemented** - several route and validation metrics exist, but a complete benchmark-style comparison has not been run.
 
+### 41. Yuan, Han, Brinton, and Brunswicker (2025) - LLMAP: LLM-Assisted Multi-Objective Route Planning with User Preferences
+
+- **PDF**: `2509.12273v1.pdf`
+- **Publication status**: arXiv:2509.12273v1 (2025); no peer-reviewed venue is verified from the local PDF.
+- **Topic**: natural-language preference parsing combined with multi-objective graph route optimization.
+- **Main research question**: Can an LLM parse heterogeneous route requests into structured tasks and preferences while a graph algorithm produces constraint-valid, multi-objective routes?
+- **Method**: an LLM-as-Parser extracts POI types, time limits, task dependencies, and preference weights; the Multi-Step Graph construction with iterative Search (MSGS) algorithm then optimizes task completion, POI quality, and route length under time, opening-hour, and dependency constraints.
+- **Conclusion**: in the tested 1,000-prompt benchmark across 27 cities in 14 countries, LLMAP outperforms LLM-as-Agent baselines on route objectives and tested constraint violations.
+- **One-sentence purpose**: The paper provides a recent direct precedent for separating natural-language preference interpretation from deterministic multi-objective route search.
+
+**Research problem**: LLM agents understand flexible requests but struggle with large maps and exact route constraints, while graph algorithms handle routing but not natural-language preferences.
+**Importance**: this is very close to the project's possible future language-to-solver architecture and directly models preference, quality, distance, task completion, opening hours, and dependencies.
+**Already known**: LLMs can parse language, and graph search can optimize routes; prior travel-agent work shows that combining all reasoning inside an LLM is unreliable.
+**New in the paper**: an LLM-as-Parser plus MSGS pipeline with per-query objective weighting and constraint-aware route construction across geographically heterogeneous prompts.
+
+**Introduction notes**: the paper contrasts LLM-as-Agent route generation with graph-based search and identifies a missing bridge between preference understanding and reliable search.
+**Necessary background**: multi-objective route planning, POI graph construction, task dependencies, opening-hour feasibility, preference-weight extraction, and LLM parsing.
+**Method/data/assumptions/reproducibility**: the HIPP benchmark contains 1,000 routing prompts sampled across 27 cities in 14 countries. Evaluation covers POI rating, review count, path length, task completion, and violations of time, dependency, and opening-hour constraints. Reproducibility benefits from released code/data, but performance depends on POI coverage, parser accuracy, routing assumptions, and the bounded set of modeled constraints.
+**Important figures/tables**: Figure 1 presents the parser-to-MSGS architecture. Table 1 compares route quality, completion, distance, and constraint violations across LLMAP and baselines. Table 2 evaluates parser accuracy. Appendix analyses cover runtime, ablation, travel mode, geography, and essential waypoints. Together they support the hybrid decomposition claim within the benchmark.
+**Discussion/conclusion**: the authors argue that language understanding and route solving should be separated. They identify computational overhead as the main limitation: MSGS permutes POI-type sets, so complexity increases substantially as the number of requested POI types grows.
+**Critical evaluation**: highly relevant and more route-specific than general neuro-symbolic papers. However, its guarantee is limited to the encoded constraints and search setup, and the benchmark is not a multi-day lodging or weather-repair study.
+**From-memory summary**: LLMAP lets an LLM translate a route request, then lets a graph algorithm handle the actual constrained multi-objective search.
+**Teach-back**: the language model reads the travel request; the route algorithm decides which real places fit and in what order.
+**Project relevance**: professor-recommended direct support for a future auditable preference parser and for evaluating utility-distance tradeoffs separately from hard feasibility.
+
+**Project Action Takeaway**
+
+- **Main goal**: Combine natural-language preference extraction with constraint-aware multi-objective route search.
+- **Main limitation**: **Author-reported limitation** - MSGS has increasing computational overhead as the number of POI types grows; **project-team inference** - the tested constraints do not include this project's full multi-day, lodging, weather, or repair setting.
+- **Publication use**: **Essential citation for the future AI/solver path and supporting citation for the current multi-objective route framing**. It cannot establish that the current project parses language or outperforms LLMAP.
+- **Project-polishing action**: Keep hard constraints, soft preferences, and objective weights in a visible schema; if a language layer is added, evaluate extraction accuracy separately from route quality and feasibility.
+- **Current project status**: **partially implemented** - multi-objective scoring and constrained routing exist, while the LLM parser and MSGS algorithm are unsupported by current code.
+
+### 42. Pan, Albalak, Wang, and Wang (2023) - Logic-LM: Empowering Large Language Models with Symbolic Solvers for Faithful Logical Reasoning
+
+- **PDF**: `2305.12295v2.pdf`
+- **Publication status**: arXiv:2305.12295v2 (2023); no venue is verified from the local PDF.
+- **Topic**: neuro-symbolic reasoning through LLM translation, deterministic solvers, and solver-error-guided self-refinement.
+- **Main research question**: Can LLMs become more faithful on complex logical problems by translating natural language into symbolic formulations and delegating inference to deterministic solvers?
+- **Method**: an LLM formulates first-order logic, constraint-satisfaction, or other symbolic representations; a corresponding solver executes the reasoning; a result interpreter returns the answer; and a self-refinement loop uses solver error messages to revise malformed symbolic formulations.
+- **Conclusion**: across five logical-reasoning datasets, Logic-LM improves average accuracy over standard and chain-of-thought prompting, while solver feedback helps repair executable-form errors.
+- **One-sentence purpose**: The paper supplies a general architecture for auditable language-to-symbolic translation and solver-guided correction, rather than a travel-planning method.
+
+**Research problem**: LLM reasoning chains can be fluent but unfaithful, while symbolic solvers are reliable only after a problem has been represented correctly.
+**Importance**: future natural-language itinerary constraints will fail at the translation boundary unless parsing, compilation, and solver feedback are treated as separate stages.
+**Already known**: symbolic inference follows explicit rules, and LLMs are flexible natural-language interpreters.
+**New in the paper**: a general framework spanning multiple logical formalisms plus iterative self-refinement from symbolic-solver error messages.
+
+**Introduction notes**: the paper frames LLMs and symbolic systems as complementary: language flexibility belongs to the LLM, while precise inference belongs to the solver.
+**Necessary background**: first-order logic, constraint-satisfaction problems, symbolic execution, logical faithfulness, few-shot formulation, and solver-error feedback.
+**Method/data/assumptions/reproducibility**: experiments use ProofWriter, PrOntoQA, FOLIO, LogicalDeduction, and AR-LSAT with ChatGPT, GPT-3.5, and GPT-4 variants. The paper reports average gains of 39.2% over standard prompting and 18.4% over chain-of-thought prompting. The released code supports reproduction, but performance depends on the chosen formalism, solver expressiveness, demonstrations, and parsing quality.
+**Important figures/tables**: Figure 1 shows the formulation-reasoning-interpretation-refinement loop. Table 2 reports accuracy across the five datasets and base LLMs. Refinement analyses show that solver feedback can repair some grammar or execution failures but not every semantic translation error.
+**Discussion/conclusion**: the authors identify two main limitations: applicability is bounded by the expressiveness of available symbolic solvers, and complex symbolic grammars are difficult to communicate through limited in-context demonstrations.
+**Critical evaluation**: strong architectural support for a future language compiler and validation loop, but it is not travel-specific and does not evaluate routing, weather, user preferences, or human-facing explanations.
+**From-memory summary**: Logic-LM translates language into logic, lets a solver reason, and uses solver errors to improve bad translations.
+**Teach-back**: instead of asking the LLM to both understand and calculate, it asks the LLM to write a formal problem that a dependable tool can check.
+**Project relevance**: professor-recommended support for validating natural-language-to-constraint translation and exposing compilation errors before a route is solved.
+
+**Project Action Takeaway**
+
+- **Main goal**: Improve reasoning faithfulness by combining LLM formulation with deterministic symbolic solving and error-guided refinement.
+- **Main limitation**: **Author-reported limitation** - the method is bounded by solver expressiveness and struggles to convey intricate symbolic grammars through limited demonstrations; **project-team inference** - its benchmark gains do not transfer directly to itinerary quality.
+- **Publication use**: **Supporting neuro-symbolic citation** for a future auditable constraint compiler. It should not be used as evidence that the present system is an LLM agent or that travel requests are parsed correctly.
+- **Project-polishing action**: If natural-language input is implemented later, retain the parsed schema, validation errors, revision history, and user confirmation rather than silently feeding LLM output into Gurobi.
+- **Current project status**: **unsupported by current code** - no LLM formulation, symbolic compiler, or solver-error self-refinement loop is implemented.
+
+### 43. Qu et al. (2025) - TripScore: Benchmarking and Rewarding Real-World Travel Planning with Fine-Grained Evaluation
+
+- **PDF**: `2510.09011v3.pdf`
+- **Publication status**: arXiv:2510.09011v3 (2025); no peer-reviewed venue is verified from the local PDF.
+- **Topic**: fine-grained travel-plan evaluation, unified reward construction, real-world requests, and reinforcement-learning evaluation.
+- **Main research question**: Can feasibility, reliability, engagement, and user preference be evaluated through fine-grained criteria that also form a useful unified reward for training travel-planning models?
+- **Method**: TripScore combines rule-based and LLM-based criteria for format, commonsense feasibility, soft plan quality, and personal preferences; learns aggregation weights from travel-expert route-pair annotations; and evaluates prompting, test-time search, neuro-symbolic approaches, supervised fine-tuning, and Group Relative Policy Optimization (GRPO).
+- **Conclusion**: the evaluator reaches 60.75% agreement with expert annotations, the dataset contains 4,870 queries including 219 real-world free-form requests, and reinforcement learning generally improves unified reward and feasibility over prompt-only or supervised baselines for the tested models.
+- **One-sentence purpose**: The paper offers a modern evaluation and reward-design reference for measuring complete itinerary quality beyond binary constraint satisfaction.
+
+**Research problem**: earlier travel benchmarks often emphasize pass/fail feasibility, use synthetic requests, or fail to combine hard constraints, soft quality, and personalization into a comparable score.
+**Importance**: this project needs both per-dimension diagnostics and an interpretable summary when comparing original, weather-adjusted, heuristic, and solver-backed routes.
+**Already known**: TravelPlanner exposes constraint failures, while TravelEval broadens multidimensional evaluation.
+**New in the paper**: a large dataset with real-world requests, four constraint families, expert-calibrated unified reward, and experiments using that reward for reinforcement learning.
+
+**Introduction notes**: the paper argues that travel quality includes feasibility, reliability, engagement, and authentic user intent, not only adherence to a rigid response template.
+**Necessary background**: rule-based evaluation, LLM-as-judge, reward aggregation, expert pairwise annotation, soft constraints, preference constraints, reinforcement learning, and GRPO.
+**Method/data/assumptions/reproducibility**: the 4,870-query dataset covers 897 cities, with 3,493 training, 158 validation, and 1,219 test examples; the test set includes 1,000 synthetic and 219 real-world requests. Expert annotations calibrate the reward, with moderate inter-rater agreement reported in the appendix. Results depend on constraint definitions, aggregation weights, judge behavior, and dataset composition.
+**Important figures/tables**: Table 1 compares benchmark coverage. Table 2 defines format, commonsense, soft, and personal-preference constraints. Table 3 compares methods and models. Table 4 gives dataset composition. Figure 4 provides itinerary-quality case studies. These support broad evaluation coverage while also revealing that a single reward compresses heterogeneous criteria.
+**Discussion/conclusion**: the paper recommends combining rule-based diagnostics with preference signals, uncertainty, and actionable feedback. Its 60.75% expert agreement is meaningful but moderate rather than definitive.
+**Critical evaluation**: highly relevant for evaluation design. A unified score is useful for ranking and learning, but this project should preserve per-dimension metrics so poor feasibility cannot be hidden by strong soft-quality scores. The benchmark evaluates LLM-generated travel plans rather than user comprehension of route tradeoffs.
+**From-memory summary**: TripScore grades travel plans with detailed hard, soft, and preference checks, then combines them into a reward that can train or compare planners.
+**Teach-back**: it is a report card for itineraries: many subject scores remain visible, but they can also be summarized into one overall grade.
+**Project relevance**: professor-recommended evaluation backbone for objective route comparisons and for defining a transparent summary score without discarding feasibility diagnostics.
+
+**Project Action Takeaway**
+
+- **Main goal**: Build a fine-grained, expert-calibrated evaluation framework and unified reward for realistic travel plans.
+- **Main limitation**: **Project-team inference** - expert agreement is moderate, reward weights and LLM-based criteria can encode evaluator bias, and benchmark performance does not establish user-facing explanation value.
+- **Publication use**: **Essential modern evaluation citation alongside TravelEval**. It supports fine-grained and preference-aware metrics, but not a claim that this project's routes score better until a comparative experiment is run.
+- **Project-polishing action**: Create a route scorecard with hard-feasibility gates, separate utility/risk/travel/preservation dimensions, uncertainty notes, and an optional transparent summary score; never report only the aggregate.
+- **Current project status**: **partially implemented** - multiple route metrics and validation fields exist, but no expert-calibrated reward or benchmark comparison has been implemented.
+
 ## Remaining Online Leads and External Context
 
 Most of the 2023-2026 online expansion is now represented by downloaded PDFs and full entries above. The table below keeps a compact index of external context and a few still-useful papers that are not all full local deep reads.
@@ -2468,9 +2568,9 @@ This maps directly to RADAR-X and contrastive planning literature.
 | 1 | **Accountable, inspectable, solver-backed itinerary adaptation under weather/disruption uncertainty** | High | High | Weather/disruption scenarios, route repair artifacts, user study | Connects TripTide/TravelEval-style evaluation with your existing weather-aware optimizer and dashboard |
 | 2 | **Contrastive route explanations: why selected, why skipped, what would change** | High | Medium-high | Explanation panel plus comprehension/decision study | Converts solver constraints into accountable user-facing explanations aligned with TRACE and RADAR-X |
 | 3 | **Mixed-initiative route critiquing and repair** | High | Medium | Critique controls, route repair loop, revision logs | Lets users say less driving, more nature, lower weather risk, include Yosemite, or avoid closures |
-| 4 | **LLM-to-symbolic weather-aware trip planning** | Medium-high | Medium | NL parser, schema, validation tests, solver integration | Builds on TRIP-PAL and TTG while adding weather, route inspection, and user revision |
+| 4 | **LLM-to-symbolic weather-aware trip planning** | Medium-high | Medium | NL parser, schema, validation tests, solver integration | Builds on TRIP-PAL, TTG, LLMAP, and Logic-LM while adding weather, route inspection, and user revision |
 | 5 | **Trust-calibrated itinerary acceptance through comparison/cognitive forcing** | Medium-high | Medium | Explanation-only vs. compare-before-accept study | Reduces blind reliance on "optimal" or fluent AI-generated routes |
-| 6 | **Modern route-quality evaluation framework for human-centered TTDP** | Medium | High | Metrics mapped to TravelEval: compliance, temporality, spatiality, economy, utility, risk | Makes your evaluation feel current without needing a new algorithmic solver claim |
+| 6 | **Modern route-quality evaluation framework for human-centered TTDP** | Medium | High | Metrics mapped to TravelEval and TripScore: feasibility, time, space, economy, utility, preference, risk, and preservation | Makes evaluation current without requiring a new algorithmic solver claim |
 
 Recommended primary path: **Idea 1 plus Idea 2**. Build a study-ready dashboard that exposes weather/disruption tradeoffs, skipped alternatives, route repair logic, and accountable explanations.
 
@@ -2534,7 +2634,7 @@ Claim instead:
 4. Explanations should be designed by goal: transparency, scrutability, decision quality, and calibrated trust.
 5. A serious user study should measure mental models and revision behavior, not only satisfaction.
 6. LLM travel planning is exciting but currently risky unless paired with symbolic constraints, validation, and grounded evidence.
-7. Recent benchmarks make the project more current: TravelEval supplies evaluation dimensions, TripTide supplies disruption framing, TRACE supplies accountability, and TRIP-PAL/TTG supply solver-backed guarantees.
+7. Recent benchmarks make the project more current: TravelEval and TripScore supply evaluation dimensions, TripTide supplies disruption framing, TRACE supplies accountability, and TRIP-PAL/TTG/LLMAP supply solver-backed or algorithm-backed hybrid precedents.
 8. The project can stand out by making optimization constraints conversational and inspectable: "why this route, why not that route, and what must change?"
 
 ## Recommended Citation Backbone
@@ -2550,8 +2650,8 @@ For a CHI/HCI-oriented paper:
 - Heer and Shneiderman (2012), Endert et al. (2017), and Sacha et al. (2017) for visual analytics and human-centered model steering.
 - Vansteenwegen et al. (2011), Gunawan et al. (2016), Ruiz-Meza and Montoya-Torres (2022), and Vu et al. (2022) for TTDP/OP foundations.
 - Lim et al. (2017), Yuan et al. (2013), Borras et al. (2014), and Halder et al. (2024) for context-aware tourism and itinerary recommendation.
-- TravelPlanner, TravelEval, Revisiting Travel Planning Capabilities, and GroupTravelBench for modern LLM travel-planning evaluation.
-- TRIP-PAL and TTG for LLM + symbolic planning guarantees.
+- TravelPlanner, TravelEval, TripScore, Revisiting Travel Planning Capabilities, and GroupTravelBench for modern LLM travel-planning evaluation.
+- TRIP-PAL, TTG, and LLMAP for LLM + symbolic/graph planning; Logic-LM for the general solver-error-guided neuro-symbolic pattern.
 - TripTide for disruption/weather-aware adaptive replanning.
 - TRACE for accountable, grounded tourism recommendation and rejection recovery.
 - CityHood for explainable travel recommendation interfaces.
@@ -2560,8 +2660,8 @@ For a CHI/HCI-oriented paper:
 
 ## Modern Citation Backbone
 
-- **LLM travel-planning benchmarks**: TravelPlanner; TravelEval; Revisiting the Travel Planning Capabilities of LLMs; GroupTravelBench; ChinaTravel if kept as an external citation.
-- **LLM + symbolic guarantees**: TRIP-PAL; TTG.
+- **LLM travel-planning benchmarks**: TravelPlanner; TravelEval; TripScore; Revisiting the Travel Planning Capabilities of LLMs; GroupTravelBench; ChinaTravel if kept as an external citation.
+- **LLM + symbolic or algorithmic planning**: TRIP-PAL; TTG; LLMAP; Logic-LM as general neuro-symbolic support.
 - **Disruption/weather replanning**: TripTide, plus your own weather-risk route repair as the project contribution.
 - **Accountable tourism recommendation**: TRACE for evidence, grounding, rejection recovery, and spatial/multi-aspect recommendation.
 - **Explainable travel recommendation**: CityHood for travel-domain explanation UI; RADAR-X and contrastive planning for "why this, not that" explanations.

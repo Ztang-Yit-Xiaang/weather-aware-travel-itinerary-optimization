@@ -90,8 +90,16 @@ def build_signal_matrix(enriched_df: pd.DataFrame, config: TripConfig) -> pd.Dat
     output["detour_minutes"] = _numeric(enriched_df, "detour_minutes", 0.0).clip(lower=0.0)
     output["low_detour_signal"] = 1.0 - _minmax(output["detour_minutes"], default=0.0)
     output["wikipedia_signal"] = _numeric(enriched_df, "wikipedia_pageview_score", 0.0).clip(0.0, 1.0)
-    output["data_confidence"] = _numeric(enriched_df, "data_confidence", 0.15).clip(0.0, 1.0)
-    output["data_uncertainty"] = (1.0 - output["data_confidence"]).clip(0.0, 1.0)
+    source_coverage = _numeric(enriched_df, "source_coverage_score", np.nan)
+    if source_coverage.isna().all():
+        source_coverage = _numeric(enriched_df, "data_confidence", 0.15)
+    output["source_coverage_score"] = source_coverage.fillna(0.15).clip(0.0, 1.0)
+    output["data_confidence"] = output["source_coverage_score"]
+    output["model_uncertainty"] = _numeric(enriched_df, "model_uncertainty", 0.0).clip(0.0, 1.0)
+    output["data_uncertainty"] = _numeric(enriched_df, "data_uncertainty", np.nan)
+    if output["data_uncertainty"].isna().all():
+        output["data_uncertainty"] = output["model_uncertainty"]
+    output["data_uncertainty"] = output["data_uncertainty"].fillna(output["model_uncertainty"]).clip(0.0, 1.0)
     output["weather_risk"] = _numeric(enriched_df, "weather_risk", 0.15).clip(0.0, 1.0)
     output["weather_safety"] = 1.0 - output["weather_risk"]
     output["source_count"] = _source_count(output["source_list"])
@@ -236,7 +244,14 @@ def apply_utility_models(
         output[column] = bayesian[column]
     output["final_poi_value"] = pd.to_numeric(output[selected_column], errors="coerce").fillna(0.0).clip(lower=0.0)
     output["utility_method"] = method
-    output["data_uncertainty"] = (1.0 - _numeric(output, "data_confidence", 0.15)).clip(0.0, 1.0)
+    if "source_coverage_score" not in output.columns:
+        output["source_coverage_score"] = _numeric(output, "data_confidence", 0.15).clip(0.0, 1.0)
+    if "model_uncertainty" not in output.columns:
+        output["model_uncertainty"] = 0.0
+    output["data_uncertainty"] = _numeric(output, "data_uncertainty", np.nan)
+    if output["data_uncertainty"].isna().all():
+        output["data_uncertainty"] = _numeric(output, "model_uncertainty", 0.0).clip(0.0, 1.0)
+    output["data_uncertainty"] = output["data_uncertainty"].fillna(_numeric(output, "model_uncertainty", 0.0)).clip(0.0, 1.0)
 
     signal_output = signal_df.copy()
     signal_output["utility_mcda_weighted"] = output["utility_mcda_weighted"]

@@ -21,6 +21,15 @@ DEFAULT_CONFIG = {
         "scenario_city_universe": "auto",
         "interest_profile": "balanced_interest",
     },
+    "data": {
+        "catalog_snapshot_id": "california_v1",
+        "context_snapshot_id": "context_static_demo_2026_06",
+        "refresh_policy": "never",
+    },
+    "run": {
+        "role": "demonstration",
+        "run_id": "auto",
+    },
     "budget": {
         "user_budget": 2000,
         "budget_mode": "approximate",
@@ -58,6 +67,9 @@ DEFAULT_CONFIG = {
                 "longitude": -118.4085,
             },
         }
+    },
+    "routing": {
+        "road_route_cache_path": "production_road_route_cache.csv",
     },
     "enrichment": {
         "run_live_apis": False,

@@ -1,0 +1,46 @@
+{
+  "snapshot_schema_version": "dataset-manifest-v1",
+  "catalog_snapshot_id": "california_v1",
+  "context_snapshot_id": "context_static_demo_2026_06",
+  "created_at": "2026-06-28T00:00:00Z",
+  "snapshot_role": "clean_clone_research_seed",
+  "description": "Small redistributable California fallback catalog plus static context seed for Phase 0 research contracts.",
+  "private_raw_data_included": false,
+  "default_refresh_policy": "never",
+  "catalog_tables": [
+    "poi_entities.csv",
+    "poi_observations.csv",
+    "poi_features.csv",
+    "feature_provenance.csv",
+    "hotel_entities.csv",
+    "source_audit.csv"
+  ],
+  "context_tables": [
+    "weather_scenarios.csv",
+    "route_options.csv"
+  ],
+  "files": {
+    "README.md": "f8bbd28b287577a1be4d97486bd1321b9466dfe62748d34a026761318806c14b",
+    "feature_provenance.csv": "1e86ba4b1506a0b042ac5c26557efa08e0468eeb9e828418c84138f8ba079ff7",
+    "hotel_entities.csv": "70031772e38e1ca55fc336c855f7250930d9edc780fc88f9ed3d139efc6d170f",
+    "poi_entities.csv": "5dc1f80856645af2be4aadafcec5c2a6e83695f683b4946f15a0a97d92b8ae80",
+    "poi_features.csv": "81656f6caa9e99f980abff9875efc1fcb3884e7e96b206438caaffa4a7ab378b",
+    "poi_observations.csv": "1df8a42f0955714feebaec70ac5b09d248c7c1401dee4a492359838d1d738971",
+    "route_options.csv": "0238d0c2fc71c6c818c20deecb47cba9729c1835944f93004b27b751a8355e31",
+    "source_audit.csv": "0f54a424f2291ae74fe97419e5bde4a77debc26280115c876c7e1b9ae321e2bd",
+    "weather_scenarios.csv": "760e05f2e2b8f64143767131060d587153cda47a9f76427c26b0b0278fe5fa0f"
+  },
+  "quality": {
+    "minimum_poi_entities": 10,
+    "requires_stable_poi_ids": true,
+    "requires_feature_provenance": true,
+    "requires_weather_valid_time": true,
+    "route_options_may_be_approximate": true
+  },
+  "limitations": [
+    "This snapshot is a fallback research seed, not a comprehensive tourism dataset.",
+    "Routing rows are approximate demonstration context until replaced by validated OSRM or local road-graph records.",
+    "Hotel prices are planning priors, not live booking quotes.",
+    "Weather rows are scenario context, not live forecasts."
+  ]
+}

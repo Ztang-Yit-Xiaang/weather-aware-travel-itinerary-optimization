@@ -22,6 +22,7 @@ results/cache/nps_*.json
 results/cache/nps_parks_*.json
 results/outputs/*.csv
 results/outputs/*.json
+results/outputs/*.jsonl
 results/outputs/*.html
 results/outputs/*.tmp
 results/outputs/probe_*/

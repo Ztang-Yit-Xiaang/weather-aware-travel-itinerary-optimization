@@ -20,6 +20,7 @@ from .data_enrichment import build_enriched_catalog
 from .diversity import diversity_audit_row
 from .hierarchical_gurobi import solve_hierarchical_trip_with_greedy, solve_hierarchical_trip_with_gurobi
 from .nature_catalog import NATURE_POI_COLUMNS, write_nature_route_artifacts
+from .phase0_exporter import PHASE0_ARTIFACT_FILES, write_phase0_research_artifacts
 from .route_gurobi_oracle import solve_enriched_route_with_gurobi
 
 PRODUCTION_ARTIFACT_FILES = [
@@ -33,6 +34,7 @@ PRODUCTION_ARTIFACT_FILES = [
     "production_dataset_completeness_audit.csv",
     "production_route_sequence_audit.csv",
     "production_place_detail_audit.csv",
+    *PHASE0_ARTIFACT_FILES,
 ]
 
 REQUIRED_DASHBOARD_ANCHORS = {
@@ -3924,6 +3926,12 @@ def build_production_method_comparison(
         route_stops_df=route_stops_df,
         must_go_candidates=must_go_candidates,
     )
+    write_phase0_research_artifacts(
+        output_dir=output_dir,
+        config=config,
+        method_df=method_df,
+        route_stops_df=route_stops_df,
+    )
     return method_df, route_stops_df
 
 
@@ -3962,6 +3970,12 @@ def prepare_comparison_dashboard_outputs(
     trip_length_route_stops_df = _load_csv(output_dir / "production_trip_length_route_stops.csv")
     method_df = _load_csv(output_dir / "production_method_comparison.csv")
     method_route_stops_df = _load_csv(output_dir / "production_method_route_stops.csv")
+    phase0_outputs = write_phase0_research_artifacts(
+        output_dir=output_dir,
+        config=config,
+        method_df=method_df,
+        route_stops_df=method_route_stops_df,
+    )
     write_artifact_metadata(output_dir, config, artifact_files=PRODUCTION_ARTIFACT_FILES)
     return {
         "production_route_matrix_comparison_df": route_matrix_df,
@@ -3970,6 +3984,7 @@ def prepare_comparison_dashboard_outputs(
         "production_trip_length_route_stops_df": trip_length_route_stops_df,
         "production_method_comparison_df": method_df,
         "production_method_route_stops_df": method_route_stops_df,
+        "phase0_research_artifacts": phase0_outputs,
     }
 
 
@@ -4113,6 +4128,12 @@ def run_configurable_blueprint_pipeline(
     trip_length_route_stops_df = _load_csv(output_dir / "production_trip_length_route_stops.csv")
     method_comparison_df = _load_csv(output_dir / "production_method_comparison.csv")
     method_route_stops_df = _load_csv(output_dir / "production_method_route_stops.csv")
+    phase0_outputs = write_phase0_research_artifacts(
+        output_dir=output_dir,
+        config=config,
+        method_df=method_comparison_df,
+        route_stops_df=method_route_stops_df,
+    )
     write_artifact_metadata(output_dir, config, artifact_files=PRODUCTION_ARTIFACT_FILES)
     return {
         **enrichment,
@@ -4133,4 +4154,5 @@ def run_configurable_blueprint_pipeline(
         "production_experiment_summary_df": experiment_summary_df,
         "production_method_comparison_df": method_comparison_df,
         "production_method_route_stops_df": method_route_stops_df,
+        "phase0_research_artifacts": phase0_outputs,
     }

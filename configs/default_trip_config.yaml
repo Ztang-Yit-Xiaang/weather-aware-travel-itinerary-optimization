@@ -8,6 +8,15 @@ trip:
   scenario_city_universe: auto
   interest_profile: balanced_interest
 
+data:
+  catalog_snapshot_id: california_v1
+  context_snapshot_id: context_static_demo_2026_06
+  refresh_policy: never
+
+run:
+  role: demonstration
+  run_id: auto
+
 budget:
   user_budget: 2000
   budget_mode: approximate
@@ -20,6 +29,9 @@ time:
   daily_time_budget_minutes: 720
   max_detour_minutes: 45
   max_intercity_drive_minutes_per_day: 360
+
+routing:
+  road_route_cache_path: production_road_route_cache.csv
 
 hotels:
   allow_visit_city_without_hotel: true

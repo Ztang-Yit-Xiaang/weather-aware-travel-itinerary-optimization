@@ -1,0 +1,37 @@
+sources:
+  - source_id: curated_seed_v1
+    display_name: Project curated California seed records
+    role: catalog_seed
+    license: project_internal_research
+    redistribution_allowed: true
+    stable_or_context: stable_catalog
+    notes: Small manually curated fallback records for clean-clone reproducibility.
+  - source_id: osm_reference
+    display_name: OpenStreetMap reference metadata
+    role: poi_identity_and_coordinates
+    license: ODbL-1.0 attribution required
+    redistribution_allowed: true
+    stable_or_context: stable_catalog
+    notes: Used as the preferred open-data identity source when live acquisition is enabled.
+  - source_id: nps_reference
+    display_name: National Park Service API reference
+    role: authoritative_park_metadata
+    license: public_government_api_attribution
+    redistribution_allowed: true
+    stable_or_context: stable_catalog
+    notes: Optional live provider; current nature config may use curated fallback when disabled.
+  - source_id: open_meteo_reference
+    display_name: Open-Meteo weather reference
+    role: weather_context
+    license: CC-BY-4.0 attribution required
+    redistribution_allowed: true
+    stable_or_context: time_sensitive_context
+    notes: Weather observations or forecasts must live in context snapshots with valid times.
+  - source_id: routing_demo_context
+    display_name: Demonstration routing context
+    role: routing_context
+    license: project_internal_research
+    redistribution_allowed: true
+    stable_or_context: time_sensitive_context
+    notes: Fallback route rows are marked road_validated=false and are not final-comparison eligible.
+

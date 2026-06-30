@@ -20,6 +20,9 @@ def config_hash(config: TripConfig) -> str:
 
 
 def artifact_metadata_payload(config: TripConfig, *, artifact_files: list[str] | None = None) -> dict[str, Any]:
+    config_fingerprint = config_hash(config)
+    configured_run_id = str(config.get("run", "run_id", "auto") or "auto")
+    run_id = f"auto_{config_fingerprint}" if configured_run_id == "auto" else configured_run_id
     return {
         "artifact_contract_version": ARTIFACT_CONTRACT_VERSION,
         "scenario": str(config.get("trip", "scenario", "california_coast")),
@@ -31,7 +34,12 @@ def artifact_metadata_payload(config: TripConfig, *, artifact_files: list[str] |
         "start_city_options": list(config.get("trip", "start_city_options", [])),
         "end_city_options": list(config.get("trip", "end_city_options", [])),
         "run_live_apis": bool(config.get("enrichment", "run_live_apis", False)),
-        "config_hash": config_hash(config),
+        "catalog_snapshot_id": str(config.get("data", "catalog_snapshot_id", "california_v1")),
+        "context_snapshot_id": str(config.get("data", "context_snapshot_id", "context_static_demo_2026_06")),
+        "refresh_policy": str(config.get("data", "refresh_policy", "never")),
+        "run_id": run_id,
+        "run_role": str(config.get("run", "role", "demonstration")),
+        "config_hash": config_fingerprint,
         "source_path": config.source_path,
         "timestamp_utc": datetime.now(UTC).isoformat(),
         "artifact_files": artifact_files or [],
@@ -76,6 +84,11 @@ def artifact_metadata_matches(output_dir: str | Path, config: TripConfig) -> boo
         "start_city_options",
         "end_city_options",
         "run_live_apis",
+        "catalog_snapshot_id",
+        "context_snapshot_id",
+        "refresh_policy",
+        "run_id",
+        "run_role",
         "config_hash",
     ]
     return all(metadata.get(key) == expected.get(key) for key in keys)

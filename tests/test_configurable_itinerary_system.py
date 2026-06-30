@@ -1568,6 +1568,7 @@ class ConfigurableItinerarySystemTests(unittest.TestCase):
         self.assertIn("results/cache/", gitignore)
         self.assertIn("results/outputs/*.csv", gitignore)
         self.assertIn("results/outputs/*.json", gitignore)
+        self.assertIn("results/outputs/*.jsonl", gitignore)
         self.assertIn("results/outputs/*.html", gitignore)
         self.assertIn("results/figures/*.html", gitignore)
         self.assertIn("results/figures/lightweight_share_map.html", gitignore)

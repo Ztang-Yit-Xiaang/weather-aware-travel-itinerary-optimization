@@ -58,6 +58,16 @@ OPEN_ENRICHED_POI_COLUMNS = [
     "corridor_fit",
     "route_fit",
     "detour_minutes",
+    "source_coverage_score",
+    "identity_coverage",
+    "location_coverage",
+    "semantic_coverage",
+    "popularity_coverage",
+    "temporal_coverage",
+    "routing_coverage",
+    "model_uncertainty",
+    "annotation_uncertainty",
+    "entity_match_confidence",
     "data_confidence",
     "data_uncertainty",
     "final_poi_value",
@@ -770,10 +780,16 @@ def fetch_osrm_route_geometry(
 
 def _ensure_open_columns(enriched_df: pd.DataFrame) -> pd.DataFrame:
     output = enriched_df.copy()
+    if "source_coverage_score" not in output.columns and "data_confidence" in output.columns:
+        output["source_coverage_score"] = pd.to_numeric(output["data_confidence"], errors="coerce").fillna(0.15)
+    if "source_coverage_score" not in output.columns:
+        output["source_coverage_score"] = 0.15
+    if "model_uncertainty" not in output.columns:
+        output["model_uncertainty"] = 0.0
+    if "annotation_uncertainty" not in output.columns:
+        output["annotation_uncertainty"] = 0.0
     if "data_uncertainty" not in output.columns:
-        output["data_uncertainty"] = 1.0 - pd.to_numeric(output.get("data_confidence", 0.15), errors="coerce").fillna(
-            0.15
-        )
+        output["data_uncertainty"] = pd.to_numeric(output["model_uncertainty"], errors="coerce").fillna(0.0)
     for column in OPEN_ENRICHED_POI_COLUMNS:
         if column not in output.columns:
             output[column] = (
@@ -948,7 +964,7 @@ def _recompute_value_columns(enriched_df: pd.DataFrame, config: TripConfig) -> p
         output["social_score"] = 0.0
         output["social_must_go"] = False
         output["must_go_weight"] = 0.0
-    output["data_confidence"] = (
+    output["source_coverage_score"] = (
         0.35
         * output["source_list"]
         .astype(str)
@@ -959,7 +975,23 @@ def _recompute_value_columns(enriched_df: pd.DataFrame, config: TripConfig) -> p
         + 0.10 * output["wikidata_id"].astype(str).str.len().gt(0).astype(float)
         + 0.10 * output["wikipedia_title"].astype(str).str.len().gt(0).astype(float)
     ).clip(0.15, 1.0)
-    output["data_uncertainty"] = 1.0 - output["data_confidence"].astype(float)
+    output["identity_coverage"] = output["source_list"].astype(str).str.len().gt(0).astype(float)
+    output["location_coverage"] = (
+        pd.to_numeric(output.get("latitude", pd.Series(dtype=float)), errors="coerce").notna()
+        & pd.to_numeric(output.get("longitude", pd.Series(dtype=float)), errors="coerce").notna()
+    ).astype(float)
+    output["semantic_coverage"] = output["category"].astype(str).str.len().gt(0).astype(float)
+    output["popularity_coverage"] = (
+        output["source_list"].astype(str).str.contains("yelp", case=False, na=False)
+        | pd.to_numeric(output.get("wikipedia_pageview_score", pd.Series(dtype=float)), errors="coerce").fillna(0).gt(0)
+    ).astype(float)
+    output["temporal_coverage"] = pd.to_numeric(output.get("weather_risk", pd.Series(dtype=float)), errors="coerce").notna().astype(float)
+    output["routing_coverage"] = pd.to_numeric(output.get("route_fit", pd.Series(dtype=float)), errors="coerce").notna().astype(float)
+    output["model_uncertainty"] = pd.to_numeric(output.get("model_uncertainty", 0.0), errors="coerce").fillna(0.0)
+    output["annotation_uncertainty"] = pd.to_numeric(output.get("annotation_uncertainty", 0.0), errors="coerce").fillna(0.0)
+    output["entity_match_confidence"] = pd.to_numeric(output.get("entity_match_confidence", 0.85), errors="coerce").fillna(0.85)
+    output["data_confidence"] = output["source_coverage_score"]
+    output["data_uncertainty"] = output["model_uncertainty"]
     output["final_poi_value"] = (
         0.42 * _numeric_series(output, "base_score_norm")
         + 0.20 * _numeric_series(output, "yelp_signal_norm")

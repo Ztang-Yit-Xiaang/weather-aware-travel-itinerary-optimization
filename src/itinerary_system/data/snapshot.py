@@ -2,13 +2,19 @@
 
 from __future__ import annotations
 
-import hashlib
-import json
 from pathlib import Path
 
 import pandas as pd
 
-from .schemas import DatasetBundle, DatasetValidationReport
+from .context import (
+    CONTEXT_TABLES,
+    DEFAULT_CONTEXT_SNAPSHOT_ID,
+    load_context_bundle,
+    read_csv_table,
+    read_manifest,
+    sha256_file,
+)
+from .schemas import CatalogBundle, DatasetBundle, DatasetValidationReport
 
 CATALOG_TABLES = (
     "poi_entities",
@@ -18,8 +24,6 @@ CATALOG_TABLES = (
     "hotel_entities",
     "source_audit",
 )
-CONTEXT_TABLES = ("weather_scenarios", "route_options")
-DEFAULT_CONTEXT_SNAPSHOT_ID = "context_static_demo_2026_06"
 
 
 def _repo_root() -> Path:
@@ -27,17 +31,54 @@ def _repo_root() -> Path:
 
 
 def _sha256(path: Path) -> str:
-    digest = hashlib.sha256()
-    with path.open("rb") as handle:
-        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
-            digest.update(chunk)
-    return digest.hexdigest()
+    return sha256_file(path)
 
 
 def _read_csv(path: Path) -> pd.DataFrame:
-    if not path.exists():
-        raise FileNotFoundError(f"Snapshot table is missing: {path}")
-    return pd.read_csv(path)
+    return read_csv_table(path)
+
+
+def _table_names(manifest: dict, key: str, default: tuple[str, ...]) -> tuple[str, ...]:
+    raw_tables = manifest.get(key) or [f"{table}.csv" for table in default]
+    names = []
+    for value in raw_tables:
+        text = str(value)
+        names.append(text[:-4] if text.endswith(".csv") else text)
+    return tuple(names)
+
+
+def load_catalog_bundle(
+    catalog_snapshot_id: str = "california_v1",
+    *,
+    root: str | Path | None = None,
+) -> CatalogBundle:
+    """Load stable catalog tables from data/snapshots/<catalog_snapshot_id>."""
+
+    base = Path(root) if root is not None else _repo_root()
+    snapshot_dir = base / "data" / "snapshots" / str(catalog_snapshot_id)
+    manifest_path = snapshot_dir / "manifest.json"
+    manifest = read_manifest(manifest_path)
+    table_names = _table_names(manifest, "catalog_tables", CATALOG_TABLES)
+
+    tables: dict[str, pd.DataFrame] = {}
+    file_hashes: dict[str, str] = {"manifest.json": _sha256(manifest_path)}
+    for filename in sorted((manifest.get("files") or {}).keys()):
+        path = snapshot_dir / str(filename)
+        if path.exists():
+            file_hashes[str(filename)] = _sha256(path)
+    for table_name in table_names:
+        filename = f"{table_name}.csv"
+        path = snapshot_dir / filename
+        tables[table_name] = _read_csv(path)
+        file_hashes[filename] = _sha256(path)
+
+    return CatalogBundle(
+        catalog_snapshot_id=str(manifest.get("catalog_snapshot_id") or catalog_snapshot_id),
+        snapshot_dir=snapshot_dir,
+        manifest=manifest,
+        tables=tables,
+        file_hashes=file_hashes,
+    )
 
 
 def load_dataset_bundle(
@@ -48,34 +89,20 @@ def load_dataset_bundle(
 ) -> DatasetBundle:
     """Load a stable catalog snapshot and its default context tables."""
 
-    base = Path(root) if root is not None else _repo_root()
-    snapshot_dir = base / "data" / "snapshots" / str(catalog_snapshot_id)
-    manifest_path = snapshot_dir / "manifest.json"
-    if not manifest_path.exists():
-        raise FileNotFoundError(f"Snapshot manifest is missing: {manifest_path}")
-    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
-    resolved_context_id = str(context_snapshot_id or manifest.get("context_snapshot_id") or DEFAULT_CONTEXT_SNAPSHOT_ID)
-
-    tables: dict[str, pd.DataFrame] = {}
-    file_hashes: dict[str, str] = {"manifest.json": _sha256(manifest_path)}
-    for filename in sorted((manifest.get("files") or {}).keys()):
-        path = snapshot_dir / str(filename)
-        if path.exists():
-            file_hashes[str(filename)] = _sha256(path)
-    for table_name in (*CATALOG_TABLES, *CONTEXT_TABLES):
-        filename = f"{table_name}.csv"
-        path = snapshot_dir / filename
-        tables[table_name] = _read_csv(path)
-        file_hashes[filename] = _sha256(path)
-
-    return DatasetBundle(
-        catalog_snapshot_id=str(manifest.get("catalog_snapshot_id") or catalog_snapshot_id),
-        context_snapshot_id=resolved_context_id,
-        snapshot_dir=snapshot_dir,
-        manifest=manifest,
-        tables=tables,
-        file_hashes=file_hashes,
+    catalog = load_catalog_bundle(catalog_snapshot_id, root=root)
+    resolved_context_id = str(
+        context_snapshot_id
+        or catalog.manifest.get("default_context_snapshot_id")
+        or catalog.manifest.get("context_snapshot_id")
+        or DEFAULT_CONTEXT_SNAPSHOT_ID
     )
+    context = load_context_bundle(
+        resolved_context_id,
+        root=root,
+        legacy_snapshot_dir=catalog.snapshot_dir,
+        legacy_manifest=catalog.manifest,
+    )
+    return DatasetBundle(catalog=catalog, context=context)
 
 
 def _missing_columns(frame: pd.DataFrame, required: set[str]) -> list[str]:
@@ -101,6 +128,23 @@ def validate_dataset_bundle(bundle: DatasetBundle) -> DatasetValidationReport:
     for name in CONTEXT_TABLES:
         if name not in bundle.tables:
             errors.append(f"missing context table: {name}")
+
+    catalog_files = bundle.catalog.manifest.get("files", {})
+    if isinstance(catalog_files, dict):
+        for filename, expected_hash in catalog_files.items():
+            actual_hash = bundle.catalog.file_hashes.get(str(filename))
+            if actual_hash and expected_hash and actual_hash != expected_hash:
+                errors.append(f"catalog manifest hash mismatch: {filename}")
+
+    context_files = bundle.context.manifest.get("files", {})
+    if isinstance(context_files, dict):
+        for filename, expected_hash in context_files.items():
+            actual_hash = bundle.context.file_hashes.get(str(filename))
+            if actual_hash and expected_hash and actual_hash != expected_hash:
+                errors.append(f"context manifest hash mismatch: {filename}")
+
+    if bundle.context.legacy_combined_snapshot:
+        warnings.append("context snapshot loaded from legacy combined catalog snapshot")
 
     entities = bundle.tables.get("poi_entities", pd.DataFrame())
     missing = _missing_columns(

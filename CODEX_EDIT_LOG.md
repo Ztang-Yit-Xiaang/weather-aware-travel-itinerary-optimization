@@ -1125,3 +1125,82 @@ Entries record Codex-assisted work sessions, findings, validation, conclusions, 
 
 - Start or provide the local/pinned OSRM endpoint, or supply matching OSRM response JSON files for the 21 request rows.
 
+## FOUND-001 repository truth implementation
+
+- Status: completed
+- Local date: 2026-06-30 CDT
+
+### Goal
+
+- Add explicit repository-state capture to new research artifacts so Phase 0 and production metadata can report the exact code identity used for a run.
+
+### What changed
+
+- `src/itinerary_system/repository_state.py`: added `RepositoryState`, `RepositoryStateUnavailable`, and `capture_repository_state()` with Git capture, environment overrides, strict/permissive behavior, package-version capture, and `GIT_OPTIONAL_LOCKS=0`.
+- `src/itinerary_system/config.py`: added `run.repository_state_strict: false`.
+- `src/itinerary_system/artifact_metadata.py`: embedded `repository_state` in `production_artifact_metadata.json` and made freshness checks compare commit, dirty flag, and package version while ignoring `captured_at`.
+- `src/itinerary_system/phase0_exporter.py`: added `repository_state` to `production_phase0_dataset_validation.json`.
+- `src/itinerary_system/__init__.py`: exported the repository-state public helpers.
+- `tests/test_repository_state.py`: added unit tests for clean Git capture, dirty Git capture, env override, permissive unknown repo, strict failure, and unknown package-version fallback.
+- `tests/test_research_foundation.py`: asserted repository-state metadata/evidence presence and moved one temp-output existence check inside its temporary-directory context.
+
+### Validation
+
+- `python -m ruff check src/itinerary_system/repository_state.py src/itinerary_system/artifact_metadata.py src/itinerary_system/config.py src/itinerary_system/phase0_exporter.py src/itinerary_system/__init__.py tests/test_repository_state.py tests/test_research_foundation.py`: passed.
+- `python -m unittest discover -s tests -p 'test_repository_state.py'`: passed, 6 tests.
+- `python -m unittest discover -s tests -p 'test_research_foundation.py'`: passed, 21 tests.
+- `python -m ruff check src tests scripts`: failed on pre-existing unrelated lint issues in scripts, `nature_catalog.py`, `nature_site_routes.py`, routing return annotations, and `tests/test_configurable_itinerary_system.py`.
+- `PYTHONDONTWRITEBYTECODE=1 python -m pytest -q -p no:cacheprovider tests/test_repository_state.py tests/test_research_foundation.py`: exited 139 before collection.
+- `PYTHONDONTWRITEBYTECODE=1 python -X faulthandler -m pytest -q -p no:cacheprovider tests/test_repository_state.py tests/test_research_foundation.py`: confirmed a segmentation fault during pytest startup in `_pytest/capture.py`, before project tests collected.
+
+### Conclusion
+
+- FOUND-001 is implemented for the current artifact surfaces without starting DATA-001. Repository state is now present in new production metadata and Phase 0 evidence payloads, and targeted lint plus unittest coverage pass.
+
+### Unresolved limitations
+
+- Full-repo Ruff remains blocked by unrelated existing lint debt.
+- Pytest remains blocked by an environment/native-library startup segmentation fault, so unittest was used as the successful test runner for the touched suites.
+- Existing dirty files in `data/snapshots/california_v1/` and `notebook/production_system_blueprint.ipynb` were preserved and not reverted.
+
+## DATA-001 catalog/context snapshot separation
+
+- Status: completed
+- Local date: 2026-07-01 CDT
+
+### Goal
+
+- Split stable catalog data from time-sensitive context data while preserving the existing `load_dataset_bundle()` compatibility surface for Phase 0 and notebook-oriented callers.
+
+### What changed
+
+- `src/itinerary_system/data/schemas.py`: added `CatalogBundle` and `ContextBundle`; changed `DatasetBundle` to compose both while preserving compatibility properties such as `catalog_snapshot_id`, `context_snapshot_id`, `snapshot_dir`, `manifest`, `tables`, `file_hashes`, and `table()`.
+- `src/itinerary_system/data/context.py`: added context snapshot loading, typed `SnapshotLoadError`/`SnapshotTableMissing`, manifest reading, table loading, hashing, and legacy combined-snapshot fallback.
+- `src/itinerary_system/data/snapshot.py`: refactored `load_dataset_bundle()` to load catalog and context separately, added `load_catalog_bundle()`, added manifest hash validation, and emits a legacy-context warning when context tables are loaded from an old combined snapshot.
+- `src/itinerary_system/data/__init__.py`: exported the new data bundle types and loading helpers.
+- `data/contexts/context_static_demo_2026_06/`: added a separated context manifest plus `weather_scenarios.csv` and `route_options.csv`.
+- `data/snapshots/california_v1/manifest.json`: changed the snapshot manifest into a catalog manifest with `default_context_snapshot_id` and removed context tables/files from the catalog-owned file list.
+- `src/itinerary_system/phase0_exporter.py`: added catalog/context snapshot directory and manifest details to `production_phase0_dataset_validation.json`.
+- `tests/data/test_context_snapshot.py`: added coverage for clean separated loading, mismatched context IDs, missing context tables, invalid context hashes, and old combined-snapshot fallback.
+
+### Validation
+
+- `python -m ruff check src/itinerary_system/data src/itinerary_system/phase0_exporter.py tests/data/test_context_snapshot.py tests/test_research_foundation.py`: passed.
+- `python -m ruff check src/itinerary_system/data src/itinerary_system/repository_state.py src/itinerary_system/artifact_metadata.py src/itinerary_system/config.py src/itinerary_system/phase0_exporter.py src/itinerary_system/__init__.py tests/data/test_context_snapshot.py tests/test_repository_state.py tests/test_research_foundation.py`: passed.
+- `python -m unittest discover -s tests/data -p 'test_context_snapshot.py'`: passed, 5 tests.
+- `python -m unittest discover -s tests -p 'test_repository_state.py'`: passed, 6 tests.
+- `python -m unittest discover -s tests -p 'test_research_foundation.py'`: passed, 21 tests.
+- `GIT_OPTIONAL_LOCKS=0 git -c filter.lfs.process= -c filter.lfs.clean= -c filter.lfs.smudge= -c filter.lfs.required=false diff --check -- src/itinerary_system/data src/itinerary_system/phase0_exporter.py data/snapshots/california_v1/manifest.json data/contexts tests/data/test_context_snapshot.py CODEX_EDIT_LOG.md`: passed.
+- `python -m ruff check src tests scripts`: failed on pre-existing unrelated lint issues in scripts, `nature_catalog.py`, `nature_site_routes.py`, routing return annotations, and `tests/test_configurable_itinerary_system.py`.
+- `PYTHONDONTWRITEBYTECODE=1 python -m pytest -q -p no:cacheprovider tests/test_repository_state.py tests/test_research_foundation.py tests/data/test_context_snapshot.py`: exited 139 before collection.
+- `PYTHONDONTWRITEBYTECODE=1 python -X faulthandler -m pytest -q -p no:cacheprovider tests/test_repository_state.py tests/test_research_foundation.py tests/data/test_context_snapshot.py`: confirmed the same segmentation fault during pytest startup in `_pytest/capture.py`, before project tests collected.
+
+### Conclusion
+
+- DATA-001 is implemented with a separated catalog/context loading contract and backward-compatible legacy snapshot path. Phase 0 evidence generation still works against the compatibility API while now exporting catalog and context manifest details.
+
+### Unresolved limitations
+
+- The old context CSV copies still remain under `data/snapshots/california_v1/` for migration compatibility but are no longer listed as catalog-owned manifest files.
+- Full-repo Ruff and pytest remain blocked for the same unrelated reasons recorded in FOUND-001.
+- Existing dirty files in `data/snapshots/california_v1/feature_provenance.csv`, `route_options.csv`, `source_audit.csv`, and `notebook/production_system_blueprint.ipynb` were preserved and not reverted.

@@ -29,6 +29,7 @@ DEFAULT_CONFIG = {
     "run": {
         "role": "demonstration",
         "run_id": "auto",
+        "repository_state_strict": False,
     },
     "budget": {
         "user_budget": 2000,

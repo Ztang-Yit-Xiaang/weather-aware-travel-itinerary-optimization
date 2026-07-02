@@ -15,6 +15,7 @@ from geopy.distance import geodesic
 from .config import TripConfig
 from .data.schemas import DatasetValidationReport
 from .data.snapshot import load_dataset_bundle, validate_dataset_bundle
+from .repository_state import capture_repository_state
 from .research_artifacts import PlanArtifact, PlannerRun, evaluate_phase0_plan, stable_content_hash
 from .routing import (
     ROAD_ROUTE_CACHE_AUDIT_FILENAME,
@@ -122,6 +123,9 @@ def _dataset_validation_report(config: TripConfig) -> tuple[DatasetValidationRep
         config.get("data", "context_snapshot_id", "context_static_demo_2026_06"),
         "context_static_demo_2026_06",
     )
+    repository_state = capture_repository_state(
+        strict=bool(config.get("run", "repository_state_strict", False))
+    ).to_record()
     try:
         bundle = load_dataset_bundle(
             catalog_snapshot_id=catalog_snapshot_id,
@@ -131,8 +135,13 @@ def _dataset_validation_report(config: TripConfig) -> tuple[DatasetValidationRep
         payload = {
             **asdict(report),
             "snapshot_dir": str(bundle.snapshot_dir),
+            "catalog_snapshot_dir": str(bundle.catalog.snapshot_dir),
+            "context_snapshot_dir": str(bundle.context.context_dir),
             "manifest": bundle.manifest,
+            "catalog_manifest": bundle.catalog.manifest,
+            "context_manifest": bundle.context.manifest,
             "file_hashes": bundle.file_hashes,
+            "repository_state": repository_state,
         }
         return report, payload
     except Exception as exc:
@@ -145,7 +154,8 @@ def _dataset_validation_report(config: TripConfig) -> tuple[DatasetValidationRep
             warnings=(),
             table_counts={},
         )
-        return report, asdict(report)
+        payload = {**asdict(report), "repository_state": repository_state}
+        return report, payload
 
 
 def _serialize_cell(value: Any) -> Any:

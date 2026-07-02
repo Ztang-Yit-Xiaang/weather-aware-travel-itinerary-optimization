@@ -6,6 +6,7 @@ These files follow the supplied paper-reading skill's four-section structure wit
 
 | PDF | Summary | Asset status |
 | --- | --- | --- |
+| `reference/1-s2.0-S0143622816306051-main.pdf` | [`1-s2.0-S0143622816306051-main_summary.md`](1-s2.0-S0143622816306051-main_summary.md) | no paper-produced public asset found |
 | `reference/1-s2.0-S0305054821002963-main.pdf` | [`1-s2.0-S0305054821002963-main_summary.md`](1-s2.0-S0305054821002963-main_summary.md) | no paper-produced public asset found |
 | `reference/1-s2.0-S0377221710002973-main.pdf` | [`1-s2.0-S0377221710002973-main_summary.md`](1-s2.0-S0377221710002973-main_summary.md) | no paper-produced public asset found |
 | `reference/1-s2.0-S037722171630296X-main.pdf` | [`1-s2.0-S037722171630296X-main_summary.md`](1-s2.0-S037722171630296X-main_summary.md) | no paper-produced public asset found |

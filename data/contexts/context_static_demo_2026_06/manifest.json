@@ -1,0 +1,27 @@
+{
+  "context_schema_version": "context-manifest-v1",
+  "context_snapshot_id": "context_static_demo_2026_06",
+  "created_at": "2026-06-28T00:00:00Z",
+  "context_role": "static_demo_research_seed",
+  "description": "Small redistributable static context seed for Phase 0 research contracts.",
+  "compatible_catalog_snapshot_ids": [
+    "california_v1"
+  ],
+  "default_refresh_policy": "never",
+  "context_tables": [
+    "weather_scenarios.csv",
+    "route_options.csv"
+  ],
+  "files": {
+    "route_options.csv": "087283fd5ba7b87ac950b28aae559d1c89a53de0e264feaee2f6fde66942c9f7",
+    "weather_scenarios.csv": "6c1e15ad2a8ca985593e5a56d2fa4c4b47d8917c310c6024b3b732f8814218cc"
+  },
+  "quality": {
+    "requires_weather_valid_time": true,
+    "route_options_may_be_approximate": true
+  },
+  "limitations": [
+    "Routing rows are approximate demonstration context until replaced by validated OSRM or local road-graph records.",
+    "Weather rows are scenario context, not live forecasts."
+  ]
+}

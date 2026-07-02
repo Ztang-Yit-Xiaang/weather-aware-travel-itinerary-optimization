@@ -197,7 +197,7 @@ The review is grouped into five buckets. Each paper includes summary, methodolog
 - Relevance: 4/5
 - Priority: important
 
-## Bucket E: Explainable / Controllable Recommenders and Weather-Aware Tourism
+## Bucket E: Explainable / Controllable Recommenders and Context-Aware Tourism
 
 ### 17. Tintarev, N. and Masthoff, J. (2007). A Survey of Explanations in Recommender Systems. ICDE Workshops 2007.
 
@@ -232,14 +232,14 @@ The review is grouped into five buckets. Each paper includes summary, methodolog
 - Relevance: 4/5
 - Priority: important
 
-### 20. Braunhofer, M., Elahi, M., Ge, M., Ricci, F., and Schievenin, T. (2013). STS: Design of Weather-Aware Mobile Recommender Systems in Tourism. Workshop on Intelligent User Interfaces: Artificial Intelligence Meets Human-Computer Interaction.
+### 20. Zhou, X., Wang, M., and Li, D. (2017). From Stay to Play: A Travel Planning Tool Based on Crowdsourcing User-Generated Contents. Applied Geography.
 
-- Link: https://ceur-ws.org/Vol-1125/paper7.pdf
-- Summary: This paper presents a weather-aware tourism recommender concept, arguing that weather can materially affect which tourist activities are appropriate.
-- Methodology and data: System/design paper for weather-aware mobile tourism recommendation.
-- Why it matters: This is one of the most directly related papers for your weather-aware travel angle.
-- Limitation or gap: It is a recommender-system design paper, not a multi-day optimization dashboard with hotels, route alternatives, and solver transparency.
-- Publication pivot: Use it to show that weather-aware tourism exists, then differentiate your work by emphasizing constrained route optimization plus inspectable tradeoffs.
+- Link: https://doi.org/10.1016/j.apgeog.2016.10.002
+- Summary: This paper combines TripAdvisor reviews, Flickr geotagged photos, and Uber travel-cost data to recommend hotels, attractions, and route sequences through a web interface.
+- Methodology and data: NLP over hotel reviews, geospatial mining over Flickr photos, route-cost estimation from Uber data, and Shiny/Leaflet interface development.
+- Why it matters: It is a verified background citation for social-media/UGC travel information and integrated hotel-attraction-route decision support.
+- Limitation or gap: It is not a weather/disruption repair method and does not provide solver-backed feasibility, evidence-conflict handling, or counterfactual explanations.
+- Publication pivot: Use it to show that UGC-based travel decision support exists, then differentiate the project through evidence-conflict-aware minimal-change repair.
 - Relevance: 4/5
 - Priority: important
 
@@ -362,4 +362,3 @@ The publishable novelty is the combination of:
 10. Bucinca et al. 2021
 
 After these ten, read the remaining papers to fill technical and interface-design depth.
-

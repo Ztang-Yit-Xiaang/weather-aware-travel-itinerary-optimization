@@ -1,7 +1,7 @@
 # Novelty Claim Verification: Limitation-Driven Itinerary Repair
 
-**Date:** 2026-06-26  
-**Scope:** Local paper summaries plus targeted web search for current travel-planning, itinerary-modification, conflict-aware RAG, counterfactual recommendation, and dynamic replanning literature.
+**Date:** 2026-07-02  
+**Scope:** Local paper summaries plus targeted web search for current travel-planning, itinerary-modification, conflict-aware RAG, counterfactual recommendation, social-media/UGC travel information, and dynamic replanning literature.
 
 ## Bottom Line
 
@@ -15,7 +15,7 @@ This should be stated as a scoped novelty claim, not as a proof that no related 
 
 ## Search Result
 
-Targeted phrase searches returned no direct match for:
+This is a scoping and novelty audit, not a complete PRISMA systematic review. Sources checked include the local PDF/summary corpus, arXiv-focused web searches, DOI/PDF metadata for the local "From Stay to Play" lead, and targeted searches over the following query families:
 
 - "minimal-change itinerary repair"
 - "counterfactual itinerary repair"
@@ -23,6 +23,18 @@ Targeted phrase searches returned no direct match for:
 - "conflict-aware counterfactual itinerary"
 - "temporal user-specific conflict-aware counterfactual itinerary"
 - "evidence conflict travel planning optimization"
+- "itinerary modification ADD DELETE REPLACE"
+- "travel planning multi-source contradictions"
+- "retrieval augmented travel planning conflicting references"
+- "counterfactual itinerary repair"
+- "minimal-change itinerary repair"
+- "weather itinerary repair LLM planner"
+- "evidence conflict travel planning itinerary repair"
+- "multi-turn tool-use travel planning benchmark"
+- "cost-optimal planning adaptation travel agents"
+- "social media user generated content travel route planning"
+
+The targeted phrase searches returned no direct match for the full proposed method. The broader searches identified important novelty threats, especially iTIMO, VeriTrip, TP-RAG, generic conflicting-evidence RAG work, and From Stay to Play.
 
 The absence of exact matches is only negative evidence. The claim must still be defended through closest-work differentiation.
 
@@ -39,10 +51,13 @@ The absence of exact matches is only negative evidence. The claim must still be 
 | [TravelEval, 2026](https://arxiv.org/abs/2606.01046) | Six-dimensional whole-trip evaluation benchmark across accuracy, compliance, temporality, spatiality, economy, and utility | Directly useful as evaluator vocabulary, but not a repair method |
 | [TripCraft, 2025](https://arxiv.org/abs/2502.20508), [TP-RAG, 2025](https://arxiv.org/abs/2504.08694), [TripScore, 2025](https://arxiv.org/abs/2510.09011) | More realistic travel-planning datasets, spatiotemporal metrics, retrieval-augmented planning, and fine-grained rewards | They improve generation/evaluation realism, but do not define the proposed evidence-conflict-aware repair operation model |
 | [TravelBench, 2025](https://arxiv.org/abs/2512.22673) | Multi-turn and tool-using travel benchmark with single-turn, multi-turn, and unsolvable tasks | Important for interaction and capability-boundary evaluation, but not a repair optimizer |
+| [COMPASS, 2025](https://arxiv.org/abs/2510.07043) | Multi-turn tool-mediated planning and constrained preference optimization over travel scenarios | Strong threat to broad interactive constrained-agent novelty, but not evidence-conflict-aware itinerary repair |
+| [CostBench, 2025](https://arxiv.org/abs/2511.02734) | Cost-optimal tool-use planning and adaptation under dynamic blocking events in travel-planning tasks | Relevant dynamic-adaptation benchmark, but focused on agent tool-use and cost sequences rather than personalized tourism itinerary repair |
 | [GroupTravelBench, 2026](https://arxiv.org/abs/2605.25200) | Multi-user travel planning with preference conflicts and fairness | "Conflict" here means user preference conflict, not contradictory weather/closure evidence tied to route-repair decisions |
 | [VeriTrip, 2026](https://arxiv.org/abs/2605.28683) | Verifiable benchmark over unstructured multimodal web corpora; explicitly emphasizes information noise and multi-source contradictions | Strong threat to the evidence-conflict angle, but it is a benchmark for evidence-grounded reasoning, not a solver-backed itinerary repair method |
-| [DRAGged into Conflicts, 2025](https://arxiv.org/abs/2506.08500), and newer conflict-aware RAG papers | Taxonomies/benchmarks/frameworks for conflicting retrieved sources | Relevant method inspiration, but not travel-route optimization or repair |
+| [DRAGged into Conflicts, 2025](https://arxiv.org/abs/2506.08500), [RAG with Conflicting Evidence, 2025](https://arxiv.org/abs/2504.13079), [CONFACT, 2025](https://arxiv.org/abs/2505.17762), and newer conflict-aware RAG papers | Taxonomies, datasets, and frameworks for conflicting retrieved sources | Relevant method inspiration and a clear warning not to claim evidence-conflict handling as new in general, but not travel-route optimization or repair |
 | [User-controllable counterfactual recommendation, 2023](https://arxiv.org/abs/2308.00894) | Counterfactual retrospective/prospective explanations for recommendation control | Supports user-control framing, but not constrained itinerary repair |
+| [From Stay to Play, 2017](https://doi.org/10.1016/j.apgeog.2016.10.002) | UGC-based hotel, attraction, and route planning with TripAdvisor, Flickr, Uber, NLP, geospatial mining, and heuristic routing | Relevant for social-media travel information, but not disruption repair, evidence conflicts, solver-backed feasibility, or counterfactual explanations |
 | [Dynamic public-transport replanning, 2025](https://arxiv.org/abs/2505.14193) | Formal dynamic replanning under delays, including pull and push approaches | Real replanning precedent, but for public transport routing rather than personalized tourism itineraries with POIs, lodging, evidence conflicts, and counterfactual explanations |
 
 ## Claim Strength
@@ -64,7 +79,10 @@ The absence of exact matches is only negative evidence. The claim must still be 
 - iTIMO owns the "itinerary modification" framing and ADD/DELETE/REPLACE vocabulary.
 - TripTide owns disruption-revision benchmarking and preservation/adaptability metrics.
 - TravelEval and TripScore own whole-plan evaluation vocabulary.
+- TravelBench, COMPASS, and CostBench weaken any broad claim that multi-turn constrained planning or dynamic tool-use adaptation is new.
 - VeriTrip and TP-RAG weaken any broad claim that evidence conflict handling is new in travel-agent evaluation.
+- DRAGged into Conflicts, RAG with Conflicting Evidence, and CONFACT weaken any broad claim that conflicting-source handling is new in RAG or fact-grounded generation.
+- From Stay to Play weakens any broad claim that combining social-media/UGC travel evidence with routing is new.
 - ITINERA, TTG, TRIP-PAL, and LLMAP make LLM-plus-symbolic/optimizer architecture established.
 
 ## Revised Safe Contribution Statement
@@ -79,6 +97,6 @@ Avoid this version:
 
 ## Next Verification Steps
 
-1. Add VeriTrip, TP-RAG, TripCraft, TravelBench, GroupTravelBench, TripScore, and ITINERA to the related-work section.
+1. Keep VeriTrip, TP-RAG, TripCraft, TravelBench, COMPASS, CostBench, GroupTravelBench, TripScore, ITINERA, and From Stay to Play in the related-work section.
 2. Run exact ablation experiments so the claim becomes evidence-backed rather than only literature-backed.
-3. Keep "From Stay to Play" out of the core citation set until the PDF/citation is found; targeted searches did not locate it.
+3. Cite From Stay to Play only as UGC/social-media travel-planning background, not as a core repair-method citation.

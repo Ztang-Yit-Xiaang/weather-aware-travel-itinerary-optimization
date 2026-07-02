@@ -17,8 +17,9 @@ from .repair_planner import (
     generate_repair_alternatives,
     parse_repair_intent,
 )
-from .research_artifacts import PlanArtifact, PlannerRun, ResearchEvaluationReport, evaluate_phase0_plan
+from .repository_state import RepositoryState, RepositoryStateUnavailable, capture_repository_state
 from .request_schema import TripPlanningRequest, normalize_interest_weights, request_to_config_overrides
+from .research_artifacts import PlanArtifact, PlannerRun, ResearchEvaluationReport, evaluate_phase0_plan
 from .routing import (
     ROAD_ROUTE_CACHE_AUDIT_FILENAME,
     ROAD_ROUTE_CACHE_FILENAME,
@@ -46,6 +47,8 @@ __all__ = [
     "RepairOperation",
     "RepairPlan",
     "RepairRequest",
+    "RepositoryState",
+    "RepositoryStateUnavailable",
     "RoadRouteCache",
     "RouteLegResult",
     "RouteResult",
@@ -53,6 +56,7 @@ __all__ = [
     "TripPlanningRequest",
     "build_repair_plan",
     "build_road_route_cache_from_artifacts",
+    "capture_repository_state",
     "detect_evidence_conflicts",
     "evaluate_phase0_plan",
     "evaluate_repair_plan",

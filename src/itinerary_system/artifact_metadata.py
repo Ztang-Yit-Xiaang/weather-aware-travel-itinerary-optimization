@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import Any
 
 from .config import TripConfig
+from .repository_state import RepositoryState, capture_repository_state
 
 ARTIFACT_METADATA_FILE = "production_artifact_metadata.json"
 ARTIFACT_CONTRACT_VERSION = "statewide-nature-artifacts-v1"
@@ -19,7 +20,19 @@ def config_hash(config: TripConfig) -> str:
     return hashlib.sha256(payload.encode("utf-8")).hexdigest()[:16]
 
 
-def artifact_metadata_payload(config: TripConfig, *, artifact_files: list[str] | None = None) -> dict[str, Any]:
+def _repository_state_payload(config: TripConfig, repository_state: RepositoryState | None = None) -> dict[str, Any]:
+    state = repository_state or capture_repository_state(
+        strict=bool(config.get("run", "repository_state_strict", False))
+    )
+    return state.to_record()
+
+
+def artifact_metadata_payload(
+    config: TripConfig,
+    *,
+    artifact_files: list[str] | None = None,
+    repository_state: RepositoryState | None = None,
+) -> dict[str, Any]:
     config_fingerprint = config_hash(config)
     configured_run_id = str(config.get("run", "run_id", "auto") or "auto")
     run_id = f"auto_{config_fingerprint}" if configured_run_id == "auto" else configured_run_id
@@ -42,6 +55,7 @@ def artifact_metadata_payload(config: TripConfig, *, artifact_files: list[str] |
         "config_hash": config_fingerprint,
         "source_path": config.source_path,
         "timestamp_utc": datetime.now(UTC).isoformat(),
+        "repository_state": _repository_state_payload(config, repository_state),
         "artifact_files": artifact_files or [],
     }
 
@@ -91,4 +105,11 @@ def artifact_metadata_matches(output_dir: str | Path, config: TripConfig) -> boo
         "run_role",
         "config_hash",
     ]
-    return all(metadata.get(key) == expected.get(key) for key in keys)
+    repository_keys = ["commit_sha", "dirty", "package_version"]
+    metadata_state = metadata.get("repository_state", {})
+    expected_state = expected.get("repository_state", {})
+    repository_matches = isinstance(metadata_state, dict) and isinstance(expected_state, dict)
+    repository_matches = repository_matches and all(
+        metadata_state.get(key) == expected_state.get(key) for key in repository_keys
+    )
+    return all(metadata.get(key) == expected.get(key) for key in keys) and repository_matches

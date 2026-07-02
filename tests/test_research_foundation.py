@@ -28,16 +28,16 @@ from itinerary_system.routing import (
     ROAD_ROUTE_CACHE_AUDIT_FILENAME,
     ROAD_ROUTE_CACHE_FILENAME,
     ROAD_ROUTE_REQUESTS_FILENAME,
+    RouteLegResult,
+    RouteResult,
     audit_legacy_route_cache,
     build_road_route_cache_from_artifacts,
     is_public_osrm_base_url,
     osrm_cache_key,
 )
-from itinerary_system.routing import RouteLegResult, RouteResult
 from itinerary_system.utility_model import build_signal_matrix
-
-from scripts.summarize_phase0_readiness import load_phase0_readiness, readiness_markdown
 from scripts.check_route_source import check_route_source
+from scripts.summarize_phase0_readiness import load_phase0_readiness, readiness_markdown
 
 CONFIG_PATH = REPO_ROOT / "configs" / "default_trip_config.yaml"
 
@@ -322,6 +322,44 @@ class ResearchFoundationTests(unittest.TestCase):
             self.assertEqual(metadata["refresh_policy"], "never")
             self.assertEqual(metadata["run_role"], "demonstration")
             self.assertTrue(metadata["run_id"].startswith("auto_"))
+            self.assertIn("repository_state", metadata)
+            repository_state = metadata["repository_state"]
+            self.assertIn("commit_sha", repository_state)
+            self.assertIn("dirty", repository_state)
+            self.assertIn("package_version", repository_state)
+            self.assertIn("captured_at", repository_state)
+
+            timestamp_only = {
+                **metadata,
+                "repository_state": {
+                    **repository_state,
+                    "captured_at": "2099-01-01T00:00:00+00:00",
+                },
+            }
+            metadata_path.write_text(json.dumps(timestamp_only, indent=2), encoding="utf-8")
+            self.assertTrue(artifact_metadata_matches(output_dir, config))
+
+            commit_mismatch = {
+                **metadata,
+                "repository_state": {
+                    **repository_state,
+                    "commit_sha": "mismatched_for_test",
+                },
+            }
+            metadata_path.write_text(json.dumps(commit_mismatch, indent=2), encoding="utf-8")
+            self.assertFalse(artifact_metadata_matches(output_dir, config))
+
+            dirty_mismatch = {
+                **metadata,
+                "repository_state": {
+                    **repository_state,
+                    "dirty": not bool(repository_state["dirty"]),
+                },
+            }
+            metadata_path.write_text(json.dumps(dirty_mismatch, indent=2), encoding="utf-8")
+            self.assertFalse(artifact_metadata_matches(output_dir, config))
+
+            metadata_path.write_text(json.dumps(timestamp_only, indent=2), encoding="utf-8")
 
             changed_context = load_trip_config(
                 CONFIG_PATH,
@@ -485,6 +523,11 @@ class ResearchFoundationTests(unittest.TestCase):
 
         self.assertEqual(outputs["plan_artifact_count"], 1)
         self.assertEqual(dataset_report["catalog_snapshot_id"], "california_v1")
+        self.assertIn("repository_state", dataset_report)
+        self.assertIn("commit_sha", dataset_report["repository_state"])
+        self.assertIn("dirty", dataset_report["repository_state"])
+        self.assertIn("package_version", dataset_report["repository_state"])
+        self.assertIn("captured_at", dataset_report["repository_state"])
         self.assertFalse(bool(dataset_report["final_comparison_eligible"]))
         self.assertEqual(dataset_report["route_cache_coverage"]["road_route_requested_leg_count"], 0)
         self.assertEqual(dataset_report["route_cache_coverage"]["road_route_validated_leg_count"], 0)
@@ -860,15 +903,15 @@ class ResearchFoundationTests(unittest.TestCase):
             self.assertEqual(passed.returncode, 0, passed.stdout + passed.stderr)
 
             readiness = load_phase0_readiness(output_dir)
+            self.assertTrue((output_dir / ROAD_ROUTE_REQUESTS_FILENAME).exists())
+            self.assertTrue((quality_dir / "phase0_readiness_summary.md").exists())
+            self.assertTrue((quality_dir / "phase0_method_readiness.csv").exists())
 
         self.assertIn("PASSED Phase 0 evidence pipeline", passed.stdout)
         self.assertIn("Road-route cache coverage: `0/3`", passed.stdout)
         self.assertIn("Strict comparison ready: `False`", passed.stdout)
         self.assertFalse(readiness["strict_comparison_ready"])
         self.assertEqual(readiness["road_route_missing_leg_count"], 3)
-        self.assertTrue((output_dir / ROAD_ROUTE_REQUESTS_FILENAME).exists())
-        self.assertTrue((quality_dir / "phase0_readiness_summary.md").exists())
-        self.assertTrue((quality_dir / "phase0_method_readiness.csv").exists())
 
     def test_phase0_evidence_pipeline_passes_strict_mode_with_osrm_cache(self):
         with temporary_directory() as output_dir:

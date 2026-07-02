@@ -24,7 +24,7 @@ The gap should be stated as a direct response to prior work:
 | [DRAGged into Conflicts](https://arxiv.org/abs/2506.08500) | Conflict-aware RAG is not tied to route decisions | We label evidence conflicts that affect itinerary constraints |
 | [User-Controllable Recommendation](https://arxiv.org/abs/2308.00894) | Counterfactual control is not constrained itinerary repair | We answer what must change to keep, replace, or relax a stop |
 | [ChinaTravel](https://arxiv.org/abs/2412.13682) | Benchmark-oriented and geographically scoped | We provide a repair method and experiment design |
-| [From Stay to Play](https://www.sciencedirect.com/science/article/pii/S0143622816306051?via%3Dihub) | Unverified lead | Keep out of core claims until exact citation/PDF is available |
+| [From Stay to Play](https://doi.org/10.1016/j.apgeog.2016.10.002) | UGC-based hotel, attraction, and route planning; not a disruption-repair paper | Use as social-media/UGC background only, not as a core novelty citation |
 
 ## Implemented Research Records
 

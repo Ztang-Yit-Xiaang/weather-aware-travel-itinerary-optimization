@@ -1213,6 +1213,50 @@ Entries record Codex-assisted work sessions, findings, validation, conclusions, 
 
 - Review or provide the intended local/pinned OSRM route source so the next implementation phase can move past the current evidence blocker.
 
+## Roadmap phase integration in repair specification
+
+- Status: completed
+- Start local time: 2026-06-30 16:29:48 CDT
+- End local time: 2026-06-30 16:35:38 Central Daylight Time-0500
+- Duration: about 6 minutes
+
+### Goal
+
+- Integrate the G0-G8 roadmap execution phases into the travel itinerary repair technical specification.
+
+### What changed
+
+- D:\UMN Courses\IE 5533\Project\Travel_Itinerary_Repair_Technical_Specification_for_Codex.md: inserted the Execution Phases and Handoff Gates section, renumbered later sections, and rewrote venue-oriented gates to reference Section 10.
+
+### What was found
+
+- The specification previously jumped from Benchmark specification directly to Work packages, with only shorter A/B/C venue gates near the end.
+- The current roadmap blocker is strict road-valid evidence: local or pinned OSRM route responses are still required before transportation claims.
+
+### Validation
+
+- PowerShell content checks: Section 10 appears before Section 11, G0-G8 detail headings are present, the gate table columns are present, the OSRM blocker is named, venue gates point to Section 10, and old Work packages are renumbered.
+- No Python test suite was run because this change only updates the external markdown planning/specification document.
+
+### Conclusion
+
+- The markdown specification now contains the concrete G0-G8 execution overlay and uses it as the authoritative order for work-package execution.
+
+### Next steps
+
+**Codex can proceed:**
+
+- Implement G0/G2 route-evidence closure by adding or running local/pinned OSRM evidence generation and strict Phase 0 validation.
+- Implement G1 canonical plan, ownership, repository, diff, and evaluator contracts after route evidence is unblocked.
+
+**Human reflection:**
+
+- The document now prioritizes route-valid evidence before repair-system claims, which may shift effort away from UI work until the routing source is settled.
+
+### Human action
+
+- Review or provide the intended local/pinned OSRM route source so the next implementation phase can move past the current evidence blocker.
+
 ## FOUND-001 repository truth implementation
 
 - Status: completed

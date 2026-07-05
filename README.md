@@ -146,7 +146,7 @@ Saved profile artifacts currently include balanced, nature-heavy, city-heavy, cu
 ```text
 weather-aware-travel-itinerary-optimization/
 ├── configs/                 # Trip and nature-aware planning configs
-├── docs/                    # Modeling notes and quality workflow
+├── docs/                    # Classified documentation index and project notes
 ├── notebook/                # Original and production notebooks
 ├── report/                  # Final report, proposal drafts, screenshots
 ├── results/                 # Generated outputs, maps, dashboards, caches
@@ -157,25 +157,31 @@ weather-aware-travel-itinerary-optimization/
 
 ## Documentation
 
+Start with the [documentation index](docs/README.md) when you want to find a file by purpose.
+
 ### Literature Review
 
 Start with the onboarding guide, then use the integrated eight-paper review, professor-recommended companion readings, and evidence matrix before opening the full 43-paper evidence bank.
 
 | Literature Document | Read It For |
 | --- | --- |
-| [Literature onboarding guide](docs/literature_onboarding_guide.md) | First read for the project problem, four research areas, terminology, research gap, roadmap, and next study scope |
-| [Integrated core literature review](docs/core_paper_reading_cards.md) | Detailed eight-paper learning sequence plus professor-recommended companion papers on neuro-symbolic routing and travel-plan evaluation |
-| [Project-literature evidence matrix](docs/project_literature_evidence_matrix.md) | Feature-by-feature map from current implementation status to supporting papers and remaining novelty |
-| [Related work outline](docs/related_work_outline.md) | Future paper structure for Tourist Trip Design, personalization, LLM/solver planning, and explainable decision support |
-| [Literature deep read study report](docs/literature_deep_read_study_report.md) | Detailed evidence bank for all local PDFs; use after the onboarding guide, not as the first read |
-| [Recent papers quick index](docs/recent_papers_2023_2026_addendum.md) | Short index of the 2023-2026 papers integrated into the deep report |
+| [Literature onboarding guide](docs/literature/literature_onboarding_guide.md) | First read for the project problem, four research areas, terminology, research gap, roadmap, and next study scope |
+| [Integrated core literature review](docs/literature/core_paper_reading_cards.md) | Detailed eight-paper learning sequence plus professor-recommended companion papers on neuro-symbolic routing and travel-plan evaluation |
+| [Project-literature evidence matrix](docs/literature/project_literature_evidence_matrix.md) | Feature-by-feature map from current implementation status to supporting papers and remaining novelty |
+| [Related work outline](docs/literature/related_work_outline.md) | Future paper structure for Tourist Trip Design, personalization, LLM/solver planning, and explainable decision support |
+| [Literature deep read study report](docs/literature/literature_deep_read_study_report.md) | Detailed evidence bank for all local PDFs; use after the onboarding guide, not as the first read |
+| [Recent papers quick index](docs/literature/recent_papers_2023_2026_addendum.md) | Short index of the 2023-2026 papers integrated into the deep report |
+| [Repair gap synthesis](docs/literature/repair_gap/literature_review_repair_gap.md) | Scoping review for ownership-aware minimal itinerary repair under disruptions |
 
 ### Project And Engineering Docs
 
 | Document | What It Covers |
 | --- | --- |
-| [Nature-aware model extension](docs/nature_aware_model_extension.md) | Interest bars, nature regions, route balance, map export architecture |
-| [Code quality workflow](docs/code_quality_workflow.md) | Formatting, tests, validation, generated artifact policy |
+| [Nature-aware model extension](docs/methods/nature_aware_model_extension.md) | Interest bars, nature regions, route balance, map export architecture |
+| [Research stabilization plan](docs/planning/research_stabilization_and_publication_plan.md) | Publication-oriented research plan, readiness gates, and venue strategy |
+| [Repair technical specification](docs/planning/travel_itinerary_repair_technical_specification.md) | Implementation contract for parent-plan-aware itinerary repair work |
+| [Data dictionary](docs/reference/data_dictionary.md) | Core data records, evidence roles, routing eligibility, and immediate fix scope |
+| [Code quality workflow](docs/reference/code_quality_workflow.md) | Formatting, tests, validation, generated artifact policy |
 | [IE 5533 final report](report/IE_5533_Final_Report.pdf) | Original course-report formulation and background |
 | [Progress report for Prof. Xie](report/prof_xie_progress_report.pdf) | Current progress, limitations, and research questions |
 | [Supervisor proposal](report/chi2027_supervisor_proposal.pdf) | Publication-oriented proposal and supervision request |

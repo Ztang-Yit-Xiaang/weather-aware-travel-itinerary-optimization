@@ -44,7 +44,7 @@ flowchart LR
     G --> H["Proposed contribution:<br/>confirmed intent + evidence conflicts + ADD/DELETE/REPLACE/MOVE/RELAX/KEEP + whole-trip metrics + counterfactual explanations"]
 ```
 
-![Conceptual gap map for limitation-driven itinerary repair](figures/literature_repair_gap_schematic.png)
+![Conceptual gap map for limitation-driven itinerary repair](../figures/literature_repair_gap_schematic.png)
 
 **Figure note:** AI-generated schematic created with the available `imagegen` skill on 2026-07-02 and saved at `docs/figures/literature_repair_gap_schematic.png`. The Mermaid diagram above is the exact reproducible source-of-truth version for labels and relationships; the raster figure is included as the required visual literature-review schematic.
 

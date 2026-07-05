@@ -3,11 +3,11 @@
 Prepared: 2026-06-17  
 Updated: 2026-07-02
 
-This file is only a quick index for the newer corpus. It intentionally avoids duplicating the long summaries already integrated into [docs/literature_deep_read_study_report.md](literature_deep_read_study_report.md). Each recent-paper entry in that evidence bank ends with a **Project Action Takeaway** covering the paper's main goal, limitation, publication use, concrete project-polishing action, and current implementation status.
+This file is only a quick index for the newer corpus. It intentionally avoids duplicating the long summaries already integrated into [literature_deep_read_study_report.md](literature_deep_read_study_report.md). Each recent-paper entry in that evidence bank ends with a **Project Action Takeaway** covering the paper's main goal, limitation, publication use, concrete project-polishing action, and current implementation status.
 
 Recommended reading path:
 
-1. Start with [docs/literature_onboarding_guide.md](literature_onboarding_guide.md).
+1. Start with [literature_onboarding_guide.md](literature_onboarding_guide.md).
 2. Use the [integrated core literature review](core_paper_reading_cards.md) for the detailed eight-paper learning sequence and project synthesis.
 3. Use the deep report for full paper-by-paper notes and figure/table interpretation.
 

@@ -66,13 +66,13 @@ The update must document the search scope, cite the closest novelty threats, syn
 
 | Artifact | Update |
 | --- | --- |
-| `docs/related_work_outline.md` | Added search methodology, inclusion/exclusion criteria, Mermaid gap map, AI schematic reference, and a new repair/evidence-conflict subsection |
-| `docs/project_literature_evidence_matrix.md` | Added rows for minimal-change repair operations, evidence-conflict handling, counterfactual repair explanations, and UGC/social-media travel evidence |
-| `docs/recent_papers_2023_2026_addendum.md` | Added iTIMO, VeriTrip, TP-RAG, ITINERA, TripCraft, TravelBench, COMPASS, CostBench, and From Stay to Play |
-| `docs/novelty_claim_verification.md` | Updated novelty-threat audit and safe contribution statement |
-| `docs/limitation_driven_itinerary_repair_method.md` | Reclassified From Stay to Play as verified background, not a core novelty citation |
-| `docs/chi_oriented_literature_review.md` | Replaced the unverified Braunhofer citation with verified From Stay to Play |
-| `docs/literature_review_slides.tex` | Replaced the unverified Braunhofer slide citation with Zhou et al. 2017 |
+| `docs/literature/related_work_outline.md` | Added search methodology, inclusion/exclusion criteria, Mermaid gap map, AI schematic reference, and a new repair/evidence-conflict subsection |
+| `docs/literature/project_literature_evidence_matrix.md` | Added rows for minimal-change repair operations, evidence-conflict handling, counterfactual repair explanations, and UGC/social-media travel evidence |
+| `docs/literature/recent_papers_2023_2026_addendum.md` | Added iTIMO, VeriTrip, TP-RAG, ITINERA, TripCraft, TravelBench, COMPASS, CostBench, and From Stay to Play |
+| `docs/literature/repair_gap/novelty_claim_verification.md` | Updated novelty-threat audit and safe contribution statement |
+| `docs/methods/limitation_driven_itinerary_repair_method.md` | Reclassified From Stay to Play as verified background, not a core novelty citation |
+| `docs/literature/chi_oriented_literature_review.md` | Replaced the unverified Braunhofer citation with verified From Stay to Play |
+| `docs/slides/literature_review_slides.tex` | Replaced the unverified Braunhofer slide citation with Zhou et al. 2017 |
 | `reference/1-s2.0-S0143622816306051-main_summary.md` | Added the missing paper-reading summary for From Stay to Play |
 | `reference/paper_summary_index.md` | Added From Stay to Play to the summary index |
 | `scripts/render_literature_review_audit_pdf.py` | Added a reproducible reportlab renderer for the audit PDF |
@@ -83,8 +83,8 @@ The update must document the search scope, cite the closest novelty threats, syn
 The literature-review skill requires at least one visual schematic. The current session does not expose the separate `scientific-schematics` skill, so the available `imagegen` skill was used for an AI-generated schematic and the Mermaid source remains the exact reproducible diagram.
 
 - AI schematic: `docs/figures/literature_repair_gap_schematic.png`
-- Consuming document: `docs/related_work_outline.md`
-- Reproducible text version: Mermaid block in `docs/related_work_outline.md`
+- Consuming document: `docs/literature/related_work_outline.md`
+- Reproducible text version: Mermaid block in `docs/literature/related_work_outline.md`
 
 ## Thematic Synthesis
 

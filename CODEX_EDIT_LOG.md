@@ -1336,3 +1336,59 @@ Entries record Codex-assisted work sessions, findings, validation, conclusions, 
 - The old context CSV copies still remain under `data/snapshots/california_v1/` for migration compatibility but are no longer listed as catalog-owned manifest files.
 - Full-repo Ruff and pytest remain blocked for the same unrelated reasons recorded in FOUND-001.
 - Existing dirty files in `data/snapshots/california_v1/feature_provenance.csv`, `route_options.csv`, `source_audit.csv`, and `notebook/production_system_blueprint.ipynb` were preserved and not reverted.
+## Literature repair gap documentation
+
+- Status: completed
+- Start local time: 2026-07-04 09:30:30 -05:00
+- End local time: 2026-07-04 09:48:34 CDT-0500
+- Duration: 17m 36s
+
+### Goal
+
+- Create documentation-only literature review deliverables for ownership-aware minimal itinerary repair under travel disruptions.
+
+### What changed
+
+- docs/literature_review_repair_gap.md: added scoping synthesis, RQ-Lit answers, novelty framing, metrics, claims-to-avoid box, and verified references.
+- docs/literature_search_log.md: recorded search surfaces, queries, screening counts, inclusion/exclusion criteria, and verification limitations.
+- docs/literature_matrix_repair_gap.md: added 26-row comparison matrix across OP/TTDP, dynamic/RL routing, LLM travel, explainability, baseline, and proposed method.
+- docs/current_score_audit.md: documented current utility, weather, nature, hotel, route, and provenance scoring formulas and limitations.
+- docs/figures/repair_literature_gap_map.md: added Mermaid gap map for the repair contribution.
+- docs/literature_review_repair_gap_citation_report.json: generated citation verification report for DOI-backed references.
+- `git status`: ?? docs/current_score_audit.md
+- `git status`: ?? docs/figures/repair_literature_gap_map.md
+- `git status`: ?? docs/literature_matrix_repair_gap.md
+- `git status`: ?? docs/literature_review_repair_gap.md
+- `git status`: ?? docs/literature_review_repair_gap_citation_report.json
+- `git status`: ?? docs/literature_search_log.md
+
+### What was found
+
+- The strongest defensible novelty is the combination of ownership labels, typed parent-child diffs, progressive neighborhoods, lexicographic preservation-before-utility objectives, independent certification, and evidence-grounded explanations.
+- Recent iTIMO and TripTide work makes broad first itinerary-modification or first disruption-benchmark claims unsafe.
+- The current repository score is a heuristic utility proxy; route travel uses geodesic fallback in key paths and hotel values rely on priors/fallbacks rather than live availability.
+
+### Validation
+
+- git diff --check: passed with no whitespace errors.
+- ASCII check on new Markdown deliverables: passed after normalizing one author name in the search log.
+- python C:\Users\1\.codex\skills\literature-evidence-synthesis\scripts\verify_citations.py docs\literature_review_repair_gap.md: 12 DOI records verified, 0 failed.
+- Local deliverable checks: created all requested Markdown docs plus optional Mermaid map and citation report; matrix has 26 rows; review has about 2,810 words.
+
+### Conclusion
+
+- Documentation deliverables now support the shifted research framing and avoid overclaiming against recent LLM travel-modification literature.
+
+### Next steps
+
+**Codex can proceed:**
+
+- Turn the repair framing into an implementation phase plan with ParentPlan/ChildPlan lineage, typed edits, progressive neighborhoods, certificates, and explanation evidence IDs.
+
+**Human reflection:**
+
+- The riskiest scholarly claim is any broad first claim around itinerary modification or disruption-aware travel planning; the safer claim is the specific ownership-aware repair architecture.
+
+### Human action
+
+- Review the novelty framing and decide whether to keep the generated citation JSON artifact in version control.

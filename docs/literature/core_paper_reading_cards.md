@@ -4,7 +4,7 @@
 
 ## 1. Purpose And How To Use This Guide
 
-This is the second document a new researcher should read after `docs/literature_onboarding_guide.md`. The onboarding guide defines the project and the field. This guide teaches the eight papers that provide the minimum intellectual spine for understanding the proposed research. The full 43-paper notes remain in `docs/literature_deep_read_study_report.md` and should be used as an evidence bank rather than read from beginning to end on the first pass.
+This is the second document a new researcher should read after `literature_onboarding_guide.md`. The onboarding guide defines the project and the field. This guide teaches the eight papers that provide the minimum intellectual spine for understanding the proposed research. The full 43-paper notes remain in `literature_deep_read_study_report.md` and should be used as an evidence bank rather than read from beginning to end on the first pass.
 
 The eight core papers are:
 

@@ -61,3 +61,90 @@ Entries record Codex-assisted work sessions, findings, validation, conclusions, 
 
 - Review the essential/supporting/optional citation priorities before drafting the final related-work section.
 
+## Docs directory cleanup
+
+- Status: completed
+- Start local time: 2026-07-04 11:04:37 -05:00
+- End local time: 2026-07-04 11:24:43 CDT-0500
+- Duration: 19m 42s
+
+### Goal
+
+- Tidy the docs directory into clear, classified folders and make key documents easier to find.
+
+### What changed
+
+- README.md: updated documentation links to the new classified docs layout.
+- docs/README.md: added a documentation index with folder map and reading paths.
+- docs/literature/: moved general literature guides, evidence banks, matrices, outlines, audits, and update notes into a literature category.
+- docs/literature/repair_gap/: grouped repair-gap review deliverables, search log, matrix, score audit, novelty verification, citation report, and Mermaid gap map.
+- docs/methods/: grouped research-method notes for limitation-driven repair, nature-aware modeling, and Phase 0 execution.
+- docs/planning/: grouped publication plans, roadmap PDF/Markdown, appendix, and both repair technical specification variants.
+- docs/reference/: grouped stable engineering reference docs, including the data dictionary and code quality workflow.
+- docs/slides/: moved literature-review slide source/PDF and LaTeX build outputs under slides/build/.
+- `git status`: M CODEX_EDIT_LOG.md
+- `git status`: M README.md
+- `git status`: D docs/chi_oriented_literature_review.md
+- `git status`: D docs/code_quality_workflow.md
+- `git status`: D docs/core_paper_reading_cards.md
+- `git status`: D docs/data_dictionary.md
+- `git status`: D docs/limitation_driven_itinerary_repair_method.md
+- `git status`: D docs/literature_deep_read_study_report.md
+- `git status`: D docs/literature_onboarding_guide.md
+- `git status`: D docs/literature_review_slides.aux
+- `git status`: D docs/literature_review_slides.fdb_latexmk
+- `git status`: D docs/literature_review_slides.fls
+- `git status`: D docs/literature_review_slides.log
+- `git status`: D docs/literature_review_slides.pdf
+- `git status`: D docs/literature_review_slides.tex
+- `git status`: D docs/literature_review_update_audit.md
+- `git status`: D docs/nature_aware_model_extension.md
+- `git status`: D docs/novelty_claim_verification.md
+- `git status`: D docs/pdflatex8088.fls
+- `git status`: D docs/plan/Publication_Oriented_Research_and_System_Design_Roadmap.pdf
+- `git status`: D docs/plan/Travel_Itinerary_Repair_Technical_Specification_for_Codex.md
+- `git status`: D docs/plans/Publication_Oriented_Research_and_System_Design_Roadmap.md
+- `git status`: D docs/plans/Travel_Itinerary_Repair_Technical_Specification_for_Codex.md
+- `git status`: D docs/project_literature_evidence_matrix.md
+- `git status`: D docs/recent_papers_2023_2026_addendum.md
+- `git status`: D docs/related_work_outline.md
+- `git status`: D docs/research_question_and_phase0_execution.md
+- `git status`: D docs/research_stabilization_and_publication_appendix.md
+- `git status`: D docs/research_stabilization_and_publication_plan.md
+- `git status`: ?? docs/README.md
+- `git status`: ?? docs/literature/
+- `git status`: ?? docs/methods/
+- `git status`: ?? docs/planning/
+- `git status`: ?? docs/reference/
+- `git status`: ?? docs/slides/
+
+### What was found
+
+- The previous docs root mixed literature, planning, engineering references, slides, generated LaTeX files, and two overlapping plan/plans directories.
+- The two repair technical specification Markdown files have different hashes, so both were preserved and renamed by role instead of overwriting either one.
+- The new repair-gap literature files were untracked before this cleanup and were preserved inside docs/literature/repair_gap/.
+
+### Validation
+
+- git diff --check -- README.md docs: passed.
+- Local Markdown link check across README.md and docs/**/*.md: passed, 26 files checked.
+- Manual layout review: docs now contains README.md plus assets, figures, literature, methods, planning, reference, and slides categories.
+
+### Conclusion
+
+- The docs directory is now classified by purpose, with a central index and updated navigation links for the moved documents.
+
+### Next steps
+
+**Codex can proceed:**
+
+- Add a lightweight docs-link checker script to the repository if ongoing documentation churn is expected.
+
+**Human reflection:**
+
+- The longer and concise repair technical specifications should eventually be reconciled so future implementation work has one canonical contract.
+
+### Human action
+
+- Review the new docs/README.md reading paths and decide whether both repair technical specification variants should remain long term.
+

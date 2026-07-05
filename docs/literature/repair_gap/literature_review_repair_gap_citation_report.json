@@ -1,0 +1,128 @@
+{
+  "total_dois": 12,
+  "verified": [
+    "10.1016/j.eswa.2014.06.007",
+    "10.1287/ijds.2025.0074",
+    "10.1016/j.cor.2021.105357",
+    "10.1016/j.ejor.2016.04.059",
+    "10.1016/j.asoc.2023.111200",
+    "10.1145/302979.303030",
+    "10.1145/3077136.3080778",
+    "10.1016/j.ejor.2012.08.015",
+    "10.1002/net.21628",
+    "10.1145/2631775.2631799",
+    "10.1016/j.orp.2022.100228",
+    "10.1016/j.ejor.2010.03.045"
+  ],
+  "failed": [],
+  "metadata": {
+    "10.1016/j.eswa.2014.06.007": {
+      "title": "Intelligent tourism recommender systems: A survey",
+      "authors": "Borr\u00e0s, J., Moreno, A., Valls, A.",
+      "year": "2014",
+      "journal": "Expert Systems with Applications",
+      "volume": "41",
+      "pages": "7370-7389",
+      "doi": "10.1016/j.eswa.2014.06.007"
+    },
+    "10.1287/ijds.2025.0074": {
+      "title": "OptiChat: Bridging Optimization Models and Practitioners with Large Language Models",
+      "authors": "Chen, H., Constante-Flores, G., Mantri, K., et al.",
+      "year": "2025",
+      "journal": "INFORMS Journal on Data Science",
+      "volume": "",
+      "pages": "",
+      "doi": "10.1287/ijds.2025.0074"
+    },
+    "10.1016/j.cor.2021.105357": {
+      "title": "A reinforcement learning approach to the orienteering problem with time windows",
+      "authors": "Gama, R., L. Fernandes, H.",
+      "year": "2021",
+      "journal": "Computers &amp; Operations Research",
+      "volume": "133",
+      "pages": "105357",
+      "doi": "10.1016/j.cor.2021.105357"
+    },
+    "10.1016/j.ejor.2016.04.059": {
+      "title": "Orienteering Problem: A survey of recent variants, solution approaches and applications",
+      "authors": "Gunawan, A., Lau, H., Vansteenwegen, P.",
+      "year": "2016",
+      "journal": "European Journal of Operational Research",
+      "volume": "255",
+      "pages": "315-332",
+      "doi": "10.1016/j.ejor.2016.04.059"
+    },
+    "10.1016/j.asoc.2023.111200": {
+      "title": "A survey on personalized itinerary recommendation: From optimisation to deep learning",
+      "authors": "Halder, S., Lim, K., Chan, J., et al.",
+      "year": "2024",
+      "journal": "Applied Soft Computing",
+      "volume": "152",
+      "pages": "111200",
+      "doi": "10.1016/j.asoc.2023.111200"
+    },
+    "10.1145/302979.303030": {
+      "title": "Principles of mixed-initiative user interfaces",
+      "authors": "Horvitz, E.",
+      "year": "1999",
+      "journal": "Proceedings of the SIGCHI conference on Human factors in computing systems the CHI is the limit - CHI '99",
+      "volume": "",
+      "pages": "159-166",
+      "doi": "10.1145/302979.303030"
+    },
+    "10.1145/3077136.3080778": {
+      "title": "Personalized Itinerary Recommendation with Queuing Time Awareness",
+      "authors": "Lim, K., Chan, J., Karunasekera, S., et al.",
+      "year": "2017",
+      "journal": "Proceedings of the 40th International ACM SIGIR Conference on Research and Development in Information Retrieval",
+      "volume": "",
+      "pages": "325-334",
+      "doi": "10.1145/3077136.3080778"
+    },
+    "10.1016/j.ejor.2012.08.015": {
+      "title": "A review of dynamic vehicle routing problems",
+      "authors": "Pillac, V., Gendreau, M., Gu\u00e9ret, C., et al.",
+      "year": "2013",
+      "journal": "European Journal of Operational Research",
+      "volume": "225",
+      "pages": "1-11",
+      "doi": "10.1016/j.ejor.2012.08.015"
+    },
+    "10.1002/net.21628": {
+      "title": "Dynamic vehicle routing problems: Three decades and counting",
+      "authors": "Psaraftis, H., Wen, M., Kontovas, C.",
+      "year": "2016",
+      "journal": "Networks",
+      "volume": "67",
+      "pages": "3-31",
+      "doi": "10.1002/net.21628"
+    },
+    "10.1145/2631775.2631799": {
+      "title": "The shortest path to happiness",
+      "authors": "Quercia, D., Schifanella, R., Aiello, L.",
+      "year": "2014",
+      "journal": "Proceedings of the 25th ACM conference on Hypertext and social media",
+      "volume": "",
+      "pages": "116-125",
+      "doi": "10.1145/2631775.2631799"
+    },
+    "10.1016/j.orp.2022.100228": {
+      "title": "A systematic literature review for the tourist trip design problem: Extensions, solution techniques and future research lines",
+      "authors": "Ruiz-Meza, J., Montoya-Torres, J.",
+      "year": "2022",
+      "journal": "Operations Research Perspectives",
+      "volume": "9",
+      "pages": "100228",
+      "doi": "10.1016/j.orp.2022.100228"
+    },
+    "10.1016/j.ejor.2010.03.045": {
+      "title": "The orienteering problem: A survey",
+      "authors": "Vansteenwegen, P., Souffriau, W., Oudheusden, D.",
+      "year": "2011",
+      "journal": "European Journal of Operational Research",
+      "volume": "209",
+      "pages": "1-10",
+      "doi": "10.1016/j.ejor.2010.03.045"
+    }
+  }
+}

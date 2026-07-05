@@ -2,7 +2,7 @@
 
 This guide is the recommended starting point for a new researcher joining the weather-aware travel itinerary optimization project. It explains the project in plain language, organizes the literature into four research areas, and points to the smaller set of papers that are worth reading first.
 
-After this introduction, read the [integrated core literature review](core_paper_reading_cards.md) for the detailed eight-paper learning sequence. The full paper-by-paper evidence remains in `docs/literature_deep_read_study_report.md`; use that file as a reference bank after you understand the field structure and core papers.
+After this introduction, read the [integrated core literature review](core_paper_reading_cards.md) for the detailed eight-paper learning sequence. The full paper-by-paper evidence remains in `literature_deep_read_study_report.md`; use that file as a reference bank after you understand the field structure and core papers.
 
 Every paper entry in the evidence bank ends with a **Project Action Takeaway**. Read that compact block first when deciding whether a paper matters: **Main goal** states what the paper tried to accomplish; **Main limitation** separates author-reported constraints from project-team inference; **Publication use** identifies the defensible claim and citation role; **Project-polishing action** turns the paper into a concrete implementation or evaluation task; and **Current project status** prevents planned work from being mistaken for an implemented contribution. These blocks are navigation aids, not substitutes for the method, results, and critical-evaluation notes above them.
 
@@ -26,7 +26,7 @@ In simpler language: the system should not merely say "this is the best route." 
 
 Based on the repository files, the current system is a California-focused travel-planning research prototype. It supports multi-day route generation with POI scoring, interest profiles, hotels or base cities, nature regions, weather-risk fields, route alternatives, Gurobi-backed or heuristic route repair, dashboard exports, and validation scripts.
 
-The main implementation evidence is in `README.md`, `docs/nature_aware_model_extension.md`, `configs/nature_trip_config.yaml`, `src/itinerary_system/utility_model.py`, `src/itinerary_system/multi_objective_route.py`, `src/itinerary_system/hierarchical_gurobi.py`, `src/itinerary_system/bandit_candidate_selector.py`, `src/itinerary_system/map_exporter.py`, and `scripts/validate_dashboard_export.py`.
+The main implementation evidence is in `README.md`, `docs/methods/nature_aware_model_extension.md`, `configs/nature_trip_config.yaml`, `src/itinerary_system/utility_model.py`, `src/itinerary_system/multi_objective_route.py`, `src/itinerary_system/hierarchical_gurobi.py`, `src/itinerary_system/bandit_candidate_selector.py`, `src/itinerary_system/map_exporter.py`, and `scripts/validate_dashboard_export.py`.
 
 The system accepts trip and planning inputs such as:
 

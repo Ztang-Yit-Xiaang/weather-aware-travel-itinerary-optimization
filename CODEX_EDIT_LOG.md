@@ -1478,3 +1478,47 @@ Entries record Codex-assisted work sessions, findings, validation, conclusions, 
 
 - Review the broad formatting diff, then push or rerun GitHub Actions to confirm the remote quality workflow.
 
+## Fetch LFS data in quality workflow
+
+- Status: completed
+- Start local time: 2026-07-05 21:41:56 CDT
+- End local time: 2026-07-05 21:43:16 CDT-0500
+- Duration: 1m 05s
+
+### Goal
+
+- Fix the GitHub-only test failures caused by LFS-backed CSV snapshots not being present in Actions checkout.
+
+### What changed
+
+- .github/workflows/quality.yml: enabled lfs: true for actions/checkout so GitHub Actions receives real CSV snapshot files instead of Git LFS pointer files.
+- `git status`: M .github/workflows/quality.yml
+
+### What was found
+
+- The pushed quality run passed Ruff format and lint, then failed tests with catalog/context manifest hash mismatches and missing CSV columns.
+- .gitattributes stores *.csv through Git LFS, and actions/checkout defaults to not downloading LFS objects; CI was testing pointer files rather than actual snapshot CSVs.
+
+### Validation
+
+- python -m pytest tests/data/test_context_snapshot.py tests/test_research_foundation.py::ResearchFoundationTests::test_snapshot_manifest_hashes_match_files tests/test_research_foundation.py::ResearchFoundationTests::test_clean_clone_snapshot_loads_and_gates_final_comparison: passed, 7 tests.
+- git lfs ls-files: confirmed snapshot CSVs are LFS-managed.
+
+### Conclusion
+
+- The quality workflow now fetches LFS data before installing and testing the package.
+
+### Next steps
+
+**Codex can proceed:**
+
+- Commit and push the workflow fix, then watch the next GitHub Actions quality run.
+
+**Human reflection:**
+
+- The repository relies on LFS-managed CSV fixtures, so future workflows that read snapshot data should also opt into LFS checkout.
+
+### Human action
+
+- Review the GitHub Actions run after the pushed workflow fix completes.
+

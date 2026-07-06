@@ -172,7 +172,9 @@ def _greedy_epsilon_repair(
             point = (float(pois.loc[idx, "latitude"]), float(pois.loc[idx, "longitude"]))
             travel_from_current = travel_minutes(current, point)
             travel_to_end = travel_minutes(point, end_depot)
-            ranked.append((float(pois.loc[idx, "repair_score"]) - 0.006 * travel_from_current - 0.003 * travel_to_end, int(idx)))
+            ranked.append(
+                (float(pois.loc[idx, "repair_score"]) - 0.006 * travel_from_current - 0.003 * travel_to_end, int(idx))
+            )
         accepted_idx: int | None = None
         for _, idx in sorted(ranked, reverse=True):
             trial = selected + [int(idx)]

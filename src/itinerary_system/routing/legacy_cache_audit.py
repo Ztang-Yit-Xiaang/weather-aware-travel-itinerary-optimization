@@ -98,7 +98,9 @@ def _audit_row(request: dict[str, Any], legacy_cache: dict[str, Any]) -> dict[st
     reverse_key = _reverse_key(key)
     exact_entry = legacy_cache.get(key)
     reverse_entry = legacy_cache.get(reverse_key)
-    match_type = "exact" if isinstance(exact_entry, dict) else ("reverse" if isinstance(reverse_entry, dict) else "missing")
+    match_type = (
+        "exact" if isinstance(exact_entry, dict) else ("reverse" if isinstance(reverse_entry, dict) else "missing")
+    )
     entry = exact_entry if isinstance(exact_entry, dict) else (reverse_entry if isinstance(reverse_entry, dict) else {})
     path_points = entry.get("path") if isinstance(entry, dict) else None
     path_point_count = len(path_points) if isinstance(path_points, list) else 0

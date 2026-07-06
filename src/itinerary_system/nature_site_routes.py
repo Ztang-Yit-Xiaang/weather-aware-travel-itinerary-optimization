@@ -8,7 +8,6 @@ can render as candidate/detail layers.
 
 from __future__ import annotations
 
-import hashlib
 import json
 import math
 import time
@@ -315,7 +314,14 @@ def _route_score(route_type: str, distance_km: float, confidence: float) -> floa
 
 def _nature_mask(frame: pd.DataFrame) -> pd.Series:
     mask = pd.Series(False, index=frame.index)
-    for column in ["is_nature", "is_national_park", "is_state_park", "is_protected_area", "is_scenic_viewpoint", "is_hiking"]:
+    for column in [
+        "is_nature",
+        "is_national_park",
+        "is_state_park",
+        "is_protected_area",
+        "is_scenic_viewpoint",
+        "is_hiking",
+    ]:
         if column in frame.columns:
             mask = mask | frame[column].astype(str).str.lower().isin({"1", "true", "yes"})
     if "nature_score" in frame.columns:
@@ -335,11 +341,17 @@ def _site_rows(enriched_df: pd.DataFrame, selected_route_df: pd.DataFrame | None
     frame["_selected"] = False
     if selected_route_df is not None and not selected_route_df.empty:
         selected_ids = {
-            _canonical_site_id(row.get("attraction_name", row.get("name", "")), row.get("nature_region", ""), row.get("city", ""))
+            _canonical_site_id(
+                row.get("attraction_name", row.get("name", "")), row.get("nature_region", ""), row.get("city", "")
+            )
             for _, row in selected_route_df.iterrows()
         }
         frame["_selected"] = frame["_site_id"].isin(selected_ids)
-    sort_cols = [column for column in ["_selected", "interest_adjusted_value", "final_poi_value", "nature_score"] if column in frame.columns]
+    sort_cols = [
+        column
+        for column in ["_selected", "interest_adjusted_value", "final_poi_value", "nature_score"]
+        if column in frame.columns
+    ]
     if sort_cols:
         frame = frame.sort_values(sort_cols, ascending=False)
     return frame.drop_duplicates("_site_id", keep="first").reset_index(drop=True)
@@ -360,7 +372,9 @@ out geom center tags;
 """
 
 
-def _load_or_fetch_osm_routes(site_id: str, lat: float, lon: float, output_dir: Path, config: TripConfig) -> tuple[list[dict[str, Any]], str]:
+def _load_or_fetch_osm_routes(
+    site_id: str, lat: float, lon: float, output_dir: Path, config: TripConfig
+) -> tuple[list[dict[str, Any]], str]:
     if not bool(config.get("nature_detail_routes", "use_osm", True)):
         return [], "osm_disabled"
     radius = int(config.get("nature_detail_routes", "overpass_radius_meters", 25000))
@@ -476,7 +490,9 @@ def parse_overpass_nature_site_routes(
     source_status: str,
     config: TripConfig,
 ) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
-    allowed_types = set(config.get("nature_detail_routes", "route_types", ["scenic_drive", "short_hike", "viewpoint_walk"]))
+    allowed_types = set(
+        config.get("nature_detail_routes", "route_types", ["scenic_drive", "short_hike", "viewpoint_walk"])
+    )
     max_short = float(config.get("nature_detail_routes", "max_short_hike_km", 12))
     max_drive = float(config.get("nature_detail_routes", "max_scenic_drive_km", 90))
     route_rows: list[dict[str, Any]] = []
@@ -503,7 +519,9 @@ def parse_overpass_nature_site_routes(
             continue
         seen.add(key)
         source_url = _safe_str(tags.get("website") or tags.get("url") or tags.get("wikipedia") or "")
-        description = _safe_str(tags.get("description", "")) or f"{route_name} is an OSM-derived internal nature-site route."
+        description = (
+            _safe_str(tags.get("description", "")) or f"{route_name} is an OSM-derived internal nature-site route."
+        )
         route, points = _route_from_geometry(
             site=site,
             route_name=route_name,
@@ -519,7 +537,9 @@ def parse_overpass_nature_site_routes(
         route_rows.append(route)
         point_rows.extend(points)
     route_rows.sort(key=lambda row: row["route_score"], reverse=True)
-    keep_ids = {row["route_id"] for row in route_rows[: int(config.get("nature_detail_routes", "max_routes_per_site", 3))]}
+    keep_ids = {
+        row["route_id"] for row in route_rows[: int(config.get("nature_detail_routes", "max_routes_per_site", 3))]
+    }
     return route_rows[: int(config.get("nature_detail_routes", "max_routes_per_site", 3))], [
         row for row in point_rows if row["route_id"] in keep_ids
     ]
@@ -550,7 +570,9 @@ def _curated_routes_for_site(site: pd.Series, config: TripConfig) -> tuple[list[
     return route_rows, point_rows
 
 
-def _empty_outputs(output_dir: Path, enriched_df: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame]:
+def _empty_outputs(
+    output_dir: Path, enriched_df: pd.DataFrame
+) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame]:
     for column in NATURE_SITE_ROUTE_METRIC_COLUMNS:
         if column not in enriched_df.columns:
             enriched_df[column] = "" if column == "internal_route_source" else 0.0

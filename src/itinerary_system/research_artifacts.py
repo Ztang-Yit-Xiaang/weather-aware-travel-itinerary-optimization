@@ -271,4 +271,3 @@ def evaluate_phase0_plan(
         },
         conditional_reward=1.0 if eligible else None,
     )
-

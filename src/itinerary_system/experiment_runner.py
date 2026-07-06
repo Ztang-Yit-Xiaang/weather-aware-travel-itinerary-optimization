@@ -444,7 +444,9 @@ def _route_allowed_cities(overnight_city: str, pass_through_cities: list[str] | 
 
 
 def _row_allowed_cities(row: pd.Series) -> list[str]:
-    return _route_allowed_cities(str(row.get("overnight_city", row.get("city", ""))), row.get("pass_through_cities", ""))
+    return _route_allowed_cities(
+        str(row.get("overnight_city", row.get("city", ""))), row.get("pass_through_cities", "")
+    )
 
 
 def _stop_in_allowed_segment(row: pd.Series) -> tuple[bool, str]:
@@ -551,7 +553,11 @@ def _write_route_sequence_audit(
         )
         duplicates = sorted(duplicate_names[duplicate_names.duplicated()].unique().tolist())
         add_check("no_duplicate_selected_pois", not duplicates, "; ".join(duplicates))
-        violation_series = preferred["sequence_violation_flag"].astype(bool) if "sequence_violation_flag" in preferred.columns else pd.Series(False, index=preferred.index)
+        violation_series = (
+            preferred["sequence_violation_flag"].astype(bool)
+            if "sequence_violation_flag" in preferred.columns
+            else pd.Series(False, index=preferred.index)
+        )
         violation_frame = preferred[violation_series].copy()
         add_check(
             "selected_city_in_allowed_segment",
@@ -560,7 +566,9 @@ def _write_route_sequence_audit(
         )
         cities = preferred["city"].fillna("").astype(str).tolist()
         los_indices = [idx for idx, city in enumerate(cities) if city.lower() == "los angeles"]
-        santa_after_la = any(city.lower() == "santa barbara" for idx, city in enumerate(cities) if los_indices and idx > min(los_indices))
+        santa_after_la = any(
+            city.lower() == "santa barbara" for idx, city in enumerate(cities) if los_indices and idx > min(los_indices)
+        )
         add_check(
             "no_la_to_santa_barbara_backtrack",
             not santa_after_la,
@@ -572,7 +580,12 @@ def _write_route_sequence_audit(
         ]
         add_check("max_drive_threshold", long_drive_rows.empty, f"violations={len(long_drive_rows)}")
     if day_plan_df is not None and not day_plan_df.empty and not preferred.empty:
-        day_names = day_plan_df.get("attraction_name", day_plan_df.get("name", pd.Series(dtype=str))).fillna("").astype(str).map(_place_key)
+        day_names = (
+            day_plan_df.get("attraction_name", day_plan_df.get("name", pd.Series(dtype=str)))
+            .fillna("")
+            .astype(str)
+            .map(_place_key)
+        )
         route_names = preferred.get("attraction_name", pd.Series(dtype=str)).fillna("").astype(str).map(_place_key)
         add_check(
             "day_plan_matches_selected_route",
@@ -2184,17 +2197,15 @@ def _ensure_required_anchor_stops(
             continue
         target_rows = _rows_for_required_anchor_day(output, anchor)
         if target_rows.empty:
-            notes.append(f"Required anchor {anchor} remained candidate-only because no compatible base day was selected.")
+            notes.append(
+                f"Required anchor {anchor} remained candidate-only because no compatible base day was selected."
+            )
             continue
-        target_day = int(
-            pd.to_numeric(target_rows["day"], errors="coerce")
-            .dropna()
-            .astype(int)
-            .sort_values()
-            .iloc[0]
-        )
+        target_day = int(pd.to_numeric(target_rows["day"], errors="coerce").dropna().astype(int).sort_values().iloc[0])
         day_rows = output[pd.to_numeric(output["day"], errors="coerce").fillna(-1).astype(int).eq(target_day)].copy()
-        current_max_order = int(pd.to_numeric(day_rows.get("stop_order", pd.Series([0])), errors="coerce").fillna(0).max())
+        current_max_order = int(
+            pd.to_numeric(day_rows.get("stop_order", pd.Series([0])), errors="coerce").fillna(0).max()
+        )
         anchor_row = _route_stop_from_required_candidate(
             candidate=candidate,
             template=day_rows.sort_values(["day", "stop_order"]).iloc[0],
@@ -2433,7 +2444,9 @@ def _hierarchical_method_route_outputs(
                 if fallback_pool.empty and not poi_catalog.empty:
                     fallback_pool = poi_catalog.copy()
                     if "city" in fallback_pool.columns:
-                        allowed_for_day = {str(item).lower() for item in _route_allowed_cities(city, pass_through_cities)}
+                        allowed_for_day = {
+                            str(item).lower() for item in _route_allowed_cities(city, pass_through_cities)
+                        }
                         fallback_pool = fallback_pool[
                             fallback_pool["city"].fillna("").astype(str).str.lower().isin(allowed_for_day)
                         ].copy()
@@ -2510,7 +2523,8 @@ def _hierarchical_method_route_outputs(
     enriched_for_required_anchors = _load_frame_from_context_or_csv(
         context,
         ["production_enriched_poi_catalog_df", "enriched_df"],
-        Path(_first_context_value(context, "OUTPUT_DIR", default="results/outputs")) / "production_enriched_poi_catalog.csv",
+        Path(_first_context_value(context, "OUTPUT_DIR", default="results/outputs"))
+        / "production_enriched_poi_catalog.csv",
     )
     route_df, required_anchor_notes = _ensure_required_anchor_stops(
         route_df,

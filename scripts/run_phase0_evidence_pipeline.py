@@ -14,11 +14,15 @@ if str(REPO_ROOT) not in sys.path:
 if str(SRC_DIR) not in sys.path:
     sys.path.insert(0, str(SRC_DIR))
 
-from itinerary_system.config import load_trip_config
-from itinerary_system.phase0_exporter import PHASE0_ARTIFACT_FILES, write_phase0_research_artifacts
-from itinerary_system.routing import OSRM_LOCAL_BASE_URL, build_road_route_cache_from_artifacts
-from scripts.summarize_phase0_readiness import load_phase0_readiness, readiness_markdown, write_readiness_outputs
-from scripts.validate_phase0_artifacts import validate
+from itinerary_system.config import load_trip_config  # noqa: E402
+from itinerary_system.phase0_exporter import PHASE0_ARTIFACT_FILES, write_phase0_research_artifacts  # noqa: E402
+from itinerary_system.routing import OSRM_LOCAL_BASE_URL, build_road_route_cache_from_artifacts  # noqa: E402
+from scripts.summarize_phase0_readiness import (  # noqa: E402
+    load_phase0_readiness,
+    readiness_markdown,
+    write_readiness_outputs,
+)
+from scripts.validate_phase0_artifacts import validate  # noqa: E402
 
 
 def parse_args() -> argparse.Namespace:
@@ -116,7 +120,9 @@ def _print_result(result: dict[str, Any], *, skip_cache_build: bool) -> None:
     if skip_cache_build:
         print("Skipped road-route cache build")
     elif cache_result is not None:
-        validated = int(cache_result.cache_df["road_validated"].astype(bool).sum()) if not cache_result.cache_df.empty else 0
+        validated = (
+            int(cache_result.cache_df["road_validated"].astype(bool).sum()) if not cache_result.cache_df.empty else 0
+        )
         requested = int(len(cache_result.audit_df))
         print(f"Wrote {cache_result.cache_path}")
         print(f"Wrote {cache_result.audit_path}")

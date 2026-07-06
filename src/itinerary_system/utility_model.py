@@ -251,7 +251,9 @@ def apply_utility_models(
     output["data_uncertainty"] = _numeric(output, "data_uncertainty", np.nan)
     if output["data_uncertainty"].isna().all():
         output["data_uncertainty"] = _numeric(output, "model_uncertainty", 0.0).clip(0.0, 1.0)
-    output["data_uncertainty"] = output["data_uncertainty"].fillna(_numeric(output, "model_uncertainty", 0.0)).clip(0.0, 1.0)
+    output["data_uncertainty"] = (
+        output["data_uncertainty"].fillna(_numeric(output, "model_uncertainty", 0.0)).clip(0.0, 1.0)
+    )
 
     signal_output = signal_df.copy()
     signal_output["utility_mcda_weighted"] = output["utility_mcda_weighted"]

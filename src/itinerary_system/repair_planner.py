@@ -259,7 +259,9 @@ def detect_evidence_conflicts(
         }
         if len(observed) > 1:
             source_ids = tuple(str(record.get("source_id") or record.get("source") or "unknown") for record in records)
-            avg_confidence = sum(_bounded_confidence(record.get("confidence", 1.0)) for record in records) / len(records)
+            avg_confidence = sum(_bounded_confidence(record.get("confidence", 1.0)) for record in records) / len(
+                records
+            )
             conflicts.append(
                 EvidenceConflict(
                     conflict_id=f"contradictory:{constraint}",
@@ -298,8 +300,12 @@ def evaluate_repair_plan(
     repaired_utility = sum(_float_value(stop, "utility", "final_poi_value", "score", default=0.0) for stop in repaired)
     baseline_risk = sum(_float_value(stop, "weather_risk", default=0.0) for stop in baseline)
     repaired_risk = sum(_float_value(stop, "weather_risk", default=0.0) for stop in repaired)
-    baseline_travel = sum(_float_value(stop, "travel_minutes", "travel_minutes_from_prev", default=0.0) for stop in baseline)
-    repaired_travel = sum(_float_value(stop, "travel_minutes", "travel_minutes_from_prev", default=0.0) for stop in repaired)
+    baseline_travel = sum(
+        _float_value(stop, "travel_minutes", "travel_minutes_from_prev", default=0.0) for stop in baseline
+    )
+    repaired_travel = sum(
+        _float_value(stop, "travel_minutes", "travel_minutes_from_prev", default=0.0) for stop in repaired
+    )
     edit_distance = _levenshtein(baseline_names, repaired_names)
 
     hard_failures: list[str] = []
@@ -341,7 +347,9 @@ def _daily_travel_minutes(route: tuple[dict[str, Any], ...]) -> dict[int, float]
         day = _day(stop)
         if day is None:
             continue
-        totals[day] = totals.get(day, 0.0) + _float_value(stop, "travel_minutes", "travel_minutes_from_prev", default=0.0)
+        totals[day] = totals.get(day, 0.0) + _float_value(
+            stop, "travel_minutes", "travel_minutes_from_prev", default=0.0
+        )
     return totals
 
 
@@ -497,7 +505,9 @@ def build_repair_plan(
                 )
 
         if should_replace:
-            relax_reason = "No lower-risk replacement was available; keeping stop requires relaxing weather-risk threshold."
+            relax_reason = (
+                "No lower-risk replacement was available; keeping stop requires relaxing weather-risk threshold."
+            )
             relax_change = f"Provide a candidate under risk {threshold:.2f} or relax the threshold to {risk:.2f}."
             relax_rationale = "The solver cannot replace this stop without candidate coverage."
             replacement = _best_replacement(stop_copy, candidate_pool, used_names, threshold)
@@ -645,11 +655,14 @@ def generate_repair_alternatives(request: RepairRequest) -> tuple[RepairPlan, ..
     conservative = build_repair_plan(request, max_stop_weather_risk=max(0.05, base_threshold - 0.15))
     balanced = build_repair_plan(request, max_stop_weather_risk=base_threshold)
     preservation_first = build_repair_plan(request, max_stop_weather_risk=min(1.0, base_threshold + 0.15))
-    return tuple(_with_plan_id(plan, suffix) for plan, suffix in [
-        (conservative, "risk_averse"),
-        (balanced, "balanced"),
-        (preservation_first, "preservation_first"),
-    ])
+    return tuple(
+        _with_plan_id(plan, suffix)
+        for plan, suffix in [
+            (conservative, "risk_averse"),
+            (balanced, "balanced"),
+            (preservation_first, "preservation_first"),
+        ]
+    )
 
 
 def _with_plan_id(plan: RepairPlan, suffix: str) -> RepairPlan:

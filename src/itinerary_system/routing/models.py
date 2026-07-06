@@ -64,7 +64,7 @@ class RouteLegResult:
         distance_m: float | None = None,
         duration_s: float | None = None,
         fallback_reason: str = "road_routing_unavailable",
-    ) -> "RouteLegResult":
+    ) -> RouteLegResult:
         """Build an explicitly non-road-validated fallback leg."""
 
         return cls(
@@ -118,7 +118,9 @@ class RouteResult:
 
     @property
     def evaluation_eligible(self) -> bool:
-        return bool(self.solver_feasible and self.schedule_feasible and self.dataset_snapshot_valid and self.road_validated)
+        return bool(
+            self.solver_feasible and self.schedule_feasible and self.dataset_snapshot_valid and self.road_validated
+        )
 
     def to_audit_rows(self) -> list[dict[str, Any]]:
         rows: list[dict[str, Any]] = []
@@ -144,4 +146,3 @@ class RouteResult:
                 }
             )
         return rows
-

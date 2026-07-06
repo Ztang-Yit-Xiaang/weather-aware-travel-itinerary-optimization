@@ -290,7 +290,12 @@ def _weather_risk(row: pd.Series) -> float:
 
 
 def _expected_duration_minutes(row: pd.Series) -> int:
-    for column in ["expected_duration_minutes", "visit_duration_minutes", "visit_duration_sim", "available_visit_minutes"]:
+    for column in [
+        "expected_duration_minutes",
+        "visit_duration_minutes",
+        "visit_duration_sim",
+        "available_visit_minutes",
+    ]:
         value = _safe_float(row.get(column, 0.0))
         if value > 0:
             return int(round(max(30.0, min(240.0, value))))
@@ -350,7 +355,9 @@ def _point_records(route_df: pd.DataFrame, *, selected_poi: bool = True) -> list
         weather_risk = _weather_risk(row)
         expected_duration = _expected_duration_minutes(row)
         route_sequence_index = int(_safe_float(row.get("route_sequence_index", 0), 0.0))
-        display_sequence_index = route_sequence_index if route_sequence_index > 0 else (len(records) + 1 if selected_poi else 0)
+        display_sequence_index = (
+            route_sequence_index if route_sequence_index > 0 else (len(records) + 1 if selected_poi else 0)
+        )
         records.append(
             {
                 "name": _route_name(row),
@@ -554,9 +561,7 @@ def _playback_points_with_endpoints(points: list[dict[str, Any]]) -> list[dict[s
     if not days:
         days = [0]
     for day in days:
-        day_points = [
-            point for point in ordered_points if int(_safe_float(point.get("day", 0), 0.0)) == day
-        ]
+        day_points = [point for point in ordered_points if int(_safe_float(point.get("day", 0), 0.0)) == day]
         if not day_points:
             continue
         _append_unique_route_node(playback, _hotel_node_from_point(day_points[0], side="start"))
@@ -571,14 +576,10 @@ def _project_cache_dir(output_dir: Path) -> Path:
     return output_dir.parent / "cache" if output_dir.name == "outputs" else output_dir / "cache"
 
 
-def _cached_route_geometry(
-    points: list[dict[str, Any]], output_dir: Path
-) -> tuple[list[list[float]], str, bool]:
+def _cached_route_geometry(points: list[dict[str, Any]], output_dir: Path) -> tuple[list[list[float]], str, bool]:
     """Return cached OSRM geometry in GeoJSON lon/lat order, or straight fallback."""
     coordinates = [
-        [float(point["lat"]), float(point["lon"])]
-        for point in points
-        if point.get("lat") and point.get("lon")
+        [float(point["lat"]), float(point["lon"])] for point in points if point.get("lat") and point.get("lon")
     ]
     straight = [[lon, lat] for lat, lon in coordinates]
     if len(coordinates) < 2:
@@ -593,11 +594,7 @@ def _cached_route_geometry(
     try:
         payload = json.loads(cache_path.read_text(encoding="utf-8"))
         latlon = payload.get("latlon_geometry", [])
-        routed = [
-            [float(lon), float(lat)]
-            for lat, lon in latlon
-            if lat is not None and lon is not None
-        ]
+        routed = [[float(lon), float(lat)] for lat, lon in latlon if lat is not None and lon is not None]
         if len(routed) >= 2:
             return routed, str(payload.get("status", "cached_osrm")), True
     except Exception:
@@ -939,7 +936,9 @@ def _candidate_record_from_csv(
     if frame.empty:
         return
     if "itinerary_eligible" in frame.columns:
-        frame = frame[frame["itinerary_eligible"].fillna(True).astype(str).str.lower().isin({"1", "true", "yes"})].copy()
+        frame = frame[
+            frame["itinerary_eligible"].fillna(True).astype(str).str.lower().isin({"1", "true", "yes"})
+        ].copy()
     if nature_only:
         mask = pd.Series(False, index=frame.index)
         for column in ["is_nature", "is_national_park", "is_state_park", "is_protected_area", "is_scenic_viewpoint"]:
@@ -1090,17 +1089,21 @@ def _nature_site_route_assets(output_dir: Path) -> tuple[dict[str, Any], list[di
             },
         )
         entry["routes"].append(route)
-    audit_items = [
-        {
-            "site_id": _safe_str(row.get("site_id", "")),
-            "site_name": _safe_str(row.get("site_name", "")),
-            "route_count": int(_safe_float(row.get("route_count", 0))),
-            "source_status": _safe_str(row.get("source_status", "")),
-            "fallback_used": _safe_bool(row.get("fallback_used", False)),
-            "missing_reason": _safe_str(row.get("missing_reason", "")),
-        }
-        for _, row in audit.iterrows()
-    ] if not audit.empty else []
+    audit_items = (
+        [
+            {
+                "site_id": _safe_str(row.get("site_id", "")),
+                "site_name": _safe_str(row.get("site_name", "")),
+                "route_count": int(_safe_float(row.get("route_count", 0))),
+                "source_status": _safe_str(row.get("source_status", "")),
+                "fallback_used": _safe_bool(row.get("fallback_used", False)),
+                "missing_reason": _safe_str(row.get("missing_reason", "")),
+            }
+            for _, row in audit.iterrows()
+        ]
+        if not audit.empty
+        else []
+    )
     return (
         {"type": "FeatureCollection", "features": features},
         pois,
@@ -1286,7 +1289,9 @@ def _city_details(
                 "route_ids": sorted(entry["route_ids"]),
                 "days": sorted(entry["days"]),
                 "hotels": sorted(entry["hotels"]),
-                "hotel_alternative_count": int(entry.get("hotel_alternative_count") or hotel_counts.get(entry["city"], 0)),
+                "hotel_alternative_count": int(
+                    entry.get("hotel_alternative_count") or hotel_counts.get(entry["city"], 0)
+                ),
             }
         )
     cities.sort(key=lambda item: (min(item["days"]) if item["days"] else 999, item["city"]))
@@ -1991,7 +1996,9 @@ def _evaluation_metrics(output_dir: Path) -> dict[str, Any]:
                 ),
                 "weather_risk": float(weather_values.mean()) if not weather_values.empty else 0.0,
                 "selected_nature_stops": int(nature_mask.sum()) if not nature_mask.empty else 0,
-                "selected_stop_count": int(len(stops)) if not stops.empty else int(_safe_float(row.get("selected_attractions", 0.0))),
+                "selected_stop_count": int(len(stops))
+                if not stops.empty
+                else int(_safe_float(row.get("selected_attractions", 0.0))),
                 "runtime_seconds": _safe_float(row.get("solve_seconds", 0.0)),
                 "notes": _safe_str(row.get("notes", "")),
             }
@@ -4797,7 +4804,7 @@ window.addEventListener('DOMContentLoaded', initMap);
     dashboard_js = assets / "dashboard.js"
     _write_text_asset(
         dashboard_js,
-"""function renderDashboardMetrics(metrics) {
+        """function renderDashboardMetrics(metrics) {
   const target = document.getElementById('metrics');
   if (!target) return;
   const subtitle = document.getElementById('dashboard-subtitle');

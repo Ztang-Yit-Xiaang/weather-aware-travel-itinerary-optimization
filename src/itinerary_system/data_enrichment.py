@@ -290,7 +290,9 @@ def _hotel_price_proxy(city: str, lodging_type: str, config: TripConfig) -> floa
     return round(0.65 * float(city_prior) + 0.35 * type_prior, 2)
 
 
-def _curated_hotel_fallback_rows(city_names: list[str], existing: pd.DataFrame, config: TripConfig) -> tuple[pd.DataFrame, pd.DataFrame]:
+def _curated_hotel_fallback_rows(
+    city_names: list[str], existing: pd.DataFrame, config: TripConfig
+) -> tuple[pd.DataFrame, pd.DataFrame]:
     existing = existing.copy() if isinstance(existing, pd.DataFrame) else pd.DataFrame()
     existing_cities = (
         set(existing.get("city", pd.Series(dtype=str)).dropna().astype(str).str.lower())
@@ -309,7 +311,9 @@ def _curated_hotel_fallback_rows(city_names: list[str], existing: pd.DataFrame, 
                 "city": city,
                 "hotel_name": hotel["name"],
                 "fallback_used": bool(should_use),
-                "fallback_reason": "no_open_hotel_rows_for_city" if should_use else "open_or_existing_hotel_rows_present",
+                "fallback_reason": "no_open_hotel_rows_for_city"
+                if should_use
+                else "open_or_existing_hotel_rows_present",
                 "source": "curated_open_web_hotel_fallback",
                 "source_confidence": 0.55,
             }
@@ -587,7 +591,13 @@ def build_open_osm_catalogs(
         hotel_catalog, hotel_fallback_audit = _curated_hotel_fallback_rows(city_names, hotel_catalog, config)
     else:
         hotel_fallback_audit = pd.DataFrame(
-            [{"fallback_used": False, "fallback_reason": "disabled_by_config", "source": "curated_open_web_hotel_fallback"}]
+            [
+                {
+                    "fallback_used": False,
+                    "fallback_reason": "disabled_by_config",
+                    "source": "curated_open_web_hotel_fallback",
+                }
+            ]
         )
     if not poi_catalog.empty:
         poi_catalog.to_csv(output_dir / "production_city_poi_catalog.csv", index=False)
@@ -670,7 +680,9 @@ def enrich_with_wikidata_wikipedia(
             image_url = str(thumbnail.get("source", "") or "").strip()
             if image_url and not str(output.at[idx, "image_url"] or "").strip():
                 output.at[idx, "image_url"] = image_url
-            content_urls = wiki_payload.get("content_urls", {}) if isinstance(wiki_payload.get("content_urls", {}), dict) else {}
+            content_urls = (
+                wiki_payload.get("content_urls", {}) if isinstance(wiki_payload.get("content_urls", {}), dict) else {}
+            )
             desktop = content_urls.get("desktop", {}) if isinstance(content_urls.get("desktop", {}), dict) else {}
             page_url = str(desktop.get("page", "") or "").strip()
             if page_url:
@@ -893,8 +905,7 @@ def _scenario_route_waypoints(config: TripConfig) -> list[tuple[float, float]]:
     filtered = [
         option
         for option in options
-        if (not starts or option.get("gateway_start") in starts)
-        and (not ends or option.get("gateway_end") in ends)
+        if (not starts or option.get("gateway_start") in starts) and (not ends or option.get("gateway_end") in ends)
     ]
     for option in filtered or options:
         for name in list(option.get("sequence", [])) + list(option.get("nature_regions", [])):
@@ -985,11 +996,19 @@ def _recompute_value_columns(enriched_df: pd.DataFrame, config: TripConfig) -> p
         output["source_list"].astype(str).str.contains("yelp", case=False, na=False)
         | pd.to_numeric(output.get("wikipedia_pageview_score", pd.Series(dtype=float)), errors="coerce").fillna(0).gt(0)
     ).astype(float)
-    output["temporal_coverage"] = pd.to_numeric(output.get("weather_risk", pd.Series(dtype=float)), errors="coerce").notna().astype(float)
-    output["routing_coverage"] = pd.to_numeric(output.get("route_fit", pd.Series(dtype=float)), errors="coerce").notna().astype(float)
+    output["temporal_coverage"] = (
+        pd.to_numeric(output.get("weather_risk", pd.Series(dtype=float)), errors="coerce").notna().astype(float)
+    )
+    output["routing_coverage"] = (
+        pd.to_numeric(output.get("route_fit", pd.Series(dtype=float)), errors="coerce").notna().astype(float)
+    )
     output["model_uncertainty"] = pd.to_numeric(output.get("model_uncertainty", 0.0), errors="coerce").fillna(0.0)
-    output["annotation_uncertainty"] = pd.to_numeric(output.get("annotation_uncertainty", 0.0), errors="coerce").fillna(0.0)
-    output["entity_match_confidence"] = pd.to_numeric(output.get("entity_match_confidence", 0.85), errors="coerce").fillna(0.85)
+    output["annotation_uncertainty"] = pd.to_numeric(output.get("annotation_uncertainty", 0.0), errors="coerce").fillna(
+        0.0
+    )
+    output["entity_match_confidence"] = pd.to_numeric(
+        output.get("entity_match_confidence", 0.85), errors="coerce"
+    ).fillna(0.85)
     output["data_confidence"] = output["source_coverage_score"]
     output["data_uncertainty"] = output["model_uncertainty"]
     output["final_poi_value"] = (
@@ -997,8 +1016,7 @@ def _recompute_value_columns(enriched_df: pd.DataFrame, config: TripConfig) -> p
         + 0.20 * _numeric_series(output, "yelp_signal_norm")
         + social_weight * _numeric_series(output, "social_score")
         + must_go_weight * _numeric_series(output, "must_go_weight") * _numeric_series(output, "social_score")
-        + corridor_weight
-        * np.maximum(_numeric_series(output, "corridor_fit"), _numeric_series(output, "route_fit"))
+        + corridor_weight * np.maximum(_numeric_series(output, "corridor_fit"), _numeric_series(output, "route_fit"))
         - detour_penalty * _numeric_series(output, "detour_minutes")
         + 0.10 * _numeric_series(output, "wikipedia_pageview_score")
     ).clip(lower=0.0)

@@ -132,8 +132,16 @@ def validate(output_dir: Path, *, require_final_eligible: bool = False) -> tuple
         warnings.append("Dataset validation reports final_comparison_eligible=false")
     route_cache_coverage = dataset.get("route_cache_coverage", {}) if isinstance(dataset, dict) else {}
     if isinstance(route_cache_coverage, dict):
-        coverage = pd.to_numeric(pd.Series([route_cache_coverage.get("road_route_validation_coverage", 0.0)]), errors="coerce").fillna(0.0).iloc[0]
-        requested = int(pd.to_numeric(pd.Series([route_cache_coverage.get("road_route_requested_leg_count", 0)]), errors="coerce").fillna(0).iloc[0])
+        coverage = (
+            pd.to_numeric(pd.Series([route_cache_coverage.get("road_route_validation_coverage", 0.0)]), errors="coerce")
+            .fillna(0.0)
+            .iloc[0]
+        )
+        requested = int(
+            pd.to_numeric(pd.Series([route_cache_coverage.get("road_route_requested_leg_count", 0)]), errors="coerce")
+            .fillna(0)
+            .iloc[0]
+        )
         if requested and float(coverage) < 1.0:
             warnings.append(f"Road-route cache coverage incomplete: {coverage:.3f}")
             if require_final_eligible:
@@ -179,12 +187,16 @@ def validate(output_dir: Path, *, require_final_eligible: bool = False) -> tuple
     if not evaluations.empty:
         eligible_evaluations = evaluations[evaluations["comparison_eligibility"].astype(str).eq("eligible")]
         for row in eligible_evaluations.itertuples(index=False):
-            plan_id = str(getattr(row, "plan_id"))
+            plan_id = str(row.plan_id)
             if plan_id not in route_flags.index:
                 errors.append(f"Eligible evaluation has no route audit rows: {plan_id}")
                 continue
             flags = route_flags.loc[plan_id]
-            if bool(flags["any_fallback"]) or not bool(flags["all_road_validated"]) or not bool(flags["all_route_eligible"]):
+            if (
+                bool(flags["any_fallback"])
+                or not bool(flags["all_road_validated"])
+                or not bool(flags["all_route_eligible"])
+            ):
                 errors.append(f"Eligible evaluation has unvalidated or fallback route audit rows: {plan_id}")
         if require_final_eligible:
             ineligible = evaluations[~evaluations["comparison_eligibility"].astype(str).eq("eligible")]
@@ -200,7 +212,9 @@ def validate(output_dir: Path, *, require_final_eligible: bool = False) -> tuple
 
     if not summary.empty and not evaluations.empty:
         summary_pairs = set(zip(summary["run_id"].astype(str), summary["plan_id"].astype(str), strict=False))
-        evaluation_pairs = set(zip(evaluations["source_run_id"].astype(str), evaluations["plan_id"].astype(str), strict=False))
+        evaluation_pairs = set(
+            zip(evaluations["source_run_id"].astype(str), evaluations["plan_id"].astype(str), strict=False)
+        )
         missing_summary = sorted(evaluation_pairs - summary_pairs)
         if missing_summary:
             errors.append(f"Evidence summary missing evaluation pairs: {missing_summary}")

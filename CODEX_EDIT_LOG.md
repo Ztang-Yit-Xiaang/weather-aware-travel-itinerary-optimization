@@ -1392,3 +1392,89 @@ Entries record Codex-assisted work sessions, findings, validation, conclusions, 
 ### Human action
 
 - Review the novelty framing and decide whether to keep the generated citation JSON artifact in version control.
+## Fix GitHub quality workflow
+
+- Status: completed
+- Start local time: 2026-07-05 20:19:54 CDT
+- End local time: 2026-07-05 21:04:22 CDT-0500
+- Duration: 43m 43s
+
+### Goal
+
+- Find why the GitHub quality workflow failed and fix the repository so formatting, lint, tests, coverage report, and dead-code report can pass.
+
+### What changed
+
+- scripts/audit_legacy_route_cache.py, scripts/build_road_route_cache.py, scripts/check_route_source.py, scripts/run_phase0_evidence_pipeline.py, scripts/validate_nature_route_pipeline.py: annotated intentional script import bootstraps with Ruff E402 noqa comments while preserving direct script execution.
+- scripts/generate_paper_summaries.py: removed unused import and unused discussion assignment; Ruff formatted generated-summary helpers.
+- scripts/render_literature_review_audit_pdf.py: made Markdown table zip use strict=False and Ruff formatted imports/spacing.
+- scripts/summarize_phase0_readiness.py, scripts/validate_dashboard_export.py, scripts/validate_phase0_artifacts.py: applied Ruff formatting and safe lint autofixes.
+- src/itinerary_system/artifact_metadata.py, data_enrichment.py, experiment_runner.py, map_exporter.py, multi_objective_route.py, phase0_exporter.py, region_scenarios.py, repair_planner.py, research_artifacts.py, utility_model.py: applied Ruff formatting and safe lint autofixes.
+- src/itinerary_system/nature_catalog.py: removed unused visit-pattern work, replaced a late-bound lambda with a regex mask, and refactored profile route picking to pass segment state explicitly.
+- src/itinerary_system/nature_site_routes.py: removed unused hashlib import and applied Ruff formatting.
+- src/itinerary_system/routing/cache.py, src/itinerary_system/routing/legacy_cache_audit.py, src/itinerary_system/routing/models.py: applied Ruff formatting and safe annotation/import lint fixes.
+- tests/test_configurable_itinerary_system.py, tests/test_research_foundation.py: applied Ruff formatting and import cleanup.
+- `git status`: M scripts/audit_legacy_route_cache.py
+- `git status`: M scripts/build_road_route_cache.py
+- `git status`: M scripts/check_route_source.py
+- `git status`: M scripts/generate_paper_summaries.py
+- `git status`: M scripts/render_literature_review_audit_pdf.py
+- `git status`: M scripts/run_phase0_evidence_pipeline.py
+- `git status`: M scripts/summarize_phase0_readiness.py
+- `git status`: M scripts/validate_dashboard_export.py
+- `git status`: M scripts/validate_nature_route_pipeline.py
+- `git status`: M scripts/validate_phase0_artifacts.py
+- `git status`: M src/itinerary_system/artifact_metadata.py
+- `git status`: M src/itinerary_system/data_enrichment.py
+- `git status`: M src/itinerary_system/experiment_runner.py
+- `git status`: M src/itinerary_system/map_exporter.py
+- `git status`: M src/itinerary_system/multi_objective_route.py
+- `git status`: M src/itinerary_system/nature_catalog.py
+- `git status`: M src/itinerary_system/nature_site_routes.py
+- `git status`: M src/itinerary_system/phase0_exporter.py
+- `git status`: M src/itinerary_system/region_scenarios.py
+- `git status`: M src/itinerary_system/repair_planner.py
+- `git status`: M src/itinerary_system/research_artifacts.py
+- `git status`: M src/itinerary_system/routing/cache.py
+- `git status`: M src/itinerary_system/routing/legacy_cache_audit.py
+- `git status`: M src/itinerary_system/routing/models.py
+- `git status`: M src/itinerary_system/utility_model.py
+- `git status`: M tests/test_configurable_itinerary_system.py
+- `git status`: M tests/test_research_foundation.py
+
+### What was found
+
+- The attached GitHub Actions screenshot showed the quality job failing at Ruff format check because 22 Python files would be reformatted.
+- After formatting, Ruff lint exposed additional issues: intentional script E402 imports, unused variables/imports, a missing zip strict parameter, quoted forward annotations, constant getattr, and a late-bound closure in nature_catalog.py.
+- The local one-shot coverage run exceeded the initial 5-minute wrapper timeout because the full suite takes about 16 minutes in this environment; running the same tests by file group produced clean results.
+
+### Validation
+
+- ruff format --check .: passed, 51 files already formatted.
+- ruff check .: passed, all checks passed.
+- git diff --check: passed.
+- coverage run --append -m pytest tests/data/test_context_snapshot.py tests/test_repair_planner.py tests/test_repository_state.py: passed, 17 tests.
+- coverage run --append -m pytest tests/test_adaptive_bandit_planner.py: passed, 6 tests.
+- coverage run --append -m pytest tests/test_research_foundation.py: passed, 21 tests on clean rerun.
+- coverage run --append -m pytest tests/test_configurable_itinerary_system.py: passed, 37 tests.
+- coverage report -m: passed, total coverage reported at 58%.
+- python scripts/find_dead_code.py: passed and wrote the ignored Vulture report.
+
+### Conclusion
+
+- The GitHub quality workflow blocker was fixed. Formatting and lint gates now pass, and all 81 tests passed locally in coverage-backed batches.
+
+### Next steps
+
+**Codex can proceed:**
+
+- Commit the changes, push the branch, and recheck GitHub Actions if the user wants repository publication handled next.
+
+**Human reflection:**
+
+- The fix touches many files because the primary CI blocker was repository-wide Ruff formatting drift; the behavioral edits were kept to lint-required cleanup.
+
+### Human action
+
+- Review the broad formatting diff, then push or rerun GitHub Actions to confirm the remote quality workflow.
+

@@ -69,7 +69,9 @@ def write_artifact_metadata(
     output_dir = Path(output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
     path = output_dir / ARTIFACT_METADATA_FILE
-    path.write_text(json.dumps(artifact_metadata_payload(config, artifact_files=artifact_files), indent=2), encoding="utf-8")
+    path.write_text(
+        json.dumps(artifact_metadata_payload(config, artifact_files=artifact_files), indent=2), encoding="utf-8"
+    )
     return path
 
 

@@ -13,7 +13,12 @@ import pandas as pd
 import requests
 
 from .config import TripConfig
-from .region_scenarios import get_nature_region_definitions, get_route_options, get_scenario_definition, scenario_summary_rows
+from .region_scenarios import (
+    get_nature_region_definitions,
+    get_route_options,
+    get_scenario_definition,
+    scenario_summary_rows,
+)
 from .request_schema import INTEREST_AXES, normalize_interest_weights, preset_to_interest_weights
 
 NATURE_POI_COLUMNS = [
@@ -191,10 +196,8 @@ def mark_itinerary_eligible(poi_df: pd.DataFrame) -> pd.DataFrame:
             text = text + " " + output[column].fillna("").astype(str)
     lowered = text.str.lower()
     non_visit_pattern = "|".join(re.escape(pattern) for pattern in NON_VISIT_POI_PATTERNS)
-    visit_pattern = "|".join(re.escape(pattern) for pattern in VISIT_POI_PATTERNS)
     strong_visit_pattern = "|".join(re.escape(pattern) for pattern in STRONG_VISIT_POI_PATTERNS)
     non_visit = lowered.str.contains(non_visit_pattern, regex=True, na=False)
-    visit = lowered.str.contains(visit_pattern, regex=True, na=False)
     strong_visit = lowered.str.contains(strong_visit_pattern, regex=True, na=False)
     protected = pd.Series(False, index=output.index)
     for column in ["social_must_go", "is_national_park", "is_state_park", "is_protected_area"]:
@@ -670,8 +673,7 @@ def _preview_route_option(config: TripConfig, profile: str | None = None) -> dic
     route_options = [
         option
         for option in get_route_options(scenario_id)
-        if (not starts or option.get("gateway_start") in starts)
-        and (not ends or option.get("gateway_end") in ends)
+        if (not starts or option.get("gateway_start") in starts) and (not ends or option.get("gateway_end") in ends)
     ]
     if not route_options:
         return {}
@@ -692,7 +694,9 @@ def _preview_route_graph(frame: pd.DataFrame, config: TripConfig, profile: str |
             for row in frame.itertuples(index=False):
                 city = str(getattr(row, "city", ""))
                 text = f"{getattr(row, 'name', '')} {city} {getattr(row, 'nature_region', '')}".lower()
-                if city.lower() in [value.lower() for value in allowed] or any(token.lower() in text for token in allowed):
+                if city.lower() in [value.lower() for value in allowed] or any(
+                    token.lower() in text for token in allowed
+                ):
                     candidate_ids.append(str(getattr(row, "name", "")).lower().replace(" ", "_"))
         segments.append(
             {
@@ -794,9 +798,7 @@ def build_interest_bar_preview(enriched_df: pd.DataFrame, config: TripConfig) ->
         rows = [_preview_candidate_row(row) for row in preview.itertuples(index=False)]
         pool_rows = [_preview_candidate_row(row) for row in pool.itertuples(index=False)]
     presets = config.get("interest", "presets", {}) or {}
-    export_profiles = config.get(
-        "interest", "export_profiles", ["nature_heavy", "balanced_interest", "city_heavy"]
-    )
+    export_profiles = config.get("interest", "export_profiles", ["nature_heavy", "balanced_interest", "city_heavy"])
     if isinstance(export_profiles, str):
         export_profiles = [part.strip() for part in export_profiles.split(",") if part.strip()]
     preset_weights = {profile: preset_to_interest_weights(profile, presets) for profile in export_profiles}
@@ -835,6 +837,26 @@ def _profile_route_rows(frame: pd.DataFrame, config: TripConfig, profile: str) -
     selected_rows = []
     seen: set[str] = set()
     sequence_index = 1
+
+    def pick_from_segment(
+        segment_frame: pd.DataFrame,
+        mask: pd.Series,
+        picked: list[pd.Series],
+        stop_limit: int,
+        seen_names: set[str],
+        max_pick: int = 1,
+    ) -> None:
+        if len(picked) >= stop_limit:
+            return
+        for _, row in segment_frame[mask].iterrows():
+            key = str(row.get("name", "")).strip().lower()
+            if not key or key in seen_names:
+                continue
+            seen_names.add(key)
+            picked.append(row)
+            if len(picked) >= stop_limit or len(picked) >= max_pick:
+                break
+
     for segment in graph.get("segments", []):
         allowed = [str(city).lower() for city in segment.get("allowed_cities", [])]
         segment_frame = frame.copy()
@@ -843,7 +865,8 @@ def _profile_route_rows(frame: pd.DataFrame, config: TripConfig, profile: str) -
             if column in segment_frame.columns:
                 text = text + " " + segment_frame[column].fillna("").astype(str).str.lower()
         if allowed:
-            segment_frame = segment_frame[text.apply(lambda value: any(city in value for city in allowed))]
+            allowed_pattern = "|".join(re.escape(city) for city in allowed)
+            segment_frame = segment_frame[text.str.contains(allowed_pattern, regex=True, na=False)]
         if segment_frame.empty:
             continue
         segment_frame = segment_frame.sort_values(
@@ -855,25 +878,33 @@ def _profile_route_rows(frame: pd.DataFrame, config: TripConfig, profile: str) -
         end_city = str(segment.get("end_city", "")).lower()
         segment_text = text.loc[segment_frame.index]
 
-        def pick_from(mask: pd.Series, max_pick: int = 1) -> None:
-            nonlocal picked
-            if len(picked) >= limit:
-                return
-            for _, row in segment_frame[mask].iterrows():
-                key = str(row.get("name", "")).strip().lower()
-                if not key or key in seen:
-                    continue
-                seen.add(key)
-                picked.append(row)
-                if len(picked) >= limit or len(picked) >= max_pick:
-                    break
-
         if sequence_index == 1 and start_city:
-            pick_from(segment_text.str.contains(re.escape(start_city), regex=True, na=False), max_pick=1)
+            pick_from_segment(
+                segment_frame,
+                segment_text.str.contains(re.escape(start_city), regex=True, na=False),
+                picked,
+                limit,
+                seen,
+                max_pick=1,
+            )
         if end_city:
-            pick_from(segment_text.str.contains(re.escape(end_city), regex=True, na=False), max_pick=limit)
+            pick_from_segment(
+                segment_frame,
+                segment_text.str.contains(re.escape(end_city), regex=True, na=False),
+                picked,
+                limit,
+                seen,
+                max_pick=limit,
+            )
         if len(picked) < limit:
-            pick_from(pd.Series(True, index=segment_frame.index), max_pick=limit)
+            pick_from_segment(
+                segment_frame,
+                pd.Series(True, index=segment_frame.index),
+                picked,
+                limit,
+                seen,
+                max_pick=limit,
+            )
         for local_order, row in enumerate(picked, start=1):
             record = row.to_dict()
             record.update(

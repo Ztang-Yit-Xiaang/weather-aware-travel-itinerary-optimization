@@ -12,7 +12,6 @@ from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
 from reportlab.lib.units import inch
 from reportlab.platypus import Image, Paragraph, SimpleDocTemplate, Spacer
 
-
 ROOT = Path(__file__).resolve().parents[1]
 SOURCE = ROOT / "docs" / "literature_review_update_audit.md"
 OUTPUT = ROOT / "output" / "pdf" / "literature_review_update_audit.pdf"
@@ -187,7 +186,7 @@ def build_story() -> list:
                 story.append(Paragraph(inline_markdown(" / ".join(cells)), table_head))
                 continue
             pairs = []
-            for header, value in zip(table_header, cells):
+            for header, value in zip(table_header, cells, strict=False):
                 if value:
                     pairs.append(f"<b>{inline_markdown(header)}:</b> {inline_markdown(value)}")
             story.append(Paragraph(" | ".join(pairs), table_item, bulletText="-"))

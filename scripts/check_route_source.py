@@ -13,7 +13,7 @@ SRC_DIR = REPO_ROOT / "src"
 if str(SRC_DIR) not in sys.path:
     sys.path.insert(0, str(SRC_DIR))
 
-from itinerary_system.routing import (
+from itinerary_system.routing import (  # noqa: E402
     OSRM_LOCAL_BASE_URL,
     ROAD_ROUTE_REQUESTS_FILENAME,
     fetch_osrm_payload,

@@ -672,15 +672,12 @@ def scenario_enrichment_city_universe(
     filtered = [
         option
         for option in options
-        if (not starts or option.get("gateway_start") in starts)
-        and (not ends or option.get("gateway_end") in ends)
+        if (not starts or option.get("gateway_start") in starts) and (not ends or option.get("gateway_end") in ends)
     ]
     if not filtered:
         filtered = options
 
-    region_lookup = {
-        region.name: region for region in scenario.nature_region_definitions
-    } | {
+    region_lookup = {region.name: region for region in scenario.nature_region_definitions} | {
         region.region_id: region for region in scenario.nature_region_definitions
     }
     names: list[str] = []

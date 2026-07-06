@@ -18,8 +18,8 @@ SRC_DIR = REPO_ROOT / "src"
 if str(SRC_DIR) not in sys.path:
     sys.path.insert(0, str(SRC_DIR))
 
-from itinerary_system.artifact_metadata import artifact_metadata_matches, read_artifact_metadata
-from itinerary_system.config import load_trip_config
+from itinerary_system.artifact_metadata import artifact_metadata_matches, read_artifact_metadata  # noqa: E402
+from itinerary_system.config import load_trip_config  # noqa: E402
 
 REQUIRED_ANCHORS = {
     "San Francisco": ["san francisco", "golden gate", "stanford"],
@@ -117,7 +117,9 @@ def main() -> int:
     parser = argparse.ArgumentParser(description="Validate statewide nature route artifacts.")
     parser.add_argument("--config", default=str(REPO_ROOT / "configs" / "nature_trip_config.yaml"))
     parser.add_argument("--output-dir", default=str(REPO_ROOT / "results" / "outputs"))
-    parser.add_argument("--dashboard-assets", default=str(REPO_ROOT / "results" / "figures" / "full_interactive_dashboard" / "assets"))
+    parser.add_argument(
+        "--dashboard-assets", default=str(REPO_ROOT / "results" / "figures" / "full_interactive_dashboard" / "assets")
+    )
     parser.add_argument("--strict", action="store_true", help="Exit non-zero when acceptance checks fail.")
     args = parser.parse_args()
 
@@ -143,7 +145,11 @@ def main() -> int:
     metadata = read_artifact_metadata(output_dir)
     metadata_fresh = artifact_metadata_matches(output_dir, config)
     method = _selected_method(route_stops, config)
-    selected = route_stops[route_stops.get("method", pd.Series(dtype=str)).astype(str).eq(method)].copy() if method else pd.DataFrame()
+    selected = (
+        route_stops[route_stops.get("method", pd.Series(dtype=str)).astype(str).eq(method)].copy()
+        if method
+        else pd.DataFrame()
+    )
 
     metrics_path = assets_dir / "dashboard_metrics.json"
     metrics = json.loads(metrics_path.read_text(encoding="utf-8")) if metrics_path.exists() else {}
@@ -156,7 +162,9 @@ def main() -> int:
     print(f"artifact_metadata_scenario: {metadata.get('scenario', 'missing')}")
     print(f"artifact_metadata_interest: {metadata.get('interest_mode', 'missing')}")
     print(f"artifact_metadata_timestamp_utc: {metadata.get('timestamp_utc', 'missing')}")
-    print(f"interest_profile_routes: {sorted(interest_routes.get('interest_profile', pd.Series(dtype=str)).dropna().astype(str).unique()) if not interest_routes.empty else 'missing'}")
+    print(
+        f"interest_profile_routes: {sorted(interest_routes.get('interest_profile', pd.Series(dtype=str)).dropna().astype(str).unique()) if not interest_routes.empty else 'missing'}"
+    )
     print(f"excluded_poi_category_audit_rows: {len(excluded_poi_audit)}")
     print(f"nature_site_route_rows: {len(nature_site_routes)}")
 
@@ -199,10 +207,14 @@ def main() -> int:
         if not nature_site_route_audit.empty:
             site_rows = nature_site_route_audit[_contains_site_mask(nature_site_route_audit, site)]
             if not site_rows.empty:
-                route_counts = pd.to_numeric(site_rows.get("route_count", pd.Series(dtype=float)), errors="coerce").fillna(0)
+                route_counts = pd.to_numeric(
+                    site_rows.get("route_count", pd.Series(dtype=float)), errors="coerce"
+                ).fillna(0)
                 route_count = int(route_counts.max()) if not route_counts.empty else 0
                 if "selected" in site_rows.columns:
-                    selected_site = bool(site_rows["selected"].map(lambda value: _truthy(value, False)).any()) or selected_site
+                    selected_site = (
+                        bool(site_rows["selected"].map(lambda value: _truthy(value, False)).any()) or selected_site
+                    )
                 missing_values = [
                     str(value)
                     for value in site_rows.get("missing_reason", pd.Series(dtype=str)).dropna().astype(str)
@@ -222,7 +234,9 @@ def main() -> int:
     required_selected = _required_selected_anchors(config)
     for anchor in REQUIRED_ANCHORS:
         candidate = _contains_anchor(enriched, anchor, ["name", "city", "nature_region", "category"])
-        chosen = _contains_anchor(selected, anchor, ["attraction_name", "name", "city", "overnight_city", "nature_region"])
+        chosen = _contains_anchor(
+            selected, anchor, ["attraction_name", "name", "city", "overnight_city", "nature_region"]
+        )
         audit_row = (
             anchor_audit[anchor_audit.get("anchor", pd.Series(dtype=str)).astype(str).eq(anchor)]
             if not anchor_audit.empty and "anchor" in anchor_audit.columns
@@ -253,7 +267,9 @@ def main() -> int:
     if not selected.empty:
         for column in ["gateway_start", "gateway_end", "overnight_city", "route_start_city", "route_end_city"]:
             if column in selected.columns:
-                la_gateway = la_gateway or selected[column].fillna("").astype(str).str.contains("Los Angeles", case=False).any()
+                la_gateway = (
+                    la_gateway or selected[column].fillna("").astype(str).str.contains("Los Angeles", case=False).any()
+                )
     if not anchor_audit.empty and "anchor" in anchor_audit.columns:
         la_rows = anchor_audit[anchor_audit["anchor"].astype(str).eq("Los Angeles")]
         if not la_rows.empty:
@@ -274,11 +290,21 @@ def main() -> int:
 
     placeholder_pattern = "lodging candidate pending|city_center_placeholder"
     if not hotel_debug.empty and "hotel_name" in hotel_debug.columns:
-        placeholder_hotels = hotel_debug["hotel_name"].fillna("").astype(str).str.contains(
-            placeholder_pattern, case=False, regex=True, na=False
+        placeholder_hotels = (
+            hotel_debug["hotel_name"]
+            .fillna("")
+            .astype(str)
+            .str.contains(placeholder_pattern, case=False, regex=True, na=False)
         )
-        print(f"placeholder_selected_hotels: {int((placeholder_hotels & hotel_debug.get('selected', pd.Series(False, index=hotel_debug.index)).map(lambda value: _truthy(value, False))).sum())}")
-        if (placeholder_hotels & hotel_debug.get("selected", pd.Series(False, index=hotel_debug.index)).map(lambda value: _truthy(value, False))).any():
+        print(
+            f"placeholder_selected_hotels: {int((placeholder_hotels & hotel_debug.get('selected', pd.Series(False, index=hotel_debug.index)).map(lambda value: _truthy(value, False))).sum())}"
+        )
+        if (
+            placeholder_hotels
+            & hotel_debug.get("selected", pd.Series(False, index=hotel_debug.index)).map(
+                lambda value: _truthy(value, False)
+            )
+        ).any():
             failures.append("selected hotel artifacts contain lodging placeholder rows")
     if selected_hotels_path.exists():
         try:
@@ -320,9 +346,11 @@ def main() -> int:
         except Exception as exc:
             failures.append(f"could not read playback_data.json: {type(exc).__name__}")
     required_profiles = {"nature_heavy", "balanced_interest", "city_heavy"}
-    exported_profiles = set(
-        interest_routes.get("interest_profile", pd.Series(dtype=str)).dropna().astype(str)
-    ) if not interest_routes.empty else set()
+    exported_profiles = (
+        set(interest_routes.get("interest_profile", pd.Series(dtype=str)).dropna().astype(str))
+        if not interest_routes.empty
+        else set()
+    )
     if not required_profiles.issubset(exported_profiles):
         failures.append(f"missing exported interest profile routes: {sorted(required_profiles - exported_profiles)}")
 

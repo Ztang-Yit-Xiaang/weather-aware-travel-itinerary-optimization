@@ -81,7 +81,7 @@ class RoadRouteCache:
     source_path: Path | None = None
 
     @classmethod
-    def from_csv(cls, path: str | Path) -> "RoadRouteCache":
+    def from_csv(cls, path: str | Path) -> RoadRouteCache:
         cache_path = Path(path)
         if not cache_path.exists():
             return cls(pd.DataFrame(), source_path=cache_path)

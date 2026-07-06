@@ -9,13 +9,11 @@ blocks from the papers.
 from __future__ import annotations
 
 import re
-import textwrap
 import unicodedata
 from dataclasses import dataclass
 from pathlib import Path
 
 from pypdf import PdfReader
-
 
 ROOT = Path(__file__).resolve().parents[1]
 REFERENCE_DIR = ROOT / "reference"
@@ -341,7 +339,6 @@ def make_summary(pdf_path: Path, entry: PaperEntry, signals: dict[str, str | int
     new = pick(fields, "New in the paper", "Main goal")
     intro = pick(fields, "Introduction notes")
     figures = pick(fields, "Important figures/tables", "Figures and tables")
-    discussion = pick(fields, "Discussion/conclusion", "Discussion / conclusion")
     critical = pick(fields, "Critical evaluation")
     project = pick(fields, "Project relevance")
     limitation = pick(fields, "Main limitation")
@@ -356,11 +353,15 @@ def make_summary(pdf_path: Path, entry: PaperEntry, signals: dict[str, str | int
             for part in [
                 finish(f"{title} examines {phrase(topic, 24)}"),
                 finish(f"Its central question is {phrase(question, 28)}"),
-                finish(f"The problem matters because {phrase(importance, 28)}") if importance else finish(f"The paper is motivated by {phrase(problem, 28)}"),
+                finish(f"The problem matters because {phrase(importance, 28)}")
+                if importance
+                else finish(f"The paper is motivated by {phrase(problem, 28)}"),
                 finish(f"The authors use {phrase(method, 30)}") if method else "",
                 finish(f"Its main contribution is {phrase(new, 30)}") if new else "",
                 finish(f"The conclusion is {phrase(conclusion, 28)}") if conclusion else "",
-                finish(f"For the weather-aware itinerary project, it supports this reading: {phrase(project, 32)}") if project else "",
+                finish(f"For the weather-aware itinerary project, it supports this reading: {phrase(project, 32)}")
+                if project
+                else "",
                 finish(f"The main caution is {phrase(limitation, 30)}") if limitation else "",
             ]
         )
@@ -381,9 +382,7 @@ def make_summary(pdf_path: Path, entry: PaperEntry, signals: dict[str, str | int
     assets = VERIFIED_ASSETS.get(pdf_path.name, [])
     third_party_assets = THIRD_PARTY_ASSETS.get(pdf_path.name, [])
     if assets:
-        asset_text = "\n".join(
-            f"- {label}: [{url}]({url}) - {note}" for label, url, note in assets
-        )
+        asset_text = "\n".join(f"- {label}: [{url}]({url}) - {note}" for label, url, note in assets)
     else:
         asset_text = (
             "- None / Not Accessible. No paper-produced public code, dataset, or demo asset was found in the local PDF text "
@@ -391,9 +390,7 @@ def make_summary(pdf_path: Path, entry: PaperEntry, signals: dict[str, str | int
         )
     if third_party_assets:
         asset_text += "\n\nThird-party assets used or referenced by the paper:\n"
-        asset_text += "\n".join(
-            f"- {label}: [{url}]({url}) - {note}" for label, url, note in third_party_assets
-        )
+        asset_text += "\n".join(f"- {label}: [{url}]({url}) - {note}" for label, url, note in third_party_assets)
 
     duplicate_note = ""
     if pdf_path.name == "2410.16456v1.pdf":
@@ -408,28 +405,43 @@ def make_summary(pdf_path: Path, entry: PaperEntry, signals: dict[str, str | int
 
     snapshot_abstract = [
         finish(f"The paper frames {phrase(problem or topic, 42)}"),
-        finish(f"The abstract-level contribution is {phrase(purpose or new or 'a contribution to the paper domain', 42)}"),
+        finish(
+            f"The abstract-level contribution is {phrase(purpose or new or 'a contribution to the paper domain', 42)}"
+        ),
     ]
 
     snapshot_intro = [
-        finish(f"The introduction motivates the work through {phrase(intro or importance or 'a gap in prior work', 42)}"),
+        finish(
+            f"The introduction motivates the work through {phrase(intro or importance or 'a gap in prior work', 42)}"
+        ),
         finish(f"The stated research question is {phrase(question or 'the paper central question', 42)}"),
     ]
     snapshot_method = [
-        finish(f"The method is {phrase(method or 'a study, system, model, benchmark, or survey appropriate to the paper', 42)}"),
+        finish(
+            f"The method is {phrase(method or 'a study, system, model, benchmark, or survey appropriate to the paper', 42)}"
+        ),
         finish(f"The work differentiates itself through {phrase(new or 'its main contribution', 42)}"),
     ]
     snapshot_conclusion = [
         finish(f"The main takeaway is {phrase(conclusion or 'the conclusion reported by the paper', 42)}"),
-        finish(f"For this project, the usable lesson is {phrase(project or 'how the paper informs weather-aware itinerary optimization', 42)}"),
+        finish(
+            f"For this project, the usable lesson is {phrase(project or 'how the paper informs weather-aware itinerary optimization', 42)}"
+        ),
     ]
     if limitation:
         snapshot_conclusion.append(finish(f"The limit to preserve is {phrase(limitation, 42)}"))
 
     finding_one_claim = phrase(conclusion or new or "The paper's results support its main contribution", 42)
-    finding_one_example = phrase(figures or method or "The paper's method, tables, figures, or examples instantiate the claim", 42)
-    finding_two_claim = phrase(project or publication_use or "The paper contributes a useful framing for this project", 42)
-    finding_two_example = phrase(project_action or critical or "The project action or critical reading shows how to apply the paper carefully", 42)
+    finding_one_example = phrase(
+        figures or method or "The paper's method, tables, figures, or examples instantiate the claim", 42
+    )
+    finding_two_claim = phrase(
+        project or publication_use or "The paper contributes a useful framing for this project", 42
+    )
+    finding_two_example = phrase(
+        project_action or critical or "The project action or critical reading shows how to apply the paper carefully",
+        42,
+    )
 
     sections = [
         f"# {title} Summary",
@@ -469,8 +481,12 @@ def make_summary(pdf_path: Path, entry: PaperEntry, signals: dict[str, str | int
         bullets(
             [
                 finish(f"Core contribution: {phrase(new or purpose or 'the paper contribution', 42)}"),
-                finish(f"Differentiation: {phrase(critical or limitation or 'the paper differs by its scope, method, or evidence', 42)}"),
-                finish(f"Defensible project use: {phrase(publication_use or project or 'use the paper within its evidence boundary', 42)}"),
+                finish(
+                    f"Differentiation: {phrase(critical or limitation or 'the paper differs by its scope, method, or evidence', 42)}"
+                ),
+                finish(
+                    f"Defensible project use: {phrase(publication_use or project or 'use the paper within its evidence boundary', 42)}"
+                ),
             ]
         ),
         "",
@@ -518,9 +534,7 @@ def make_index(generated: list[Path]) -> str:
     for summary_path in sorted(generated):
         pdf_name = summary_path.name.removesuffix("_summary.md") + ".pdf"
         asset_status = "verified assets" if pdf_name in VERIFIED_ASSETS else "no paper-produced public asset found"
-        lines.append(
-            f"| `reference/{pdf_name}` | [`{summary_path.name}`]({summary_path.name}) | {asset_status} |"
-        )
+        lines.append(f"| `reference/{pdf_name}` | [`{summary_path.name}`]({summary_path.name}) | {asset_status} |")
     lines.append("")
     return "\n".join(lines)
 

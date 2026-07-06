@@ -2,7 +2,6 @@ import json
 import shutil
 import subprocess
 import sys
-import tempfile
 import unittest
 import uuid
 from contextlib import contextmanager
@@ -16,13 +15,13 @@ SRC_DIR = REPO_ROOT / "src"
 if str(SRC_DIR) not in sys.path:
     sys.path.insert(0, str(SRC_DIR))
 
+from itinerary_system._legacy import import_legacy_module
+from itinerary_system.artifact_metadata import artifact_metadata_matches, write_artifact_metadata
 from itinerary_system.bandit_candidate_selector import (
     build_bandit_arms,
     route_search_strategies_from_config,
     run_bandit_gurobi_stress_benchmark,
 )
-from itinerary_system._legacy import import_legacy_module
-from itinerary_system.artifact_metadata import artifact_metadata_matches, write_artifact_metadata
 from itinerary_system.budget import estimate_budget_range
 from itinerary_system.config import load_trip_config
 from itinerary_system.data_enrichment import canonical_poi_columns
@@ -378,7 +377,10 @@ class ConfigurableItinerarySystemTests(unittest.TestCase):
         config = load_trip_config(
             CONFIG_PATH,
             overrides={
-                "interest": {"mode": "nature_heavy", "weights": {"nature": 0.55, "city": 0.2, "culture": 0.15, "history": 0.1}},
+                "interest": {
+                    "mode": "nature_heavy",
+                    "weights": {"nature": 0.55, "city": 0.2, "culture": 0.15, "history": 0.1},
+                },
                 "nature_detail_routes": {"soft_score_weight": 0.06},
             },
         )
@@ -1374,7 +1376,10 @@ class ConfigurableItinerarySystemTests(unittest.TestCase):
                 any(feature.get("geometry", {}).get("type") == "LineString" for feature in payload["features"])
             )
         self.assertTrue(
-            any(feature.get("geometry", {}).get("type") == "LineString" for feature in selected_route_geojson["features"])
+            any(
+                feature.get("geometry", {}).get("type") == "LineString"
+                for feature in selected_route_geojson["features"]
+            )
         )
         self.assertTrue(any("days_7" in route.get("quick_groups", []) for route in route_index["routes"]))
         self.assertTrue(any("balanced" in route.get("quick_groups", []) for route in route_index["routes"]))

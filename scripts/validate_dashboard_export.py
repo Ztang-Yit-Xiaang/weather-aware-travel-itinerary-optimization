@@ -224,7 +224,12 @@ def validate(figure_dir: Path, output_dir: Path) -> tuple[list[str], list[str]]:
 
     if evaluation_html.exists():
         html = evaluation_html.read_text(encoding="utf-8", errors="replace")
-        for token in ["Method Evaluation Dashboard", "assets/evaluation_metrics.js", "Method Comparison", "Solver Tradeoffs"]:
+        for token in [
+            "Method Evaluation Dashboard",
+            "assets/evaluation_metrics.js",
+            "Method Comparison",
+            "Solver Tradeoffs",
+        ]:
             if token not in html:
                 errors.append(f"Evaluation dashboard missing required token {token!r}: {evaluation_html}")
 
@@ -344,9 +349,7 @@ def validate(figure_dir: Path, output_dir: Path) -> tuple[list[str], list[str]]:
             if not any(isinstance(route, dict) and route.get("default") for route in routes):
                 errors.append(f"route_index.json must contain at least one default route: {route_index_path}")
             nature_detail_routes = [
-                route
-                for route in routes
-                if isinstance(route, dict) and str(route.get("family", "")) == "nature_detail"
+                route for route in routes if isinstance(route, dict) and str(route.get("family", "")) == "nature_detail"
             ]
             if not nature_detail_routes:
                 errors.append(f"route_index.json must include non-playable nature_detail layer: {route_index_path}")
@@ -439,7 +442,9 @@ def validate(figure_dir: Path, output_dir: Path) -> tuple[list[str], list[str]]:
                             }
                             missing = required_stop_fields.difference(poi_data[0])
                             if missing:
-                                errors.append(f"Default route POI JSON missing rich stop fields {sorted(missing)}: {poi_path}")
+                                errors.append(
+                                    f"Default route POI JSON missing rich stop fields {sorted(missing)}: {poi_path}"
+                                )
                     except Exception as exc:
                         errors.append(f"Invalid POI JSON: {poi_path}: {exc}")
                 if poi_js_path.exists():

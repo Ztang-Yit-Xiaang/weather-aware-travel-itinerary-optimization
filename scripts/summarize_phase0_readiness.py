@@ -134,9 +134,13 @@ def load_phase0_readiness(output_dir: str | Path) -> dict[str, Any]:
     )
     requested_legs = _safe_int(route_cache_coverage.get("road_route_requested_leg_count"), len(cache_audit))
     validated_legs = _safe_int(route_cache_coverage.get("road_route_validated_leg_count"))
-    missing_legs = _safe_int(route_cache_coverage.get("road_route_missing_leg_count"), max(0, requested_legs - validated_legs))
+    missing_legs = _safe_int(
+        route_cache_coverage.get("road_route_missing_leg_count"), max(0, requested_legs - validated_legs)
+    )
     coverage = _safe_float(route_cache_coverage.get("road_route_validation_coverage"))
-    strict_ready = bool(evaluation_count and eligible_count == evaluation_count and requested_legs > 0 and coverage >= 1.0)
+    strict_ready = bool(
+        evaluation_count and eligible_count == evaluation_count and requested_legs > 0 and coverage >= 1.0
+    )
 
     return {
         "output_dir": str(output_path),

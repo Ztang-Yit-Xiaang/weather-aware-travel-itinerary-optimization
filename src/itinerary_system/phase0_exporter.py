@@ -101,7 +101,9 @@ def _route_cache_coverage(output_dir: Path, route_cache: RoadRouteCache) -> dict
         validated = int(audit["road_validated"].astype(str).str.lower().isin({"true", "1", "yes"}).sum())
     else:
         requested = int(len(route_cache.frame))
-        validated = int(route_cache.frame.get("road_validated_bool", pd.Series(False, index=route_cache.frame.index)).sum())
+        validated = int(
+            route_cache.frame.get("road_validated_bool", pd.Series(False, index=route_cache.frame.index)).sum()
+        )
     missing = max(0, requested - validated)
     coverage_ratio = float(validated / requested) if requested else 0.0
     return {
@@ -214,7 +216,9 @@ def _selected_stops(route_rows: pd.DataFrame) -> tuple[dict[str, Any], ...]:
         selected.append(
             {
                 "poi_id": _safe_str(row.get("poi_id"), _slug(row.get("attraction_name"), f"stop_{index + 1}")),
-                "attraction_name": _safe_str(row.get("attraction_name"), _safe_str(row.get("name"), f"Stop {index + 1}")),
+                "attraction_name": _safe_str(
+                    row.get("attraction_name"), _safe_str(row.get("name"), f"Stop {index + 1}")
+                ),
                 "city": _safe_str(row.get("city")),
                 "day": int(_safe_float(row.get("day"), 0.0) or 0),
                 "stop_order": int(_safe_float(row.get("stop_order"), index + 1) or index + 1),
@@ -231,7 +235,9 @@ def _point_id(label: str, index: int) -> str:
     return f"{_slug(label, 'point')}_{index}"
 
 
-def _row_point(row: pd.Series, lat_column: str, lon_column: str, label_column: str, index: int) -> dict[str, Any] | None:
+def _row_point(
+    row: pd.Series, lat_column: str, lon_column: str, label_column: str, index: int
+) -> dict[str, Any] | None:
     lat = _safe_float(row.get(lat_column))
     lon = _safe_float(row.get(lon_column))
     if not math.isfinite(lat) or not math.isfinite(lon):
@@ -269,7 +275,10 @@ def _leg_from_points(
         cached_leg = route_cache.lookup_leg(left, right)
         if cached_leg is not None:
             return cached_leg
-    geometry = ((float(left["latitude"]), float(left["longitude"])), (float(right["latitude"]), float(right["longitude"])))
+    geometry = (
+        (float(left["latitude"]), float(left["longitude"])),
+        (float(right["latitude"]), float(right["longitude"])),
+    )
     distance_m = geodesic(geometry[0], geometry[1]).km * 1000.0
     duration_s = distance_m / 1000.0 * 1.25 / 38.0 * 3600.0
     row = right.get("row") if isinstance(right.get("row"), pd.Series) else pd.Series(dtype=object)
@@ -309,7 +318,9 @@ def _route_result(
 ) -> RouteResult:
     legs: list[RouteLegResult] = []
     if not route_rows.empty:
-        route_groups = route_rows.groupby("day", sort=True, dropna=False) if "day" in route_rows.columns else [(1, route_rows)]
+        route_groups = (
+            route_rows.groupby("day", sort=True, dropna=False) if "day" in route_rows.columns else [(1, route_rows)]
+        )
         for _, day_rows in route_groups:
             points = _route_points_for_day(day_rows)
             for left, right in zip(points[:-1], points[1:], strict=False):
@@ -399,7 +410,9 @@ def _planner_and_plan(
         context_snapshot_id=dataset_report.context_snapshot_id,
         selected_stops=_selected_stops(sorted_rows),
         day_assignments=day_assignments,
-        sequence=tuple(_safe_str(row.get("attraction_name"), f"stop_{index + 1}") for index, row in sorted_rows.iterrows()),
+        sequence=tuple(
+            _safe_str(row.get("attraction_name"), f"stop_{index + 1}") for index, row in sorted_rows.iterrows()
+        ),
         modeled_metrics={
             "total_utility": _safe_float(method_row.get("total_utility"), 0.0),
             "total_travel_time": _safe_float(method_row.get("total_travel_time"), 0.0),

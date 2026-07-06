@@ -259,7 +259,11 @@ def write_phase0_osrm_cache_files(output_dir: Path) -> None:
             json.dumps(
                 {
                     "status": "osrm_live",
-                    "latlon_geometry": [[left[0], left[1]], [(left[0] + right[0]) / 2, (left[1] + right[1]) / 2], [right[0], right[1]]],
+                    "latlon_geometry": [
+                        [left[0], left[1]],
+                        [(left[0] + right[0]) / 2, (left[1] + right[1]) / 2],
+                        [right[0], right[1]],
+                    ],
                     "raw": {
                         "routes": [
                             {
@@ -519,7 +523,9 @@ class ResearchFoundationTests(unittest.TestCase):
             route_audit = pd.read_csv(output_dir / "production_phase0_route_audit.csv")
             planner_runs = pd.read_csv(output_dir / "production_phase0_planner_runs.csv")
             dataset_report = json.loads((output_dir / "production_phase0_dataset_validation.json").read_text())
-            plan_lines = (output_dir / "production_phase0_plan_artifacts.jsonl").read_text(encoding="utf-8").splitlines()
+            plan_lines = (
+                (output_dir / "production_phase0_plan_artifacts.jsonl").read_text(encoding="utf-8").splitlines()
+            )
 
         self.assertEqual(outputs["plan_artifact_count"], 1)
         self.assertEqual(dataset_report["catalog_snapshot_id"], "california_v1")

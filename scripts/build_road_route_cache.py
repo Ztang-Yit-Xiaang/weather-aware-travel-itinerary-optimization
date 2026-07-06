@@ -11,7 +11,7 @@ SRC_DIR = REPO_ROOT / "src"
 if str(SRC_DIR) not in sys.path:
     sys.path.insert(0, str(SRC_DIR))
 
-from itinerary_system.routing import OSRM_LOCAL_BASE_URL, build_road_route_cache_from_artifacts
+from itinerary_system.routing import OSRM_LOCAL_BASE_URL, build_road_route_cache_from_artifacts  # noqa: E402
 
 
 def parse_args() -> argparse.Namespace:

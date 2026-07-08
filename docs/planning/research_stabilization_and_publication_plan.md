@@ -7,7 +7,7 @@
 **Status:** Revised roadmap for research-team and supervisor review<br>
 **Revised:** June 24, 2026<br>
 **Venue decision:** Evidence-driven TRB or IUI/CHI path; no venue is assumed in advance<br>
-**Technical appendix:** [Research Stabilization and Publication Appendix](research_stabilization_and_publication_appendix.md)
+**Technical implementation contract:** [Travel Itinerary Repair Technical Specification](travel_itinerary_repair_technical_specification.md)
 
 ---
 
@@ -449,7 +449,7 @@ Pause publication result generation when artifacts mutate without lineage, displ
 ### 8.3 Recommended next seven days
 
 1. Freeze the first-slice contexts and corridor; mark every other family staged.
-2. Define `ParsedTravelRequest`, parser/confirmation statuses, compiler output, and artifact hashes in the appendix.
+2. Define `ParsedTravelRequest`, parser/confirmation statuses, compiler output, and artifact hashes in the technical specification.
 3. Remove post-solve anchor mutation from publication paths or require a new child run and evaluation.
 4. Implement the `PlannerRun`/`PlanArtifact` separation and requested/executed method lineage design.
 5. Build the independent evaluator skeleton with artifact and hard-feasibility gates before soft scoring.
@@ -464,4 +464,4 @@ Pause publication result generation when artifacts mutate without lineage, displ
 - confirm ethics timing and participant access;
 - reverify venue deadlines and select a target only after the technical gate.
 
-Detailed schemas, status rules, compiler contracts, branch/checker stages, evaluator gates, experiments, tests, and literature traceability are maintained in the [technical appendix](research_stabilization_and_publication_appendix.md).
+Detailed schemas, status rules, compiler contracts, branch/checker stages, evaluator gates, experiments, tests, and literature traceability are maintained in the [technical specification](travel_itinerary_repair_technical_specification.md).

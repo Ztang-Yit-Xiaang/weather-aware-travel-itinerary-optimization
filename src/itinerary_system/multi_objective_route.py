@@ -12,6 +12,7 @@ from geopy.distance import geodesic
 from .config import TripConfig
 from .diversity import category_labels, submodular_diversity
 from .nature_catalog import interest_value_column, route_interest_metrics
+from .routing import RouteMatrix, RouteMatrixMissing, SolverRouteMatrixAdapter, route_anchor_key
 
 
 def poi_value(row: pd.Series, config: TripConfig | None = None) -> float:
@@ -52,6 +53,62 @@ def travel_minutes(a: tuple[float, float], b: tuple[float, float]) -> float:
     return float(geodesic(a, b).km * 1.25 / 38.0 * 60.0)
 
 
+def _publication_mode(mode: str) -> bool:
+    return str(mode).lower() in {"publication", "strict", "final", "research"}
+
+
+def _coerce_route_adapter(
+    *,
+    route_matrix: RouteMatrix | None,
+    route_matrix_adapter: SolverRouteMatrixAdapter | None,
+    routing_mode: str,
+) -> SolverRouteMatrixAdapter | None:
+    if route_matrix_adapter is not None:
+        return SolverRouteMatrixAdapter(route_matrix_adapter.route_matrix, mode=routing_mode)
+    if route_matrix is not None:
+        return SolverRouteMatrixAdapter(route_matrix, mode=routing_mode)
+    if _publication_mode(routing_mode):
+        raise RouteMatrixMissing("publication-mode route solving requires a RouteMatrix")
+    return None
+
+
+def _row_entity_id(row: pd.Series, fallback: str) -> str:
+    for column in ["poi_id", "place_id", "attraction_id", "route_anchor_id", "id", "name"]:
+        if column not in row.index:
+            continue
+        value = row.get(column)
+        if str(value or "").strip():
+            return route_anchor_key(value)
+    return route_anchor_key(fallback)
+
+
+def _poi_entity_ids(pois: pd.DataFrame) -> list[str]:
+    return [_row_entity_id(pois.loc[idx], f"poi_{idx}") for idx in range(len(pois))]
+
+
+def _route_sequence_ids(
+    selected: list[int],
+    pois: pd.DataFrame,
+    *,
+    start_depot_id: str,
+    end_depot_id: str,
+) -> tuple[str, ...]:
+    poi_ids = _poi_entity_ids(pois)
+    return (route_anchor_key(start_depot_id),) + tuple(poi_ids[idx] for idx in selected) + (
+        route_anchor_key(end_depot_id),
+    )
+
+
+def _matrix_travel_minutes(
+    route_matrix_adapter: SolverRouteMatrixAdapter | None,
+    origin_id: str,
+    destination_id: str,
+) -> float | None:
+    if route_matrix_adapter is None:
+        return None
+    return route_matrix_adapter.travel_minutes(origin_id, destination_id)
+
+
 def _poi_cost(row: pd.Series, config: TripConfig) -> float:
     for column in ["cost", "admission_cost", "estimated_cost"]:
         if column in row.index:
@@ -79,10 +136,18 @@ def route_stats(
     config: TripConfig,
     *,
     end_depot: tuple[float, float] | None = None,
-) -> dict[str, float]:
+    route_matrix_adapter: SolverRouteMatrixAdapter | None = None,
+    start_depot_id: str = "start_depot",
+    end_depot_id: str = "end_depot",
+    route_id: str = "epsilon_gurobi_route",
+    solver_feasible: bool = False,
+) -> dict[str, Any]:
     end_depot = end_depot or start_depot
     if not selected:
-        direct_travel = travel_minutes(start_depot, end_depot) if start_depot != end_depot else 0.0
+        direct_travel = 0.0
+        if start_depot != end_depot:
+            matrix_minutes = _matrix_travel_minutes(route_matrix_adapter, start_depot_id, end_depot_id)
+            direct_travel = matrix_minutes if matrix_minutes is not None else travel_minutes(start_depot, end_depot)
         return {
             "total_value": 0.0,
             "total_travel_minutes": float(direct_travel),
@@ -93,16 +158,33 @@ def route_stats(
             "total_weather_risk": 0.0,
             "diversity_score": 0.0,
         }
-    points = (
-        [start_depot]
-        + [(float(pois.loc[idx, "latitude"]), float(pois.loc[idx, "longitude"])) for idx in selected]
-        + [end_depot]
-    )
-    travel = sum(travel_minutes(left, right) for left, right in zip(points[:-1], points[1:], strict=False))
+    route_result = None
+    if route_matrix_adapter is not None:
+        sequence_ids = _route_sequence_ids(
+            selected,
+            pois,
+            start_depot_id=start_depot_id,
+            end_depot_id=end_depot_id,
+        )
+        route_result = route_matrix_adapter.route_result(
+            sequence_ids,
+            route_id=route_id,
+            solver_feasible=solver_feasible,
+            schedule_feasible=True,
+            dataset_snapshot_valid=True,
+        )
+        travel = float(route_result.total_duration_s or 0.0) / 60.0
+    else:
+        points = (
+            [start_depot]
+            + [(float(pois.loc[idx, "latitude"]), float(pois.loc[idx, "longitude"])) for idx in selected]
+            + [end_depot]
+        )
+        travel = sum(travel_minutes(left, right) for left, right in zip(points[:-1], points[1:], strict=False))
     visit = sum(visit_minutes(pois.loc[idx]) for idx in selected)
     selected_frame = pois.loc[selected].copy()
     interest_metrics = route_interest_metrics(selected_frame, config)
-    return {
+    stats = {
         "total_value": float(sum(poi_value(pois.loc[idx], config) for idx in selected)),
         "total_travel_minutes": float(travel),
         "total_visit_minutes": float(visit),
@@ -113,6 +195,29 @@ def route_stats(
         "diversity_score": float(submodular_diversity(selected_frame)),
         **interest_metrics,
     }
+    if route_matrix_adapter is not None and route_result is not None:
+        stats.update(
+            {
+                "route_matrix_id": route_matrix_adapter.route_matrix.matrix_id,
+                "route_duration_source": "route_matrix",
+                "route_road_validated": route_result.road_validated,
+                "route_fallback_used": route_result.fallback_used,
+                "route_result_total_duration_s": route_result.total_duration_s,
+                "route_leg_ids": [leg.query_hash for leg in route_result.legs],
+            }
+        )
+    else:
+        stats.update(
+            {
+                "route_matrix_id": "",
+                "route_duration_source": "geodesic_speed_proxy",
+                "route_road_validated": False,
+                "route_fallback_used": bool(selected or start_depot != end_depot),
+                "route_result_total_duration_s": None,
+                "route_leg_ids": [],
+            }
+        )
+    return stats
 
 
 def _constraints(config: TripConfig, max_pois: int) -> dict[str, float]:
@@ -138,13 +243,27 @@ def _greedy_epsilon_repair(
     start_depot: tuple[float, float],
     *,
     end_depot: tuple[float, float] | None = None,
+    route_matrix_adapter: SolverRouteMatrixAdapter | None = None,
+    start_depot_id: str = "start_depot",
+    end_depot_id: str = "end_depot",
+    route_id: str = "epsilon_gurobi_route",
 ) -> dict[str, Any]:
     max_pois = int(config.get("optimization", "max_pois_per_day", 4))
     constraints = _constraints(config, max_pois)
     end_depot = end_depot or start_depot
     pois = candidate_df.reset_index(drop=True).copy()
     if pois.empty:
-        stats = route_stats([], pois, start_depot, config, end_depot=end_depot)
+        stats = route_stats(
+            [],
+            pois,
+            start_depot,
+            config,
+            end_depot=end_depot,
+            route_matrix_adapter=route_matrix_adapter,
+            start_depot_id=start_depot_id,
+            end_depot_id=end_depot_id,
+            route_id=route_id,
+        )
         return {
             "solver_status": "heuristic_epsilon_repair_empty",
             "selected_indices": [],
@@ -165,20 +284,37 @@ def _greedy_epsilon_repair(
     )
     selected: list[int] = []
     current = start_depot
+    current_id = route_anchor_key(start_depot_id)
+    poi_entity_ids = _poi_entity_ids(pois)
     remaining = pois.sort_values("repair_score", ascending=False).index.tolist()
     while remaining and len(selected) < max_pois:
         ranked: list[tuple[float, int]] = []
         for idx in remaining:
             point = (float(pois.loc[idx, "latitude"]), float(pois.loc[idx, "longitude"]))
-            travel_from_current = travel_minutes(current, point)
-            travel_to_end = travel_minutes(point, end_depot)
+            poi_id = poi_entity_ids[int(idx)]
+            travel_from_current = _matrix_travel_minutes(route_matrix_adapter, current_id, poi_id)
+            if travel_from_current is None:
+                travel_from_current = travel_minutes(current, point)
+            travel_to_end = _matrix_travel_minutes(route_matrix_adapter, poi_id, end_depot_id)
+            if travel_to_end is None:
+                travel_to_end = travel_minutes(point, end_depot)
             ranked.append(
                 (float(pois.loc[idx, "repair_score"]) - 0.006 * travel_from_current - 0.003 * travel_to_end, int(idx))
             )
         accepted_idx: int | None = None
         for _, idx in sorted(ranked, reverse=True):
             trial = selected + [int(idx)]
-            stats = route_stats(trial, pois, start_depot, config, end_depot=end_depot)
+            stats = route_stats(
+                trial,
+                pois,
+                start_depot,
+                config,
+                end_depot=end_depot,
+                route_matrix_adapter=route_matrix_adapter,
+                start_depot_id=start_depot_id,
+                end_depot_id=end_depot_id,
+                route_id=route_id,
+            )
             if stats["total_time_minutes"] > constraints["time_budget"]:
                 continue
             if stats["total_cost"] > constraints["daily_hard_budget"]:
@@ -193,8 +329,20 @@ def _greedy_epsilon_repair(
             break
         selected.append(accepted_idx)
         current = (float(pois.loc[accepted_idx, "latitude"]), float(pois.loc[accepted_idx, "longitude"]))
+        current_id = poi_entity_ids[accepted_idx]
         remaining = [idx for idx in remaining if int(idx) != accepted_idx]
-    stats = route_stats(selected, pois, start_depot, config, end_depot=end_depot)
+    stats = route_stats(
+        selected,
+        pois,
+        start_depot,
+        config,
+        end_depot=end_depot,
+        route_matrix_adapter=route_matrix_adapter,
+        start_depot_id=start_depot_id,
+        end_depot_id=end_depot_id,
+        route_id=route_id,
+        solver_feasible=True,
+    )
     # The loop maintains feasibility, but keep the explicit objective construction close to the solver contract.
     objective = (
         stats["total_value"]
@@ -227,9 +375,19 @@ def solve_multi_objective_route(
     end_depot: tuple[float, float] | None = None,
     candidate_size: int | None = None,
     route_id: str = "epsilon_gurobi_route",
+    route_matrix: RouteMatrix | None = None,
+    route_matrix_adapter: SolverRouteMatrixAdapter | None = None,
+    routing_mode: str = "demo",
+    start_depot_id: str = "start_depot",
+    end_depot_id: str = "end_depot",
 ) -> dict[str, Any]:
     """Solve a bandit-selected small route with explicit epsilon constraints."""
     start = time.perf_counter()
+    matrix_adapter = _coerce_route_adapter(
+        route_matrix=route_matrix,
+        route_matrix_adapter=route_matrix_adapter,
+        routing_mode=routing_mode,
+    )
     if start_depot is None:
         start_depot = depot
     if end_depot is None:
@@ -240,9 +398,14 @@ def solve_multi_objective_route(
             config,
             start_depot or (0.0, 0.0),
             end_depot=end_depot or start_depot or (0.0, 0.0),
+            route_matrix_adapter=matrix_adapter,
+            start_depot_id=start_depot_id,
+            end_depot_id=end_depot_id,
+            route_id=route_id,
         )
         result["runtime_seconds"] = time.perf_counter() - start
         result["route_id"] = route_id
+        result["routing_mode"] = routing_mode
         return result
 
     max_candidates = int(candidate_size or int(config.get("optimization", "max_pois_per_day", 4)) * 3)
@@ -273,8 +436,11 @@ def solve_multi_objective_route(
         + [(float(pois.loc[i, "latitude"]), float(pois.loc[i, "longitude"])) for i in range(len(pois))]
         + [end_depot]
     )
+    node_ids = [route_anchor_key(start_depot_id)] + _poi_entity_ids(pois) + [route_anchor_key(end_depot_id)]
     travel = {
-        (i, j): travel_minutes(points[i], points[j])
+        (i, j): matrix_adapter.travel_minutes(node_ids[i], node_ids[j])
+        if matrix_adapter is not None
+        else travel_minutes(points[i], points[j])
         for i in range(len(pois) + 2)
         for j in range(len(pois) + 2)
         if i != j and i != end_node and j != start_node
@@ -381,7 +547,18 @@ def solve_multi_objective_route(
             ordered.append(nxt - 1)
             current = nxt
         selected = ordered or selected
-        stats = route_stats(selected, pois, start_depot, config, end_depot=end_depot)
+        stats = route_stats(
+            selected,
+            pois,
+            start_depot,
+            config,
+            end_depot=end_depot,
+            route_matrix_adapter=matrix_adapter,
+            start_depot_id=start_depot_id,
+            end_depot_id=end_depot_id,
+            route_id=route_id,
+            solver_feasible=True,
+        )
         result = {
             "solver_status": f"gurobi_status_{int(model.Status)}",
             "selected_indices": selected,
@@ -398,12 +575,22 @@ def solve_multi_objective_route(
             **stats,
         }
     except Exception as exc:
-        result = _greedy_epsilon_repair(pois, config, start_depot, end_depot=end_depot)
+        result = _greedy_epsilon_repair(
+            pois,
+            config,
+            start_depot,
+            end_depot=end_depot,
+            route_matrix_adapter=matrix_adapter,
+            start_depot_id=start_depot_id,
+            end_depot_id=end_depot_id,
+            route_id=route_id,
+        )
         result["solver_status"] = f"{result['solver_status']}_after_gurobi_error:{type(exc).__name__}"
 
     result["runtime_seconds"] = float(time.perf_counter() - start)
     result["candidate_size"] = int(len(pois))
     result["route_id"] = route_id
+    result["routing_mode"] = routing_mode
     result["epsilon_time_budget"] = constraints["time_budget"]
     result["epsilon_cost_budget"] = constraints["daily_hard_budget"]
     result["epsilon_detour_minutes"] = constraints["epsilon_detour"]

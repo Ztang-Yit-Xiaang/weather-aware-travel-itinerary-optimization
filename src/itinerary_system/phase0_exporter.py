@@ -16,7 +16,13 @@ from .config import TripConfig
 from .data.schemas import DatasetValidationReport
 from .data.snapshot import load_dataset_bundle, validate_dataset_bundle
 from .repository_state import capture_repository_state
-from .research_artifacts import PlanArtifact, PlannerRun, evaluate_phase0_plan, stable_content_hash
+from .research_artifacts import (
+    PlanArtifactV2,
+    PlannerRun,
+    evaluate_phase0_plan,
+    mark_solver_certificate_invalidated,
+    stable_content_hash,
+)
 from .routing import (
     ROAD_ROUTE_CACHE_AUDIT_FILENAME,
     ROAD_ROUTE_CACHE_FILENAME,
@@ -231,6 +237,28 @@ def _selected_stops(route_rows: pd.DataFrame) -> tuple[dict[str, Any], ...]:
     return tuple(selected)
 
 
+def _ordered_days(route_rows: pd.DataFrame) -> tuple[dict[str, Any], ...]:
+    ordered = []
+    rows = _sorted_route_rows(route_rows)
+    if rows.empty or "day" not in rows.columns:
+        return ()
+    for day, day_rows in rows.groupby("day", sort=True, dropna=False):
+        stop_ids = tuple(
+            _safe_str(row.get("poi_id"), _slug(row.get("attraction_name"), f"stop_{index + 1}"))
+            for index, row in day_rows.iterrows()
+        )
+        ordered.append({"day": int(_safe_float(day, 0.0) or 0), "stop_ids": stop_ids})
+    return tuple(ordered)
+
+
+def _route_ids_by_day(plan_id: str, route_rows: pd.DataFrame) -> dict[int, str]:
+    rows = _sorted_route_rows(route_rows)
+    if rows.empty or "day" not in rows.columns:
+        return {}
+    days = sorted({int(_safe_float(value, 0.0) or 0) for value in rows["day"].tolist()})
+    return {day: f"route_{plan_id}_day_{day}" for day in days}
+
+
 def _point_id(label: str, index: int) -> str:
     return f"{_slug(label, 'point')}_{index}"
 
@@ -348,6 +376,23 @@ def _solver_certification(status: str, route_rows: pd.DataFrame) -> str:
     return "FEASIBILITY_CERTIFIED"
 
 
+def _post_solve_mutation_reasons(method_row: pd.Series, route_rows: pd.DataFrame) -> tuple[str, ...]:
+    reasons: list[str] = []
+    status_text = " ".join(route_rows.get("status", pd.Series(dtype=str)).fillna("").astype(str).tolist()).lower()
+    notes_text = " ".join(route_rows.get("notes", pd.Series(dtype=str)).fillna("").astype(str).tolist()).lower()
+    method_notes = _safe_str(method_row.get("notes")).lower()
+    combined_notes = f"{notes_text} {method_notes}"
+    if "required_anchor_selected" in status_text:
+        reasons.append("required_anchor_selected_after_solve")
+    if "required-anchor policy inserted" in combined_notes:
+        reasons.append("required_anchor_policy_inserted_after_solve")
+    if "required anchor" in method_notes and (" was added " in method_notes or " replaced " in method_notes):
+        reasons.append("required_anchor_method_notes_after_solve")
+    if "removed placeholder selected stops" in method_notes:
+        reasons.append("placeholder_stop_removed_after_solve")
+    return tuple(dict.fromkeys(reasons))
+
+
 def _execution_status(status: str, route_rows: pd.DataFrame) -> str:
     lowered = status.lower()
     if "failed" in lowered or route_rows.empty:
@@ -363,7 +408,7 @@ def _planner_and_plan(
     *,
     config: TripConfig,
     dataset_report: DatasetValidationReport,
-) -> tuple[PlannerRun, PlanArtifact]:
+) -> tuple[PlannerRun, PlanArtifactV2]:
     method, label, trip_days = _method_key(method_row)
     scenario = _safe_str(config.get("trip", "scenario", "california_coast"), "california_coast")
     request_payload = {
@@ -379,6 +424,7 @@ def _planner_and_plan(
     plan_id = f"plan_{stable_content_hash({'run_id': run_id, 'stops': _selected_stops(route_rows)})}"
     status = _safe_str(method_row.get("status"), "FAILED")
     execution_status = _execution_status(status, route_rows)
+    mutation_reasons = _post_solve_mutation_reasons(method_row, route_rows)
     planner_run = PlannerRun(
         run_id=run_id,
         planning_request_id=request_id,
@@ -397,12 +443,14 @@ def _planner_and_plan(
         runtime_seconds=_safe_float(method_row.get("solve_seconds"), None),
         result_plan_id=plan_id,
     )
+    if mutation_reasons:
+        planner_run = mark_solver_certificate_invalidated(planner_run, reason=";".join(mutation_reasons))
     sorted_rows = _sorted_route_rows(route_rows)
     day_assignments = {
         _safe_str(row.get("attraction_name"), f"stop_{index + 1}"): int(_safe_float(row.get("day"), 0.0) or 0)
         for index, row in sorted_rows.iterrows()
     }
-    plan = PlanArtifact(
+    plan = PlanArtifactV2(
         plan_id=plan_id,
         source_run_id=run_id,
         planning_request_id=request_id,
@@ -411,8 +459,12 @@ def _planner_and_plan(
         selected_stops=_selected_stops(sorted_rows),
         day_assignments=day_assignments,
         sequence=tuple(
-            _safe_str(row.get("attraction_name"), f"stop_{index + 1}") for index, row in sorted_rows.iterrows()
+            _safe_str(row.get("poi_id"), _slug(row.get("attraction_name"), f"stop_{index + 1}"))
+            for index, row in sorted_rows.iterrows()
         ),
+        ordered_days=_ordered_days(sorted_rows),
+        route_ids_by_day=_route_ids_by_day(plan_id, sorted_rows),
+        change_components={"post_solve_mutation_detected": 1.0} if mutation_reasons else {},
         modeled_metrics={
             "total_utility": _safe_float(method_row.get("total_utility"), 0.0),
             "total_travel_time": _safe_float(method_row.get("total_travel_time"), 0.0),
@@ -510,6 +562,10 @@ def write_phase0_research_artifacts(
                 "route_road_validation_coverage": route_validation_coverage,
                 "solver_certification": planner_run.solver_certification,
                 "execution_status": planner_run.execution_status,
+                "post_solve_mutation_detected": planner_run.solver_certification == "INVALIDATED_AFTER_EDIT",
+                "post_solve_mutation_reason": planner_run.fallback_reason
+                if planner_run.solver_certification == "INVALIDATED_AFTER_EDIT"
+                else "",
                 "route_road_validated": route.road_validated,
                 "route_fallback_used": route.fallback_used,
                 "comparison_eligibility": evaluation.comparison_eligibility,

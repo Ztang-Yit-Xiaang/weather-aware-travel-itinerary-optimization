@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import hashlib
 import json
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from datetime import UTC, datetime
 from typing import Any, Literal
 
@@ -149,6 +149,286 @@ class PlanArtifact:
         if include_content_hash:
             record["content_hash"] = self.content_hash
         return record
+
+
+@dataclass(frozen=True)
+class PlanArtifactV2:
+    """Immutable plan content with parent-child lineage and certificate fields."""
+
+    plan_id: str
+    source_run_id: str
+    planning_request_id: str
+    catalog_snapshot_id: str
+    context_snapshot_id: str
+    selected_stops: tuple[dict[str, Any], ...]
+    parent_plan_id: str | None = None
+    day_assignments: dict[str, int] = field(default_factory=dict)
+    sequence: tuple[str, ...] = ()
+    lodging_assignments: dict[str, str] = field(default_factory=dict)
+    ordered_days: tuple[dict[str, Any], ...] = ()
+    route_ids_by_day: dict[int, str] = field(default_factory=dict)
+    owned_constraints: tuple[dict[str, Any], ...] = ()
+    modeled_metrics: dict[str, float] = field(default_factory=dict)
+    context_exposure_components: dict[str, float] = field(default_factory=dict)
+    change_components: dict[str, float] = field(default_factory=dict)
+    certificate_id: str | None = None
+    created_at: str = field(default_factory=lambda: datetime.now(UTC).isoformat())
+    schema_version: str = "plan-artifact-v2"
+
+    @property
+    def content_hash(self) -> str:
+        return stable_content_hash(self.to_record(include_content_hash=False))
+
+    @classmethod
+    def from_v1(cls, plan: PlanArtifact) -> PlanArtifactV2:
+        return plan_artifact_from_v1(plan)
+
+    def to_record(self, *, include_content_hash: bool = True) -> dict[str, Any]:
+        record = {
+            "plan_id": self.plan_id,
+            "parent_plan_id": self.parent_plan_id,
+            "source_run_id": self.source_run_id,
+            "planning_request_id": self.planning_request_id,
+            "catalog_snapshot_id": self.catalog_snapshot_id,
+            "context_snapshot_id": self.context_snapshot_id,
+            "selected_stops": list(self.selected_stops),
+            "day_assignments": self.day_assignments,
+            "sequence": list(self.sequence),
+            "lodging_assignments": self.lodging_assignments,
+            "ordered_days": [_ordered_day_record(day) for day in self.ordered_days],
+            "route_ids_by_day": {str(day): route_id for day, route_id in self.route_ids_by_day.items()},
+            "owned_constraints": list(self.owned_constraints),
+            "modeled_metrics": self.modeled_metrics,
+            "context_exposure_components": self.context_exposure_components,
+            "change_components": self.change_components,
+            "certificate_id": self.certificate_id,
+            "created_at": self.created_at,
+            "schema_version": self.schema_version,
+        }
+        if include_content_hash:
+            record["content_hash"] = self.content_hash
+        return record
+
+
+@dataclass(frozen=True)
+class MutationReport:
+    """Comparison of two plan records for material post-solve edits."""
+
+    parent_plan_id: str
+    candidate_plan_id: str
+    parent_content_hash: str
+    candidate_content_hash: str
+    material_change: bool
+    changed_fields: tuple[str, ...]
+    reason_codes: tuple[str, ...]
+    requires_child_run: bool
+
+    def to_record(self) -> dict[str, Any]:
+        return {
+            "parent_plan_id": self.parent_plan_id,
+            "candidate_plan_id": self.candidate_plan_id,
+            "parent_content_hash": self.parent_content_hash,
+            "candidate_content_hash": self.candidate_content_hash,
+            "material_change": self.material_change,
+            "changed_fields": list(self.changed_fields),
+            "reason_codes": list(self.reason_codes),
+            "requires_child_run": self.requires_child_run,
+        }
+
+
+MATERIAL_PLAN_FIELDS = (
+    "selected_stops",
+    "day_assignments",
+    "sequence",
+    "lodging_assignments",
+    "ordered_days",
+    "route_ids_by_day",
+    "owned_constraints",
+    "modeled_metrics",
+    "context_exposure_components",
+    "change_components",
+)
+
+
+def plan_artifact_from_v1(plan: PlanArtifact) -> PlanArtifactV2:
+    """Convert the v1 artifact shape to the additive v2 shape."""
+
+    ordered_days = _ordered_days_from_plan(plan)
+    return PlanArtifactV2(
+        plan_id=plan.plan_id,
+        parent_plan_id=plan.parent_plan_id,
+        source_run_id=plan.source_run_id,
+        planning_request_id=plan.planning_request_id,
+        catalog_snapshot_id=plan.catalog_snapshot_id,
+        context_snapshot_id=plan.context_snapshot_id,
+        selected_stops=plan.selected_stops,
+        day_assignments=dict(plan.day_assignments),
+        sequence=tuple(plan.sequence),
+        lodging_assignments=dict(plan.lodging_assignments),
+        ordered_days=ordered_days,
+        modeled_metrics=dict(plan.modeled_metrics),
+        context_exposure_components=dict(plan.context_exposure_components),
+        change_components=dict(plan.change_components),
+        created_at=plan.created_at,
+    )
+
+
+def _ordered_day_record(day: dict[str, Any]) -> dict[str, Any]:
+    record = dict(day)
+    if "stop_ids" in record:
+        record["stop_ids"] = list(record["stop_ids"])
+    return record
+
+
+def owned_constraint_records(
+    plan: PlanArtifact | PlanArtifactV2,
+    *,
+    active_only: bool = False,
+) -> tuple[dict[str, Any], ...]:
+    """Return typed constraint records while preserving inactive prompt output."""
+
+    plan_v2 = _ensure_v2(plan)
+    records = tuple(dict(record) for record in plan_v2.owned_constraints)
+    if not active_only:
+        return records
+    active: list[dict[str, Any]] = []
+    for record in records:
+        confirmed = bool(record.get("confirmed", False))
+        origin = str(record.get("origin", ""))
+        strength = str(record.get("strength", ""))
+        if not confirmed:
+            continue
+        if origin == "llm_interpretation" and not confirmed:
+            continue
+        if strength == "test_only":
+            continue
+        active.append(record)
+    return tuple(active)
+
+
+def detect_post_solve_mutation(before: PlanArtifact | PlanArtifactV2, after: PlanArtifact | PlanArtifactV2) -> MutationReport:
+    """Detect material plan-content changes that require new lineage."""
+
+    before_v2 = _ensure_v2(before)
+    after_v2 = _ensure_v2(after)
+    before_record = before_v2.to_record(include_content_hash=False)
+    after_record = after_v2.to_record(include_content_hash=False)
+    changed_fields = tuple(field for field in MATERIAL_PLAN_FIELDS if before_record.get(field) != after_record.get(field))
+    reason_codes = tuple(_mutation_reason_code(field) for field in changed_fields)
+    material_change = bool(changed_fields)
+    return MutationReport(
+        parent_plan_id=before_v2.plan_id,
+        candidate_plan_id=after_v2.plan_id,
+        parent_content_hash=before_v2.content_hash,
+        candidate_content_hash=after_v2.content_hash,
+        material_change=material_change,
+        changed_fields=changed_fields,
+        reason_codes=reason_codes,
+        requires_child_run=material_change,
+    )
+
+
+def create_child_plan_after_mutation(
+    parent: PlanArtifact | PlanArtifactV2,
+    changed_plan: PlanArtifact | PlanArtifactV2,
+    run: PlannerRun,
+) -> PlanArtifactV2:
+    """Create a child plan tied to the run that owns a post-solve edit."""
+
+    parent_v2 = _ensure_v2(parent)
+    changed_v2 = _ensure_v2(changed_plan)
+    child_seed = {
+        "parent_plan_id": parent_v2.plan_id,
+        "source_run_id": run.run_id,
+        "changed_plan_hash": changed_v2.content_hash,
+    }
+    child_plan_id = f"plan_{stable_content_hash(child_seed)}"
+    return replace(
+        changed_v2,
+        plan_id=child_plan_id,
+        parent_plan_id=parent_v2.plan_id,
+        source_run_id=run.run_id,
+        planning_request_id=run.planning_request_id,
+        catalog_snapshot_id=run.catalog_snapshot_id,
+        context_snapshot_id=run.context_snapshot_id,
+        certificate_id=None,
+        schema_version="plan-artifact-v2",
+    )
+
+
+def invalidate_plan_certificate(
+    plan: PlanArtifact | PlanArtifactV2,
+    *,
+    reason: str = "post_solve_mutation",
+) -> PlanArtifactV2:
+    """Return a v2 plan with stale certificate fields cleared and audited."""
+
+    plan_v2 = _ensure_v2(plan)
+    change_components = dict(plan_v2.change_components)
+    change_components["certificate_invalidated"] = 1.0
+    return replace(plan_v2, certificate_id=None, change_components=change_components)
+
+
+def invalidate_certificate(
+    plan: PlanArtifact | PlanArtifactV2,
+    *,
+    reason: str = "post_solve_mutation",
+) -> PlanArtifactV2:
+    """Compatibility alias for the post-solve certificate invalidation gate."""
+
+    return invalidate_plan_certificate(plan, reason=reason)
+
+
+def mark_solver_certificate_invalidated(run: PlannerRun, reason: str = "post_solve_mutation") -> PlannerRun:
+    """Return a run record whose solver certificate cannot be used for comparison."""
+
+    error_summary = run.error_summary or f"solver certification invalidated after edit: {reason}"
+    return replace(
+        run,
+        solver_certification="INVALIDATED_AFTER_EDIT",
+        fallback_reason=run.fallback_reason or reason,
+        error_summary=error_summary,
+    )
+
+
+def _ensure_v2(plan: PlanArtifact | PlanArtifactV2) -> PlanArtifactV2:
+    if isinstance(plan, PlanArtifactV2):
+        return plan
+    return plan_artifact_from_v1(plan)
+
+
+def _ordered_days_from_plan(plan: PlanArtifact) -> tuple[dict[str, Any], ...]:
+    grouped: dict[int, list[str]] = {}
+    stop_lookup = {
+        str(stop.get("poi_id") or stop.get("attraction_name") or stop.get("name") or ""): stop
+        for stop in plan.selected_stops
+    }
+    if plan.sequence:
+        for stop_id in plan.sequence:
+            stop = stop_lookup.get(str(stop_id), {})
+            day = int(stop.get("day") or plan.day_assignments.get(str(stop_id), 0) or 0)
+            grouped.setdefault(day, []).append(str(stop_id))
+    else:
+        for stop in plan.selected_stops:
+            stop_id = str(stop.get("poi_id") or stop.get("attraction_name") or stop.get("name") or "")
+            day = int(stop.get("day") or plan.day_assignments.get(stop_id, 0) or 0)
+            grouped.setdefault(day, []).append(stop_id)
+    return tuple({"day": day, "stop_ids": tuple(stop_ids)} for day, stop_ids in sorted(grouped.items()))
+
+
+def _mutation_reason_code(field: str) -> str:
+    return {
+        "selected_stops": "selected_stops_changed",
+        "day_assignments": "day_assignments_changed",
+        "sequence": "sequence_changed",
+        "lodging_assignments": "lodging_assignments_changed",
+        "ordered_days": "ordered_days_changed",
+        "route_ids_by_day": "route_ids_changed",
+        "owned_constraints": "owned_constraints_changed",
+        "modeled_metrics": "modeled_metrics_changed",
+        "context_exposure_components": "context_exposure_changed",
+        "change_components": "change_components_changed",
+    }.get(field, f"{field}_changed")
 
 
 @dataclass(frozen=True)

@@ -1,4 +1,6 @@
-# Limitation-Driven Itinerary Repair Method
+# Itinerary Repair Method
+
+This is the canonical method note. It absorbs the former limitation-driven repair note and Phase 0 execution note.
 
 ## Core Publication Thesis
 
@@ -88,3 +90,38 @@ Secondary IUI/CHI fallback claim:
 > Counterfactual repair explanations improve users' understanding, control, and error detection compared with static route explanations.
 
 Avoid claiming that LLM plus optimizer is novel, that the system guarantees real-world itineraries, that it is an autonomous travel agent, or that weather-aware recommendation alone is the contribution.
+
+## Phase 0 Evidence Path
+
+The current research blocker is not route generation. The blocker is separating demo artifacts from publication-grade evidence. Phase 0 should proceed in this order:
+
+1. Use `catalog_snapshot_id`, `context_snapshot_id`, and `run_id` in metadata and outputs.
+2. Use `RouteLegResult` and `RouteResult` to gate road validation.
+3. Use `PlannerRun`, `PlanArtifact`, and `ResearchEvaluationReport` to separate solver attempts, immutable plans, and independent eligibility.
+4. Treat post-solve mutation as a new child run, plan, and evaluation before using it in research comparisons.
+5. Add route-leg audit output and wire these contracts into the production pipeline incrementally.
+
+Current Phase 0 evidence files are expected beside the production method artifacts:
+
+```text
+production_phase0_dataset_validation.json
+production_phase0_planner_runs.csv
+production_phase0_plan_artifacts.jsonl
+production_phase0_route_audit.csv
+production_phase0_evaluation_reports.csv
+production_phase0_evidence_summary.csv
+```
+
+Use the evidence pipeline for the current diagnosis:
+
+```powershell
+python scripts/run_phase0_evidence_pipeline.py --output-dir results/outputs --quality-dir results/quality
+```
+
+Use strict mode before treating artifacts as final comparison evidence:
+
+```powershell
+python scripts/run_phase0_evidence_pipeline.py --output-dir results/outputs --quality-dir results/quality --require-final-eligible
+```
+
+Strict mode should fail until every compared method has road-validated route legs and an eligible evaluation report. To fill missing route evidence, prefer a local or pinned OSRM endpoint and build `production_road_route_cache.csv`; do not silently treat geodesic fallback legs as publication-valid road routes.

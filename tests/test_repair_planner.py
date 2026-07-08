@@ -96,6 +96,9 @@ class RepairPlannerTests(unittest.TestCase):
 
         self.assertEqual(plan.repaired_route, baseline_route())
         self.assertEqual(plan.operations, ())
+        self.assertEqual(plan.parent_plan_id, "unconfirmed:parent")
+        self.assertEqual(plan.child_plan_id, "unconfirmed:unconfirmed")
+        self.assertEqual(plan.plan_diff["weighted_edit_cost"], 0.0)
         self.assertEqual(plan.metadata["status"], "blocked_unconfirmed_intent")
         self.assertEqual(plan.counterfactual_explanations[0].constraint, "confirmed_intent")
 
@@ -138,6 +141,9 @@ class RepairPlannerTests(unittest.TestCase):
         self.assertEqual(replaced[0].target_stop, "Yosemite Valley Hike")
         self.assertEqual(replaced[0].replacement_stop, "Muir Woods Visitor Center")
         self.assertTrue(plan.evaluation_report.feasible)
+        self.assertEqual(plan.parent_plan_id, "weather-repair:parent")
+        self.assertEqual(plan.child_plan_id, "weather-repair:repair")
+        self.assertGreater(plan.plan_diff["weighted_edit_cost"], 0.0)
         self.assertGreater(plan.evaluation_report.metrics["weather_risk_delta"], 0.0)
         self.assertGreater(plan.evaluation_report.metrics["preservation_rate"], 0.0)
         self.assertTrue(

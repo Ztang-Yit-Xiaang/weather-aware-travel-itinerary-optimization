@@ -30,6 +30,11 @@ class EnrichedPOI:
     corridor_fit: float = 0.0
     detour_minutes: float = 0.0
     source_list: str = "unknown"
+    source_coverage_score: float = 0.0
+    data_confidence: float = 0.0
+    model_uncertainty: float = 0.0
+    data_uncertainty: float = 0.0
+    missing_source_list: str = ""
 
 
 @dataclass(frozen=True)
@@ -56,8 +61,12 @@ class HierarchicalGurobiPlan:
     gateway_end: str
     city_sequence: list[str]
     days_by_city: dict[str, int]
+    plan_id: str | None = None
+    parent_plan_id: str | None = None
     overnight_bases: list[str] = field(default_factory=list)
     pass_through_pois: list[str] = field(default_factory=list)
+    route_ids_by_day: dict[int, str] = field(default_factory=dict)
+    owned_constraints: list[dict[str, Any]] = field(default_factory=list)
     objective: float = 0.0
     solver_status: str = "not_solved"
 

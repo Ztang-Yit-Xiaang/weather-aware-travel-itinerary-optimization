@@ -1,6 +1,6 @@
 # Weather-Aware Itinerary Optimization Literature Deep Read
 
-> **Reader note:** This is the detailed evidence bank, not the recommended starting point. New readers should begin with [literature_onboarding_guide.md](literature_onboarding_guide.md), continue with the [integrated eight-paper literature review](core_paper_reading_cards.md), and then use [project_literature_evidence_matrix.md](project_literature_evidence_matrix.md) and [related_work_outline.md](related_work_outline.md) before returning here for full paper-by-paper notes.
+> **Reader note:** This is the detailed evidence bank, not the recommended starting point. New readers should begin with [literature_onboarding_guide.md](literature_onboarding_guide.md), continue with the [integrated eight-paper literature review](core_paper_reading_cards.md), and then use [evidence_matrix.md](evidence_matrix.md) and [repair_gap_review.md](repair_gap_review.md) before returning here for full paper-by-paper notes.
 >
 > **Caution:** Several recent 2024-2026 PDFs are arXiv-style or demo/preprint papers in the local folder. Unless a venue is explicitly verified in the PDF entry, treat publication status as unverified and cite accordingly.
 

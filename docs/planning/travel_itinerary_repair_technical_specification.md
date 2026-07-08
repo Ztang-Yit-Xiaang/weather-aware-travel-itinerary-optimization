@@ -616,7 +616,154 @@ Split by complete parent-plan/disruption family. Never split POI rows from the s
 
 ---
 
-## 10. Work packages
+## 10. Execution Phases and Handoff Gates
+
+This section is the authoritative phase overlay for executing the work packages below. The package IDs remain the implementation backlog; the gates here define what must be true before later research, benchmark, UI, or study claims can be made.
+
+### 10.1 Current status as of 2026-06-30
+
+**Completed or substantially present**
+
+- Clean data snapshot flow and `DatasetBundle` validation exist for the current California-oriented corpus.
+- Phase 0 artifact export, strict validators, readiness summaries, and route-source prechecks exist.
+- Route request manifests and legacy route-cache audits exist, so missing road-routing evidence is inspectable rather than silent.
+- The current code already has route artifact contracts, planner-run artifacts, map/evaluation outputs, Gurobi and heuristic planning entry points, and a research-foundation test suite.
+
+**Blocked or not yet publication-valid**
+
+- Strict final-plan eligibility is blocked until local OSRM or pinned road-route responses exist for all required benchmark route legs.
+- Existing solver-facing flows still include geodesic or fallback travel proxies in places that cannot support transportation-optimization claims.
+- The repository does not yet have parent-plan-aware repair, typed ownership semantics, progressive repair neighborhoods, generalized final-plan diffing, or evidence-grounded counterfactual explanations.
+- The package-level pipeline runner is not yet the only authoritative entry point; notebook-oriented orchestration still exists.
+
+**Next milestone**
+
+- Produce road-valid route evidence, rerun strict Phase 0 validation, then implement canonical parent/child plans and typed plan diff before implementing the repair master.
+
+### 10.2 Gate table
+
+| Gate | Research purpose | Required package IDs | Start condition | Exit evidence | Blocking risks |
+| --- | --- | --- | --- | --- | --- |
+| G0 - Repository truth and Phase 0 closeout | Freeze the current system state so later claims are grounded in reproducible evidence. | `FOUND-001`, `QA-001`, current Phase 0 scripts | Clean checkout can run the current foundation tests and artifact exporters. | Strict Phase 0 validation passes, or the only remaining blocker is explicitly documented missing approved OSRM route evidence. | Hidden data drift, stale manifests, untracked notebook outputs, route fallback treated as validated. |
+| G1 - Canonical plans and plan diff | Establish immutable parent/child plans and measurable repair changes. | `PLAN-001`, `PLAN-002`, `DIFF-001`, `VERIFY-001` | G0 evidence is available and current artifact contracts are preserved. | Frozen parent and child plans load, hash, diff, and evaluate independently. | Repair work starts before ownership and diff semantics are stable. |
+| G2 - Road-valid routing context | Ensure every transportation comparison uses validated road evidence. | `ROUTE-001`, `ROUTE-002`, `ROUTE-003`, `ROUTE-004` | Route request manifest exists and local/pinned OSRM source is available. | Optimizer, evaluator, and renderer consume the same validated route records; strict route-source checks pass. | Public OSRM dependency, geodesic fallback leakage, partial cache coverage, mismatched geometry/duration sources. |
+| G3 - Single-day ownership-aware repair | Prove the core mixed-initiative repair idea on one inspectable disruption. | `REPAIR-001`, `REPAIR-002`, `REPAIR-003`, `REPAIR-004`, `VERIFY-001` | G1 and G2 pass for the selected parent plan and day. | Locked/booked/user-strong commitments are preserved unless explicitly relaxed; output has typed diff, evaluator report, and explanation-ready evidence. | Weighted-sum shortcuts, untyped deletes/adds, hidden post-solve mutation, route-invalid subproblem costs. |
+| G4 - Progressive multi-day repair | Expand from one day to smallest-radius certified multi-day repair. | `REPAIR-005`, `LODGE-001` through `LODGE-007`, `ROUTE-004` | G3 succeeds on at least one canonical disruption. | Neighborhood expansion is deterministic, explainable, and stops at the smallest certified feasible child plan. | Over-broad reoptimization, lodging provider ambiguity, corridor changes not connected to route evidence. |
+| G5 - Benchmark package | Convert the system into a defensible computational paper package. | `BENCH-001`, `BENCH-002`, completed G0-G4 dependencies | Canonical plans, route evidence, diff, repair, and evaluator are stable. | Six-disruption benchmark reports feasibility, preservation, diff size, travel, risk, utility, and runtime against baselines. | Split leakage, missing-source utility bias, unvalidated route evidence, overclaiming beyond benchmark scope. |
+| G6 - Interactive prototype | Make the repair system usable from the same pipeline artifacts. | `PIPE-001`, `NOTEBOOK-001`, `UI-001` | G5 artifact contracts are stable enough to render without notebook-only logic. | One command runs the configured case and produces artifacts consumable by notebook and UI. | Duplicate orchestration, notebook state mutation, UI consuming noncanonical dictionaries. |
+| G7 - Explanation and study readiness | Ground user-facing claims in inspectable evidence links. | `EXPLAIN-001`, `EXPLAIN-002`, `STUDY-001` | G6 prototype can show original/repaired plans and certified diffs. | Every explanation links to diff components, owned constraints, route evidence, and evaluator metrics. | Explanations become template text without evidence IDs, study logs cannot reconstruct decisions. |
+| G8 - CHI/IUI extension | Extend the backend repair result into interaction and design claims. | Completed G0-G7, `STUDY-001` refinements | Pilot evidence identifies stable user tasks and explanation formats. | Stable prototype, logged interactions, study materials, and defensible claims about user control and plan preservation. | Premature study before backend claims are valid, interaction polish masking uncertified solver behavior. |
+
+### 10.3 Implementation order lock
+
+- Do not implement repair master logic before canonical `PlanArtifact`, `PlanDiff`, and independent evaluator contracts exist.
+- Do not make benchmark, transportation, or publication claims until local or pinned road-valid routing evidence passes strict validation.
+- Do not start UI or user-study work until pipeline, diff, repair, evaluator, and explanation contracts are stable enough to replay from artifacts.
+- Preserve existing Phase 0 script names and artifact names unless a compatibility wrapper is provided.
+- Treat public OSRM as disabled by default. Use local OSRM or pinned route evidence unless a human explicitly approves another routing source for a non-publication run.
+
+### 10.4 Gate-by-gate execution detail
+
+#### G0 - Repository truth and Phase 0 closeout
+
+1. Run the current research-foundation tests.
+2. Run the route-source precheck with probe mode against the configured routing source.
+3. Run the Phase 0 evidence pipeline without allowing silent fallback routes.
+4. Record whether strict final eligibility passes or is blocked only by missing approved OSRM evidence.
+5. Do not proceed to transportation claims if any route source is geodesic, synthetic, stale, or untraceable.
+
+Required handoff artifacts:
+
+- dataset snapshot manifest;
+- route request manifest;
+- route-source check output;
+- Phase 0 validation report;
+- readiness summary naming any remaining blocker.
+
+#### G1 - Canonical plans and plan diff
+
+1. Add canonical parent/child plan schemas while preserving compatibility with existing artifact readers.
+2. Represent commitment ownership explicitly with typed strengths and relaxation policy.
+3. Store immutable parent IDs, child IDs, content hashes, run IDs, and artifact lineage.
+4. Implement generalized diff components for delete, add, day movement, time shift, order change, lodging change, road/corridor change, and explicit relaxation.
+5. Add independent evaluation hooks so a plan can be certified after diffing.
+
+Required handoff artifacts:
+
+- `plan_demo_current` parent artifact;
+- `plan_california_repair_v1` parent artifact;
+- one child repair artifact fixture;
+- typed `PlanDiff` JSON;
+- evaluator report tied to parent and child hashes.
+
+#### G2 - Road-valid routing context
+
+1. Add local OSRM Docker/runbook assets and document the map extract/version used.
+2. Implement OSRM Table for matrices and OSRM Route for selected geometry.
+3. Keep Nearest/snap evidence separate from route duration evidence.
+4. Make route cache entries source-aware and fail strict validation when required route legs are missing.
+5. Replace solver-facing geodesic travel costs with validated route matrix lookups or explicit non-publication fallback flags.
+
+Required handoff artifacts:
+
+- local OSRM run instructions;
+- complete route matrix/cache for the benchmark slice;
+- route-source policy report;
+- strict validation proving evaluator and optimizer use the same road evidence.
+
+#### G3 - Single-day ownership-aware repair
+
+1. Implement `EditRequest`, `DisruptionSnapshot`, `RepairNeighborhood`, `RepairRequest`, and `RepairOutcome` for one canonical single-day disruption.
+2. Convert the current route solver into a day-route subproblem that receives parent-plan commitments and validated route matrix costs.
+3. Implement sequential lexicographic solve stages in this order: hard relaxations, ownership-weighted changes, risk/travel/cost, then utility/diversity/scenic value.
+4. Emit typed change metrics instead of only aggregate objective values.
+5. Re-evaluate the final child plan independently after solving and invalidate certification after any post-solve mutation.
+
+Required handoff artifacts:
+
+- repair request fixture;
+- repair outcome fixture;
+- objective-stage trace;
+- typed plan diff;
+- independent evaluator report;
+- explanation evidence references.
+
+#### G4 - Progressive multi-day repair
+
+1. Add deterministic neighborhood expansion across day, adjacent days, lodging/base, and route corridor scopes.
+2. Freeze all entities outside the active neighborhood unless a documented relaxation opens them.
+3. Stop at the smallest neighborhood that produces a certified feasible child plan.
+4. Record every expansion attempt, infeasibility reason, and accepted radius.
+
+#### G5 - Benchmark package
+
+1. Generate the six disruption families from canonical parent plans.
+2. Evaluate flexible, mixed, booking-constrained, scenic-route-protective, and high-lock ownership profiles.
+3. Compare against LLM-only rewrite, full reoptimization, current hybrid pipeline, weighted-sum repair, fixed-radius repair, and progressive sequential lexicographic repair.
+4. Report feasibility, relaxation count, ownership-weighted diff, route-valid travel, weather/risk score, utility, scenic/diversity metrics, runtime, and explanation coverage.
+5. Split by complete parent-plan/disruption family; never split rows from the same plan family across train, development, and test.
+
+#### G6 - Interactive prototype
+
+1. Implement `pipeline_runner.py` as the authoritative execution entry point.
+2. Move notebook logic into configure, execute, display, and export cells only.
+3. Render original/repaired routes from canonical artifacts, not mutable notebook dictionaries.
+4. Ensure one command can reproduce the artifacts shown in the notebook or UI.
+
+#### G7 - Explanation and study readiness
+
+1. Create structured explanation evidence that references constraints, diffs, route records, objective stages, and evaluator metrics.
+2. Add why, why-not, and what-if explanation runners only when they can cite stored evidence.
+3. Export study tasks and event logs that can reconstruct parent plan, edit, disruption, repair output, and user-facing explanation.
+
+#### G8 - CHI/IUI extension
+
+1. Use the G5 benchmark and G7 pilot evidence to decide whether the first submission is transportation-optimization-first, IUI-first, or CHI-extension-first.
+2. Keep claims limited to certified repair behavior, visible ownership semantics, consequence preview, and calibrated reliance.
+3. Do not claim production-grade booking, global travel planning, or real-time universal weather/traffic reliability.
+
+---
+## 11. Work packages
 
 Each package below is independently reviewable. Do not merge unrelated packages into one large change.
 
@@ -1080,6 +1227,8 @@ Implement protocols, configuration, response models, and fake contract tests. Do
 
 ### ROUTE-001 — Unified routing provider and RouteMatrix
 
+**Phase 0.2 status:** Core `RouteMatrix`, provider protocol types, CSV/context loaders, explicit geodesic fallback matrix, and solver adapter are implemented. Validated provider completion and full benchmark matrix generation remain in ROUTE-002/ROUTE-003/Phase 4.
+
 **Files to create**
 
 - `src/itinerary_system/routing/provider.py`
@@ -1153,6 +1302,8 @@ Implement Table, Route, and Nearest calls with injected HTTP client, timeout, re
 
 ### ROUTE-004 — Replace geodesic travel inside solvers
 
+**Phase 0.2 status:** `multi_objective_route.py`, `hierarchical_gurobi.py`, and the route oracle wrapper accept injected route matrices/adapters. Publication mode now fails closed on missing, fallback, or non-road-validated cells; demo mode keeps explicit geodesic fallback behavior. Full pipeline calls still need validated matrix provisioning before publication comparisons.
+
 **Files to modify**
 
 - `src/itinerary_system/multi_objective_route.py`
@@ -1176,6 +1327,10 @@ Inject RouteMatrix. Keep geodesic implementation only in explicit approximate mo
 ---
 
 ### PLAN-001 — Plan and ownership schemas
+
+**Implementation status**
+
+Phase 1.0 substrate implemented: `OwnedConstraint`, closed ownership/relaxation vocabularies, v2 plan migration compatibility, and active/inactive constraint filtering are available in `src/itinerary_system/plans/` and `src/itinerary_system/research_artifacts.py`.
 
 **Files to create**
 
@@ -1206,6 +1361,10 @@ Introduce v2 types without breaking Phase 0 readers.
 
 ### PLAN-002 — Immutable plan repository and canonical parents
 
+**Implementation status**
+
+Phase 1.0 substrate implemented for append-only JSON storage and the current demo parent: `PlanRepository`, `load_plan()`, `save_plan_append_only()`, and `data/benchmark/parent_plans/plan_demo_current.json` exist. Broader reviewed benchmark parent publication remains a later pipeline step.
+
 **Files to create**
 
 - `src/itinerary_system/plans/repository.py`
@@ -1227,6 +1386,10 @@ Introduce v2 types without breaking Phase 0 readers.
 ---
 
 ### DIFF-001 — Generalized plan diff
+
+**Implementation status**
+
+Phase 1.0 substrate implemented: `compute_plan_diff()` and `PlanDiffBuilder` emit typed stop, day, time, order, lodging, road, unchanged-day, and deterministic weighted-cost components. Solver consumption of these components remains Phase 2 work.
 
 **Files to create**
 
@@ -1591,46 +1754,52 @@ Add tests for:
 
 ---
 
-## 11. Dependency gates and venue-oriented exits
+## 12. Dependency gates and venue-oriented exits
 
-### Gate A — Transportation-ready evidence
+Section 10 is the authoritative engineering execution order. This section compresses those gates into venue-oriented exits for paper planning and should not be used to skip prerequisites.
+
+### Gate A - Transportation-ready evidence
+
+Corresponds to G0 through G5.
 
 Requires:
 
-- DATA-001 through DATA-003;
-- ROUTE-001 through ROUTE-004;
-- PLAN-001/002;
-- DIFF-001;
-- REPAIR-001 through REPAIR-005;
-- VERIFY-001;
-- BENCH-001/002.
+- repository truth, clean data/context boundaries, and strict Phase 0 evidence;
+- road-valid routing context with local or pinned OSRM evidence;
+- canonical parent/child plans, typed ownership, generalized diff, and independent evaluator;
+- ownership-aware repair through progressive multi-day neighborhoods;
+- six-disruption benchmark with baselines, preservation/quality/runtime analysis, and honest limitations.
 
-Exit condition: road-validated six-disruption benchmark, baselines, preservation/quality/runtime analysis, honest limitations.
+Exit condition: a road-validated computational benchmark package that can support transportation optimization claims without relying on geodesic or unverified fallback routing.
 
-### Gate B — IUI-ready system
+### Gate B - IUI-ready system
 
-Adds:
-
-- PIPE-001;
-- NOTEBOOK-001;
-- EXPLAIN-001/002;
-- UI-001;
-- controlled study prototype and pilot.
-
-Exit condition: working mixed-initiative repair loop and computational + user evidence.
-
-### Gate C — CHI-ready system
+Corresponds to G0 through G7.
 
 Adds:
 
-- refined user study;
-- qualitative analysis;
-- interaction polish;
-- design implications around plan ownership, consequence preview, and calibrated reliance.
+- authoritative package-level pipeline runner;
+- thin notebook migration;
+- original/repaired route comparison UI;
+- structured explanation evidence and counterfactual runners;
+- controlled study prototype, pilot tasks, and replayable event logs.
+
+Exit condition: a working mixed-initiative repair loop with computational evidence, evidence-grounded explanations, and pilot-ready user interaction traces.
+
+### Gate C - CHI-ready system
+
+Corresponds to G0 through G8.
+
+Adds:
+
+- refined user study design and analysis plan;
+- interaction polish around plan ownership, consequence preview, and calibrated reliance;
+- qualitative analysis that connects interface behavior to certified backend repair behavior.
+
+Exit condition: a stable prototype, logged interactions, study materials, and defensible claims about user control and plan preservation.
 
 ---
-
-## 12. Non-goals for the first paper
+## 13. Non-goals for the first paper
 
 - nationwide or worldwide route planning;
 - production booking transactions;
@@ -1644,7 +1813,7 @@ Adds:
 
 ---
 
-## 13. Definition of done for the complete implementation
+## 14. Definition of done for the complete implementation
 
 The system is paper-ready only when all statements below are true:
 

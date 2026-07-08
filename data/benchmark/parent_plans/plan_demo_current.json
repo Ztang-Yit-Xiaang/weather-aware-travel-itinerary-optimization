@@ -1,0 +1,92 @@
+{
+  "catalog_snapshot_id": "california_v1",
+  "certificate_id": null,
+  "change_components": {},
+  "content_hash": "b7338a4144d24dc2",
+  "context_exposure_components": {},
+  "context_snapshot_id": "context_static_demo_2026_06",
+  "created_at": "2026-07-07T00:00:00+00:00",
+  "day_assignments": {
+    "poi_ferry_building": 1,
+    "poi_golden_gate_bridge": 1
+  },
+  "lodging_assignments": {
+    "1": "San Francisco Hotel"
+  },
+  "modeled_metrics": {
+    "selected_stop_count": 2.0
+  },
+  "ordered_days": [
+    {
+      "day": 1,
+      "stop_ids": [
+        "poi_golden_gate_bridge",
+        "poi_ferry_building"
+      ]
+    }
+  ],
+  "owned_constraints": [
+    {
+      "confirmed": true,
+      "constraint_id": "keep_golden_gate_bridge",
+      "evidence_refs": [
+        "demo_user_request"
+      ],
+      "origin": "user",
+      "relation": "must_keep",
+      "relaxation_policy": "never",
+      "schema_version": "owned-constraint-v1",
+      "scope": "stop",
+      "strength": "locked",
+      "target_id": "poi_golden_gate_bridge",
+      "value": true
+    },
+    {
+      "confirmed": false,
+      "constraint_id": "llm_prefers_food_market",
+      "evidence_refs": [
+        "demo_prompt_interpretation"
+      ],
+      "origin": "llm_interpretation",
+      "relation": "prefer",
+      "relaxation_policy": "auto_with_penalty",
+      "schema_version": "owned-constraint-v1",
+      "scope": "stop",
+      "strength": "preference",
+      "target_id": "poi_ferry_building",
+      "value": true
+    }
+  ],
+  "parent_plan_id": null,
+  "plan_id": "plan_demo_current",
+  "planning_request_id": "request_california_demo",
+  "route_ids_by_day": {
+    "1": "route_validated_demo"
+  },
+  "schema_version": "plan-artifact-v2",
+  "selected_stops": [
+    {
+      "city": "San Francisco",
+      "day": 1,
+      "latitude": 37.8199,
+      "longitude": -122.4783,
+      "name": "Golden Gate Bridge",
+      "stop_id": "poi_golden_gate_bridge",
+      "stop_order": 1
+    },
+    {
+      "city": "San Francisco",
+      "day": 1,
+      "latitude": 37.7955,
+      "longitude": -122.3937,
+      "name": "Ferry Building",
+      "stop_id": "poi_ferry_building",
+      "stop_order": 2
+    }
+  ],
+  "sequence": [
+    "poi_golden_gate_bridge",
+    "poi_ferry_building"
+  ],
+  "source_run_id": "run_phase0_demo"
+}

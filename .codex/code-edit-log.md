@@ -148,3 +148,88 @@ Entries record Codex-assisted work sessions, findings, validation, conclusions, 
 
 - Review the new docs/README.md reading paths and decide whether both repair technical specification variants should remain long term.
 
+## Docs overlap consolidation
+
+- Status: completed
+- Start local time: 2026-07-05 23:01:15 -05:00
+- End local time: 2026-07-05 23:07:04 CDT-0500
+- Duration: 5m 27s
+
+### Goal
+
+- Merge overlapping documentation and keep only the durable, readable docs needed for research, implementation, and reference use.
+
+### What changed
+
+- README.md: simplified documentation links to the consolidated canonical files.
+- docs/README.md: updated the docs index to the smaller durable file set.
+- docs/literature/repair_gap_review.md: made this the canonical repair-gap review by merging search notes, novelty boundaries, comparison matrix summary, score caveat, and figure reference.
+- docs/literature/evidence_matrix.md: renamed and expanded the evidence matrix with scoring caveats from the former current-score audit.
+- docs/methods/repair_method.md: renamed and expanded the repair method note with Phase 0 execution guidance.
+- docs/planning/travel_itinerary_repair_technical_specification.md: replaced the concise variant with the fuller specification content and removed the duplicate extended file.
+- docs/planning/research_stabilization_and_publication_plan.md: updated technical appendix links to point to the remaining technical specification.
+- docs/: removed superseded literature process notes, duplicate planning roadmap/spec files, the old planning PDF, and LaTeX build byproducts.
+- `git status`: M README.md
+- `git status`: M docs/README.md
+- `git status`: D docs/literature/chi_oriented_literature_review.md
+- `git status`: M docs/literature/literature_deep_read_study_report.md
+- `git status`: M docs/literature/literature_onboarding_guide.md
+- `git status`: D docs/literature/literature_review_update_audit.md
+- `git status`: D docs/literature/project_literature_evidence_matrix.md
+- `git status`: D docs/literature/recent_papers_2023_2026_addendum.md
+- `git status`: D docs/literature/related_work_outline.md
+- `git status`: D docs/literature/repair_gap/current_score_audit.md
+- `git status`: D docs/literature/repair_gap/literature_matrix_repair_gap.md
+- `git status`: D docs/literature/repair_gap/literature_review_repair_gap.md
+- `git status`: D docs/literature/repair_gap/literature_review_repair_gap_citation_report.json
+- `git status`: D docs/literature/repair_gap/literature_search_log.md
+- `git status`: D docs/literature/repair_gap/novelty_claim_verification.md
+- `git status`: D docs/literature/repair_gap/repair_literature_gap_map.md
+- `git status`: D docs/methods/limitation_driven_itinerary_repair_method.md
+- `git status`: D docs/methods/research_question_and_phase0_execution.md
+- `git status`: D docs/planning/publication_oriented_research_and_system_design_roadmap.md
+- `git status`: D docs/planning/publication_oriented_research_and_system_design_roadmap.pdf
+- `git status`: D docs/planning/research_stabilization_and_publication_appendix.md
+- `git status`: M docs/planning/research_stabilization_and_publication_plan.md
+- `git status`: M docs/planning/travel_itinerary_repair_technical_specification.md
+- `git status`: D docs/planning/travel_itinerary_repair_technical_specification_extended.md
+- `git status`: D docs/slides/build/literature_review_slides.aux
+- `git status`: D docs/slides/build/literature_review_slides.fdb_latexmk
+- `git status`: D docs/slides/build/literature_review_slides.fls
+- `git status`: D docs/slides/build/literature_review_slides.log
+- `git status`: D docs/slides/build/pdflatex8088.fls
+- `git status`: ?? docs/literature/evidence_matrix.md
+- `git status`: ?? docs/literature/repair_gap_review.md
+- `git status`: ?? docs/methods/repair_method.md
+
+### What was found
+
+- The biggest overlaps were repair-gap search/novelty/matrix/score notes, duplicate repair technical specs, roadmap-plus-plan-plus-appendix planning files, and generated slide build artifacts.
+- The fuller repair specification differed from the concise file by adding execution phases and handoff gates, so that content became the canonical technical specification.
+- The deep literature report remains because it is the only full paper-by-paper evidence bank; the shorter docs now point to it only as a reference, not a starting point.
+
+### Validation
+
+- git diff --check -- README.md docs: passed.
+- Local Markdown link check across README.md and docs/**/*.md: passed, 13 files checked.
+- Stale-reference scan for deleted doc names and folders: passed, no deleted doc paths referenced.
+- Manual layout review: docs now has 16 files/assets total across README, literature, methods, planning, reference, slides, assets, and figures.
+
+### Conclusion
+
+- The docs directory now keeps a smaller set of canonical documents and removes overlapping process, duplicate, and generated files.
+
+### Next steps
+
+**Codex can proceed:**
+
+- Optionally add a lightweight docs link checker script or pre-commit check if docs will keep changing.
+
+**Human reflection:**
+
+- The deep literature evidence bank is still large; it is useful as a source archive, but it could later be split by paper family if reading speed matters more than one-file completeness.
+
+### Human action
+
+- Review the consolidated docs/README.md and confirm whether the remaining deep evidence bank should stay as one large reference file.
+

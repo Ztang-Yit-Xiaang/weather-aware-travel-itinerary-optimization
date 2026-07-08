@@ -54,6 +54,9 @@ Use these fields separately:
 
 | Field | Meaning |
 | --- | --- |
+| `has_osm`, `has_yelp`, `has_curated`, `has_wikidata`, `has_wikipedia`, `has_weather`, `has_route` | Per-source availability masks used to distinguish missing evidence from low-scoring evidence |
+| `available_source_list` | Pipe-delimited list of available source families |
+| `missing_source_list` | Pipe-delimited list of unavailable source families |
 | `identity_coverage` | Whether identity/source records are present |
 | `location_coverage` | Whether coordinates are available and valid |
 | `semantic_coverage` | Whether category/description semantics exist |
@@ -66,7 +69,9 @@ Use these fields separately:
 
 Legacy `data_confidence` may remain as a compatibility alias while older
 dashboards and tests still use it. New research code should prefer
-`source_coverage_score`.
+`source_coverage_score`. Utility scoring should not treat source coverage as a
+preference value; unavailable source terms are omitted from the active utility
+denominator and recorded in `production_utility_source_ablation.csv`.
 
 ## Routing Eligibility
 
@@ -111,6 +116,14 @@ road_validated
 When this file is absent, Phase 0 exports keep route legs as fallback geodesic
 proxies. When it is present and covers all route movements, strict Phase 0
 validation can pass.
+
+`production_validated_route_matrix.csv` and
+`production_validated_route_matrix_report.json` are the solver-facing route
+matrix artifacts. The report records checked legs, validated legs, fallback
+legs, missing cells, invalid distance/duration cells, and whether the matrix is
+publication-ready for the requested sequences. Use
+`scripts/build_validated_route_matrix.py` to create these artifacts from
+`route_options.csv` or `production_road_route_cache.csv`.
 
 `production_road_route_cache_audit.csv` records every requested leg, its OSRM
 cache key, cache path, status, and whether it was converted into a validated

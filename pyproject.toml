@@ -51,6 +51,7 @@ ignore = ["E501"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["src"]
+addopts = "-p no:cacheprovider"
 
 [tool.coverage.run]
 source = ["src/itinerary_system"]

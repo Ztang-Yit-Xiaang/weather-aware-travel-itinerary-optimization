@@ -12,6 +12,7 @@ from geopy.distance import geodesic
 from ._legacy import import_legacy_module
 from .config import TripConfig
 from .multi_objective_route import solve_multi_objective_route
+from .routing import RouteMatrix, SolverRouteMatrixAdapter
 
 
 def build_solver_overrides(config: TripConfig) -> dict[str, Any]:
@@ -120,6 +121,11 @@ def solve_enriched_route_with_gurobi(
     start_depot: tuple[float, float] | None = None,
     end_depot: tuple[float, float] | None = None,
     candidate_size: int | None = None,
+    route_matrix: RouteMatrix | None = None,
+    route_matrix_adapter: SolverRouteMatrixAdapter | None = None,
+    routing_mode: str = "demo",
+    start_depot_id: str = "start_depot",
+    end_depot_id: str = "end_depot",
 ) -> dict[str, Any]:
     """Solve a small enriched-POI route problem with Gurobi, fallback heuristic.
 
@@ -134,7 +140,14 @@ def solve_enriched_route_with_gurobi(
         end_depot=end_depot,
         candidate_size=candidate_size,
         route_id="bandit_selected_epsilon_route",
+        route_matrix=route_matrix,
+        route_matrix_adapter=route_matrix_adapter,
+        routing_mode=routing_mode,
+        start_depot_id=start_depot_id,
+        end_depot_id=end_depot_id,
     )
+    # Phase 0.2 quarantine: the legacy implementation below is unreachable and
+    # retained only until a separate equivalence/removal pass can delete it.
     start = time.perf_counter()
     if candidate_df.empty:
         result = _greedy_route_repair(candidate_df, config, depot or (0.0, 0.0))

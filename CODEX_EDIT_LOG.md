@@ -1522,3 +1522,629 @@ Entries record Codex-assisted work sessions, findings, validation, conclusions, 
 
 - Review the GitHub Actions run after the pushed workflow fix completes.
 
+## Preserve current repair-gap artifacts
+
+- Status: completed
+- Start local time: 2026-07-05 23:27:43 CDT
+- End local time: 2026-07-05 23:31:39 CDT-0500
+- Duration: 3m
+
+### Goal
+
+- Keep the compact repair-gap matrix and current score audit as standalone current-project artifacts while preserving the consolidated literature documents.
+
+### What changed
+
+- docs/literature/current/README.md: added a small index for obvious and latent current-project problems.
+- docs/literature/current/literature_matrix_repair_gap.md: restored the compact repair-gap matrix in a new current folder and added a column guide plus full reference key.
+- docs/literature/current/current_score_audit.md: restored the current project score audit as a standalone artifact.
+- `git status`: M .codex/code-edit-log.md
+- `git status`: M README.md
+- `git status`: M docs/README.md
+- `git status`: D docs/literature/chi_oriented_literature_review.md
+- `git status`: M docs/literature/literature_deep_read_study_report.md
+- `git status`: M docs/literature/literature_onboarding_guide.md
+- `git status`: D docs/literature/literature_review_update_audit.md
+- `git status`: D docs/literature/project_literature_evidence_matrix.md
+- `git status`: D docs/literature/recent_papers_2023_2026_addendum.md
+- `git status`: D docs/literature/related_work_outline.md
+- `git status`: D docs/literature/repair_gap/current_score_audit.md
+- `git status`: D docs/literature/repair_gap/literature_matrix_repair_gap.md
+- `git status`: D docs/literature/repair_gap/literature_review_repair_gap.md
+- `git status`: D docs/literature/repair_gap/literature_review_repair_gap_citation_report.json
+- `git status`: D docs/literature/repair_gap/literature_search_log.md
+- `git status`: D docs/literature/repair_gap/novelty_claim_verification.md
+- `git status`: D docs/literature/repair_gap/repair_literature_gap_map.md
+- `git status`: D docs/methods/limitation_driven_itinerary_repair_method.md
+- `git status`: D docs/methods/research_question_and_phase0_execution.md
+- `git status`: D docs/planning/publication_oriented_research_and_system_design_roadmap.md
+- `git status`: D docs/planning/publication_oriented_research_and_system_design_roadmap.pdf
+- `git status`: D docs/planning/research_stabilization_and_publication_appendix.md
+- `git status`: M docs/planning/research_stabilization_and_publication_plan.md
+- `git status`: M docs/planning/travel_itinerary_repair_technical_specification.md
+- `git status`: D docs/planning/travel_itinerary_repair_technical_specification_extended.md
+- `git status`: D docs/slides/build/literature_review_slides.aux
+- `git status`: D docs/slides/build/literature_review_slides.fdb_latexmk
+- `git status`: D docs/slides/build/literature_review_slides.fls
+- `git status`: D docs/slides/build/literature_review_slides.log
+- `git status`: D docs/slides/build/pdflatex8088.fls
+- `git status`: ?? docs/literature/current/
+- `git status`: ?? docs/literature/evidence_matrix.md
+- `git status`: ?? docs/literature/repair_gap_review.md
+- `git status`: ?? docs/methods/repair_method.md
+
+### What was found
+
+- The original repair-gap matrix and score-audit files are deleted in the current working tree as part of the broader document consolidation, but their last tracked contents are recoverable from HEAD.
+- The compact matrix should remain inspectable because it makes the gap evidence easy to scan, while the consolidated review serves a different narrative purpose.
+
+### Validation
+
+- git diff --check -- docs/literature/current: passed.
+- Manual file inspection: confirmed the new current folder contains README.md, literature_matrix_repair_gap.md, and current_score_audit.md.
+
+### Conclusion
+
+- The matrix and audit are preserved under docs/literature/current without restoring or disturbing the old deleted paths.
+
+### Next steps
+
+**Codex can proceed:**
+
+- Link docs/literature/current from docs/literature/repair_gap_review.md or docs/README.md if the user wants these artifacts discoverable from the consolidated docs.
+
+**Human reflection:**
+
+- The matrix now has enough column/reference explanation for a reader while keeping the compact style intact.
+
+### Human action
+
+- Review whether docs/literature/current is the preferred folder name and whether the old deleted repair_gap paths should remain deleted.
+
+## Reorganize current matrix and audit docs
+
+- Status: completed
+- Start local time: 2026-07-06 00:01:40 CDT
+- End local time: 2026-07-06 00:03:30 CDT-0500
+- Duration: 1m 28s
+
+### Goal
+
+- Move the repair-gap matrix into the literature directory and the current implementation audit into a docs/current folder.
+
+### What changed
+
+- docs/literature/literature_matrix_repair_gap.md: moved the compact repair-gap matrix out of docs/literature/current and into the literature directory.
+- docs/current/current_score_audit.md: moved the current score audit into a current-project documentation folder.
+- docs/current/README.md: added a short index explaining why implementation audits live under docs/current and the literature matrix lives under docs/literature.
+- docs/literature/current/: removed the temporary folder created in the previous organization pass.
+- `git status`: M .codex/code-edit-log.md
+- `git status`: M CODEX_EDIT_LOG.md
+- `git status`: M README.md
+- `git status`: M docs/README.md
+- `git status`: D docs/literature/chi_oriented_literature_review.md
+- `git status`: M docs/literature/literature_deep_read_study_report.md
+- `git status`: M docs/literature/literature_onboarding_guide.md
+- `git status`: D docs/literature/literature_review_update_audit.md
+- `git status`: D docs/literature/project_literature_evidence_matrix.md
+- `git status`: D docs/literature/recent_papers_2023_2026_addendum.md
+- `git status`: D docs/literature/related_work_outline.md
+- `git status`: D docs/literature/repair_gap/current_score_audit.md
+- `git status`: D docs/literature/repair_gap/literature_matrix_repair_gap.md
+- `git status`: D docs/literature/repair_gap/literature_review_repair_gap.md
+- `git status`: D docs/literature/repair_gap/literature_review_repair_gap_citation_report.json
+- `git status`: D docs/literature/repair_gap/literature_search_log.md
+- `git status`: D docs/literature/repair_gap/novelty_claim_verification.md
+- `git status`: D docs/literature/repair_gap/repair_literature_gap_map.md
+- `git status`: D docs/methods/limitation_driven_itinerary_repair_method.md
+- `git status`: D docs/methods/research_question_and_phase0_execution.md
+- `git status`: D docs/planning/publication_oriented_research_and_system_design_roadmap.md
+- `git status`: D docs/planning/publication_oriented_research_and_system_design_roadmap.pdf
+- `git status`: D docs/planning/research_stabilization_and_publication_appendix.md
+- `git status`: M docs/planning/research_stabilization_and_publication_plan.md
+- `git status`: M docs/planning/travel_itinerary_repair_technical_specification.md
+- `git status`: D docs/planning/travel_itinerary_repair_technical_specification_extended.md
+- `git status`: D docs/slides/build/literature_review_slides.aux
+- `git status`: D docs/slides/build/literature_review_slides.fdb_latexmk
+- `git status`: D docs/slides/build/literature_review_slides.fls
+- `git status`: D docs/slides/build/literature_review_slides.log
+- `git status`: D docs/slides/build/pdflatex8088.fls
+- `git status`: ?? docs/current/
+- `git status`: ?? docs/literature/evidence_matrix.md
+- `git status`: ?? docs/literature/literature_matrix_repair_gap.md
+- `git status`: ?? docs/literature/repair_gap_review.md
+- `git status`: ?? docs/methods/repair_method.md
+
+### What was found
+
+- The user's preferred structure is matrix with literature artifacts and audit with current-project notes, rather than both under docs/literature/current.
+
+### Validation
+
+- git diff --check -- docs/current docs/literature/literature_matrix_repair_gap.md: passed.
+- Manual inspection: confirmed docs/current contains README.md and current_score_audit.md, and docs/literature/literature_matrix_repair_gap.md starts with the preserved matrix and column guide.
+
+### Conclusion
+
+- The matrix and audit now live in the requested locations without touching the broader in-progress document consolidation.
+
+### Next steps
+
+**Codex can proceed:**
+
+- Update docs/README.md or docs/literature/repair_gap_review.md with links to the moved files if desired.
+
+**Human reflection:**
+
+- This split better separates literature evidence from implementation claim-control notes.
+
+### Human action
+
+- Review whether docs/current is the final preferred folder name.
+
+## Current problem phase plans
+
+- Status: completed
+- Start local time: 2026-07-06 00:11:03 CDT
+- End local time: 2026-07-06 00:27:08 Central Daylight Time-0500
+- Duration: 15m 19s
+
+### Goal
+
+- Generate Codex phase plans from the current score audit and current project docs to fix obvious and latent repository problems.
+
+### What changed
+
+- docs/planning/current_problem_fix_phase_plans.md: added eight implementation-ready phase plans covering validation harness, artifact lineage, route matrix, utility missingness, parent/diff foundation, progressive repair, evaluator/explanations, and pipeline/benchmark migration.
+
+### What was found
+
+- docs/current/current_score_audit.md identifies heuristic utility, geodesic routing, non-parent-aware repair, unreachable route-oracle code, and source-coverage claim risks.
+- Source inspection confirmed Phase 0 scaffolds exist in research_artifacts.py, routing/models.py, and repair_planner.py, while optimizer paths still depend on geodesic travel and lack parent-aware edit variables.
+- The worktree already had substantial unrelated documentation moves and edits; those were left untouched.
+
+### Validation
+
+- python -m ruff check src tests scripts: passed.
+- python -m pytest: collected 81 tests and reached 77 passed / 4 failed before timeout status; failures were PermissionError cases in tests/data/test_context_snapshot.py while writing under C:\Users\1\AppData\Local\Temp, with pytest cache permission warnings.
+- Focused rerun of tests/data/test_context_snapshot.py with TEMP/TMP/TMPDIR pointed at .codex_tmp_pytest: still failed 4 tests because Python tempfile resolved to C:\Users\1\AppData\Local\Temp in this managed shell.
+- Manual inspection: confirmed docs/planning/current_problem_fix_phase_plans.md has eight Phase X.X implementation plans with required sections and planning-only roadmap notes.
+
+### Conclusion
+
+- Created a current-problem phase plan document grounded in current docs, source files, and live validation results; planning goal is satisfied.
+
+### Next steps
+
+**Codex can proceed:**
+
+- Implement Phase 0.0 to stabilize pytest temp/cache behavior and produce a current problem manifest.
+- Then implement Phase 0.1 artifact lineage and Phase 0.2 route-matrix boundaries before claiming publication-grade repair evidence.
+
+**Human reflection:**
+
+- The strongest near-term path is to fix evidence truthfulness and validation reproducibility before expanding solver functionality.
+
+### Human action
+
+- Review the phase ordering and decide whether Phase 0.0 validation stabilization should be implemented first.
+
+## Context-aware itinerary repair detailed phase plan
+
+- Status: completed
+- Start local time: 2026-07-06 00:36:04 CDT
+- End local time: 2026-07-06 00:53:16 CDT-0500
+- Duration: Not recorded
+
+### Goal
+
+- Create a repository-grounded, implementation-ready G0-G8 phase plan for Context-Aware, Inspectable Itinerary Repair without implementing code.
+
+### What changed
+
+- docs/planning/context_aware_itinerary_repair_detailed_phase_plan.md: added the detailed planning-only master plan with G0-G8 gate sections, diagrams, data models, method signatures, validation rules, tests, acceptance criteria, literature guardrails, and definition of done.
+- CODEX_EDIT_LOG.md: appended this completed planning report.
+
+### What was found
+
+- Files inspected: README.md; docs/README.md; docs/current/current_score_audit.md; docs/current/README.md; docs/reference/data_dictionary.md; docs/reference/code_quality_workflow.md; docs/planning/research_stabilization_and_publication_plan.md; docs/planning/travel_itinerary_repair_technical_specification.md; docs/planning/current_problem_fix_phase_plans.md; docs/literature/core_paper_reading_cards.md; docs/literature/evidence_matrix.md; docs/literature/literature_deep_read_study_report.md; docs/literature/literature_matrix_repair_gap.md; docs/literature/literature_onboarding_guide.md; docs/literature/repair_gap_review.md; relevant src, scripts, and tests for artifacts, routing, repair scaffold, utilities, Phase 0 scripts, and current validation contracts.
+- Repository evidence shows Phase 0 artifacts, route cache/source checks, catalog/context snapshots, and a deterministic repair scaffold exist, but canonical parent-child PlanArtifact v2, PlanDiff, independent certificates, ownership-aware repair, progressive repair, authoritative pipeline runner, and explanation evidence contracts remain planned work.
+- Literature files support the safe claim that the contribution combines ownership-labeled commitments, progressive repair neighborhoods, lexicographic preservation-before-utility objectives, independent validation, and evidence-grounded explanations for user-owned itinerary repair under localized disruptions.
+- Limitations: this task intentionally did not implement code, did not mark implementation checkboxes complete, did not resolve pre-existing dirty worktree changes, and did not run full source tests because the requested deliverable was a planning document.
+
+### Validation
+
+- Structural heading check for G0-G8: passed; every phase contains the required @codex-phase-plan headings in order.
+- Concept coverage spot check with rg for TripTide guardrails, ConstraintOrigin, RepairRadius, RoutingProvider, LodgingCategory, PipelineRun, run_research_pipeline, road_validated, ruff, and pytest: passed.
+- python -m ruff check src tests scripts: not run; planning-only documentation task with no code implementation.
+- python -m pytest: not run; planning-only documentation task with no code implementation.
+
+### Conclusion
+
+- The requested implementation-ready planning artifact now exists under docs/planning and is grounded in the repository and literature documents rather than invented structure.
+
+### Next steps
+
+**Codex can proceed:**
+
+- Implement G0 first: repository truth, Phase 0 closeout, strict route-source validation, artifact manifest checks, and no public-route or geodesic publication claims.
+- After G0 passes, implement G1: PlanArtifact v2 migration, PlanRepository, typed PlanDiff, and EvaluationCertificate contracts before repair master logic.
+
+**Human reflection:**
+
+- The most important sequencing choice is to stabilize evidence truthfulness and parent-child artifact contracts before expanding solver behavior or UI work.
+
+### Human action
+
+- Review docs/planning/context_aware_itinerary_repair_detailed_phase_plan.md and approve G0 as the next implementation gate if the ordering matches your research priorities.
+
+## Incorporate LLM preference-to-commitment plan
+
+- Status: completed
+- Start local time: 2026-07-06 14:41:14 CDT
+- End local time: 2026-07-06 14:47:40 CDT-0500
+- Duration: Not recorded
+
+### Goal
+
+- Incorporate the LLM preference-to-commitment architecture into the Context-Aware, Inspectable Itinerary Repair phase plan without implementing code.
+
+### What changed
+
+- docs/planning/context_aware_itinerary_repair_detailed_phase_plan.md: added G6.5 evidence-bounded LLM preference-to-commitment work package and updated the executive summary, implementation locks, artifact flow, G7 explanation bridge, G8 study metrics, and final definition of done.
+- CODEX_EDIT_LOG.md: appended this completed planning report.
+
+### What was found
+
+- The existing plan already bounded LLM verbalization in G7 and inactive LLM constraints in G1, but lacked a detailed pre-repair taste hypothesis and suggested-commitment layer.
+- The added architecture keeps the LLM out of generation, optimization, feasibility, routing validity, hotel availability, and final evaluation; LLM outputs remain inactive until deterministic validation and user confirmation.
+- The plan now treats taste as an evidence-backed hypothesis from parent-plan artifacts, not ground-truth user preference, and defines study metrics for taste agreement, commitment acceptance, false suggestions, preservation gain, and repair cost.
+- Limitations: this was a documentation-only planning update; no code, prompt templates, UI, tests, or live LLM integrations were implemented.
+
+### Validation
+
+- Phase heading structure check: passed for 10 phase/work-package sections, including G6.5, with all required @codex-phase-plan headings in order.
+- Targeted concept coverage check: passed for TasteEvidencePack, TasteDimension, SuggestedCommitment, UserCommitmentDecision, PromptRun, CounterfactualQuestionInterpreter, PreferenceCommitmentExplanationBridge, PreferenceCommitmentStudyMetrics, and LLM study conditions.
+- Trailing whitespace check on touched files: passed.
+- ASCII check on the plan document: passed.
+- python -m ruff check src tests scripts: not run; planning-only documentation update with no code implementation.
+- python -m pytest: not run; planning-only documentation update with no code implementation.
+
+### Conclusion
+
+- The detailed phase plan now includes the LLM as a bounded mixed-initiative preference-to-commitment assistant while preserving the solver/evaluator boundaries.
+
+### Next steps
+
+**Codex can proceed:**
+
+- Implement G0 and G1 before any LLM work, then consider G6.5 only after parent artifacts, diff, repair inputs, and pipeline replay are stable.
+
+**Human reflection:**
+
+- The strongest IUI/CHI framing is not LLM planning, but making implicit itinerary taste visible, editable, and operational through confirmed repair commitments.
+
+### Human action
+
+- Review the new G6.5 work package and decide whether the LLM taste module should remain between G6 and G7 or be split further into prototype and study subpackages.
+
+## Phase 0.0 validation harness
+
+- Status: completed
+- Start local time: 2026-07-06 18:24:34 CDT
+- End local time: 2026-07-06 18:48:18 Central Daylight Time-0500
+- Duration: 23m 20s
+
+### Goal
+
+- Implement Phase 0.0 by stabilizing pytest temp/cache behavior, adding a project check wrapper, and recording the current problem manifest.
+
+### What changed
+
+- tests/conftest.py: added pytest startup configuration that forces temp paths into .codex_tmp_pytest/pytest and replaces tempfile.TemporaryDirectory with a workspace-safe context manager.
+- pyproject.toml: disabled pytest cacheprovider through pytest addopts to avoid managed-workspace cache permission warnings.
+- scripts/run_project_checks.py: added a validation wrapper with workspace temp configuration, command execution, failure classification, and JSON summary output.
+- tests/test_project_checks.py: added focused tests for environment, product-code, and timeout failure classification.
+- tests/data/test_context_snapshot.py: changed the missing-table fixture to copy contexts while excluding route_options.csv instead of deleting it.
+- docs/current/current_problem_manifest.md: added the active problem manifest linking current blockers to phases and acceptance checks.
+
+### What was found
+
+- Python tempfile respected the workspace temp path after conftest setup, but directories created through tempfile/mkdtemp were not writable for nested data folders in this managed Windows workspace.
+- The workspace permits writing files under .codex_tmp_pytest but denies delete and rename operations, so tests must avoid delete-based fixture setup and temp cleanup must be best-effort.
+- Ruff passes, though its cache write still reports access-denied warnings; pytest cache warnings are removed by disabling cacheprovider.
+
+### Validation
+
+- python -m ruff check src tests scripts: passed; ruff emitted non-fatal cache write warnings.
+- python -m pytest tests/data/test_context_snapshot.py tests/test_project_checks.py: 8 passed.
+- python -m pytest: 84 passed in 461.41s.
+- python scripts/run_project_checks.py: passed ruff, context snapshot pytest, and full pytest; wrote results/quality/project_check_summary.json.
+
+### Conclusion
+
+- Phase 0.0 is implemented: validation no longer fails on the prior temp-permission issue, the check wrapper works, and the current problem manifest exists.
+
+### Next steps
+
+**Codex can proceed:**
+
+- Implement Phase 0.1 artifact lineage and post-solve mutation gate.
+
+**Human reflection:**
+
+- The managed workspace denies deletion/rename even for generated temp files, so future tests should prefer construction-only fixtures over copy-then-delete setup patterns.
+
+### Human action
+
+- Review the new current problem manifest and confirm Phase 0.1 should be next.
+
+## Phase 0.1 artifact lineage
+
+- Status: completed
+- Start local time: 2026-07-06 20:01:35 CDT
+- End local time: 2026-07-06 20:21:32 Central Daylight Time-0500
+- Duration: 19m 7s
+
+### Goal
+
+- Implement Phase 0.1 artifact lineage and the post-solve mutation gate.
+
+### What changed
+
+- src/itinerary_system/research_artifacts.py: added PlanArtifactV2, MutationReport, v1 migration, post-solve mutation detection, child-plan creation, and certificate/run invalidation helpers.
+- src/itinerary_system/phase0_exporter.py: emits v2 plan records with ordered days and route ids, and invalidates solver certification for known required-anchor or placeholder post-solve edits.
+- tests/test_artifact_lineage.py: added focused lineage, mutation, child-plan, and certificate invalidation tests.
+- tests/test_research_foundation.py: asserts v2 Phase 0 plan artifacts and exporter invalidation when anchor mutation evidence is present.
+- docs/current/current_problem_manifest.md: updated CP-001 artifact-lineage status after implementation.
+
+### What was found
+
+- Phase 0 export could adopt v2 plan records additively because the validator already accepts flexible JSONL records with required lineage fields.
+- Known required-anchor insertion evidence is available in exported route status and method notes, so Phase 0.1 can invalidate certification without changing planner or solver behavior.
+
+### Validation
+
+- python -m ruff check src tests scripts: passed; ruff emitted non-fatal .ruff_cache access-denied warnings.
+- python -m pytest tests\\test_artifact_lineage.py tests\\test_research_foundation.py: passed, 28 tests.
+- python scripts\\run_project_checks.py: passed; ruff, context snapshot pytest, and full pytest all passed; full pytest collected 91 tests.
+- git diff --check on tracked Phase 0.1 edits: passed.
+
+### Conclusion
+
+- Phase 0.1 is implemented: plan artifacts now carry v2 lineage fields and known post-solve mutation evidence invalidates certification at Phase 0 export.
+
+### Next steps
+
+**Codex can proceed:**
+
+- Proceed to Phase 0.2 route matrix boundary and acceptance tests.
+
+**Human reflection:**
+
+- Broader production ownership and repair-solver integration remains intentionally deferred to later phases in the current problem plan.
+
+### Human action
+
+- None
+
+## Ruff validation cache correction
+
+- Status: completed
+- Start local time: 2026-07-06 20:42:32 CDT
+- End local time: 2026-07-06 21:05:22 Central Daylight Time-0500
+- Duration: 12m 3s
+
+### Goal
+
+- Audit and correct the Ruff validation path before Phase 0.2.
+
+### What changed
+
+- scripts/run_project_checks.py: disables Ruff caching with RUFF_NO_CACHE and runs ruff check with --no-cache in the standard validation wrapper.
+- tests/test_project_checks.py: added a regression check that workspace temp configuration disables Ruff cache use.
+- docs/current/current_problem_manifest.md: updated the current validation command to use python -m ruff check --no-cache src tests scripts.
+
+### What was found
+
+- Plain python -m ruff check src tests scripts exits 0 but emits .ruff_cache access-denied warnings in this managed workspace.
+- python -m ruff check --no-cache src tests scripts exits 0 with clean stdout and empty stderr.
+
+### Validation
+
+- python -m ruff check --no-cache src tests scripts: passed with no stderr warnings.
+- python -m pytest tests\\test_project_checks.py: passed, 4 tests.
+- python scripts\\run_project_checks.py: passed; summary shows Ruff command includes --no-cache and stderr_excerpt is empty; full pytest collected 92 tests and passed.
+- git diff --check on tracked Ruff validation edits: passed.
+
+### Conclusion
+
+- The standard validation path now treats Ruff as a clean no-cache check rather than a warning-tolerant cached check.
+
+### Next steps
+
+**Codex can proceed:**
+
+- Proceed to Phase 0.2 after this corrected validation baseline.
+
+**Human reflection:**
+
+- The raw cached Ruff command still warns in this managed workspace, so future local instructions should prefer the no-cache form.
+
+### Human action
+
+- None
+
+## Phase 0.2 route matrix boundary
+
+- Status: completed
+- Start local time: 2026-07-07 14:40:01 CDT
+- End local time: 2026-07-07 15:17:06 中部夏令时-0500
+- Duration: 36m 22s
+
+### Goal
+
+- Implement Phase 0.2 route matrix and road-validation boundary.
+
+### What changed
+
+- src/itinerary_system/routing/matrix.py: added RouteMatrixCell, RouteMatrix, strict publication errors, CSV/context loaders, explicit geodesic fallback matrix, route-result construction, and SolverRouteMatrixAdapter.
+- src/itinerary_system/routing/provider.py: added provider protocol and request/activation/snap dataclasses for future OSRM/cache providers.
+- src/itinerary_system/routing/__init__.py: exported route matrix, provider, adapter, and strict error types.
+- src/itinerary_system/multi_objective_route.py: added optional route matrix/adapter inputs, publication/demo routing modes, stable node ID mapping, matrix-backed travel tables, and matrix-backed route totals.
+- src/itinerary_system/hierarchical_gurobi.py: added optional route matrix/adapter inputs for intercity and strict nature-region detour scoring, with publication-mode missing-matrix rejection.
+- src/itinerary_system/route_gurobi_oracle.py: forwards route matrix controls to the active day-route solver and marks the legacy block as quarantined.
+- tests/routing/test_route_matrix.py: added RouteMatrix, fallback gating, cache loading, solver strict-mode, and hierarchical adapter tests.
+- docs/current/current_problem_manifest.md: updated CP-002 route matrix boundary status.
+- docs/planning/travel_itinerary_repair_technical_specification.md: added Phase 0.2 status notes for ROUTE-001 and ROUTE-004.
+
+### What was found
+
+- The project already had RouteResult provenance and road cache rows; the missing boundary was solver-facing RouteMatrix injection and strict-mode refusal.
+- The managed shell resolved bare python to a Windows app-alias stub during this turn, so validation used the concrete Python 3.12 path recorded by the project-check wrapper.
+- Route oracle legacy optimization code is unreachable after the wrapper return, so Phase 0.2 quarantined it rather than deleting it without a separate equivalence pass.
+
+### Validation
+
+- C:\\Users\\1\\AppData\\Local\\Programs\\Python\\Python312\\python.exe -m ruff check --no-cache src tests scripts: passed with empty stderr.
+- C:\\Users\\1\\AppData\\Local\\Programs\\Python\\Python312\\python.exe -m pytest tests\\routing\\test_route_matrix.py: passed, 8 tests.
+- Route-focused existing pytest selection: passed, 12 tests including route matrix, open-path route solver, hierarchical allocation/pass-through, and route oracle wrapper tests.
+- C:\\Users\\1\\AppData\\Local\\Programs\\Python\\Python312\\python.exe scripts\\run_project_checks.py: passed; full pytest collected 100 tests and all passed; summary shows Ruff --no-cache with empty stderr.
+- git diff --check on tracked Phase 0.2 edits: passed; Git emitted only CRLF normalization warnings.
+
+### Conclusion
+
+- Phase 0.2 is implemented: publication-mode solver paths now require RouteMatrix evidence and reject missing, fallback, or non-road-validated cells; demo geodesic fallback remains explicit and auditable.
+
+### Next steps
+
+**Codex can proceed:**
+
+- Proceed to Phase 0.3 utility source-missingness and claim-safe scores.
+
+**Human reflection:**
+
+- Complete publication claims still depend on later provider/pipeline work that generates complete validated matrices for benchmark contexts.
+
+### Human action
+
+- None
+
+## Validated route matrix and Phase 0.3 utility missingness
+
+- Status: completed
+- Start local time: 2026-07-07 15:53:16 CDT
+- End local time: 2026-07-07 16:13:19 Central Daylight Time-0500
+- Duration: 19m 40s
+
+### Goal
+
+- Build validated route matrix validation artifacts and implement Phase 0.3 utility source-missingness behavior.
+
+### What changed
+
+- src/itinerary_system/routing/matrix.py: added RouteMatrixValidationReport, required-pair extraction, publication-readiness validation, matrix DataFrame serialization, artifact writing, and validated-matrix build helper.
+- scripts/build_validated_route_matrix.py: added CLI to build matrix artifacts from route_options or road-cache CSV and fail when required cells are not publication-ready.
+- src/itinerary_system/routing/__init__.py: exported route matrix validation/report APIs.
+- src/itinerary_system/utility_model.py: added source masks, masked source normalization, masked MCDA scoring, TOPSIS missing-source neutrality, source-ablation audit, and utility output fields.
+- src/itinerary_system/data_enrichment.py: emits source availability masks, source coverage, and legacy data_confidence alias from the shared mask builder.
+- src/itinerary_system/schemas.py: added source coverage, uncertainty, and missing-source fields to EnrichedPOI.
+- tests/routing/test_route_matrix.py: added matrix validation/report and CLI failure tests, and corrected the default config path.
+- tests/test_utility_missingness.py: added Phase 0.3 tests for missing-vs-poor Yelp, equal non-Yelp POIs, all-source-missing fallback, coverage/uncertainty separation, and deterministic ablation output.
+- docs/current/current_score_audit.md: updated utility-source wording to describe masked missingness instead of zero penalties.
+- docs/reference/data_dictionary.md: documented source mask fields, ablation audit, and validated route matrix artifacts.
+- docs/current/current_problem_manifest.md: updated CP-002 and CP-003 statuses.
+
+### What was found
+
+- The project already built road-route caches, but needed a RouteMatrix-level publication-readiness report for solver-required sequences.
+- Missing Yelp and present-but-poor Yelp now have distinct utility semantics: missing is excluded from the denominator, while poor available evidence can lower score.
+- Git now detects dubious ownership under the current Windows user, so workspace git inspections used a command-local safe.directory override rather than changing global Git config.
+
+### Validation
+
+- C:\\Users\\1\\AppData\\Local\\Programs\\Python\\Python312\\python.exe -m ruff check --no-cache src tests scripts: passed with empty stderr.
+- C:\\Users\\1\\AppData\\Local\\Programs\\Python\\Python312\\python.exe -m pytest tests\\routing\\test_route_matrix.py tests\\test_utility_missingness.py: passed, 16 tests.
+- C:\\Users\\1\\AppData\\Local\\Programs\\Python\\Python312\\python.exe -m pytest tests\\test_research_foundation.py: passed, 22 tests.
+- C:\\Users\\1\\AppData\\Local\\Programs\\Python\\Python312\\python.exe scripts\\run_project_checks.py: passed; full pytest collected 108 tests and all passed; summary shows Ruff --no-cache with empty stderr.
+- git -c safe.directory=... diff --check on tracked edited files: passed; Git emitted only CRLF normalization warnings.
+
+### Conclusion
+
+- Validated route matrix artifacts can now be built and checked, and Phase 0.3 missing-source utility behavior is implemented with coverage, uncertainty, and utility kept separate.
+
+### Next steps
+
+**Codex can proceed:**
+
+- Proceed to Phase 1.0 parent plan, ownership, and plan diff foundation.
+
+**Human reflection:**
+
+- Live or local routing provider work is still needed to populate complete road-valid matrices for large benchmark contexts, but the validation/report gate now exists.
+
+### Human action
+
+- None
+
+## Phase 1.0 parent plan and diff foundation
+
+- Status: completed
+- Start local time: 2026-07-07 19:04:15 CDT
+- End local time: 2026-07-07 20:05:39 Central Daylight Time-0500
+- Duration: 60m 40s
+
+### Goal
+
+- Implement canonical parent/child plan ownership, append-only storage, typed plan diffs, and repair scaffold lineage metadata.
+
+### What changed
+
+- src/itinerary_system/plans/models.py: added closed ownership vocabularies, OwnedConstraint, OwnershipPolicy, PlanDiff dataclasses, validation helpers, and Phase 0 route-stops plan construction.
+- src/itinerary_system/plans/repository.py: added append-only JSON PlanRepository with load/save helpers, conflict detection, hash verification, and index writing.
+- src/itinerary_system/plans/diff.py: added PlanDiffBuilder and compute_plan_diff for stop additions/deletions, day moves, time shifts, order, lodging, road changes, unchanged days, and weighted edit cost.
+- src/itinerary_system/plans/__init__.py: exported the canonical plan APIs.
+- src/itinerary_system/research_artifacts.py: normalized ordered-day serialization and added owned_constraint_records() compatibility helper.
+- src/itinerary_system/repair_planner.py: added parent_plan_id, child_plan_id, and plan_diff metadata for existing deterministic repair outputs.
+- src/itinerary_system/schemas.py: added additive plan lineage, route-id, and owned-constraint fields to HierarchicalGurobiPlan.
+- data/benchmark/parent_plans/plan_demo_current.json: added current demo parent plan artifact with ownership records and content hash.
+- tests/plans/test_models.py: added ownership, relaxation, validation, and Phase 0 route-stops construction tests.
+- tests/plans/test_repository.py: added append-only save/load/conflict/missing-plan tests.
+- tests/plans/test_diff.py: added identity, typed-change, weighted-cost, and incompatible-catalog tests.
+- tests/test_repair_planner.py: asserted repair scaffold emits parent/child plan IDs and diff metadata.
+- scripts/run_project_checks.py: raised default check timeout to 900 seconds so the current full suite can complete in the wrapper.
+- docs/current/current_problem_manifest.md: updated CP-004 to reflect the implemented Phase 1.0 substrate.
+- docs/planning/travel_itinerary_repair_technical_specification.md: documented implementation status for PLAN-001, PLAN-002, and DIFF-001.
+
+### What was found
+
+- The existing repair planner could be annotated additively; no repair decision behavior had to change for Phase 1.0.
+- JSON round trips convert nested ordered-day stop tuples to lists, so PlanArtifactV2 serialization needed normalization for append-only idempotence.
+- The current full pytest suite collects 119 tests and takes about 10-11 minutes on this Windows workspace, exceeding the old 600-second wrapper timeout.
+
+### Validation
+
+- C:\Users\1\AppData\Local\Programs\Python\Python312\python.exe -m ruff check --no-cache src tests scripts: passed.
+- C:\Users\1\AppData\Local\Programs\Python\Python312\python.exe -m pytest tests/plans tests/test_repair_planner.py tests/test_artifact_lineage.py: passed, 23 tests.
+- C:\Users\1\AppData\Local\Programs\Python\Python312\python.exe -m pytest: passed, 119 tests in 676.68s.
+- C:\Users\1\AppData\Local\Programs\Python\Python312\python.exe scripts/run_project_checks.py: passed; summary shows Ruff, context snapshot pytest, and full pytest all passed.
+
+### Conclusion
+
+- Phase 1.0 is implemented: canonical ownership records, append-only parent storage, typed plan diffs, and repair scaffold lineage metadata are available and validated.
+
+### Next steps
+
+**Codex can proceed:**
+
+- Proceed to Phase 2.0 progressive ownership-aware repair solver, starting with repair neighborhoods that consume PlanArtifactV2, OwnedConstraint, RouteMatrix, and PlanDiff.
+
+**Human reflection:**
+
+- The standard full-suite validation now needs a generous timeout because the Windows workspace runs the 119-test suite near the 11-minute mark.
+- Phase 1.0 makes repair changes measurable, but it does not yet improve repair decisions; that claim depends on the Phase 2 solver.
+
+### Human action
+
+- None
+

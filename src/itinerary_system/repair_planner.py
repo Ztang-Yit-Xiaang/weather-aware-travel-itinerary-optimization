@@ -15,6 +15,9 @@ import re
 from dataclasses import dataclass, field
 from typing import Any, Literal
 
+from .plans import OwnershipPolicy, compute_plan_diff
+from .research_artifacts import PlanArtifactV2, stable_content_hash
+
 RepairOperationName = Literal["ADD", "DELETE", "REPLACE", "MOVE", "RELAX", "KEEP"]
 ConflictType = Literal["stale", "contradictory", "low_confidence", "missing"]
 
@@ -113,6 +116,9 @@ class RepairPlan:
     evidence_conflicts: tuple[EvidenceConflict, ...]
     evaluation_report: EvaluationReport
     counterfactual_explanations: tuple[CounterfactualExplanation, ...]
+    parent_plan_id: str | None = None
+    child_plan_id: str | None = None
+    plan_diff: dict[str, Any] | None = None
     method: str = "counterfactual_minimal_change_repair"
     metadata: dict[str, Any] = field(default_factory=dict)
 
@@ -162,6 +168,112 @@ def route_hash(route: tuple[dict[str, Any], ...] | list[dict[str, Any]]) -> str:
     """Return a stable hash for the user-visible route skeleton."""
     raw = json.dumps(_route_payload(route), sort_keys=True, separators=(",", ":"))
     return hashlib.sha256(raw.encode("utf-8")).hexdigest()[:16]
+
+
+def _route_to_plan_artifact(
+    route: tuple[dict[str, Any], ...] | list[dict[str, Any]],
+    *,
+    plan_id: str,
+    source_run_id: str,
+    planning_request_id: str,
+    catalog_snapshot_id: str,
+    context_snapshot_id: str,
+    parent_plan_id: str | None = None,
+    owned_constraints: tuple[dict[str, Any], ...] = (),
+) -> PlanArtifactV2:
+    selected_stops: list[dict[str, Any]] = []
+    sequence: list[str] = []
+    day_assignments: dict[str, int] = {}
+    ordered_by_day: dict[int, list[str]] = {}
+    lodging_assignments: dict[str, str] = {}
+    route_ids_by_day: dict[int, str] = {}
+
+    for index, stop in enumerate(route, start=1):
+        stop_record = dict(stop)
+        stop_id = _stable_stop_id(stop_record, index)
+        stop_record["stop_id"] = stop_id
+        stop_record.setdefault("stop_order", index)
+        day = _day(stop_record)
+        if day is not None:
+            stop_record["day"] = day
+            day_assignments[stop_id] = day
+            ordered_by_day.setdefault(day, []).append(stop_id)
+            lodging_id = str(
+                stop_record.get("lodging_id")
+                or stop_record.get("hotel_id")
+                or stop_record.get("overnight_city")
+                or ""
+            ).strip()
+            if lodging_id:
+                lodging_assignments[str(day)] = lodging_id
+            route_id = str(stop_record.get("route_id") or stop_record.get("road_route_id") or "").strip()
+            if route_id:
+                route_ids_by_day[day] = route_id
+        sequence.append(stop_id)
+        selected_stops.append(stop_record)
+
+    ordered_days = tuple(
+        {"day": day, "stop_ids": tuple(stop_ids)}
+        for day, stop_ids in sorted(ordered_by_day.items(), key=lambda item: item[0])
+    )
+    return PlanArtifactV2(
+        plan_id=plan_id,
+        parent_plan_id=parent_plan_id,
+        source_run_id=source_run_id,
+        planning_request_id=planning_request_id,
+        catalog_snapshot_id=catalog_snapshot_id,
+        context_snapshot_id=context_snapshot_id,
+        selected_stops=tuple(selected_stops),
+        day_assignments=day_assignments,
+        sequence=tuple(sequence),
+        lodging_assignments=lodging_assignments,
+        ordered_days=ordered_days,
+        route_ids_by_day=route_ids_by_day,
+        owned_constraints=owned_constraints,
+    )
+
+
+def _stable_stop_id(stop: dict[str, Any], index: int) -> str:
+    for key in ("stop_id", "poi_id", "attraction_id", "attraction_name", "name", "poi", "stop_name"):
+        value = stop.get(key)
+        if value is not None and str(value).strip():
+            return str(value).strip()
+    return f"stop_{index}"
+
+
+def _plan_lineage_for_repair(
+    request: RepairRequest,
+    repaired_route: tuple[dict[str, Any], ...],
+    *,
+    child_plan_id: str,
+) -> tuple[str, str, dict[str, Any]]:
+    catalog_snapshot_id = str(request.confirmed_constraints.get("catalog_snapshot_id") or "repair_scaffold_catalog")
+    context_snapshot_id = str(request.confirmed_constraints.get("context_snapshot_id") or "repair_scaffold_context")
+    owned_constraints = tuple(
+        dict(record)
+        for record in request.confirmed_constraints.get("owned_constraints", ())
+        if isinstance(record, dict)
+    )
+    parent = _route_to_plan_artifact(
+        request.baseline_route,
+        plan_id=f"{request.request_id}:parent",
+        source_run_id=f"{request.request_id}:input",
+        planning_request_id=request.request_id,
+        catalog_snapshot_id=catalog_snapshot_id,
+        context_snapshot_id=context_snapshot_id,
+        owned_constraints=owned_constraints,
+    )
+    child = _route_to_plan_artifact(
+        repaired_route,
+        plan_id=child_plan_id,
+        parent_plan_id=parent.plan_id,
+        source_run_id=f"{request.request_id}:repair_scaffold",
+        planning_request_id=request.request_id,
+        catalog_snapshot_id=catalog_snapshot_id,
+        context_snapshot_id=context_snapshot_id,
+        owned_constraints=owned_constraints,
+    )
+    return parent.plan_id, child.plan_id, compute_plan_diff(parent, child, OwnershipPolicy()).to_record()
 
 
 def parse_repair_intent(text: str, *, confirmed: bool = False, confidence: float = 0.55) -> ParsedRepairIntent:
@@ -402,6 +514,11 @@ def build_repair_plan(
     if not intent.confirmed:
         repaired = tuple(dict(stop) for stop in request.baseline_route)
         evaluation = evaluate_repair_plan(repaired, repaired)
+        parent_plan_id, child_plan_id, plan_diff = _plan_lineage_for_repair(
+            request,
+            repaired,
+            child_plan_id=f"{request.request_id}:unconfirmed",
+        )
         explanation = CounterfactualExplanation(
             target="repair request",
             constraint="confirmed_intent",
@@ -416,6 +533,9 @@ def build_repair_plan(
             evidence_conflicts=conflicts,
             evaluation_report=evaluation,
             counterfactual_explanations=(explanation,),
+            parent_plan_id=parent_plan_id,
+            child_plan_id=child_plan_id,
+            plan_diff=plan_diff,
             metadata={"status": "blocked_unconfirmed_intent"},
         )
 
@@ -633,6 +753,11 @@ def build_repair_plan(
         max_daily_travel_minutes=max_travel,
         max_stop_weather_risk=max(threshold, request.tolerance_profile.get("hard_weather_gate", threshold)),
     )
+    parent_plan_id, child_plan_id, plan_diff = _plan_lineage_for_repair(
+        request,
+        tuple(repaired),
+        child_plan_id=f"{request.request_id}:repair",
+    )
     return RepairPlan(
         plan_id=f"{request.request_id}:repair",
         parent_route_hash=parent_hash,
@@ -641,6 +766,9 @@ def build_repair_plan(
         evidence_conflicts=conflicts,
         evaluation_report=evaluation,
         counterfactual_explanations=tuple(counterfactuals),
+        parent_plan_id=parent_plan_id,
+        child_plan_id=child_plan_id,
+        plan_diff=plan_diff,
         metadata={
             "max_stop_weather_risk": threshold,
             "max_daily_travel_minutes": max_travel,
@@ -666,17 +794,30 @@ def generate_repair_alternatives(request: RepairRequest) -> tuple[RepairPlan, ..
 
 
 def _with_plan_id(plan: RepairPlan, suffix: str) -> RepairPlan:
+    plan_id = f"{plan.plan_id}:{suffix}"
     return RepairPlan(
-        plan_id=f"{plan.plan_id}:{suffix}",
+        plan_id=plan_id,
         parent_route_hash=plan.parent_route_hash,
         repaired_route=plan.repaired_route,
         operations=plan.operations,
         evidence_conflicts=plan.evidence_conflicts,
         evaluation_report=plan.evaluation_report,
         counterfactual_explanations=plan.counterfactual_explanations,
+        parent_plan_id=plan.parent_plan_id,
+        child_plan_id=plan_id,
+        plan_diff=_retarget_plan_diff(plan.plan_diff, child_plan_id=plan_id),
         method=plan.method,
         metadata={**plan.metadata, "frontier_policy": suffix},
     )
+
+
+def _retarget_plan_diff(plan_diff: dict[str, Any] | None, *, child_plan_id: str) -> dict[str, Any] | None:
+    if plan_diff is None:
+        return None
+    retargeted = dict(plan_diff)
+    retargeted["child_plan_id"] = child_plan_id
+    retargeted["diff_id"] = f"diff_{stable_content_hash({key: value for key, value in retargeted.items() if key != 'diff_id'})}"
+    return retargeted
 
 
 def _confirmed_move_targets(confirmed_constraints: dict[str, Any]) -> dict[str, int]:

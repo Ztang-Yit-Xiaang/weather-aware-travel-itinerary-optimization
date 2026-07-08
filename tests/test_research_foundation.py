@@ -538,6 +538,10 @@ class ResearchFoundationTests(unittest.TestCase):
         self.assertEqual(dataset_report["route_cache_coverage"]["road_route_requested_leg_count"], 0)
         self.assertEqual(dataset_report["route_cache_coverage"]["road_route_validated_leg_count"], 0)
         self.assertEqual(len(plan_lines), 1)
+        plan_record = json.loads(plan_lines[0])
+        self.assertEqual(plan_record["schema_version"], "plan-artifact-v2")
+        self.assertIn("ordered_days", plan_record)
+        self.assertIn("route_ids_by_day", plan_record)
         self.assertEqual(summary["comparison_eligibility"].iloc[0], "ineligible")
         self.assertFalse(bool(summary["route_road_validated"].iloc[0]))
         self.assertTrue(bool(summary["route_fallback_used"].iloc[0]))
@@ -619,6 +623,37 @@ class ResearchFoundationTests(unittest.TestCase):
         self.assertTrue(route_audit["road_validated"].astype(bool).all())
         self.assertFalse(route_audit["fallback_used"].astype(bool).any())
         self.assertTrue(route_audit["geometry_source"].eq("validated_osrm_cache").all())
+
+    def test_phase0_exporter_invalidates_solver_certificate_after_anchor_mutation(self):
+        config = load_trip_config(CONFIG_PATH)
+        route_stops = phase0_route_stops_frame()
+        route_stops.loc[1, "status"] = "REQUIRED_ANCHOR_SELECTED"
+        route_stops.loc[1, "notes"] = "Required-anchor policy inserted Yosemite because a base day was feasible."
+        method = phase0_method_frame()
+        method.loc[0, "notes"] = "Required anchor Yosemite was added to feasible day 1."
+
+        with temporary_directory() as output_dir:
+            phase0_road_route_cache_frame().to_csv(output_dir / ROAD_ROUTE_CACHE_FILENAME, index=False)
+            write_phase0_research_artifacts(
+                output_dir=output_dir,
+                config=config,
+                method_df=method,
+                route_stops_df=route_stops,
+            )
+            summary = pd.read_csv(output_dir / "production_phase0_evidence_summary.csv")
+            evaluation = pd.read_csv(output_dir / "production_phase0_evaluation_reports.csv")
+            planner_runs = pd.read_csv(output_dir / "production_phase0_planner_runs.csv")
+            plan_record = json.loads(
+                (output_dir / "production_phase0_plan_artifacts.jsonl").read_text(encoding="utf-8").splitlines()[0]
+            )
+
+        self.assertTrue(bool(summary["route_road_validated"].iloc[0]))
+        self.assertEqual(summary["solver_certification"].iloc[0], "INVALIDATED_AFTER_EDIT")
+        self.assertTrue(bool(summary["post_solve_mutation_detected"].iloc[0]))
+        self.assertEqual(planner_runs["solver_certification"].iloc[0], "INVALIDATED_AFTER_EDIT")
+        self.assertEqual(evaluation["hard_feasibility_status"].iloc[0], "FAILED")
+        self.assertEqual(evaluation["comparison_eligibility"].iloc[0], "ineligible")
+        self.assertEqual(plan_record["change_components"]["post_solve_mutation_detected"], 1.0)
 
     def test_road_route_cache_builder_audits_missing_cache_without_validation(self):
         with temporary_directory() as output_dir:

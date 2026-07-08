@@ -22,10 +22,11 @@ from itinerary_system.data.context import CONTEXT_TABLES
 from itinerary_system.data.snapshot import CATALOG_TABLES
 
 
-def copy_data_tree(target_root: Path) -> None:
+def copy_data_tree(target_root: Path, *, missing_context_tables: tuple[str, ...] = ()) -> None:
     data_dir = target_root / "data"
     shutil.copytree(REPO_ROOT / "data" / "snapshots", data_dir / "snapshots")
-    shutil.copytree(REPO_ROOT / "data" / "contexts", data_dir / "contexts")
+    ignore = shutil.ignore_patterns(*missing_context_tables) if missing_context_tables else None
+    shutil.copytree(REPO_ROOT / "data" / "contexts", data_dir / "contexts", ignore=ignore)
 
 
 class ContextSnapshotTests(unittest.TestCase):
@@ -67,8 +68,7 @@ class ContextSnapshotTests(unittest.TestCase):
     def test_missing_context_table_raises_typed_snapshot_error(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             root = Path(tmpdir)
-            copy_data_tree(root)
-            (root / "data" / "contexts" / "context_static_demo_2026_06" / "route_options.csv").unlink()
+            copy_data_tree(root, missing_context_tables=("route_options.csv",))
 
             with self.assertRaises(SnapshotTableMissing):
                 load_context_bundle("context_static_demo_2026_06", root=root)

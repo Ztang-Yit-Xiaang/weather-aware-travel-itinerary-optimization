@@ -1,6 +1,6 @@
-# Project-Literature Evidence Matrix
+# Project Evidence Matrix
 
-This matrix connects project features and possible claims to the literature and to the current implementation. It is intentionally conservative. A feature marked `implemented` has support in code, documentation, generated artifacts, or validation scripts. A feature marked `partially implemented` exists in a limited form. A feature marked `planned` is a good next step but should not be claimed as current system behavior. A feature marked `unsupported by current code` should not appear as an implemented contribution.
+This matrix connects project features and possible claims to the literature and to the current implementation. It also absorbs the former current-score audit so implementation claims and scoring caveats live in one place. A feature marked `implemented` has support in code, documentation, generated artifacts, or validation scripts. A feature marked `partially implemented` exists in a limited form. A feature marked `planned` is a good next step but should not be claimed as current system behavior. A feature marked `unsupported by current code` should not appear as an implemented contribution.
 
 | Project feature or claim | Current implementation status | Relevant paper(s) | What the paper supports | What remains novel or different here | Evidence strength |
 | --- | --- | --- | --- | --- | --- |
@@ -45,3 +45,23 @@ This matrix connects project features and possible claims to the literature and 
 - Evidence-conflict handling improves repair decisions under contradictory weather/closure sources.
 - The method outperforms other planning methods across route quality, runtime, or feasibility.
 - Natural-language preferences are reliably converted into validated optimization constraints.
+
+## Score Audit Summary
+
+Use the current project score as `utility_proxy`, `contextual utility`, or `research utility score`. Avoid treating it as calibrated satisfaction, real-time booking evidence, live congestion, or road-valid certification.
+
+| Score area | Current meaning | Caveat |
+| --- | --- | --- |
+| POI utility | Weighted combination of base score, Yelp/social/must-go signals, corridor fit, Wikipedia signal, source coverage, weather safety, and detour. | Weights are design choices; missing data can behave like low value. |
+| Source coverage | Derived from OSM, Yelp, curated, Wikidata, and Wikipedia source flags. | This is coverage, not calibrated uncertainty. |
+| Weather safety | Uses weather-risk fields and defaults when absent. | Needs weather snapshot/provenance before publication claims. |
+| Hotel value | Uses priors, curated/OSM data, estimated nightly price, and value heuristics. | Not live hotel availability or booking price. |
+| Nature exposure | Uses nature/scenic/hiking signals, weather sensitivity, and interest-adjusted utility. | Useful for weather-to-nature repair, but still a heuristic feature model. |
+| Route travel | Some current flows use geodesic fallback travel estimates. | Not road-valid unless backed by explicit route-leg provenance. |
+| Current route objective | Maximizes POI value plus diversity and subtracts travel/weather/detour penalties under constraints. | Generates routes; it is not yet parent-child repair with typed edit variables. |
+
+For repair experiments, report preservation and certification before utility:
+
+1. `LockedPreservation`, `BookedPreservation`, `UnaffectedDayPreservation`, and `WeightedEditCost`.
+2. `WeatherRiskReduction`, `NatureExposureReduction`, `RouteClosureAvoidance`, and `CertificationStatus`.
+3. `UtilityRetained`, `UtilityRegret`, `InterestAdjustedUtility`, and `EstimatedBudgetDelta`.

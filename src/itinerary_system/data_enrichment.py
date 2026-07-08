@@ -35,7 +35,7 @@ from .nature_site_routes import (
     build_nature_site_route_artifacts,
 )
 from .region_scenarios import all_scenario_coordinates, get_route_options, scenario_enrichment_city_universe
-from .utility_model import apply_utility_models, learning_to_rank_audit
+from .utility_model import apply_utility_models, build_source_masks, learning_to_rank_audit
 
 USER_AGENT = "IE5533-WeatherAwareTravelPlanner/1.0 (academic project; open data cache)"
 
@@ -59,6 +59,15 @@ OPEN_ENRICHED_POI_COLUMNS = [
     "route_fit",
     "detour_minutes",
     "source_coverage_score",
+    "has_osm",
+    "has_yelp",
+    "has_curated",
+    "has_wikidata",
+    "has_wikipedia",
+    "has_weather",
+    "has_route",
+    "available_source_list",
+    "missing_source_list",
     "identity_coverage",
     "location_coverage",
     "semantic_coverage",
@@ -975,17 +984,21 @@ def _recompute_value_columns(enriched_df: pd.DataFrame, config: TripConfig) -> p
         output["social_score"] = 0.0
         output["social_must_go"] = False
         output["must_go_weight"] = 0.0
-    output["source_coverage_score"] = (
-        0.35
-        * output["source_list"]
-        .astype(str)
-        .str.contains("osm|overpass|openstreetmap", case=False, na=False)
-        .astype(float)
-        + 0.25 * output["source_list"].astype(str).str.contains("yelp", case=False, na=False).astype(float)
-        + 0.20 * output["source_list"].astype(str).str.contains("curated", case=False, na=False).astype(float)
-        + 0.10 * output["wikidata_id"].astype(str).str.len().gt(0).astype(float)
-        + 0.10 * output["wikipedia_title"].astype(str).str.len().gt(0).astype(float)
-    ).clip(0.15, 1.0)
+    source_masks = build_source_masks(output)
+    for column in [
+        "has_osm",
+        "has_yelp",
+        "has_curated",
+        "has_wikidata",
+        "has_wikipedia",
+        "has_weather",
+        "has_route",
+        "available_source_list",
+        "missing_source_list",
+        "source_coverage_score",
+        "data_confidence",
+    ]:
+        output[column] = source_masks[column]
     output["identity_coverage"] = output["source_list"].astype(str).str.len().gt(0).astype(float)
     output["location_coverage"] = (
         pd.to_numeric(output.get("latitude", pd.Series(dtype=float)), errors="coerce").notna()

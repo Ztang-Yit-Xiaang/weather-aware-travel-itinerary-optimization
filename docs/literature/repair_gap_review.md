@@ -2,7 +2,9 @@
 
 Working title: Repair, Do Not Regenerate: Ownership-Aware Minimal Itinerary Repair under Travel Disruptions
 
-Search date: 2026-07-04. This review was prepared as a scoping synthesis, not a full systematic review. It follows the literature-evidence-synthesis workflow: multi-source search, citation verification where possible, matrix-based comparison, explicit evidence quality, and conservative gap claims. The companion search log is in `literature_search_log.md`; the comparison matrix is in `literature_matrix_repair_gap.md`; the score audit is in `current_score_audit.md`.
+Search date: 2026-07-04. This review was prepared as a scoping synthesis, not a full systematic review. It now absorbs the former repair search log, repair comparison matrix, novelty memo, and score-audit summary so this is the canonical repair-gap literature document.
+
+![Conceptual gap map for limitation-driven itinerary repair](../figures/literature_repair_gap_schematic.png)
 
 ## Scope and Review Question
 
@@ -11,6 +13,22 @@ The project has shifted from weather-aware itinerary generation toward a narrowe
 > What is missing from existing itinerary optimization, adaptive routing, LLM travel planning, and explainable optimization work if the artifact to be repaired is a user-owned itinerary with locked, booked, preferred, and flexible commitments?
 
 The short answer is that prior work strongly covers route/POI optimization, contextual recommendation, dynamic vehicle routing, LLM generation/evaluation, and optimization explanation as separate streams. It does not yet provide a tightly specified architecture in which a parent itinerary is a persistent object, changes are typed and ownership-weighted, repair proceeds through progressively larger local neighborhoods, objectives are solved lexicographically with preservation before utility, final plans are independently certified, and explanations are grounded in plan diffs, constraints, route evidence, and counterfactual repair attempts.
+
+## Search and Evidence Notes
+
+The searched concepts were minimal-change itinerary repair, counterfactual itinerary repair, solver-backed itinerary repair, weather itinerary repair, itinerary modification operations, evidence-conflict travel planning, conflicting-source RAG, dynamic replanning, and social-media/UGC travel planning. The checked surfaces included the local PDF corpus, local generated paper summaries, arXiv-focused searches, DOI/PDF metadata for key leads, ACL/ACM/ScienceDirect-style metadata where available, and repository documents.
+
+No searched phrase matched the full proposed method. That absence is only negative evidence, so the claim must be made as a scoped closest-work distinction rather than as proof that no adjacent work exists.
+
+| Closest threat | What it owns | Boundary for this project |
+|---|---|---|
+| iTIMO | Itinerary modification framing and ADD/DELETE/REPLACE vocabulary | Does not provide solver-backed temporal repair with ownership, lodging, MOVE/RELAX/KEEP, and independent certification. |
+| TripTide | Disruption-revision benchmark and preservation/adaptability metrics | Evaluates LLM revisions rather than a mathematical minimal-change repair optimizer. |
+| TTG, TRIP-PAL, ITINERA, LLMAP | LLM-plus-symbolic or LLM-plus-optimizer travel planning | Strong precedent for bounded language interfaces, but focused on generation/search rather than parent-child disruption repair. |
+| TravelEval, TripScore, TripCraft | Whole-plan evaluation and travel benchmark metrics | Useful evaluator vocabulary, not a repair mechanism. |
+| VeriTrip, TP-RAG, DRAGged into Conflicts, CONFACT | Evidence conflicts, noisy retrieval, and grounded reasoning | Relevant warning against broad conflict-handling claims, but not route-constrained itinerary repair. |
+| User-controllable counterfactual recommendation | Counterfactual user control | Supports explanation framing, but not constrained itinerary repair. |
+| From Stay to Play | UGC hotel, attraction, and route evidence | Background for evidence sources, not a disruption-repair method. |
 
 ## Synthesis by Stream
 
@@ -116,7 +134,7 @@ The LLM should compile user language into typed edits, ask for confirmation on o
 
 ## Comparison Against Literature
 
-The companion matrix shows the main pattern:
+The consolidated matrix shows the main pattern:
 
 | Stream | Strong coverage | Weak or missing for this project |
 |---|---|---|
@@ -172,9 +190,19 @@ Safe claim:
 
 > This project combines ownership-labeled commitments, progressive repair neighborhoods, lexicographic preservation-before-utility objectives, independent validation, and evidence-grounded explanations for user-owned itinerary repair under localized disruptions.
 
+## Current Score Caveat
+
+The current repository score should be described as a transparent research utility proxy, not as calibrated traveler satisfaction, live hotel availability, real congestion, or certified road-valid travel. For the repair framing, separate the score into:
+
+1. Preservation metrics: locked preservation, booked preservation, unaffected-day preservation, and weighted edit cost.
+2. Disruption metrics: weather risk reduction, nature exposure reduction, closure avoidance, and certification status.
+3. Utility metrics: utility retained, utility regret against full reoptimization, interest-adjusted utility, and estimated budget delta.
+
+This keeps the current utility model useful without letting it swallow the actual contribution: ownership-aware minimal repair.
+
 ## Evidence Quality and Limitations
 
-The strongest evidence base is survey-level OP/TTDP and dynamic VRP work, plus peer-reviewed SIGIR/EMNLP/ACM/INFORMS papers. The newest LLM travel modification and disruption papers are largely arXiv or recent conference/benchmark artifacts; they are highly relevant but should be treated as rapidly evolving evidence. Search coverage is limited to accessible web, publisher, arXiv, ACL, ACM, CEUR, Wiley, ScienceDirect, Semantic Scholar/OpenAlex-like pages, DBLP/RePEc, and local project documents. Google Scholar hit counts, Scopus, and Web of Science exports were not available in this Codex environment, so exact database hit counts are recorded as unavailable in the search log.
+The strongest evidence base is survey-level OP/TTDP and dynamic VRP work, plus peer-reviewed SIGIR/EMNLP/ACM/INFORMS papers. The newest LLM travel modification and disruption papers are largely arXiv or recent conference/benchmark artifacts; they are highly relevant but should be treated as rapidly evolving evidence. Search coverage was limited to accessible web, publisher, arXiv, ACL, ACM, CEUR, Wiley, ScienceDirect, Semantic Scholar/OpenAlex-like pages, DBLP/RePEc, and local project documents. Google Scholar hit counts, Scopus, and Web of Science exports were not available in the Codex environment, so exact database hit counts are unavailable.
 
 ## References
 

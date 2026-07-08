@@ -16,6 +16,7 @@ from .region_scenarios import (
     get_route_options,
     get_scenario_definition,
 )
+from .routing import RouteMatrix, RouteMatrixMissing, SolverRouteMatrixAdapter, route_anchor_key
 
 CITY_COORDS = {
     "San Diego": (32.7157, -117.1611),
@@ -121,7 +122,37 @@ def unique_in_order(values):
     return output
 
 
-def drive_minutes_between_cities(city_a: str, city_b: str) -> float:
+def _publication_mode(mode: str) -> bool:
+    return str(mode).lower() in {"publication", "strict", "final", "research"}
+
+
+def _coerce_route_adapter(
+    *,
+    route_matrix: RouteMatrix | None,
+    route_matrix_adapter: SolverRouteMatrixAdapter | None,
+    routing_mode: str,
+) -> SolverRouteMatrixAdapter | None:
+    if route_matrix_adapter is not None:
+        return SolverRouteMatrixAdapter(route_matrix_adapter.route_matrix, mode=routing_mode)
+    if route_matrix is not None:
+        return SolverRouteMatrixAdapter(route_matrix, mode=routing_mode)
+    if _publication_mode(routing_mode):
+        raise RouteMatrixMissing("publication-mode hierarchical planning requires a RouteMatrix")
+    return None
+
+
+def _city_route_id(city: str) -> str:
+    return route_anchor_key(city)
+
+
+def drive_minutes_between_cities(
+    city_a: str,
+    city_b: str,
+    *,
+    route_matrix_adapter: SolverRouteMatrixAdapter | None = None,
+) -> float:
+    if route_matrix_adapter is not None:
+        return route_matrix_adapter.travel_minutes(_city_route_id(city_a), _city_route_id(city_b))
     coord_a = CITY_COORDS[city_a]
     coord_b = CITY_COORDS[city_b]
     return geodesic(coord_a, coord_b).km * 1.25 / 72.0 * 60.0
@@ -335,7 +366,26 @@ def _nature_region_bonus(region: NatureRegionDefinition, config: TripConfig) -> 
     return bonus
 
 
-def _minutes_from_sequence_to_region(sequence: list[str], region: NatureRegionDefinition) -> float:
+def _minutes_from_sequence_to_region(
+    sequence: list[str],
+    region: NatureRegionDefinition,
+    *,
+    route_matrix_adapter: SolverRouteMatrixAdapter | None = None,
+) -> float:
+    if route_matrix_adapter is not None:
+        minutes = []
+        region_ids = [_city_route_id(region.name), _city_route_id(region.region_id)]
+        for city in sequence:
+            if city not in CITY_COORDS:
+                continue
+            for region_id in region_ids:
+                try:
+                    minutes.append(route_matrix_adapter.travel_minutes(_city_route_id(city), region_id))
+                    break
+                except Exception:
+                    if route_matrix_adapter.strict:
+                        raise
+        return float(min(minutes)) if minutes else 9999.0
     region_point = (region.latitude, region.longitude)
     minutes = []
     for city in sequence:
@@ -384,6 +434,7 @@ def _annotate_nature_regions(
     *,
     sequence: list[str],
     route_nature_regions: list[str] | None = None,
+    route_matrix_adapter: SolverRouteMatrixAdapter | None = None,
 ) -> dict:
     scenario_id = str(config.get("trip", "scenario", "california_coast"))
     if not bool(config.get("nature", "enabled", True)):
@@ -415,7 +466,11 @@ def _annotate_nature_regions(
 
     candidates = []
     for region in regions:
-        detour_minutes = _minutes_from_sequence_to_region(sequence, region)
+        detour_minutes = _minutes_from_sequence_to_region(
+            sequence,
+            region,
+            route_matrix_adapter=route_matrix_adapter,
+        )
         gateway_hit = any(base in sequence or base in plan.get("overnight_bases", []) for base in region.gateway_bases)
         route_hit = region.name in route_region_names or region.region_id in route_region_names
         nature_fit = nature_weight * float(region.nature_score) + 0.20 * float(region.scenic_score)
@@ -519,7 +574,19 @@ def _annotate_nature_regions(
     return plan
 
 
-def candidate_plans(config: TripConfig, city_catalog_summary_df: pd.DataFrame) -> list[dict]:
+def candidate_plans(
+    config: TripConfig,
+    city_catalog_summary_df: pd.DataFrame,
+    *,
+    route_matrix: RouteMatrix | None = None,
+    route_matrix_adapter: SolverRouteMatrixAdapter | None = None,
+    routing_mode: str = "demo",
+) -> list[dict]:
+    matrix_adapter = _coerce_route_adapter(
+        route_matrix=route_matrix,
+        route_matrix_adapter=route_matrix_adapter,
+        routing_mode=routing_mode,
+    )
     plans = []
     value_exponent = float(config.get("optimization", "city_day_value_exponent", 0.82))
     pass_through_weight = float(config.get("optimization", "pass_through_city_bonus_weight", 0.18))
@@ -531,7 +598,14 @@ def candidate_plans(config: TripConfig, city_catalog_summary_df: pd.DataFrame) -
         sequence = route_option["sequence"]
         base_sequence = _base_city_sequence_for_config(config, sequence, start_city, end_city)
         sequence_cities = unique_in_order(sequence)
-        leg_minutes = [drive_minutes_between_cities(sequence[i], sequence[i + 1]) for i in range(len(sequence) - 1)]
+        leg_minutes = [
+            drive_minutes_between_cities(
+                sequence[i],
+                sequence[i + 1],
+                route_matrix_adapter=matrix_adapter,
+            )
+            for i in range(len(sequence) - 1)
+        ]
         total_drive_minutes = float(sum(leg_minutes))
         route_nature_regions = route_option.get("nature_regions", [])
         for base_cities in generate_base_city_sets(
@@ -588,6 +662,10 @@ def candidate_plans(config: TripConfig, city_catalog_summary_df: pd.DataFrame) -
                     "city_sequence": sequence,
                     "days_by_city": allocation,
                     "intercity_drive_minutes": total_drive_minutes,
+                    "route_matrix_id": matrix_adapter.route_matrix.matrix_id if matrix_adapter is not None else "",
+                    "route_duration_source": "route_matrix" if matrix_adapter is not None else "geodesic_speed_proxy",
+                    "route_road_validated": bool(matrix_adapter.strict) if matrix_adapter is not None else False,
+                    "route_fallback_used": False if matrix_adapter is not None and matrix_adapter.strict else True,
                     "objective": float(objective),
                     "city_value_component": float(city_value),
                     "must_go_city_component": float(must_go_value),
@@ -609,6 +687,7 @@ def candidate_plans(config: TripConfig, city_catalog_summary_df: pd.DataFrame) -
                     config,
                     sequence=sequence,
                     route_nature_regions=route_nature_regions,
+                    route_matrix_adapter=matrix_adapter,
                 )
                 plans.append(plan)
     return plans
@@ -624,6 +703,7 @@ def _score_hierarchical_plan(
     allocation: dict[str, int],
     route_option_label: str | None = None,
     route_nature_regions: list[str] | None = None,
+    route_matrix_adapter: SolverRouteMatrixAdapter | None = None,
 ) -> dict:
     value_exponent = float(config.get("optimization", "city_day_value_exponent", 0.82))
     pass_through_weight = float(config.get("optimization", "pass_through_city_bonus_weight", 0.18))
@@ -632,7 +712,14 @@ def _score_hierarchical_plan(
     sequence_cities = unique_in_order(sequence)
     base_cities = [city for city in sequence_cities if int(allocation.get(city, 0)) > 0]
     pass_through_cities = [city for city in sequence_cities if city not in set(base_cities)]
-    leg_minutes = [drive_minutes_between_cities(sequence[i], sequence[i + 1]) for i in range(len(sequence) - 1)]
+    leg_minutes = [
+        drive_minutes_between_cities(
+            sequence[i],
+            sequence[i + 1],
+            route_matrix_adapter=route_matrix_adapter,
+        )
+        for i in range(len(sequence) - 1)
+    ]
     total_drive_minutes = float(sum(leg_minutes))
     city_value = sum(
         city_score(city, city_catalog_summary_df) * (float(days) ** value_exponent) for city, days in allocation.items()
@@ -678,6 +765,10 @@ def _score_hierarchical_plan(
         "city_sequence": sequence,
         "days_by_city": allocation,
         "intercity_drive_minutes": total_drive_minutes,
+        "route_matrix_id": route_matrix_adapter.route_matrix.matrix_id if route_matrix_adapter is not None else "",
+        "route_duration_source": "route_matrix" if route_matrix_adapter is not None else "geodesic_speed_proxy",
+        "route_road_validated": bool(route_matrix_adapter.strict) if route_matrix_adapter is not None else False,
+        "route_fallback_used": False if route_matrix_adapter is not None and route_matrix_adapter.strict else True,
         "objective": float(objective),
         "city_value_component": float(city_value),
         "must_go_city_component": float(must_go_value),
@@ -693,11 +784,22 @@ def _score_hierarchical_plan(
         "pass_through_pois": pass_through_cities,
         "problem_layer": "hierarchical_multicity_day_allocation",
     }
-    return _annotate_nature_regions(plan, config, sequence=sequence, route_nature_regions=route_nature_regions)
+    return _annotate_nature_regions(
+        plan,
+        config,
+        sequence=sequence,
+        route_nature_regions=route_nature_regions,
+        route_matrix_adapter=route_matrix_adapter,
+    )
 
 
 def solve_hierarchical_trip_with_greedy(
-    config: TripConfig, city_catalog_summary_df: pd.DataFrame
+    config: TripConfig,
+    city_catalog_summary_df: pd.DataFrame,
+    *,
+    route_matrix: RouteMatrix | None = None,
+    route_matrix_adapter: SolverRouteMatrixAdapter | None = None,
+    routing_mode: str = "demo",
 ) -> tuple[dict, pd.DataFrame]:
     """Greedily choose gateways/base cities/day counts for a method baseline.
 
@@ -706,6 +808,11 @@ def solve_hierarchical_trip_with_greedy(
     corridor by marginal city value, then allocates remaining days one at a
     time to the base city with the highest diminishing-return gain.
     """
+    matrix_adapter = _coerce_route_adapter(
+        route_matrix=route_matrix,
+        route_matrix_adapter=route_matrix_adapter,
+        routing_mode=routing_mode,
+    )
     total_days = int(config.get("trip", "trip_days", 7))
     min_days = int(config.get("optimization", "min_days_per_base_city", 1))
     max_days = int(config.get("optimization", "max_days_per_base_city", 3))
@@ -796,13 +903,19 @@ def solve_hierarchical_trip_with_greedy(
             allocation=allocation,
             route_option_label=route_option.get("label", f"{start_city} to {end_city}"),
             route_nature_regions=route_option.get("nature_regions", []),
+            route_matrix_adapter=matrix_adapter,
         )
         plan["optimizer_role"] = "hierarchical_greedy_master"
         plan["solver_status"] = "greedy_heuristic"
         greedy_plans.append(plan)
 
     if not greedy_plans:
-        fallback_plans = candidate_plans(config, city_catalog_summary_df)
+        fallback_plans = candidate_plans(
+            config,
+            city_catalog_summary_df,
+            route_matrix_adapter=matrix_adapter,
+            routing_mode=routing_mode,
+        )
         if not fallback_plans:
             raise ValueError("No feasible hierarchical greedy candidate plans generated")
         fallback = max(fallback_plans, key=lambda item: float(item["objective"]))
@@ -820,7 +933,12 @@ def solve_hierarchical_trip_with_greedy(
 
 
 def solve_hierarchical_trip_with_gurobi(
-    config: TripConfig, city_catalog_summary_df: pd.DataFrame
+    config: TripConfig,
+    city_catalog_summary_df: pd.DataFrame,
+    *,
+    route_matrix: RouteMatrix | None = None,
+    route_matrix_adapter: SolverRouteMatrixAdapter | None = None,
+    routing_mode: str = "demo",
 ) -> tuple[dict, pd.DataFrame]:
     """Use Gurobi to choose the best pre-generated hierarchical plan.
 
@@ -828,7 +946,17 @@ def solve_hierarchical_trip_with_gurobi(
     gateway/allocation binary. If Gurobi is unavailable, the method falls back to
     the same objective by enumeration and marks the solver status.
     """
-    plans = candidate_plans(config, city_catalog_summary_df)
+    matrix_adapter = _coerce_route_adapter(
+        route_matrix=route_matrix,
+        route_matrix_adapter=route_matrix_adapter,
+        routing_mode=routing_mode,
+    )
+    plans = candidate_plans(
+        config,
+        city_catalog_summary_df,
+        route_matrix_adapter=matrix_adapter,
+        routing_mode=routing_mode,
+    )
     if not plans:
         raise ValueError("No feasible hierarchical candidate plans generated")
 

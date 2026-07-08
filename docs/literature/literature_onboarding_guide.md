@@ -2,7 +2,7 @@
 
 This guide is the recommended starting point for a new researcher joining the weather-aware travel itinerary optimization project. It explains the project in plain language, organizes the literature into four research areas, and points to the smaller set of papers that are worth reading first.
 
-After this introduction, read the [integrated core literature review](core_paper_reading_cards.md) for the detailed eight-paper learning sequence. The full paper-by-paper evidence remains in `literature_deep_read_study_report.md`; use that file as a reference bank after you understand the field structure and core papers.
+After this introduction, read the [integrated core literature review](core_paper_reading_cards.md), then use [evidence_matrix.md](evidence_matrix.md) and [repair_gap_review.md](repair_gap_review.md) for the project-specific claim boundaries. The full paper-by-paper evidence remains in `literature_deep_read_study_report.md`; use that file as a reference bank after you understand the field structure and core papers.
 
 Every paper entry in the evidence bank ends with a **Project Action Takeaway**. Read that compact block first when deciding whether a paper matters: **Main goal** states what the paper tried to accomplish; **Main limitation** separates author-reported constraints from project-team inference; **Publication use** identifies the defensible claim and citation role; **Project-polishing action** turns the paper into a concrete implementation or evaluation task; and **Current project status** prevents planned work from being mistaken for an implemented contribution. These blocks are navigation aids, not substitutes for the method, results, and critical-evaluation notes above them.
 

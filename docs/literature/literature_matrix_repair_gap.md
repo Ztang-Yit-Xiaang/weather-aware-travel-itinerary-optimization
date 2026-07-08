@@ -2,7 +2,31 @@
 
 Search date: 2026-07-04
 
+Purpose: preserve the compact repair-gap matrix as a current-project artifact. This file keeps the scanning style of the original matrix while adding a short column guide and a full reference key so the table is easier to defend in a report or meeting.
+
 Evidence levels use the engineering/CS hierarchy from the literature-evidence-synthesis skill: E1 industrial deployment, E2 multi-site experiment, E3 replication, E4 controlled experiment, E5 benchmark/simulation, E6 case study, E7 proof of concept/demo, Review for survey papers.
+
+## How to Read This Matrix
+
+| Column | Meaning |
+|---|---|
+| Citation | Short author-year key. Full title and venue are listed in the Reference Key below. |
+| Stream | Literature family, such as OP/TTDP, LLM travel planning, dynamic routing, or explainable optimization. |
+| Research question | Main question the paper answers. |
+| Method | Study type or technical approach. |
+| Data/source | Evidence base used by the paper. |
+| Key contribution | Main result or conceptual contribution. |
+| Repair relation | How the work relates to itinerary repair: backbone, adjacent precedent, direct threat, or gap evidence. |
+| Ownership labels | Whether the work models locked, booked, strong, weak, or flexible user commitments. |
+| Parent-child diff | Whether the work explicitly compares an accepted parent itinerary with a repaired child itinerary. |
+| Progressive neighborhoods | Whether repair starts locally and expands only when necessary. |
+| Lexicographic objectives | Whether objectives are ordered, for example preservation first, feasibility second, utility later. |
+| Independent certification | Whether the final plan is checked by a separate solver, route validator, planner, benchmark oracle, or certificate artifact. |
+| Explanation grounding | Whether explanations are tied to plan diffs, constraints, solver outcomes, route/weather/hotel evidence, or counterfactual artifacts. |
+| Evidence level | Strength/type of evidence using the E1-E7 hierarchy. |
+| Citation priority | A = core citation, B = supporting citation, C = optional/background. |
+
+## Matrix
 
 | # | Citation | Stream | Research question | Method | Data/source | Key contribution | Repair relation | Ownership labels | Parent-child diff | Progressive neighborhoods | Lexicographic objectives | Independent certification | Explanation grounding | Evidence level | Citation priority |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
@@ -47,3 +71,30 @@ The strongest empty matrix cells are the intersection of:
 - Evidence-grounded explanations tied to diff, solver, route, weather, hotel, and counterfactual artifacts.
 
 This gap is methodological and application-oriented. It is not a claim that no one has studied itinerary modification or disruption response; iTIMO and TripTide make that claim unsafe. The defensible contribution is the combination of ownership-aware repair semantics, optimization stages, certification, and explanation evidence in one itinerary repair framework.
+
+## Reference Key
+
+- Borras, J., Moreno, A., and Valls, A. (2014). Intelligent tourism recommender systems: A survey. Expert Systems with Applications, 41(16), 7370-7389. DOI: 10.1016/j.eswa.2014.06.007
+- Braunhofer, M., Elahi, M., Ge, M., Ricci, F., and Schievenin, T. (2013). STS: Design of Weather-Aware Mobile Recommender Systems in Tourism. AI*HCI@AI*IA / CEUR Workshop Proceedings.
+- Chen, H. et al. (2025). OptiChat: Bridging Optimization Models and Practitioners with Large Language Models. INFORMS Journal on Data Science. DOI: 10.1287/ijds.2025.0074
+- Chen, W. et al. (2026). TravelEval: A Comprehensive Benchmarking Framework for Evaluating LLM-Powered Travel Planning Agents. arXiv:2606.01046.
+- de la Rosa, T., Gopalakrishnan, S., Pozanco, A., Zeng, Z., and Borrajo, D. (2024). TRIP-PAL: Travel Planning with Guarantees by Combining Large Language Models and Automated Planners. arXiv:2406.10196.
+- Gama, R., and Fernandes, H. L. (2021). A reinforcement learning approach to the orienteering problem with time windows. Computers & Operations Research, 133, 105357. DOI: 10.1016/j.cor.2021.105357
+- Gunawan, A., Lau, H. C., and Vansteenwegen, P. (2016). Orienteering Problem: A survey of recent variants, solution approaches and applications. European Journal of Operational Research, 255(2), 315-332. DOI: 10.1016/j.ejor.2016.04.059
+- Halder, S., Lim, K. H., Chan, J., and Zhang, X. (2024). A survey on personalized itinerary recommendation: From optimisation to deep learning. Applied Soft Computing, 152, 111200. DOI: 10.1016/j.asoc.2023.111200
+- Horvitz, E. (1999). Principles of mixed-initiative user interfaces. CHI 1999. DOI: 10.1145/302979.303030
+- Huang, Z., Ma, Y., Zhang, H., Ma, H., and Sun, Z. (2026). iTIMO: An LLM-empowered Synthesis Dataset for Travel Itinerary Modification. arXiv:2601.10609.
+- Ju, D. et al. (2024). To the Globe (TTG): Towards Language-Driven Guaranteed Travel Planning. EMNLP 2024 System Demonstrations, 240-249.
+- Karmakar, P., Chaudhuri, S., Mallick, S., Gupta, M., Jana, A., and Ghosh, S. (2025). TripTide: A Benchmark for Adaptive Travel Planning under Disruptions. arXiv:2510.21329.
+- Kool, W., van Hoof, H., and Welling, M. (2019). Attention, Learn to Solve Routing Problems! ICLR 2019.
+- Lim, K. H., Chan, J., Karunasekera, S., and Leckie, C. (2017). Personalized Itinerary Recommendation with Queuing Time Awareness. SIGIR 2017, 325-334. DOI: 10.1145/3077136.3080778
+- Nazari, M., Oroojlooy, A., Snyder, L., and Takac, M. (2018). Reinforcement Learning for Solving the Vehicle Routing Problem. NeurIPS 2018.
+- Otto, D., Kurtz, J., and Birbil, S. I. (2025). Coherent Local Explanations for Mathematical Optimization. arXiv:2502.04840.
+- Pillac, V., Gendreau, M., Gueret, C., and Medaglia, A. L. (2013). A review of dynamic vehicle routing problems. European Journal of Operational Research, 225(1), 1-11. DOI: 10.1016/j.ejor.2012.08.015
+- Psaraftis, H. N., Wen, M., and Kontovas, C. A. (2016). Dynamic vehicle routing problems: Three decades and counting. Networks, 67(1), 3-31. DOI: 10.1002/net.21628
+- Qu, Y., Xiao, H., Li, F., Zhou, H., and Dai, X. (2025). TripScore: Benchmarking and rewarding real-world travel planning with fine-grained evaluation. arXiv:2510.09011.
+- Quercia, D., Schifanella, R., and Aiello, L. M. (2014). The Shortest Path to Happiness: Recommending Beautiful, Quiet, and Happy Routes in the City. HT 2014. DOI: 10.1145/2631775.2631799
+- Ruiz-Meza, J. L., and Montoya-Torres, J. R. (2022). A systematic literature review for the tourist trip design problem: Extensions, solution techniques and future research lines. Operations Research Perspectives. DOI: 10.1016/j.orp.2022.100228
+- Tang, J. et al. (2024). ITINERA: Integrating Spatial Optimization with LLMs for Open-domain Urban Itinerary Planning. EMNLP 2024 Industry Track.
+- TravelPlanner: Xie, J. et al. (2024). TravelPlanner: A Benchmark for Real-World Planning with Language Agents. arXiv:2402.01622.
+- Vansteenwegen, P., Souffriau, W., and Van Oudheusden, D. (2011). The orienteering problem: A survey. European Journal of Operational Research, 209(1), 1-10. DOI: 10.1016/j.ejor.2010.03.045

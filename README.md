@@ -161,23 +161,22 @@ Start with the [documentation index](docs/README.md) when you want to find a fil
 
 ### Literature Review
 
-Start with the onboarding guide, then use the integrated eight-paper review, professor-recommended companion readings, and evidence matrix before opening the full 43-paper evidence bank.
+Start with the onboarding guide, then use the integrated eight-paper review, evidence matrix, and repair-gap review before opening the full evidence bank.
 
 | Literature Document | Read It For |
 | --- | --- |
 | [Literature onboarding guide](docs/literature/literature_onboarding_guide.md) | First read for the project problem, four research areas, terminology, research gap, roadmap, and next study scope |
 | [Integrated core literature review](docs/literature/core_paper_reading_cards.md) | Detailed eight-paper learning sequence plus professor-recommended companion papers on neuro-symbolic routing and travel-plan evaluation |
-| [Project-literature evidence matrix](docs/literature/project_literature_evidence_matrix.md) | Feature-by-feature map from current implementation status to supporting papers and remaining novelty |
-| [Related work outline](docs/literature/related_work_outline.md) | Future paper structure for Tourist Trip Design, personalization, LLM/solver planning, and explainable decision support |
+| [Project evidence matrix](docs/literature/evidence_matrix.md) | Feature-by-feature map from current implementation status to supporting papers, scoring caveats, and remaining novelty |
+| [Repair gap review](docs/literature/repair_gap_review.md) | Consolidated related-work, novelty, search, metric, and claim-boundary review for ownership-aware repair |
 | [Literature deep read study report](docs/literature/literature_deep_read_study_report.md) | Detailed evidence bank for all local PDFs; use after the onboarding guide, not as the first read |
-| [Recent papers quick index](docs/literature/recent_papers_2023_2026_addendum.md) | Short index of the 2023-2026 papers integrated into the deep report |
-| [Repair gap synthesis](docs/literature/repair_gap/literature_review_repair_gap.md) | Scoping review for ownership-aware minimal itinerary repair under disruptions |
 
 ### Project And Engineering Docs
 
 | Document | What It Covers |
 | --- | --- |
 | [Nature-aware model extension](docs/methods/nature_aware_model_extension.md) | Interest bars, nature regions, route balance, map export architecture |
+| [Itinerary repair method](docs/methods/repair_method.md) | Repair-method thesis, records, experiments, claims, and Phase 0 evidence path |
 | [Research stabilization plan](docs/planning/research_stabilization_and_publication_plan.md) | Publication-oriented research plan, readiness gates, and venue strategy |
 | [Repair technical specification](docs/planning/travel_itinerary_repair_technical_specification.md) | Implementation contract for parent-plan-aware itinerary repair work |
 | [Data dictionary](docs/reference/data_dictionary.md) | Core data records, evidence roles, routing eligibility, and immediate fix scope |

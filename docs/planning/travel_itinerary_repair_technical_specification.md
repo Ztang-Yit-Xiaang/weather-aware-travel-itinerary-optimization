@@ -1415,6 +1415,10 @@ Compute deletion, addition, day move, time shift, reorder, lodging, road, and un
 
 ### REPAIR-001 — Repair neighborhood
 
+**Implementation status**
+
+Phase 2.0 first slice implemented: `RepairRadius`, `RepairNeighborhood`, `ParentPlanIndex`, `RepairNeighborhoodBuilder`, `build_repair_neighborhood()`, `affected_days()`, and `freeze_constraints()` exist under `src/itinerary_system/repair/`. Neighborhoods now freeze unaffected assignments, include adjacent/boundary days where required, and keep locked/booked constraints fixed unless booked relaxation is explicitly allowed at a lodging-edit radius.
+
 **Files to create**
 
 - `src/itinerary_system/repair/neighborhood.py`
@@ -1437,6 +1441,10 @@ Build radius 0, 1, 2, and full editable sets from disruption and parent plan.
 ---
 
 ### REPAIR-002 — Ownership-aware repair master
+
+**Implementation status**
+
+Phase 2.0 second slice implemented: `src/itinerary_system/repair/change_variables.py` defines solver-facing decision variables, typed change variables, and objective terms/components; `src/itinerary_system/repair/master_model.py` builds a solver-neutral `RepairModel` from `PlanArtifactV2`, `RepairNeighborhood`, request constraints, and optional `RouteMatrix`. The model now enforces fixed outside-neighborhood assignments, prevents locked POI deletion/relaxation, keeps booked lodging fixed without explicit permission, exports objective component values, and can extract a child `PlanArtifactV2` with diff cost. This is still a master-model scaffold; REPAIR-003/004/005 must add lexicographic solve execution, day-route subproblem solving, and progressive orchestration.
 
 **Files to create**
 
@@ -1463,6 +1471,10 @@ Implement selection/day/lodging variables and typed change variables relative to
 
 ### REPAIR-003 — Sequential lexicographic solver
 
+**Implementation status**
+
+Phase 2.0 third slice implemented: `src/itinerary_system/repair/lexicographic.py` provides `ObjectiveTolerances`, `LexicographicStageResult`, `LexicographicResult`, `LexicographicRepairSolver`, `solve_lexicographically()`, stage-to-`PlannerRun` conversion, child-plan extraction, and a small candidate-choice Gurobi reference solver. The implementation preserves earlier stage optima within configured tolerances, persists stage status/bound/gap fields, emits failed run records for infeasible stages, and has a small-instance test matching the Gurobi reference. This still solves over explicit candidate `RepairSolution` records; REPAIR-004/005 must generate day-route candidates and orchestrate progressive attempts.
+
 **Files to create**
 
 - `src/itinerary_system/repair/lexicographic.py`
@@ -1485,11 +1497,19 @@ Implement selection/day/lodging variables and typed change variables relative to
 
 Refactor current `multi_objective_route.py` into a typed `DayRouteSolver` using RouteMatrix, opening windows, visit duration, and fixed day assignment.
 
+**Implementation status**
+
+Phase 2.0 fourth slice implemented: `src/itinerary_system/repair/day_route_solver.py` provides `DayRouteSolverConfig`, `DayRouteCandidate`, `DayRouteSubproblemResult`, `DayRouteSolver`, and `solve_day_route_subproblem()`. The solver evaluates explicit and generated single-day stop sequences against `RouteMatrix` legs, start/end anchors, opening windows, visit durations, max-day minutes, fixed day assignments, and strict publication-mode route validation. It emits full `RepairSolution` candidates for REPAIR-003. This does not yet provide the REPAIR-005 progressive controller or VERIFY-001 independent final-plan evaluator.
+
 **Dependencies:** ROUTE-004, REPAIR-002.
 
 ---
 
 ### REPAIR-005 — Progressive repair controller
+
+**Implementation status**
+
+Phase 2.0 fifth slice implemented: `src/itinerary_system/repair/progressive.py` provides `ProgressiveRepairController`, `repair_progressively()`, `RepairOutcome`, `RepairAttempt`, `CandidateEvaluationRecord`, `RepairDiagnosis`, and `diagnose_failure()`. The controller loads the immutable parent plan, orders configured radii with full reoptimization forced last, builds each neighborhood and repair master model, generates RouteMatrix-backed day-route candidates, solves candidate choices lexicographically, evaluates each selected child through a caller-provided independent evaluator hook, saves only the first eligible child plan, and records every attempted radius. If no radius succeeds, diagnosis reports attempted radii and the smallest observed hard/booked-relaxation and weighted-edit metrics from evaluated candidates. This completes progressive orchestration but does not replace VERIFY-001; final production certification still requires the independent final-plan evaluator package.
 
 **Files to create**
 
@@ -1510,6 +1530,10 @@ Refactor current `multi_objective_route.py` into a typed `DayRouteSolver` using 
 ---
 
 ### VERIFY-001 — Independent final-plan evaluator
+
+**Implementation status**
+
+Phase 3.0 first slice implemented: `src/itinerary_system/evaluation/certificate.py` defines `EvaluationFinding` and `PlanEvaluationCertificate`, and `src/itinerary_system/evaluation/plan_evaluator.py` defines `PlanEvaluatorConfig` and `PlanEvaluator`. The evaluator recomputes eligibility from `PlanArtifactV2`, `PlannerRun`, `OwnedConstraint`, and `RouteMatrix` evidence rather than solver feasibility booleans. It checks artifact/source/run linkage, stored content hashes and stale certificates, hard owned constraints, route matrix publication readiness, day timing and opening windows, lodging consistency, budget/weather/closure signals, and duplicate visits. It emits independent certificates whose failures and warnings are separate and whose `plan_content_hash` invalidates certification after post-solve mutation. EXPLAIN-001 structured evidence objects and deterministic evidence builders, plus EXPLAIN-002 dependency-injected counterfactual/template-verbalizer contracts, are now implemented; `run_research_pipeline()` can export executor-provided explanation records, and the progressive repair adapter now emits contrastive repair explanation evidence for accepted children.
 
 **Files to create**
 
@@ -1547,10 +1571,15 @@ Recompute final displayed plan constraints from PlanArtifact and routing/context
 
 ### EXPLAIN-001 — Structured explanation evidence
 
+**Implementation status**
+
+Implemented: `src/itinerary_system/explanation/evidence.py` defines `EvidenceRecord`, `ExplanationClaim`, `ExplanationEvidence`, `WhyEvidence`, `WhyNotEvidence`, `WhatIfEvidence`, `ContrastiveEvidence`, `ExplanationEvidenceBuilder`, `build_explanation_evidence`, and `validate_explanation_claims`; `tests/explanation/test_evidence.py` covers missing references, invalid evidence types, serialization, and publication filtering, while `tests/explanation/test_evidence_builder.py` covers builder-derived why/contrastive evidence from plan diff, certificate eligibility, and route-validation records. Numerical and causal claims fail closed unless they cite allowed evidence records, and unsupported claims are omitted from publication records.
+
 **Files to create**
 
 - `src/itinerary_system/explanation/evidence.py`
 - `tests/explanation/test_evidence.py`
+- `tests/explanation/test_evidence_builder.py`
 
 **Public objects**
 
@@ -1559,6 +1588,8 @@ Recompute final displayed plan constraints from PlanArtifact and routing/context
 - `WhatIfEvidence`
 - `ContrastiveEvidence`
 - `ExplanationClaim`
+- `ExplanationEvidenceBuilder`
+- `build_explanation_evidence`
 
 **Invariant**
 
@@ -1571,6 +1602,10 @@ Every numerical or causal claim has one or more valid references to a constraint
 ---
 
 ### EXPLAIN-002 — Counterfactual runner and verbalizer
+
+**Implementation status**
+
+Implemented: `src/itinerary_system/explanation/counterfactual.py` defines `CounterfactualRequest`, `CounterfactualRunRecord`, `CounterfactualRunner`, and `build_counterfactual_request`; `src/itinerary_system/explanation/verbalizer.py` defines `RenderedExplanation`, `DeterministicTemplateVerbalizer`, and `validate_claim_evidence_map`. The runner creates sandbox why-not/what-if requests, can call an injected repair executor for re-solve behavior, records counterfactual run success/failure evidence, and detects parent-plan mutation. The deterministic verbalizer is the benchmark-default renderer and hides unsupported claims. `run_research_pipeline()` now writes executor-provided explanation records under `runs/<run_id>/explanations/`; `build_progressive_repair_executor()` generates grounded contrastive evidence from accepted repair diff, route matrix, and certificate records.
 
 **Files to create**
 
@@ -1592,6 +1627,10 @@ Every numerical or causal claim has one or more valid references to a constraint
 ---
 
 ### PIPE-001 — Authoritative pipeline runner
+
+**Implementation status**
+
+Implemented slices: `src/itinerary_system/pipeline_runner.py` defines `RefreshPolicy`, `PipelineRunContext`, `PipelineExecutionResult`, `PipelineRun`, `RunDirectoryExists`, `PipelineStrictModeError`, `run_research_pipeline()`, `run_phase0_generation_executor()`, `build_phase0_generation_executor()`, `run_production_generation_executor()`, `build_production_generation_executor()`, `run_progressive_repair_executor()`, and `build_progressive_repair_executor()`. The runner creates immutable `runs/<run_id>/` directories, redacts resolved config, writes the canonical subdirectory layout, exports injected generation/repair artifacts, refuses overwrites, disables live API flags when `RefreshPolicy.NEVER` is used, blocks ineligible strict runs after writing diagnostics, adapts existing Phase 0 evidence exports into canonical artifacts, adapts the existing production optimizer output into canonical artifacts, and adapts the REPAIR-005 progressive controller into child plan, diff, independent certificate, route matrix, explanation, metrics, and dashboard artifacts without notebook dependency. It does not yet replace the notebook-oriented `experiment_runner.py`, implement benchmark disruption suites, or migrate the notebook.
 
 **Files to create**
 
@@ -1640,6 +1679,10 @@ Every numerical or causal claim has one or more valid references to a constraint
 
 ### BENCH-001 — Six disruption generators
 
+**Implementation status**
+
+Implemented: `src/itinerary_system/benchmark/disruptions.py` defines `DisruptionFamily`, `DisruptionScenario`, `DisruptionGenerator`, `generate_disruption_scenarios()`, and `generate_disruption_requests()`. The generator emits the six canonical families with deterministic IDs, explicit `observed`/`synthetic` status in scenario metadata, evidence records, and repair-request constraints, and copies parent stop records instead of mutating the parent artifact. `data/benchmark/disruptions/bench_001_families.json` records the static six-family contract.
+
 **Files to create**
 
 - `src/itinerary_system/benchmark/disruptions.py`
@@ -1661,12 +1704,18 @@ Every numerical or causal claim has one or more valid references to a constraint
 
 ### BENCH-002 — Benchmark runner, baselines, and splits
 
+**Implementation status**
+
+Implemented: `src/itinerary_system/benchmark/runner.py` defines `BenchmarkMethodAdapter`, `BenchmarkRunRecord`, `BenchmarkResult`, and `run_benchmark_suite()` for paired method execution over frozen `DisruptionScenario` inputs; `src/itinerary_system/benchmark/splits.py` defines deterministic parent-plan/disruption-family split keys and hard leakage validation; `src/itinerary_system/benchmark/metrics.py` extracts preservation, quality, computation, certificate, and explanation metric columns from injected method results. `src/itinerary_system/benchmark/methods.py` now defines `build_pipeline_benchmark_method_adapter()` and `pipeline_run_to_benchmark_result()` so benchmark methods can execute through `run_research_pipeline()` and then load the emitted pipeline artifacts back into the benchmark row shape. The runner exports `metrics/benchmark_metrics.jsonl` plus `manifest.json` under the chosen benchmark output directory. Complete publication benchmark matrices still require later provider/pipeline runs over the full canonical parent/profile/method suite.
+
 **Files to create**
 
 - `src/itinerary_system/benchmark/runner.py`
 - `src/itinerary_system/benchmark/splits.py`
 - `src/itinerary_system/benchmark/metrics.py`
+- `src/itinerary_system/benchmark/methods.py`
 - `tests/benchmark/test_no_leakage.py`
+- `tests/benchmark/test_method_adapters.py`
 
 **Acceptance criteria**
 

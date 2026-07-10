@@ -233,3 +233,51 @@ Entries record Codex-assisted work sessions, findings, validation, conclusions, 
 
 - Review the consolidated docs/README.md and confirm whether the remaining deep evidence bank should stay as one large reference file.
 
+## Professor update deck for context-aware itinerary repair
+
+- Status: completed
+- Start local time: 2026-07-08 11:53:17 -05:00
+- End local time: 2026-07-08 12:02:16 -05:00
+- Duration: 8m 59s
+
+### Goal
+
+- Create an English 12-slide, 16:9 professor-update PowerPoint deck using the requested PPT generator style and the local literature/planning/current-state documents as evidence.
+
+### What changed
+
+- docs/slides/context_aware_itinerary_repair_professor_update.pptx: created a 12-slide UMN maroon/gold grid-product-style professor update deck with slide numbers, consistent header/footer treatment, source-document footers, matrix/cards/architecture visuals, and speaker notes for every slide.
+
+### What was found
+
+- The current problem manifest now records VERIFY-001 independent final-plan evaluator and certificate core as implemented, while explanation evidence, immutable benchmark/pipeline work, frozen scenarios, and publication validation remain open.
+- The literature sources make broad "first itinerary modification" or "first disruption benchmark" claims unsafe because iTIMO and TripTide are close threat papers.
+- The defensible novelty remains ownership-aware parent-child repair with typed diffs, progressive neighborhoods, lexicographic preservation-before-utility, independent validation, and evidence-grounded explanations.
+- PowerPoint and LibreOffice executables were not available in this shell for rendered slide screenshots.
+
+### Validation
+
+- Generated the deck with pptxgenjs from a temporary dependency install outside the repository.
+- Node/JSZip structural validation: passed with 12 slides, 12 notes pages, 16:9 dimensions (aspect 1.7778), footer slide numbers present on all slides, and no raw URLs in slide text.
+- Rendered visual screenshot validation was not run because PowerPoint/LibreOffice were unavailable in the shell.
+
+### Conclusion
+
+- The requested professor-update deck is available at docs/slides/context_aware_itinerary_repair_professor_update.pptx and reflects the current manifest distinction between implemented/scaffolded work and claims not yet allowed.
+
+### Next steps
+
+**Codex can proceed:**
+
+- Add rendered slide previews or polish individual slide layouts if a PowerPoint/LibreOffice-capable environment is available.
+- Generate a one-scenario professor demo package that pairs the deck with parent plan, disruption, child repair, PlanDiff, and certificate artifacts.
+
+**Human reflection:**
+
+- Confirm whether the meeting should emphasize the technical repair/evaluator path or the later IUI/CHI inspectability path.
+- Decide whether RQ1 parser work should be explicitly deferred in the professor discussion.
+
+### Human action
+
+- Review the deck before the meeting and decide the first frozen corridor/scenario and expected demo depth for the next update.
+

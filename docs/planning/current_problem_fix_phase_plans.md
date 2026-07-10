@@ -1423,6 +1423,10 @@ After implementation and validation, update `REPAIR-001` through `REPAIR-005` st
 
 Implement **independent evaluator, certificate, and explanation evidence**.
 
+## Implementation Status
+
+VERIFY-001, EXPLAIN-001, and EXPLAIN-002 are implemented in the current workspace. The evaluator and certificate package recompute final-plan eligibility independently, structured explanation evidence fails closed without artifact refs, and `ExplanationEvidenceBuilder` now creates default why/contrastive evidence from `PlanDiff`, certificate eligibility, and route-validation records. Dependency-injected counterfactual runners plus deterministic template verbalization support why-not/what-if explanations from stored run evidence. Phase 4.0 still must wire these artifacts into immutable pipeline run directories and benchmark exports before publication or UI claims are complete.
+
 This feature should allow the system to:
 
 1. Recompute final displayed plan validity independently of solver booleans.
@@ -1613,6 +1617,7 @@ Internal and dashboard integration:
 * `tests/evaluation/test_plan_evaluator.py`
 * `tests/evaluation/test_certificate.py`
 * `tests/explanation/test_evidence.py`
+* `tests/explanation/test_evidence_builder.py`
 
 ## Files to Modify
 
@@ -1660,6 +1665,10 @@ After implementation and tests pass, update `VERIFY-001` and `EXPLAIN-001` statu
 
 Implement **authoritative pipeline, benchmark, and notebook migration**.
 
+## Implementation Status
+
+PIPE-001 package-runner, Phase 0 generation adapter, production optimizer adapter, progressive repair adapter, BENCH-001 disruption-generator, BENCH-002 paired-runner, and BENCH-002 pipeline-method-adapter slices are implemented in the current workspace. `src/itinerary_system/pipeline_runner.py` provides a typed package-level run boundary with immutable run directories, redacted config export, injected generation/repair executors, canonical artifact subdirectories, overwrite protection, refresh-policy live-API disabling, strict-mode blocking after diagnostic artifact writes, `build_phase0_generation_executor()` for adapting existing Phase 0 evidence exports, `build_production_generation_executor()` for adapting the existing production optimizer output into `PipelineExecutionResult`, and `build_progressive_repair_executor()` for adapting the REPAIR-005 progressive controller into child plan, diff, certificate, routing, explanation, metrics, and dashboard artifacts without notebook dependency. `src/itinerary_system/benchmark/disruptions.py` now provides deterministic six-family disruption scenarios and repair requests with explicit observed/synthetic status. `run_benchmark_suite()` now runs injected method adapters over identical frozen disruption scenarios, enforces parent-plan/disruption-family split isolation, and exports long-form benchmark metrics plus a run manifest. `build_pipeline_benchmark_method_adapter()` now lets benchmark methods execute through `run_research_pipeline()` and load the resulting artifacts back into benchmark rows. Notebook migration remains open Phase 4.0 work, and publication claims still require complete validated benchmark matrices from later provider/pipeline runs.
+
 This feature should allow the system to:
 
 1. Run generation and repair through one package-level pipeline runner.
@@ -1681,9 +1690,7 @@ The project already has:
 
 The missing part is:
 
-* A canonical `PipelineRun` API.
-* Immutable `runs/<run_id>/` output layout.
-* Benchmark disruption generators and paired method runner.
+* Paired benchmark method runner.
 * Notebook cells that call package functions instead of carrying business logic.
 
 ## New Components to Add
@@ -1846,7 +1853,12 @@ def run_research_pipeline(
 ) -> PipelineRun
 
 def generate_disruption_requests(parent_plan: PlanArtifactV2, bundle: DatasetBundle, seed: int) -> tuple[RepairRequest, ...]
-def run_benchmark_suite(config_path: Path, scenarios: tuple[RepairRequest, ...]) -> BenchmarkResult
+def run_benchmark_suite(
+    *,
+    scenarios: tuple[DisruptionScenario, ...],
+    methods: tuple[BenchmarkMethodAdapter, ...],
+    output_dir: Path,
+) -> BenchmarkResult
 def migrate_notebook_to_pipeline(notebook_path: Path) -> None
 ```
 
@@ -1890,9 +1902,11 @@ Internal and notebook integration:
 * `src/itinerary_system/benchmark/runner.py`
 * `src/itinerary_system/benchmark/splits.py`
 * `src/itinerary_system/benchmark/metrics.py`
+* `src/itinerary_system/benchmark/methods.py`
 * `tests/test_pipeline_runner.py`
 * `tests/benchmark/test_disruptions.py`
 * `tests/benchmark/test_no_leakage.py`
+* `tests/benchmark/test_method_adapters.py`
 
 ## Files to Modify
 
@@ -1920,7 +1934,7 @@ Internal and notebook integration:
 - [ ] Repair mode emits parent/child/diff/evaluation/manifest.
 - [ ] Strict mode blocks ineligible plan.
 - [ ] Six disruption families have deterministic IDs.
-- [ ] Benchmark paired methods use identical frozen inputs.
+- [x] Benchmark paired methods use identical frozen inputs.
 - [ ] Notebook calls package runner and contains no business logic.
 
 ## Roadmap / Full Pipeline Update

@@ -1,0 +1,37 @@
+{
+  "schema_version": "benchmark-disruption-family-manifest-v1",
+  "benchmark_id": "BENCH-001",
+  "description": "Canonical deterministic disruption families for context-aware itinerary repair benchmarks.",
+  "families": [
+    {
+      "family": "weather_deterioration",
+      "default_evidence_status": "synthetic",
+      "description": "Weather risk or feasibility worsens for an already scheduled stop."
+    },
+    {
+      "family": "road_closure",
+      "default_evidence_status": "synthetic",
+      "description": "A day route or required road segment becomes unavailable and requires route revalidation."
+    },
+    {
+      "family": "hotel_unavailability",
+      "default_evidence_status": "synthetic",
+      "description": "A lodging assignment becomes unavailable and may require explicit booked-lodging relaxation."
+    },
+    {
+      "family": "attraction_closure",
+      "default_evidence_status": "synthetic",
+      "description": "A scheduled attraction closes or enters an opening-window conflict."
+    },
+    {
+      "family": "reduced_driving_tolerance",
+      "default_evidence_status": "synthetic",
+      "description": "The traveler lowers daily driving or pace tolerance after accepting the parent itinerary."
+    },
+    {
+      "family": "new_must_visit",
+      "default_evidence_status": "synthetic",
+      "description": "The traveler adds a new must-visit stop that must be considered in a child repair."
+    }
+  ]
+}

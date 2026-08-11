@@ -1,0 +1,590 @@
+{
+  "base_url": "http://127.0.0.1:8127",
+  "started_utc": "2026-08-10T16:12:25Z",
+  "checks": [
+    {
+      "label": "trip_initial_1440x900",
+      "viewport": {
+        "w": 1440,
+        "h": 900
+      },
+      "steps": [],
+      "coverage_ratio": 1.0,
+      "ready": true,
+      "ready_reason": "loading verified local geography\u2026",
+      "issues": [],
+      "shot": {
+        "screenshot_path": "results\\stability_pass_8127\\trip_initial_1440x900_map.png",
+        "screenshot_bytes": 100474,
+        "screenshot_timestamp_utc": "2026-08-10T16:12:30Z",
+        "screenshot_dimensions": {
+          "w": 651,
+          "h": 548
+        },
+        "coverage_ratio": 0.3623958648681983,
+        "present": true,
+        "statusText": "Loading verified local geography\u2026",
+        "statusHidden": true,
+        "mapWidth": 651,
+        "mapHeight": 548,
+        "mapTop": 152,
+        "mapLeft": 397,
+        "mapBottom": 700,
+        "canvasCount": 1,
+        "visibleCanvases": 1,
+        "mapArea": 356748,
+        "coveredArea": 356748,
+        "totalCanvasArea": 356748,
+        "areaCoverageRatio": 1
+      },
+      "page_shot": {
+        "screenshot_path": "results\\stability_pass_8127\\trip_initial_1440x900_page.png",
+        "screenshot_bytes": 236712,
+        "screenshot_timestamp_utc": "2026-08-10T16:12:31Z",
+        "screenshot_dimensions": {
+          "w": 1440,
+          "h": 900
+        },
+        "coverage_ratio": 0.17766126543209876
+      },
+      "selected_state": {
+        "selected_day_id": "7",
+        "selected_stop_id": null,
+        "selected_segment_id": null,
+        "selected_candidate_id": null,
+        "selected_alternative_id": null,
+        "current_route": "/app/itinerary",
+        "route_text_open": false,
+        "toolbar_mode": "Select",
+        "viewport": {
+          "w": 1440,
+          "h": 900
+        },
+        "documentHeight": 900
+      },
+      "active_nav": [],
+      "console_errors": [],
+      "network_failures": [],
+      "route": "http://127.0.0.1:8127/app/itinerary",
+      "screenshot_after_ready": true
+    },
+    {
+      "label": "trip_after_reload_1440x900",
+      "viewport": {
+        "w": 1440,
+        "h": 900
+      },
+      "steps": [],
+      "coverage_ratio": 1.0,
+      "ready": true,
+      "ready_reason": "loading verified local geography\u2026",
+      "issues": [],
+      "shot": {
+        "screenshot_path": "results\\stability_pass_8127\\trip_after_reload_1440x900_map.png",
+        "screenshot_bytes": 68159,
+        "screenshot_timestamp_utc": "2026-08-10T16:12:34Z",
+        "screenshot_dimensions": {
+          "w": 651,
+          "h": 548
+        },
+        "coverage_ratio": 0.4586234540908428,
+        "present": true,
+        "statusText": "Loading verified local geography\u2026",
+        "statusHidden": true,
+        "mapWidth": 651,
+        "mapHeight": 548,
+        "mapTop": 152,
+        "mapLeft": 397,
+        "mapBottom": 700,
+        "canvasCount": 1,
+        "visibleCanvases": 1,
+        "mapArea": 356748,
+        "coveredArea": 356748,
+        "totalCanvasArea": 356748,
+        "areaCoverageRatio": 1
+      },
+      "page_shot": {
+        "screenshot_path": "results\\stability_pass_8127\\trip_after_reload_1440x900_page.png",
+        "screenshot_bytes": 202876,
+        "screenshot_timestamp_utc": "2026-08-10T16:12:34Z",
+        "screenshot_dimensions": {
+          "w": 1440,
+          "h": 900
+        },
+        "coverage_ratio": 0.2041496913580247
+      },
+      "selected_state": {
+        "selected_day_id": "7",
+        "selected_stop_id": null,
+        "selected_segment_id": null,
+        "selected_candidate_id": null,
+        "selected_alternative_id": null,
+        "current_route": "/app/itinerary",
+        "route_text_open": false,
+        "toolbar_mode": "Select",
+        "viewport": {
+          "w": 1440,
+          "h": 900
+        },
+        "documentHeight": 900
+      },
+      "active_nav": [],
+      "console_errors": [],
+      "network_failures": [],
+      "route": "http://127.0.0.1:8127/app/itinerary",
+      "screenshot_after_ready": true
+    },
+    {
+      "label": "trip_compare_trip_1440x900",
+      "viewport": {
+        "w": 1440,
+        "h": 900
+      },
+      "steps": [],
+      "coverage_ratio": 1.0,
+      "ready": true,
+      "ready_reason": "loading verified local geography\u2026",
+      "issues": [],
+      "shot": {
+        "screenshot_path": "results\\stability_pass_8127\\trip_compare_trip_1440x900_map.png",
+        "screenshot_bytes": 100474,
+        "screenshot_timestamp_utc": "2026-08-10T16:12:38Z",
+        "screenshot_dimensions": {
+          "w": 651,
+          "h": 548
+        },
+        "coverage_ratio": 0.3623958648681983,
+        "present": true,
+        "statusText": "Loading verified local geography\u2026",
+        "statusHidden": true,
+        "mapWidth": 651,
+        "mapHeight": 548,
+        "mapTop": 152,
+        "mapLeft": 397,
+        "mapBottom": 700,
+        "canvasCount": 1,
+        "visibleCanvases": 1,
+        "mapArea": 356748,
+        "coveredArea": 356748,
+        "totalCanvasArea": 356748,
+        "areaCoverageRatio": 1
+      },
+      "page_shot": {
+        "screenshot_path": "results\\stability_pass_8127\\trip_compare_trip_1440x900_page.png",
+        "screenshot_bytes": 236712,
+        "screenshot_timestamp_utc": "2026-08-10T16:12:38Z",
+        "screenshot_dimensions": {
+          "w": 1440,
+          "h": 900
+        },
+        "coverage_ratio": 0.17766126543209876
+      },
+      "selected_state": {
+        "selected_day_id": "7",
+        "selected_stop_id": null,
+        "selected_segment_id": null,
+        "selected_candidate_id": null,
+        "selected_alternative_id": null,
+        "current_route": "/app/itinerary",
+        "route_text_open": false,
+        "toolbar_mode": "Select",
+        "viewport": {
+          "w": 1440,
+          "h": 900
+        },
+        "documentHeight": 900
+      },
+      "active_nav": [],
+      "console_errors": [],
+      "network_failures": [],
+      "route": "http://127.0.0.1:8127/app/itinerary",
+      "screenshot_after_ready": true
+    },
+    {
+      "label": "copilot_toggle_1440x900",
+      "viewport": {
+        "w": 1440,
+        "h": 900
+      },
+      "steps": [],
+      "coverage_ratio": 1.0,
+      "ready": true,
+      "ready_reason": "loading verified local geography\u2026",
+      "issues": [],
+      "shot": {
+        "screenshot_path": "results\\stability_pass_8127\\copilot_toggle_1440x900_map.png",
+        "screenshot_bytes": 68159,
+        "screenshot_timestamp_utc": "2026-08-10T16:12:40Z",
+        "screenshot_dimensions": {
+          "w": 651,
+          "h": 548
+        },
+        "coverage_ratio": 0.4586234540908428,
+        "present": true,
+        "statusText": "Loading verified local geography\u2026",
+        "statusHidden": true,
+        "mapWidth": 651,
+        "mapHeight": 548,
+        "mapTop": 152,
+        "mapLeft": 397,
+        "mapBottom": 700,
+        "canvasCount": 1,
+        "visibleCanvases": 1,
+        "mapArea": 356748,
+        "coveredArea": 356748,
+        "totalCanvasArea": 356748,
+        "areaCoverageRatio": 1
+      },
+      "page_shot": {
+        "screenshot_path": "results\\stability_pass_8127\\copilot_toggle_1440x900_page.png",
+        "screenshot_bytes": 202876,
+        "screenshot_timestamp_utc": "2026-08-10T16:12:40Z",
+        "screenshot_dimensions": {
+          "w": 1440,
+          "h": 900
+        },
+        "coverage_ratio": 0.2041496913580247
+      },
+      "selected_state": {
+        "selected_day_id": "7",
+        "selected_stop_id": null,
+        "selected_segment_id": null,
+        "selected_candidate_id": null,
+        "selected_alternative_id": null,
+        "current_route": "/app/itinerary",
+        "route_text_open": false,
+        "toolbar_mode": "Select",
+        "viewport": {
+          "w": 1440,
+          "h": 900
+        },
+        "documentHeight": 900
+      },
+      "active_nav": [],
+      "console_errors": [],
+      "network_failures": [],
+      "route": "http://127.0.0.1:8127/app/itinerary",
+      "screenshot_after_ready": true
+    },
+    {
+      "label": "resize_1440x1024_1440_900",
+      "viewport": {
+        "w": 1440,
+        "h": 900
+      },
+      "steps": [
+        {
+          "map_dimensions": [
+            {
+              "present": true,
+              "statusText": "Loading verified local geography\u2026",
+              "statusHidden": true,
+              "mapWidth": 651,
+              "mapHeight": 548,
+              "mapTop": 152,
+              "mapLeft": 397,
+              "mapBottom": 700,
+              "canvasCount": 1,
+              "visibleCanvases": 1,
+              "mapArea": 356748,
+              "coveredArea": 356748,
+              "totalCanvasArea": 356748,
+              "areaCoverageRatio": 1
+            },
+            {
+              "present": true,
+              "statusText": "Loading verified local geography\u2026",
+              "statusHidden": true,
+              "mapWidth": 605,
+              "mapHeight": 424,
+              "mapTop": 148,
+              "mapLeft": 81,
+              "mapBottom": 572,
+              "canvasCount": 1,
+              "visibleCanvases": 1,
+              "mapArea": 256520,
+              "coveredArea": 256520,
+              "totalCanvasArea": 256520,
+              "areaCoverageRatio": 1
+            },
+            {
+              "present": true,
+              "statusText": "Loading verified local geography\u2026",
+              "statusHidden": true,
+              "mapWidth": 651,
+              "mapHeight": 548,
+              "mapTop": 152,
+              "mapLeft": 397,
+              "mapBottom": 700,
+              "canvasCount": 1,
+              "visibleCanvases": 1,
+              "mapArea": 356748,
+              "coveredArea": 356748,
+              "totalCanvasArea": 356748,
+              "areaCoverageRatio": 1
+            }
+          ]
+        }
+      ],
+      "coverage_ratio": 1.0,
+      "ready": true,
+      "ready_reason": "loading verified local geography\u2026",
+      "issues": [],
+      "shot": {
+        "screenshot_path": "results\\stability_pass_8127\\resize_1440x1024_1440_900_map.png",
+        "screenshot_bytes": 68159,
+        "screenshot_timestamp_utc": "2026-08-10T16:12:44Z",
+        "screenshot_dimensions": {
+          "w": 651,
+          "h": 548
+        },
+        "coverage_ratio": 0.4586234540908428,
+        "present": true,
+        "statusText": "Loading verified local geography\u2026",
+        "statusHidden": true,
+        "mapWidth": 651,
+        "mapHeight": 548,
+        "mapTop": 152,
+        "mapLeft": 397,
+        "mapBottom": 700,
+        "canvasCount": 1,
+        "visibleCanvases": 1,
+        "mapArea": 356748,
+        "coveredArea": 356748,
+        "totalCanvasArea": 356748,
+        "areaCoverageRatio": 1
+      },
+      "page_shot": {
+        "screenshot_path": "results\\stability_pass_8127\\resize_1440x1024_1440_900_page.png",
+        "screenshot_bytes": 202876,
+        "screenshot_timestamp_utc": "2026-08-10T16:12:44Z",
+        "screenshot_dimensions": {
+          "w": 1440,
+          "h": 900
+        },
+        "coverage_ratio": 0.2041496913580247
+      },
+      "selected_state": {
+        "selected_day_id": "7",
+        "selected_stop_id": null,
+        "selected_segment_id": null,
+        "selected_candidate_id": null,
+        "selected_alternative_id": null,
+        "current_route": "/app/itinerary",
+        "route_text_open": false,
+        "toolbar_mode": "Select",
+        "viewport": {
+          "w": 1440,
+          "h": 900
+        },
+        "documentHeight": 900
+      },
+      "active_nav": [],
+      "console_errors": [],
+      "network_failures": [],
+      "route": "http://127.0.0.1:8127/app/itinerary",
+      "screenshot_after_ready": true
+    },
+    {
+      "label": "compare_recommended_1024x768",
+      "viewport": {
+        "w": 1024,
+        "h": 768
+      },
+      "steps": [],
+      "coverage_ratio": 1.0,
+      "ready": true,
+      "ready_reason": "",
+      "issues": [],
+      "shot": {
+        "screenshot_path": "results\\stability_pass_8127\\compare_recommended_1024x768_map.png",
+        "screenshot_bytes": 96660,
+        "screenshot_timestamp_utc": "2026-08-10T16:12:47Z",
+        "screenshot_dimensions": {
+          "w": 1024,
+          "h": 768
+        },
+        "coverage_ratio": 0.08184814453125
+      },
+      "page_shot": {
+        "screenshot_path": "results\\stability_pass_8127\\compare_recommended_1024x768_page.png",
+        "screenshot_bytes": 96660,
+        "screenshot_timestamp_utc": "2026-08-10T16:12:47Z",
+        "screenshot_dimensions": {
+          "w": 1024,
+          "h": 768
+        },
+        "coverage_ratio": 0.08184814453125
+      },
+      "selected_state": {
+        "selected_day_id": "7",
+        "selected_stop_id": null,
+        "selected_segment_id": null,
+        "selected_candidate_id": null,
+        "selected_alternative_id": null,
+        "current_route": "/app/compare",
+        "route_text_open": false,
+        "toolbar_mode": null,
+        "viewport": {
+          "w": 1024,
+          "h": 768
+        },
+        "documentHeight": 768
+      },
+      "active_nav": [],
+      "console_errors": [],
+      "network_failures": [],
+      "route": "http://127.0.0.1:8127/app/compare",
+      "screenshot_after_ready": true
+    },
+    {
+      "label": "text_route_panel_1280x800",
+      "viewport": {
+        "w": 1280,
+        "h": 800
+      },
+      "steps": [],
+      "coverage_ratio": 1.0,
+      "ready": true,
+      "ready_reason": "loading verified local geography\u2026",
+      "issues": [],
+      "shot": {
+        "screenshot_path": "results\\stability_pass_8127\\text_route_panel_1280x800_map.png",
+        "screenshot_bytes": 63085,
+        "screenshot_timestamp_utc": "2026-08-10T16:12:50Z",
+        "screenshot_dimensions": {
+          "w": 491,
+          "h": 416
+        },
+        "coverage_ratio": 0.22823319755600815,
+        "present": true,
+        "statusText": "Loading verified local geography\u2026",
+        "statusHidden": true,
+        "mapWidth": 491,
+        "mapHeight": 416,
+        "mapTop": 152,
+        "mapLeft": 397,
+        "mapBottom": 568,
+        "canvasCount": 1,
+        "visibleCanvases": 1,
+        "mapArea": 204256,
+        "coveredArea": 204256,
+        "totalCanvasArea": 204256,
+        "areaCoverageRatio": 1
+      },
+      "page_shot": {
+        "screenshot_path": "results\\stability_pass_8127\\text_route_panel_1280x800_page.png",
+        "screenshot_bytes": 187018,
+        "screenshot_timestamp_utc": "2026-08-10T16:12:50Z",
+        "screenshot_dimensions": {
+          "w": 1280,
+          "h": 800
+        },
+        "coverage_ratio": 0.126765625
+      },
+      "selected_state": {
+        "selected_day_id": "7",
+        "selected_stop_id": null,
+        "selected_segment_id": null,
+        "selected_candidate_id": null,
+        "selected_alternative_id": null,
+        "current_route": "/app/itinerary",
+        "route_text_open": true,
+        "toolbar_mode": "Select",
+        "viewport": {
+          "w": 1280,
+          "h": 800
+        },
+        "documentHeight": 800
+      },
+      "active_nav": [],
+      "console_errors": [],
+      "network_failures": [],
+      "route": "http://127.0.0.1:8127/app/itinerary",
+      "screenshot_after_ready": true
+    },
+    {
+      "label": "mobile_390x844",
+      "viewport": {
+        "w": 390,
+        "h": 844
+      },
+      "steps": [],
+      "coverage_ratio": 1.0,
+      "ready": true,
+      "ready_reason": "loading verified local geography\u2026",
+      "issues": [],
+      "shot": {
+        "screenshot_path": "results\\stability_pass_8127\\mobile_390x844_map.png",
+        "screenshot_bytes": 61911,
+        "screenshot_timestamp_utc": "2026-08-10T16:12:52Z",
+        "screenshot_dimensions": {
+          "w": 353,
+          "h": 592
+        },
+        "coverage_ratio": 0.2980198683102366,
+        "present": true,
+        "statusText": "Loading verified local geography\u2026",
+        "statusHidden": true,
+        "mapWidth": 353,
+        "mapHeight": 592,
+        "mapTop": 136,
+        "mapLeft": 11,
+        "mapBottom": 728,
+        "canvasCount": 1,
+        "visibleCanvases": 1,
+        "mapArea": 208976,
+        "coveredArea": 208976,
+        "totalCanvasArea": 208976,
+        "areaCoverageRatio": 1
+      },
+      "page_shot": {
+        "screenshot_path": "results\\stability_pass_8127\\mobile_390x844_page.png",
+        "screenshot_bytes": 79047,
+        "screenshot_timestamp_utc": "2026-08-10T16:12:53Z",
+        "screenshot_dimensions": {
+          "w": 390,
+          "h": 844
+        },
+        "coverage_ratio": 0.20815408919674322
+      },
+      "selected_state": {
+        "selected_day_id": "7",
+        "selected_stop_id": null,
+        "selected_segment_id": null,
+        "selected_candidate_id": null,
+        "selected_alternative_id": null,
+        "current_route": "/app/itinerary",
+        "route_text_open": false,
+        "toolbar_mode": "Select",
+        "viewport": {
+          "w": 390,
+          "h": 844
+        },
+        "documentHeight": 908
+      },
+      "active_nav": [],
+      "console_errors": [],
+      "network_failures": [],
+      "route": "http://127.0.0.1:8127/app/itinerary",
+      "screenshot_after_ready": true
+    }
+  ],
+  "console_errors": [],
+  "network_failures": [],
+  "acceptance_criteria": {
+    "fresh_load_complete_tiles": true,
+    "reload_complete_tiles": true,
+    "trip_compare_trip_no_gap": true,
+    "copilot_open_close_no_gap": true,
+    "resize_no_gap": true,
+    "compare_1024_768": true,
+    "text_route_visible": true,
+    "mobile_view_captured": true,
+    "coverage_ge_95_all_relevant": true,
+    "map_height_560_760_oriented": false,
+    "page_viewport_match": true,
+    "no_screenshot_before_ready": true
+  },
+  "ended_utc": "2026-08-10T16:12:53Z"
+}

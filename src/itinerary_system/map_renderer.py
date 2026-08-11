@@ -2,8 +2,8 @@
 
 This wrapper protects the production hierarchical California map from stale
 local 3-day Gurobi outputs in notebook memory, prepares comparison dashboard
-artifacts, calls the legacy blueprint map renderer, then re-saves the HTML with
-focused initial bounds.
+artifacts, calls the package-owned blueprint renderer, then re-saves the HTML
+with focused initial bounds.
 """
 
 from __future__ import annotations
@@ -13,8 +13,7 @@ from typing import Any
 
 import pandas as pd
 
-from . import map_exporter
-from ._legacy import import_legacy_module
+from . import blueprint_renderer, map_exporter
 from .artifact_metadata import artifact_metadata_matches
 from .config import TripConfig
 from .experiment_runner import _write_route_sequence_audit, prepare_comparison_dashboard_outputs
@@ -542,12 +541,7 @@ def build_map(
     config: TripConfig,
     output_path: str | Path | None = None,
 ):
-    """Build the production HTML map.
-
-    The actual map drawing still lives in legacy blueprint_trip_map.py.
-    This wrapper sanitizes the context and adjusts the saved HTML view.
-    """
-    blueprint_trip_map = import_legacy_module("blueprint_trip_map")
+    """Build the production HTML map through the package-owned renderer."""
 
     merged_context = _sanitize_production_map_context(context, config, output_path)
 
@@ -561,7 +555,7 @@ def build_map(
     prepare_map_dashboard_data(merged_context, config=config, output_path=output_path)
 
     html_path = Path(output_path) if output_path is not None else None
-    trip_map, day_plan_df, returned_html_path = blueprint_trip_map.build_production_trip_map(
+    trip_map, day_plan_df, returned_html_path = blueprint_renderer.build_production_trip_map(
         merged_context,
         output_path=output_path,
         run_live_routing=bool(_config_get(config, "enrichment", "run_live_apis", default=False)),

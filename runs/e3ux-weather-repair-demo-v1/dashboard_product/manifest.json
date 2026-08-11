@@ -1,0 +1,81 @@
+{
+  "asset_hashes": {
+    "assets/product.css": "de44428fa224df4252ecc69d7895b7dd0c249ec93c8d753ff4f5aba95c361eab",
+    "assets/product_data.js": "c002cb07af255e2e036a5ea7badfe7c90ffea4f141de5bb12031ad92799da9e8",
+    "assets/product_map.js": "84efc84a458b12925e3f1b7f0bbf0a4b7f7d25f6d8306e3606df8127fb3e6e64",
+    "assets/product_ui.js": "1658e01567e3f38d3d968dc85c14b2094fbc93d7e9e52e87657d828e7877e58f",
+    "index.html": "d4df5460966272106ce8dce693c6b72b54a9b5e26089fe04635695a16c5ca013"
+  },
+  "certificate_id": "cert_e68c2d7c0d169a3e",
+  "child_content_hash": "a7e7a0d888278daf",
+  "child_plan_id": "plan_7a706ef44466f240",
+  "compatibility_boundary": "Read-only presentation of canonical run artifacts. It does not replace or mutate the optimizer, evaluator, benchmark, route model, plan repository, legacy dashboard, Folium renderer, or interaction authority.",
+  "diff_id": "diff_1923c674931ec053",
+  "executed_method_ids": [
+    "lexicographic_repair:enumeration",
+    "progressive_sequential_lexicographic_repair"
+  ],
+  "explanation_ids": [
+    "repair_explanation_b54c99988319083e"
+  ],
+  "generated_at": "2026-07-29T20:52:16.069006+00:00",
+  "parent_content_hash": "20b540fdc5ed5cc9",
+  "parent_plan_id": "plan_e1c4f803691e3188",
+  "product_version": "1.0.0",
+  "requested_method_ids": [
+    "lexicographic_repair",
+    "progressive_sequential_lexicographic_repair"
+  ],
+  "route_matrix_id": "route_matrix_68ab535465b06808",
+  "run_id": "e3ux_weather_repair_demo_v1",
+  "run_manifest_path": "../manifest.json",
+  "run_status": "completed",
+  "schema_version": "product-dashboard-manifest-v1",
+  "source_artifact_refs": {
+    "benchmark_metrics": [
+      "benchmark/metrics/benchmark_metrics.jsonl"
+    ],
+    "diffs": [
+      "diffs/diff_1923c674931ec053.json"
+    ],
+    "evaluations": [
+      "evaluations/cert_e68c2d7c0d169a3e.json"
+    ],
+    "explanations": [
+      "explanations/repair_explanation_b54c99988319083e.json"
+    ],
+    "metrics": [
+      "metrics/metrics.json"
+    ],
+    "planner_runs": [
+      "planner_runs.jsonl"
+    ],
+    "plans": [
+      "plans/plan_e1c4f803691e3188.json",
+      "plans/plan_7a706ef44466f240.json"
+    ],
+    "requests": [
+      "requests/bench_weather_deterioration_4062619eeaf4.json"
+    ],
+    "routing": [
+      "routing/route_matrix_68ab535465b06808.json"
+    ]
+  },
+  "source_content_hashes": {
+    "benchmark/metrics/benchmark_metrics.jsonl": "0cf705a349d4d8415fa14428b5c3bd4de7a84b6fc8bf6c0612290b9b6e86a59c",
+    "diffs/diff_1923c674931ec053.json": "7eb2660449a5bc011caa639f0381448d0b30f5dbda944251b97834356dcbd357",
+    "evaluations/cert_e68c2d7c0d169a3e.json": "fb756f8b84043933b3fd383f34a6ac9dc375e6ec132a8df905f413398d9a3a05",
+    "explanations/repair_explanation_b54c99988319083e.json": "3641d2299fcbe5f87885a12cc7e2269be5bcc730858f2239eb94154a23fd577f",
+    "metrics/metrics.json": "32e4f272406a6d4c822ea4d60fa577c78658619a7aae26c56f1b352b577f9ebd",
+    "planner_runs.jsonl": "4cbd315e8484e902d289474a4c7847c94bae303dfb4bbac7dd7bc0af101a8969",
+    "plans/plan_7a706ef44466f240.json": "7b1cfc19002d81b5a406340010863a9446b999109be1ffa03b7eee7fe82a1866",
+    "plans/plan_e1c4f803691e3188.json": "4036ca84db5b1194ddacdc82aab344141104edf81eba6b42a1b05af950f8939d",
+    "requests/bench_weather_deterioration_4062619eeaf4.json": "4044fec09dc1096696937a214a4ed600168508e29b5362f40180cd7fc21757f5",
+    "routing/route_matrix_68ab535465b06808.json": "6f3b5b8eda1a9f73e28b6404ef15126086dbd7861c683790af6f6e87b41b4677"
+  },
+  "truth_states": [
+    "interaction_mode_disabled",
+    "eligible_repair",
+    "failed_method"
+  ]
+}

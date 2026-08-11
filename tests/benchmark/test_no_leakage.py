@@ -11,6 +11,7 @@ from itinerary_system.benchmark import (
     BenchmarkMethodAdapter,
     assert_no_parent_family_leakage,
     benchmark_split_key,
+    extract_benchmark_metrics,
     generate_disruption_scenarios,
     run_benchmark_suite,
     split_by_parent_disruption_family,
@@ -200,3 +201,281 @@ def test_run_benchmark_suite_pairs_methods_on_identical_inputs_and_exports_metri
         assert baseline_input["context_snapshot_id"] == repair_input["context_snapshot_id"]
         assert baseline_input["parent_plan_id"] == repair_input["parent_plan_id"]
         assert baseline_input["request"]["confirmed_constraints"] == repair_input["request"]["confirmed_constraints"]
+
+
+def test_quality_metrics_are_owned_only_by_independent_evaluator():
+    scenario = generate_disruption_scenarios(parent_plan(), seed=11)[0]
+    planner_only = extract_benchmark_metrics(
+        {
+            "metrics": {
+                "utility_retained": 999,
+                "utility_regret": -999,
+                "weather_risk_delta": -999,
+            },
+            "evaluations": (
+                {
+                    "comparison_eligibility": "eligible",
+                    "evaluation_status": "PASSED",
+                    "route_validation": {"road_validated": True},
+                },
+            ),
+        },
+        scenario=scenario,
+    )
+
+    assert planner_only["quality_utility_retained"] is None
+    assert planner_only["quality_utility_regret"] is None
+    assert planner_only["quality_weather_risk_delta"] is None
+    assert planner_only["quality_metric_owner"] == "independent_evaluator"
+    assert planner_only["quality_metrics_present"] is False
+    assert planner_only["benchmark_ranking_eligible"] is False
+
+    malformed = extract_benchmark_metrics(
+        {
+            "evaluations": (
+                {
+                    "comparison_eligibility": "eligible",
+                    "evaluation_status": "PASSED",
+                    "route_validation": {"road_validated": True},
+                    "metrics": {"utility_retained": "not-a-number"},
+                },
+            ),
+        },
+        scenario=scenario,
+    )
+    assert malformed["quality_metrics_present"] is False
+    assert malformed["benchmark_ranking_eligible"] is False
+
+    evaluated = extract_benchmark_metrics(
+        {
+            "metrics": {"utility_retained": 999},
+            "evaluations": (
+                {
+                    "comparison_eligibility": "eligible",
+                    "evaluation_status": "PASSED",
+                    "route_validation": {"road_validated": True},
+                    "metrics": {"utility_retained": 0.8, "weather_risk_delta": -0.1},
+                },
+            ),
+        },
+        scenario=scenario,
+    )
+
+    assert evaluated["quality_utility_retained"] == 0.8
+    assert evaluated["quality_weather_risk_delta"] == -0.1
+    assert evaluated["quality_route_validated"] is True
+    assert evaluated["quality_metrics_present"] is True
+    assert evaluated["benchmark_ranking_eligible"] is True
+
+
+def test_runner_rejects_duplicate_method_ids_before_execution(tmp_path: Path):
+    scenario = generate_disruption_scenarios(parent_plan(), seed=12)[0]
+    method = BenchmarkMethodAdapter(method_id="duplicate", runner=lambda _: {})
+
+    with pytest.raises(ValueError, match="method IDs must be unique"):
+        run_benchmark_suite(
+            scenarios=(scenario,),
+            methods=(method, method),
+            output_dir=tmp_path / "duplicates",
+        )
+
+
+def test_publication_mode_requires_exact_four_methods(tmp_path: Path):
+    scenario = generate_disruption_scenarios(parent_plan(), seed=13)[0]
+    incomplete = (BenchmarkMethodAdapter(method_id="full_reoptimization", runner=lambda _: {}),)
+
+    with pytest.raises(ValueError, match="missing required methods"):
+        run_benchmark_suite(
+            scenarios=(scenario,),
+            methods=incomplete,
+            output_dir=tmp_path / "incomplete",
+            publication_mode=True,
+        )
+
+
+def test_publication_manifest_blocks_unvalidated_routes(tmp_path: Path):
+    scenario = generate_disruption_scenarios(parent_plan(), seed=14)[0]
+
+    def unvalidated_result(_):
+        return {
+            "status": "completed",
+            "evaluations": (
+                {
+                    "comparison_eligibility": "eligible",
+                    "evaluation_status": "PASSED",
+                    "route_validation": {"road_validated": False},
+                    "metrics": {"utility_retained": 0.9},
+                },
+            ),
+        }
+
+    method_ids = (
+        "context_blind_solver",
+        "deterministic_context_aware_heuristic",
+        "progressive_sequential_lexicographic_repair",
+        "full_reoptimization",
+    )
+    result = run_benchmark_suite(
+        scenarios=(scenario,),
+        methods=tuple(BenchmarkMethodAdapter(method_id=method_id, runner=unvalidated_result) for method_id in method_ids),
+        output_dir=tmp_path / "publication",
+        publication_mode=True,
+    )
+
+    manifest = json.loads(result.manifest_path.read_text(encoding="utf-8"))
+    readiness = manifest["publication_readiness"]
+    assert manifest["publication_mode"] is True
+    assert readiness["complete"] is True
+    assert readiness["ranking_eligible_run_count"] == 0
+    assert readiness["publication_ready"] is False
+
+
+def test_publication_manifest_requires_method_specific_planner_provenance(tmp_path: Path):
+    scenario = generate_disruption_scenarios(parent_plan(), seed=15)[0]
+    method_ids = (
+        "context_blind_solver",
+        "deterministic_context_aware_heuristic",
+        "progressive_sequential_lexicographic_repair",
+        "full_reoptimization",
+    )
+
+    def result_for(method_id: str):
+        def run(_):
+            return {
+                "status": "completed",
+                "planner_runs": (
+                    {"method_requested": method_id, "method_executed": method_id},
+                ),
+                "evaluations": (
+                    {
+                        "comparison_eligibility": "eligible",
+                        "evaluation_status": "PASSED",
+                        "route_validation": {"road_validated": True},
+                        "metrics": {"utility_retained": 0.9},
+                    },
+                ),
+                "route_records": (
+                    {
+                        "matrix_id": "frozen_matrix",
+                        "source_bundle_id": "frozen_bundle",
+                        "source_content_sha256": "a" * 64,
+                        "cells": {"a-b": 1},
+                    },
+                ),
+            }
+
+        return run
+
+    result = run_benchmark_suite(
+        scenarios=(scenario,),
+        methods=tuple(
+            BenchmarkMethodAdapter(method_id=method_id, runner=result_for(method_id))
+            for method_id in method_ids
+        ),
+        output_dir=tmp_path / "provenance",
+        publication_mode=True,
+    )
+    rows = [json.loads(line) for line in result.metrics_path.read_text(encoding="utf-8").splitlines()]
+    readiness = json.loads(result.manifest_path.read_text(encoding="utf-8"))["publication_readiness"]
+
+    assert all(row["benchmark_method_provenance_valid"] for row in rows)
+    assert all(row["benchmark_ranking_eligible"] for row in rows)
+    assert readiness["publication_ready"] is True
+
+
+def test_publication_manifest_rejects_relabelled_method_implementation(tmp_path: Path):
+    scenario = generate_disruption_scenarios(parent_plan(), seed=16)[0]
+    method_ids = (
+        "context_blind_solver",
+        "deterministic_context_aware_heuristic",
+        "progressive_sequential_lexicographic_repair",
+        "full_reoptimization",
+    )
+
+    def relabelled_result(_):
+        return {
+            "status": "completed",
+            "planner_runs": (
+                {"method_requested": "full_reoptimization", "method_executed": "full_reoptimization"},
+            ),
+            "evaluations": (
+                {
+                    "comparison_eligibility": "eligible",
+                    "evaluation_status": "PASSED",
+                    "route_validation": {"road_validated": True},
+                    "metrics": {"utility_retained": 0.9},
+                },
+            ),
+        }
+
+    result = run_benchmark_suite(
+        scenarios=(scenario,),
+        methods=tuple(BenchmarkMethodAdapter(method_id=method_id, runner=relabelled_result) for method_id in method_ids),
+        output_dir=tmp_path / "relabelled",
+        publication_mode=True,
+    )
+    rows = [json.loads(line) for line in result.metrics_path.read_text(encoding="utf-8").splitlines()]
+    readiness = json.loads(result.manifest_path.read_text(encoding="utf-8"))["publication_readiness"]
+
+    assert sum(bool(row["benchmark_method_provenance_valid"]) for row in rows) == 1
+    assert readiness["publication_ready"] is False
+
+
+def test_nonfinite_quality_metrics_and_unknown_status_are_not_rankable():
+    scenario = generate_disruption_scenarios(parent_plan(), seed=17)[0]
+
+    for value in (float("nan"), float("inf"), float("-inf")):
+        metrics = extract_benchmark_metrics(
+            result={
+                "evaluations": (
+                    {
+                        "comparison_eligibility": "eligible",
+                        "evaluation_status": "PASSED",
+                        "route_validation": {"road_validated": True},
+                        "metrics": {"utility_retained": value},
+                    },
+                ),
+            },
+            scenario=scenario,
+            runtime_seconds=0.1,
+        )
+        assert metrics["quality_utility_retained"] is None
+        assert metrics["benchmark_ranking_eligible"] is False
+
+    unknown_status = extract_benchmark_metrics(
+        result={
+            "evaluations": (
+                {
+                    "comparison_eligibility": "eligible",
+                    "evaluation_status": "UNKNOWN",
+                    "route_validation": {"road_validated": True},
+                    "metrics": {"utility_retained": 0.9},
+                },
+            ),
+        },
+        scenario=scenario,
+        runtime_seconds=0.1,
+    )
+    assert unknown_status["benchmark_ranking_eligible"] is False
+
+
+def test_preservation_metrics_never_fall_back_to_planner_owned_values():
+    scenario = generate_disruption_scenarios(parent_plan(), seed=18)[0]
+
+    no_diff = extract_benchmark_metrics(
+        result={"metrics": {"weighted_edit_cost": 99, "unchanged_days": [1, 2]}},
+        scenario=scenario,
+        runtime_seconds=0.1,
+    )
+    assert no_diff["preservation_weighted_edit_cost"] is None
+    assert no_diff["preservation_unchanged_day_count"] == 0
+    assert no_diff["preservation_metric_owner"] is None
+
+    explicit_empty_diff = extract_benchmark_metrics(
+        result={"diff_records": ({"unchanged_days": []},)},
+        scenario=scenario,
+        runtime_seconds=0.1,
+    )
+    assert explicit_empty_diff["preservation_weighted_edit_cost"] is None
+    assert explicit_empty_diff["preservation_unchanged_day_count"] == 0
+    assert explicit_empty_diff["preservation_metric_owner"] == "plan_diff"

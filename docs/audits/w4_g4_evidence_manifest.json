@@ -1,0 +1,94 @@
+{
+  "schema_version": "w4-g4-evidence-v1",
+  "generated_at": "2026-08-06T20:43:16-05:00",
+  "product_id": "itinerary-repair-copilot",
+  "phase_status": {
+    "w4": "implemented",
+    "g4": "blocked",
+    "w5": "planned_not_ready",
+    "cp_010": "in-progress"
+  },
+  "research_status_unchanged": {
+    "e3_1": "blocked",
+    "e3_3": "blocked",
+    "e4": "blocked",
+    "e3_ux5": "deferred",
+    "e5": "deferred"
+  },
+  "credential_metadata": {
+    "openai_api_key_present": true,
+    "local_target": ".env.local",
+    "git_ignored": true,
+    "git_untracked": true,
+    "secret_value_recorded": false
+  },
+  "live_provider_evidence": {
+    "authorized": true,
+    "authorization_scope": "two_separately_authorized_single_smoke_requests",
+    "authorization_consumed": true,
+    "authorized_request_count": 2,
+    "smoke_attempted": true,
+    "smoke_completed": false,
+    "smoke_result": "failed_closed",
+    "smoke_failure_code": "openai_invalid_structured_output",
+    "exact_provider_failure_class": "not_recorded_by_current_sanitizer",
+    "application_http_status": 502,
+    "external_request_count": 2,
+    "model": "gpt-5.6-terra",
+    "openai_sdk_version": "2.53.0",
+    "synthetic_context_only": true,
+    "automatic_state_mutation": false,
+    "raw_provider_data_recorded": false,
+    "safe_diagnostics_improved_after_attempt": true,
+    "diagnostic_rerun_required": false,
+    "latest_diagnostic_result": {
+      "provider_status": 400,
+      "provider_error_code": "unsupported_parameter",
+      "diagnostic_code": "provider_request_invalid",
+      "external_request_count": 1,
+      "automatic_state_mutation": false,
+      "raw_provider_data_recorded": false
+    },
+    "request_parameter_fix_required": false,
+    "request_parameter_fix_implemented": true,
+    "request_parameter_fix": "text.verbosity",
+    "post_fix_live_smoke_completed": false,
+    "fixed_24_evaluation_completed": false,
+    "low_medium_comparison_completed": false,
+    "blocker_code": "live_smoke_unsupported_parameter"
+  },
+  "verification": {
+    "ruff": "passed",
+    "context_snapshot_tests": 5,
+    "full_pytest_passed": 616,
+    "full_pytest_warnings": 1,
+    "product_pytest_passed": 306,
+    "post_fix_focused_pytest_passed": 56,
+    "browser_w4_passed": 8,
+    "project_checks_summary": "results/quality/project_check_summary.json",
+    "project_checks_summary_sha256": "8f99c931abaf8a7054077131558709b01b022244de340628844db346bdee4033"
+  },
+  "prompt": {
+    "version": "copilot-prompt-v1",
+    "sha256": "4cb96797b5b93cc0530d631b4aa293ef4e8fdee7bb3fdf3fa702f0616ad0713f",
+    "offline_cases_required": 72,
+    "live_cases_required": 24,
+    "assistant_copy_policy": "server_canonical_v1"
+  },
+  "audit_reports": [
+    {"path": "docs/audits/w4_provider_schema_audit.md", "sha256": "97a27188d67e345366def99760cedebdc27946b76531c1c2318e49755a7556df", "offline_verdict": "pass"},
+    {"path": "docs/audits/w4_copilot_privacy_security_audit.md", "sha256": "1eb1073dd47c08611d44c73a7cc4ddea4be257021195b1485e74e84778f449e1", "offline_verdict": "pass"},
+    {"path": "docs/audits/w4_transcript_retention_audit.md", "sha256": "c3da17cfee3ec039dc492a07c91b66e298740f5b4a6802c3e95b76d00d99c6bb", "offline_verdict": "pass"},
+    {"path": "docs/audits/w4_map_context_sync_audit.md", "sha256": "69617f14a6c806416ccb8a4d6bd3d0341f2ee35963491543a9347f6a7456f91d", "offline_verdict": "pass"},
+    {"path": "docs/audits/w4_accessibility_content_audit.md", "sha256": "50e81646d603b2e514843bf2419e94f1390fb5b291e97470af8498fcfa7e045d", "offline_verdict": "pass"},
+    {"path": "docs/audits/w4_user_journey_black_box_audit.md", "sha256": "66ee4ab524a29fba5407406d92fb8fe285713963d343d5541daeb37f72be87f6", "offline_verdict": "pass"},
+    {"path": "docs/audits/w4_prompt_quality_injection_audit.md", "sha256": "0d2acd206d373e303458b745cd7b63c4a1d7fb9f8c0f411f220aa58ddbd21b38", "offline_verdict": "pass"},
+    {"path": "docs/audits/w4_phase_gate_status_audit.md", "sha256": "f51097289337cb072a2889f5a1ca0bbb4675d30bfadfdba33c45145cf8620da9", "offline_verdict": "pass"},
+    {"path": "docs/audits/w4_integration_review_audit.md", "sha256": "9c6d76d63617f5ca8e242ea6cf80ca01ee22cf904fc2ae70ac75d9494e2c8bbd", "offline_verdict": "pass"}
+  ],
+  "code_hashes": {
+    "openai_copilot_py": "bf90d93b05c17c5b5963855fbddc446d389f48db7fe165d688bc8b405f8da84c",
+    "copilot_prompt_py": "bb924f1de648b563f2fa0df2c045d7bb41f9e30aa6edc8e24fb79d475ee63b08",
+    "conversations_py": "06ea4a568d0c0f8875e54892d1208d1aff4bca0b3ec7e568062072b97fa3fb53"
+  }
+}

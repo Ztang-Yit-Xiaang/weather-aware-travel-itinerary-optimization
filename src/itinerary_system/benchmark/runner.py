@@ -13,6 +13,7 @@ from typing import Any
 from ..research_artifacts import stable_content_hash
 from .disruptions import DisruptionScenario
 from .metrics import extract_benchmark_metrics
+from .publication import publication_readiness, require_publication_method_set
 from .splits import assert_no_parent_family_leakage, split_by_parent_disruption_family
 
 
@@ -91,6 +92,7 @@ def run_benchmark_suite(
     output_dir: str | Path,
     benchmark_id: str | None = None,
     splits: Mapping[str, Iterable[DisruptionScenario]] | None = None,
+    publication_mode: bool = False,
 ) -> BenchmarkResult:
     """Run paired benchmark methods over identical frozen scenarios and export rows."""
 
@@ -100,6 +102,11 @@ def run_benchmark_suite(
         raise ValueError("scenarios must contain at least one disruption scenario")
     if not method_tuple:
         raise ValueError("methods must contain at least one benchmark method")
+    method_ids = tuple(method.method_id for method in method_tuple)
+    if len(set(method_ids)) != len(method_ids):
+        raise ValueError("benchmark method IDs must be unique")
+    if publication_mode:
+        require_publication_method_set(method_ids)
 
     resolved_benchmark_id = benchmark_id or _benchmark_id(scenario_tuple, method_tuple)
     resolved_splits = splits or split_by_parent_disruption_family(scenario_tuple)
@@ -150,7 +157,7 @@ def run_benchmark_suite(
         manifest_path=manifest_path,
         run_records=tuple(records),
     )
-    _write_json(manifest_path, _manifest(result, resolved_splits))
+    _write_json(manifest_path, _manifest(result, resolved_splits, publication_mode=publication_mode))
     return result
 
 
@@ -164,6 +171,11 @@ def _run_record(
     frozen_input_hash: str,
 ) -> BenchmarkRunRecord:
     metrics = extract_benchmark_metrics(raw_result, scenario=scenario, runtime_seconds=runtime_seconds)
+    provenance = _method_provenance_metrics(raw_result, expected_method_id=method.method_id)
+    metrics.update(provenance)
+    metrics["benchmark_ranking_eligible"] = bool(
+        metrics.get("benchmark_ranking_eligible") and provenance["benchmark_method_provenance_valid"]
+    )
     return BenchmarkRunRecord(
         benchmark_id=benchmark_id,
         scenario_id=scenario.scenario_id,
@@ -218,6 +230,32 @@ def _failed_run_record(
     )
 
 
+def _method_provenance_metrics(raw_result: Any, *, expected_method_id: str) -> dict[str, Any]:
+    planner_runs = _records(_value(raw_result, "planner_runs"))
+    requested_ids = tuple(str(record.get("method_requested") or "") for record in planner_runs)
+    executed_ids = tuple(str(record.get("method_executed") or "") for record in planner_runs)
+    matching_records = tuple(
+        record for record in planner_runs if str(record.get("method_requested") or "") == expected_method_id
+    )
+    matching_executions_valid = bool(matching_records) and all(
+        _execution_matches_or_declares_fallback(record, expected_method_id=expected_method_id)
+        for record in matching_records
+    )
+    return {
+        "benchmark_expected_method_id": expected_method_id,
+        "benchmark_planner_method_requested_ids": list(dict.fromkeys(requested_ids)),
+        "benchmark_planner_method_executed_ids": list(dict.fromkeys(executed_ids)),
+        "benchmark_method_provenance_valid": matching_executions_valid,
+    }
+
+
+def _execution_matches_or_declares_fallback(record: Mapping[str, Any], *, expected_method_id: str) -> bool:
+    executed = str(record.get("method_executed") or "")
+    if executed == expected_method_id or executed.startswith(f"{expected_method_id}:"):
+        return True
+    return bool(str(record.get("fallback_reason") or "").strip())
+
+
 def _run_id(method: BenchmarkMethodAdapter, scenario: DisruptionScenario, raw_result: Any) -> str:
     run_id = _value(raw_result, "run_id")
     if run_id:
@@ -242,11 +280,19 @@ def _benchmark_id(scenarios: tuple[DisruptionScenario, ...], methods: tuple[Benc
     return f"benchmark_{digest[:12]}"
 
 
-def _manifest(result: BenchmarkResult, splits: Mapping[str, Iterable[DisruptionScenario]]) -> dict[str, Any]:
+def _manifest(
+    result: BenchmarkResult,
+    splits: Mapping[str, Iterable[DisruptionScenario]],
+    *,
+    publication_mode: bool,
+) -> dict[str, Any]:
+    readiness = publication_readiness(result.method_ids, (record.to_record() for record in result.run_records))
     return {
         **result.to_record(),
         "metrics_path": str(result.metrics_path),
         "manifest_path": str(result.manifest_path),
+        "publication_mode": publication_mode,
+        "publication_readiness": readiness,
         "splits": {
             split_name: [scenario.scenario_id for scenario in split_scenarios]
             for split_name, split_scenarios in splits.items()

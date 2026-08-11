@@ -110,6 +110,21 @@ def test_family_specific_constraints_are_repair_ready():
     assert scenarios[DisruptionFamily.NEW_MUST_VISIT].request.candidate_pois[0]["stop_id"] == "bench_must_visit_day_2"
 
 
+def test_configured_normal_travel_budget_does_not_change_reduced_tolerance_scenario():
+    scenarios = {
+        scenario.family: scenario
+        for scenario in generate_disruption_scenarios(
+            parent_plan(),
+            seed=3,
+            max_daily_travel_minutes=720.0,
+        )
+    }
+
+    for family, scenario in scenarios.items():
+        expected = 180.0 if family == DisruptionFamily.REDUCED_DRIVING_TOLERANCE else 720.0
+        assert scenario.request.tolerance_profile["max_daily_travel_minutes"] == expected
+
+
 def test_static_disruption_family_manifest_matches_generator_contract():
     manifest_path = REPO_ROOT / "data" / "benchmark" / "disruptions" / "bench_001_families.json"
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
@@ -117,3 +132,53 @@ def test_static_disruption_family_manifest_matches_generator_contract():
     assert manifest["schema_version"] == "benchmark-disruption-family-manifest-v1"
     assert tuple(family["family"] for family in manifest["families"]) == tuple(family.value for family in DisruptionFamily)
     assert all(family["default_evidence_status"] == "synthetic" for family in manifest["families"])
+
+
+def test_frozen_catalog_candidates_replace_unlocated_synthetic_placeholders():
+    candidate_pool = (
+        {
+            "stop_id": "candidate_high",
+            "name": "Candidate High",
+            "city": "Unit City",
+            "latitude": 10.0,
+            "longitude": 20.0,
+            "final_poi_value": 9.0,
+        },
+        {
+            "stop_id": "candidate_second",
+            "name": "Candidate Second",
+            "city": "Unit City",
+            "latitude": 11.0,
+            "longitude": 21.0,
+            "final_poi_value": 8.0,
+        },
+    )
+    parent = parent_plan()
+    parent = PlanArtifactV2(
+        **{
+            **parent.__dict__,
+            "selected_stops": tuple({**stop, "city": "Unit City"} for stop in parent.selected_stops),
+        }
+    )
+
+    scenarios = {
+        scenario.family: scenario
+        for scenario in generate_disruption_scenarios(parent, seed=3, candidate_pool=candidate_pool)
+    }
+
+    weather = scenarios[DisruptionFamily.WEATHER_DETERIORATION].request.candidate_pois[0]
+    closure = scenarios[DisruptionFamily.ATTRACTION_CLOSURE].request.candidate_pois[0]
+    must_visit = scenarios[DisruptionFamily.NEW_MUST_VISIT].request.candidate_pois[0]
+    assert weather["stop_id"] == "candidate_high"
+    assert closure["stop_id"] == "candidate_high"
+    assert must_visit["stop_id"] == "candidate_second"
+    assert all(
+        candidate["benchmark_candidate_source"] == "frozen_catalog"
+        and candidate["benchmark_synthetic"] is False
+        and "latitude" in candidate
+        and "longitude" in candidate
+        for candidate in (weather, closure, must_visit)
+    )
+    assert scenarios[DisruptionFamily.NEW_MUST_VISIT].request.confirmed_constraints["must_include"] == (
+        "candidate_second",
+    )

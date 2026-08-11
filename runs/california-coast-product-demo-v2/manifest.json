@@ -1,0 +1,378 @@
+{
+  "alternatives": [
+    {
+      "certificate_id": "cert_686ef65d376b2867",
+      "certificate_relative_path": "alternatives/w2_weather_recommended_v2/evaluations/cert_686ef65d376b2867.json",
+      "comparison_eligibility": "eligible",
+      "evaluation_status": "PASSED",
+      "parent_plan_id": "plan_e1c4f803691e3188",
+      "plan_content_hash": "101223352523c41c",
+      "plan_id": "plan_f5ee52459659dcb5",
+      "plan_relative_path": "alternatives/w2_weather_recommended_v2/plans/plan_f5ee52459659dcb5.json",
+      "role": "recommended",
+      "route_fallback_leg_count": 0,
+      "route_legs": [
+        {
+          "day": 1,
+          "destination_id": "hollywood_walk_of_fame",
+          "evidence_scope": "certified_daily_route_leg",
+          "origin_id": "los_angeles_international_airport"
+        },
+        {
+          "day": 1,
+          "destination_id": "the_line_la",
+          "evidence_scope": "certified_daily_route_leg",
+          "origin_id": "hollywood_walk_of_fame"
+        },
+        {
+          "day": 2,
+          "destination_id": "tcl_chinese_theatre",
+          "evidence_scope": "certified_daily_route_leg",
+          "origin_id": "the_line_la"
+        },
+        {
+          "day": 2,
+          "destination_id": "the_line_la",
+          "evidence_scope": "certified_daily_route_leg",
+          "origin_id": "tcl_chinese_theatre"
+        },
+        {
+          "day": 3,
+          "destination_id": "griffith_observatory",
+          "evidence_scope": "certified_daily_route_leg",
+          "origin_id": "the_line_la"
+        },
+        {
+          "day": 3,
+          "destination_id": "the_line_la",
+          "evidence_scope": "certified_daily_route_leg",
+          "origin_id": "griffith_observatory"
+        },
+        {
+          "day": 4,
+          "destination_id": "stearns_wharf",
+          "evidence_scope": "certified_daily_route_leg",
+          "origin_id": "the_line_la"
+        },
+        {
+          "day": 4,
+          "destination_id": "surf_n_wear_s_beach_house",
+          "evidence_scope": "certified_daily_route_leg",
+          "origin_id": "stearns_wharf"
+        },
+        {
+          "day": 4,
+          "destination_id": "hotel_milo_santa_barbara",
+          "evidence_scope": "certified_daily_route_leg",
+          "origin_id": "surf_n_wear_s_beach_house"
+        },
+        {
+          "day": 5,
+          "destination_id": "wheel_fun_rentals_24_e_mason_st",
+          "evidence_scope": "certified_daily_route_leg",
+          "origin_id": "hotel_milo_santa_barbara"
+        },
+        {
+          "day": 5,
+          "destination_id": "california_trike",
+          "evidence_scope": "certified_daily_route_leg",
+          "origin_id": "wheel_fun_rentals_24_e_mason_st"
+        },
+        {
+          "day": 5,
+          "destination_id": "hotel_milo_santa_barbara",
+          "evidence_scope": "certified_daily_route_leg",
+          "origin_id": "california_trike"
+        },
+        {
+          "day": 6,
+          "destination_id": "moxi_the_wolf_museum_of_exploration_innovation",
+          "evidence_scope": "certified_daily_route_leg",
+          "origin_id": "hotel_milo_santa_barbara"
+        },
+        {
+          "day": 6,
+          "destination_id": "hotel_milo_santa_barbara",
+          "evidence_scope": "certified_daily_route_leg",
+          "origin_id": "moxi_the_wolf_museum_of_exploration_innovation"
+        },
+        {
+          "day": 7,
+          "destination_id": "bixby_creek_bridge_viewpoint",
+          "evidence_scope": "certified_daily_route_leg",
+          "origin_id": "hotel_milo_santa_barbara"
+        },
+        {
+          "day": 7,
+          "destination_id": "san_francisco_international_airport",
+          "evidence_scope": "certified_daily_route_leg",
+          "origin_id": "bixby_creek_bridge_viewpoint"
+        }
+      ],
+      "route_publication_ready": true,
+      "route_required_leg_count": 16,
+      "route_total_minutes": 650.57,
+      "run_relative_path": "alternatives/w2_weather_recommended_v2"
+    },
+    {
+      "certificate_id": "cert_5a6deef4c159d346",
+      "certificate_relative_path": "alternatives/w2_weather_low_driving_v2/evaluations/cert_5a6deef4c159d346.json",
+      "comparison_eligibility": "eligible",
+      "evaluation_status": "PASSED",
+      "parent_plan_id": "plan_e1c4f803691e3188",
+      "plan_content_hash": "72b2a086e0104f9e",
+      "plan_id": "plan_8aa919c8323dbac0",
+      "plan_relative_path": "alternatives/w2_weather_low_driving_v2/plans/plan_8aa919c8323dbac0.json",
+      "role": "low_driving",
+      "route_fallback_leg_count": 0,
+      "route_legs": [
+        {
+          "day": 1,
+          "destination_id": "hollywood_walk_of_fame",
+          "evidence_scope": "certified_daily_route_leg",
+          "origin_id": "los_angeles_international_airport"
+        },
+        {
+          "day": 1,
+          "destination_id": "the_line_la",
+          "evidence_scope": "certified_daily_route_leg",
+          "origin_id": "hollywood_walk_of_fame"
+        },
+        {
+          "day": 2,
+          "destination_id": "tcl_chinese_theatre",
+          "evidence_scope": "certified_daily_route_leg",
+          "origin_id": "the_line_la"
+        },
+        {
+          "day": 2,
+          "destination_id": "the_line_la",
+          "evidence_scope": "certified_daily_route_leg",
+          "origin_id": "tcl_chinese_theatre"
+        },
+        {
+          "day": 3,
+          "destination_id": "griffith_observatory",
+          "evidence_scope": "certified_daily_route_leg",
+          "origin_id": "the_line_la"
+        },
+        {
+          "day": 3,
+          "destination_id": "the_line_la",
+          "evidence_scope": "certified_daily_route_leg",
+          "origin_id": "griffith_observatory"
+        },
+        {
+          "day": 4,
+          "destination_id": "stearns_wharf",
+          "evidence_scope": "certified_daily_route_leg",
+          "origin_id": "the_line_la"
+        },
+        {
+          "day": 4,
+          "destination_id": "surf_n_wear_s_beach_house",
+          "evidence_scope": "certified_daily_route_leg",
+          "origin_id": "stearns_wharf"
+        },
+        {
+          "day": 4,
+          "destination_id": "hotel_milo_santa_barbara",
+          "evidence_scope": "certified_daily_route_leg",
+          "origin_id": "surf_n_wear_s_beach_house"
+        },
+        {
+          "day": 5,
+          "destination_id": "wheel_fun_rentals_24_e_mason_st",
+          "evidence_scope": "certified_daily_route_leg",
+          "origin_id": "hotel_milo_santa_barbara"
+        },
+        {
+          "day": 5,
+          "destination_id": "california_trike",
+          "evidence_scope": "certified_daily_route_leg",
+          "origin_id": "wheel_fun_rentals_24_e_mason_st"
+        },
+        {
+          "day": 5,
+          "destination_id": "hotel_milo_santa_barbara",
+          "evidence_scope": "certified_daily_route_leg",
+          "origin_id": "california_trike"
+        },
+        {
+          "day": 6,
+          "destination_id": "moxi_the_wolf_museum_of_exploration_innovation",
+          "evidence_scope": "certified_daily_route_leg",
+          "origin_id": "hotel_milo_santa_barbara"
+        },
+        {
+          "day": 6,
+          "destination_id": "hotel_milo_santa_barbara",
+          "evidence_scope": "certified_daily_route_leg",
+          "origin_id": "moxi_the_wolf_museum_of_exploration_innovation"
+        },
+        {
+          "day": 7,
+          "destination_id": "santa_barbara_museum_of_natural_history_sea_center",
+          "evidence_scope": "certified_daily_route_leg",
+          "origin_id": "hotel_milo_santa_barbara"
+        },
+        {
+          "day": 7,
+          "destination_id": "san_francisco_international_airport",
+          "evidence_scope": "certified_daily_route_leg",
+          "origin_id": "santa_barbara_museum_of_natural_history_sea_center"
+        }
+      ],
+      "route_publication_ready": true,
+      "route_required_leg_count": 16,
+      "route_total_minutes": 595.463333,
+      "run_relative_path": "alternatives/w2_weather_low_driving_v2"
+    }
+  ],
+  "artifacts_sha256": {
+    "alternatives/w2_weather_low_driving_v2/dashboard/baseline_561005e4ba95.json": "550b51a97ce9fa76ab26008f03b32edbc21ed7fd132b7a8dd48ed9e611e38c10",
+    "alternatives/w2_weather_low_driving_v2/dataset_manifest.json": "a493cc2c7d37def7e69d885333a61fe4752182e93d321584c4c9f5e74ed2b41f",
+    "alternatives/w2_weather_low_driving_v2/diffs/diff_ea97896a586cb3af.json": "da8cd8a797bfad73c79b1fa84109854001cbb163f7ebfeda2b17a431ac785032",
+    "alternatives/w2_weather_low_driving_v2/evaluations/cert_5a6deef4c159d346.json": "4bb3d2c2888fd667bcedf2711acd740aa3d2f4f43d662c3f6217d09a91e785df",
+    "alternatives/w2_weather_low_driving_v2/explanations/explain_plan_8aa919c8323dbac0.json": "6130f6741fc5c8c0a21015c862117190317a8e2bcf8e4bd680ce0940e5892b38",
+    "alternatives/w2_weather_low_driving_v2/manifest.json": "5bb4d44e427bb16951fec46987170ea4035ef800245fb63177673d7008b1d803",
+    "alternatives/w2_weather_low_driving_v2/metrics/metrics.json": "b9fb54e969b6720dabd494913b7cf9ad603f504c2eba5c448d2b9049a4978018",
+    "alternatives/w2_weather_low_driving_v2/planner_runs.jsonl": "049067516a384a27310b75baeb5fda87c7db47dcc0c11e88f24317ea27266dce",
+    "alternatives/w2_weather_low_driving_v2/plans/plan_8aa919c8323dbac0.json": "bfa85e93d0d187f6a26d8ae8a27a1689cae852c8bc9ca186985cea53b715732f",
+    "alternatives/w2_weather_low_driving_v2/plans/plan_e1c4f803691e3188.json": "4036ca84db5b1194ddacdc82aab344141104edf81eba6b42a1b05af950f8939d",
+    "alternatives/w2_weather_low_driving_v2/requests/w2_weather_low_driving_v2.json": "675c406eb81c4ec548390932d18976c585e979cac9aa0c78da71e4235c53cf7b",
+    "alternatives/w2_weather_low_driving_v2/resolved_config.redacted.json": "388380306db47caa1d0dd7ad32241a38f27256ab5bb983c03a626ac4ce27fcfd",
+    "alternatives/w2_weather_low_driving_v2/routing/route_matrix_68ab535465b06808.json": "6f3b5b8eda1a9f73e28b6404ef15126086dbd7861c683790af6f6e87b41b4677",
+    "alternatives/w2_weather_recommended_v2/dashboard/baseline_a00a00087b3c.json": "84830995352eb770b52aa4858f1f95d55e8a2de1532f9bccbcfbba47f42f8d16",
+    "alternatives/w2_weather_recommended_v2/dataset_manifest.json": "a493cc2c7d37def7e69d885333a61fe4752182e93d321584c4c9f5e74ed2b41f",
+    "alternatives/w2_weather_recommended_v2/diffs/diff_367bd571d9a8b665.json": "416c4619d8df3c0732bacf8dcfa63c3eaa4c59cf2e66c9f2ebf0dcdce2ed453c",
+    "alternatives/w2_weather_recommended_v2/evaluations/cert_686ef65d376b2867.json": "7357273268fe65a13f10d3d72a5dd04ee4732aabe08a3560da4d61d76a6add5c",
+    "alternatives/w2_weather_recommended_v2/explanations/explain_plan_f5ee52459659dcb5.json": "df57e596958eea4dee75ea6d551e1594e3468672514026ca5a453f036a7ac8ea",
+    "alternatives/w2_weather_recommended_v2/manifest.json": "1ed0688df3030d60f80ca55ce961cd6daf30aac7491b0cd2cf0e0313aa29d814",
+    "alternatives/w2_weather_recommended_v2/metrics/metrics.json": "9f2348b9f2d5fd288dd0e266210d18a71742b37c88f383c89ec888d4b018fc14",
+    "alternatives/w2_weather_recommended_v2/planner_runs.jsonl": "8d49e6747afb47a700ebf9bcdc2f75146334db7fa97bce298fd2d300446acdbf",
+    "alternatives/w2_weather_recommended_v2/plans/plan_e1c4f803691e3188.json": "4036ca84db5b1194ddacdc82aab344141104edf81eba6b42a1b05af950f8939d",
+    "alternatives/w2_weather_recommended_v2/plans/plan_f5ee52459659dcb5.json": "1e4528a293280db9c601e237dbce51021ae663e328e9cbe842c80b2a0ff3ebba",
+    "alternatives/w2_weather_recommended_v2/requests/w2_weather_recommended_v2.json": "26c760edc833913879c012e97f2f4ddccf49115cec43a98b692a02bb7f3f9ce6",
+    "alternatives/w2_weather_recommended_v2/resolved_config.redacted.json": "388380306db47caa1d0dd7ad32241a38f27256ab5bb983c03a626ac4ce27fcfd",
+    "alternatives/w2_weather_recommended_v2/routing/route_matrix_68ab535465b06808.json": "6f3b5b8eda1a9f73e28b6404ef15126086dbd7861c683790af6f6e87b41b4677"
+  },
+  "package_id": "california_coast_product_demo_v2",
+  "parent": {
+    "content_hash": "20b540fdc5ed5cc9",
+    "plan_id": "plan_e1c4f803691e3188",
+    "relative_path": "runs/e3ux-weather-repair-demo-v6/plans/plan_e1c4f803691e3188.json",
+    "route_legs": [
+      {
+        "day": 1,
+        "destination_id": "hollywood_walk_of_fame",
+        "evidence_scope": "road_validated_daily_route_leg",
+        "origin_id": "los_angeles_international_airport"
+      },
+      {
+        "day": 1,
+        "destination_id": "the_line_la",
+        "evidence_scope": "road_validated_daily_route_leg",
+        "origin_id": "hollywood_walk_of_fame"
+      },
+      {
+        "day": 2,
+        "destination_id": "tcl_chinese_theatre",
+        "evidence_scope": "road_validated_daily_route_leg",
+        "origin_id": "the_line_la"
+      },
+      {
+        "day": 2,
+        "destination_id": "the_line_la",
+        "evidence_scope": "road_validated_daily_route_leg",
+        "origin_id": "tcl_chinese_theatre"
+      },
+      {
+        "day": 3,
+        "destination_id": "griffith_observatory",
+        "evidence_scope": "road_validated_daily_route_leg",
+        "origin_id": "the_line_la"
+      },
+      {
+        "day": 3,
+        "destination_id": "the_line_la",
+        "evidence_scope": "road_validated_daily_route_leg",
+        "origin_id": "griffith_observatory"
+      },
+      {
+        "day": 4,
+        "destination_id": "stearns_wharf",
+        "evidence_scope": "road_validated_daily_route_leg",
+        "origin_id": "the_line_la"
+      },
+      {
+        "day": 4,
+        "destination_id": "surf_n_wear_s_beach_house",
+        "evidence_scope": "road_validated_daily_route_leg",
+        "origin_id": "stearns_wharf"
+      },
+      {
+        "day": 4,
+        "destination_id": "hotel_milo_santa_barbara",
+        "evidence_scope": "road_validated_daily_route_leg",
+        "origin_id": "surf_n_wear_s_beach_house"
+      },
+      {
+        "day": 5,
+        "destination_id": "wheel_fun_rentals_24_e_mason_st",
+        "evidence_scope": "road_validated_daily_route_leg",
+        "origin_id": "hotel_milo_santa_barbara"
+      },
+      {
+        "day": 5,
+        "destination_id": "california_trike",
+        "evidence_scope": "road_validated_daily_route_leg",
+        "origin_id": "wheel_fun_rentals_24_e_mason_st"
+      },
+      {
+        "day": 5,
+        "destination_id": "hotel_milo_santa_barbara",
+        "evidence_scope": "road_validated_daily_route_leg",
+        "origin_id": "california_trike"
+      },
+      {
+        "day": 6,
+        "destination_id": "moxi_the_wolf_museum_of_exploration_innovation",
+        "evidence_scope": "road_validated_daily_route_leg",
+        "origin_id": "hotel_milo_santa_barbara"
+      },
+      {
+        "day": 6,
+        "destination_id": "hotel_milo_santa_barbara",
+        "evidence_scope": "road_validated_daily_route_leg",
+        "origin_id": "moxi_the_wolf_museum_of_exploration_innovation"
+      },
+      {
+        "day": 7,
+        "destination_id": "golden_gate_bridge",
+        "evidence_scope": "road_validated_daily_route_leg",
+        "origin_id": "hotel_milo_santa_barbara"
+      },
+      {
+        "day": 7,
+        "destination_id": "san_francisco_international_airport",
+        "evidence_scope": "road_validated_daily_route_leg",
+        "origin_id": "golden_gate_bridge"
+      }
+    ]
+  },
+  "route_evidence": {
+    "matrix_file_sha256": "6f3b5b8eda1a9f73e28b6404ef15126086dbd7861c683790af6f6e87b41b4677",
+    "matrix_id": "route_matrix_68ab535465b06808",
+    "relative_path": "runs/e3ux-weather-repair-demo-v6/routing/route_matrix_68ab535465b06808.json",
+    "source_bundle_id": "route_bundle_a60c80047098a3b6",
+    "source_content_sha256": "3d2ded2d2a862aa6bcf026429b0a0376386928cfa3af109758301d1647584f71"
+  },
+  "run_id": "california_coast_product_demo_v2",
+  "schema_version": "product-demo-package-v1",
+  "source_run": {
+    "manifest_sha256": "bcc65f820f6555211915bd129552dd6d6b674902ef1da6510b120b661ff6f2dc",
+    "relative_path": "runs/e3ux-weather-repair-demo-v6",
+    "run_id": "e3ux_weather_repair_demo_v6"
+  }
+}

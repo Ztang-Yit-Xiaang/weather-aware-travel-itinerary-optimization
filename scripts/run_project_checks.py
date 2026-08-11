@@ -143,10 +143,14 @@ def _excerpt(value: str, *, max_chars: int = 4000) -> str:
 def main() -> int:
     repo_root = Path(__file__).resolve().parents[1]
     env = configure_workspace_temp(repo_root)
+    full_pytest_base = repo_root / "tmp_test" / f"project_checks_full_{time.time_ns()}"
     checks = [
         ("ruff", [sys.executable, "-m", "ruff", "check", "--no-cache", "src", "tests", "scripts"]),
         ("context_snapshot_pytest", [sys.executable, "-m", "pytest", "tests/data/test_context_snapshot.py"]),
-        ("full_pytest", [sys.executable, "-m", "pytest"]),
+        (
+            "full_pytest",
+            [sys.executable, "-m", "pytest", "--basetemp", str(full_pytest_base)],
+        ),
     ]
     results = [run_check(command, env, name=name) for name, command in checks]
     summary_path = write_summary(results, repo_root / "results" / "quality" / "project_check_summary.json")

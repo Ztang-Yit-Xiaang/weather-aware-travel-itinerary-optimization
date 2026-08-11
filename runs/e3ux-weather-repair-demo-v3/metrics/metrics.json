@@ -1,0 +1,14 @@
+{
+  "accepted_radius": "same_stop_time_shift",
+  "mode": "repair",
+  "planner_failure_count": 0,
+  "repair_attempt_count": 1,
+  "repair_candidate_evaluation_count": 1,
+  "repair_outcome_id": "repair_outcome_582893c2c68e9594",
+  "repair_outcome_status": "accepted",
+  "repair_output_missing": false,
+  "repair_output_plan_count": 1,
+  "run_id": "benchmark_158cf6d48be8",
+  "strict": true,
+  "strict_failure_count": 0
+}

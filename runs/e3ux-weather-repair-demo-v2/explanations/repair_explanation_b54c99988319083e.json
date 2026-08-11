@@ -1,0 +1,73 @@
+{
+  "child_plan_id": "plan_7a706ef44466f240",
+  "claims": [
+    {
+      "claim_id": "claim_acceptance_plan_7a706ef44466f240",
+      "claim_type": "causal",
+      "confidence": "derived",
+      "evidence_refs": [
+        "evaluation:cert_e68c2d7c0d169a3e:comparison_eligibility",
+        "plan_diff:diff_1923c674931ec053:weighted_edit_cost",
+        "route:route_matrix_68ab535465b06808:matrix"
+      ],
+      "rendered_text": "The repair accepted same_stop_time_shift after the child plan passed independent evaluation.",
+      "text_template": "The repair accepted {accepted_radius} after the child plan passed independent evaluation.",
+      "unsupported": false,
+      "values": {
+        "accepted_radius": "same_stop_time_shift"
+      }
+    },
+    {
+      "claim_id": "claim_weighted_edit_cost_plan_7a706ef44466f240",
+      "claim_type": "numeric",
+      "confidence": "derived",
+      "evidence_refs": [
+        "plan_diff:diff_1923c674931ec053:weighted_edit_cost"
+      ],
+      "rendered_text": "The ownership-weighted edit cost is 6.0.",
+      "text_template": "The ownership-weighted edit cost is {weighted_edit_cost}.",
+      "unsupported": false,
+      "values": {
+        "weighted_edit_cost": 6.0
+      }
+    }
+  ],
+  "diff_id": "diff_1923c674931ec053",
+  "evidence_id": "repair_explanation_b54c99988319083e",
+  "evidence_records": [
+    {
+      "field_path": "weighted_edit_cost",
+      "payload": {
+        "value": 6.0
+      },
+      "record_hash": "eb1a0e00b0f3fcb2",
+      "ref_id": "plan_diff:diff_1923c674931ec053:weighted_edit_cost",
+      "source_id": "diff_1923c674931ec053",
+      "source_type": "plan_diff"
+    },
+    {
+      "field_path": "comparison_eligibility",
+      "payload": {
+        "value": "eligible"
+      },
+      "record_hash": "f52f751ae34c3597",
+      "ref_id": "evaluation:cert_e68c2d7c0d169a3e:comparison_eligibility",
+      "source_id": "cert_e68c2d7c0d169a3e",
+      "source_type": "evaluation"
+    },
+    {
+      "field_path": "matrix_id",
+      "payload": {
+        "context_snapshot_id": "context_static_demo_2026_06"
+      },
+      "record_hash": "9e8d0415515be85d",
+      "ref_id": "route:route_matrix_68ab535465b06808:matrix",
+      "source_id": "route_matrix_68ab535465b06808",
+      "source_type": "route"
+    }
+  ],
+  "evidence_type": "contrastive",
+  "findings": [],
+  "parent_plan_id": "plan_e1c4f803691e3188",
+  "schema_version": "explanation-evidence-v1"
+}

@@ -1,0 +1,21 @@
+{
+  "child_plan_id": "plan_8aa919c8323dbac0",
+  "claims": [
+    {
+      "claim_id": "selected_from_deterministic_trace",
+      "evidence_refs": [
+        "day_route:7:39f52a34f8994522"
+      ]
+    }
+  ],
+  "decision_record_ids": [
+    "day_route:7:08f78a187eb2a3ac",
+    "day_route:7:39f52a34f8994522",
+    "day_route:7:16b5e96763b02ed3"
+  ],
+  "evidence_id": "explain_plan_8aa919c8323dbac0",
+  "evidence_type": "deterministic_candidate_trace",
+  "method_id": "deterministic_context_aware_heuristic",
+  "parent_plan_id": "plan_e1c4f803691e3188",
+  "schema_version": "baseline-explanation-v1"
+}

@@ -1,0 +1,90 @@
+{
+  "artifact_counts": {
+    "benchmark_metrics": 1,
+    "dashboard": 1,
+    "dashboard_product": 1,
+    "diffs": 1,
+    "evaluations": 1,
+    "explanations": 1,
+    "metrics": 1,
+    "planner_runs": 1,
+    "plans": 2,
+    "requests": 1,
+    "routing": 1
+  },
+  "artifacts": {
+    "benchmark_metrics": [
+      "benchmark/metrics/benchmark_metrics.jsonl"
+    ],
+    "dashboard": [
+      "dashboard/repair_outcome_582893c2c68e9594.json"
+    ],
+    "dashboard_product": [
+      "dashboard_product/manifest.json"
+    ],
+    "diffs": [
+      "diffs/diff_1923c674931ec053.json"
+    ],
+    "evaluations": [
+      "evaluations/cert_e68c2d7c0d169a3e.json"
+    ],
+    "explanations": [
+      "explanations/repair_explanation_b54c99988319083e.json"
+    ],
+    "metrics": [
+      "metrics/metrics.json"
+    ],
+    "planner_runs": [
+      "planner_runs.jsonl"
+    ],
+    "plans": [
+      "plans/plan_e1c4f803691e3188.json",
+      "plans/plan_7a706ef44466f240.json"
+    ],
+    "requests": [
+      "requests/bench_weather_deterioration_4062619eeaf4.json"
+    ],
+    "routing": [
+      "routing/route_matrix_68ab535465b06808.json"
+    ]
+  },
+  "catalog_snapshot_id": "california_v1",
+  "context_snapshot_id": "context_static_demo_2026_06",
+  "derived_from": {
+    "derivation_kind": "read_only_product_snapshot",
+    "source_manifest_sha256": "b8eef29d4d0b758747addabfbb83911d78ee71a56741e2aefecfcfa16c3d4b55",
+    "source_run_id": "benchmark_158cf6d48be8"
+  },
+  "mode": "repair",
+  "parent_plan_id": "plan_e1c4f803691e3188",
+  "pipeline_run": {
+    "evaluation_ids": [
+      "cert_e68c2d7c0d169a3e"
+    ],
+    "output_plan_ids": [
+      "plan_7a706ef44466f240"
+    ],
+    "planner_run_ids": [
+      "run_3ff5636caef81ca1",
+      "run_958b83a51fed0e31",
+      "run_076e8bf84eb17d22",
+      "run_2cbd2ea237063d81",
+      "bench_weather_deterioration_5946cd07a5c6"
+    ]
+  },
+  "planner_failure_count": 0,
+  "product_dashboard": {
+    "compatibility_boundary": "Read-only presentation of canonical run artifacts. It does not replace or mutate the optimizer, evaluator, benchmark, route model, plan repository, legacy dashboard, Folium renderer, or interaction authority.",
+    "manifest_path": "dashboard_product/manifest.json",
+    "product_version": "1.0.0",
+    "schema_version": "product-dashboard-manifest-v1"
+  },
+  "refresh_policy": "never",
+  "repair_output_missing": false,
+  "repair_request_id": "bench_weather_deterioration_4062619eeaf4",
+  "run_id": "e3ux_weather_repair_demo_v1",
+  "schema_version": "pipeline-manifest-v1",
+  "status": "completed",
+  "strict": true,
+  "strict_failure_count": 0
+}

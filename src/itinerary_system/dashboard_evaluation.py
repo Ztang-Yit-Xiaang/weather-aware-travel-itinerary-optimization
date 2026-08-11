@@ -1,0 +1,221 @@
+"""Evaluation-dashboard payload and page rendering.
+
+This module intentionally owns only the canonical E3 evaluation view. Reading
+repository artifacts and recording written paths remain responsibilities of the
+map exporter so the extraction does not alter export semantics.
+"""
+
+from __future__ import annotations
+
+import math
+from typing import Any
+
+import pandas as pd
+
+EVALUATION_METHODS = [
+    ("context_blind_solver", "Context-blind solver"),
+    ("deterministic_context_aware_heuristic", "Context-aware heuristic"),
+    ("progressive_sequential_lexicographic_repair", "Progressive lexicographic repair"),
+    ("full_reoptimization", "Full reoptimization"),
+]
+
+
+def _safe_text(value: Any) -> str:
+    if value is None:
+        return ""
+    try:
+        if pd.isna(value):
+            return ""
+    except Exception:
+        pass
+    return str(value)
+
+
+def _optional_metric(row: pd.Series, key: str) -> float | None:
+    try:
+        value = float(row.get(key))
+    except Exception:
+        return None
+    return value if math.isfinite(value) else None
+
+
+def _optional_bool(value: Any) -> bool | None:
+    if value is None or (not isinstance(value, (list, tuple, dict)) and pd.isna(value)):
+        return None
+    text = str(value).strip().lower()
+    if text in {"1", "true", "yes"}:
+        return True
+    if text in {"0", "false", "no"}:
+        return False
+    return None
+
+
+def build_evaluation_metrics(comparison: pd.DataFrame, route_stops: pd.DataFrame) -> dict[str, Any]:
+    """Build the canonical, evaluator-owned E3 dashboard payload."""
+    methods: list[dict[str, Any]] = []
+    for method_id, default_label in EVALUATION_METHODS:
+        comparison_rows = (
+            comparison[comparison["method"].astype(str).eq(method_id)].copy()
+            if not comparison.empty and "method" in comparison.columns
+            else pd.DataFrame()
+        )
+        stops = (
+            route_stops[route_stops["method"].astype(str).eq(method_id)].copy()
+            if not route_stops.empty and "method" in route_stops.columns
+            else pd.DataFrame()
+        )
+        if comparison_rows.empty and stops.empty:
+            continue
+        row = comparison_rows.iloc[0] if not comparison_rows.empty else pd.Series(dtype=object)
+        methods.append(
+            {
+                "method": method_id,
+                "label": _safe_text(row.get("method_display_name", "")) or default_label,
+                "short_label": default_label,
+                "status": _safe_text(row.get("status", "missing_metrics")),
+                "ranking_eligible": _optional_bool(row.get("benchmark_ranking_eligible")),
+                "weighted_edit_cost": _optional_metric(row, "preservation_weighted_edit_cost"),
+                "utility_retained": _optional_metric(row, "quality_utility_retained"),
+                "weather_risk_delta": _optional_metric(row, "quality_weather_risk_delta"),
+                "runtime_seconds": _optional_metric(row, "computation_runtime_seconds"),
+                "selected_stop_count": int(len(stops)) if not stops.empty else None,
+                "notes": _safe_text(row.get("notes", "")),
+            }
+        )
+    return {
+        "available": bool(methods),
+        "data_status": "available" if methods else "not_available",
+        "source_files": [
+            "production_method_comparison.csv",
+            "production_method_route_stops.csv",
+        ],
+        "methods": methods,
+        "chart_fields": [
+            {"key": "weighted_edit_cost", "label": "Weighted edit cost", "higher_is_better": False},
+            {"key": "utility_retained", "label": "Utility retained", "higher_is_better": True},
+            {"key": "weather_risk_delta", "label": "Weather-risk reduction", "higher_is_better": True},
+            {"key": "runtime_seconds", "label": "Runtime (sec)", "higher_is_better": False},
+        ],
+        "tradeoff_explanation": [
+            "Context-blind optimization intentionally omits contextual constraints; independent evaluation may reject its output.",
+            "The deterministic context-aware heuristic is reproducible but does not claim exact optimality.",
+            "Progressive repair expands its neighborhood only as needed and preserves lexicographic priorities.",
+            "Full reoptimization is exact only for the frozen candidate universe and reports a refusal status when its safety cap is exceeded.",
+        ],
+        "empty_message": "No canonical E3 method evidence is available in this export." if not methods else "",
+    }
+
+
+def evaluation_page_html() -> str:
+    """Return the standalone evaluation dashboard document."""
+    return """<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Itinerary Method Evaluation</title>
+  <style>
+    :root { --forest:#0a6b53; --teal:#18b8a5; --line:#d8e5e1; --text:#10233d; --muted:#5b6b7d; --panel:#fff; }
+    * { box-sizing: border-box; }
+    body { margin: 0; color: var(--text); font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: #eef6f5; }
+    main { width: min(1180px, calc(100% - 32px)); margin: 0 auto; padding: 24px 0 36px; }
+    header { display: flex; align-items: end; justify-content: space-between; gap: 16px; margin-bottom: 18px; }
+    h1 { margin: 0; font-size: 28px; line-height: 1.05; }
+    p { margin: 6px 0 0; color: var(--muted); line-height: 1.45; }
+    a { color: var(--forest); font-weight: 800; text-decoration: none; }
+    .grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+    .panel { border: 1px solid var(--line); border-radius: 8px; background: var(--panel); box-shadow: 0 10px 28px rgba(14,35,58,.10); padding: 16px; }
+    .panel h2 { margin: 0 0 12px; font-size: 15px; text-transform: uppercase; }
+    .chart-row { display: grid; grid-template-columns: 170px minmax(0, 1fr) 80px; gap: 10px; align-items: center; margin: 9px 0; font-size: 12px; }
+    .bar-track { height: 12px; border-radius: 999px; background: #dbe8e7; overflow: hidden; }
+    .bar { height: 100%; border-radius: inherit; background: linear-gradient(90deg, var(--forest), var(--teal)); }
+    table { width: 100%; border-collapse: collapse; font-size: 12px; }
+    th, td { padding: 9px 8px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; }
+    th { color: var(--muted); font-size: 11px; text-transform: uppercase; }
+    .wide { grid-column: 1 / -1; }
+    .note-list { margin: 0; padding-left: 18px; color: var(--muted); line-height: 1.45; }
+    .direction { color: var(--muted); font-size: 10px; text-transform: none; }
+    .empty-state { color: var(--muted); grid-column: 1 / -1; }
+    @media (max-width: 860px) { header { display: block; } .grid { grid-template-columns: 1fr; } .chart-row { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+  <main>
+    <header>
+      <div>
+        <h1>Method Evaluation Dashboard</h1>
+        <p>Canonical E3 comparison from saved, independently evaluated benchmark artifacts.</p>
+      </div>
+      <a href="index.html">Back to map dashboard</a>
+    </header>
+    <section id="charts" class="grid" aria-label="Method comparison charts"></section>
+    <section class="panel wide" aria-label="Method comparison table">
+      <h2>Method Comparison</h2>
+      <div id="method-table"></div>
+    </section>
+    <section class="panel wide" aria-label="Solver tradeoff explanation">
+      <h2>Solver Tradeoffs</h2>
+      <ul id="tradeoff-list" class="note-list"></ul>
+    </section>
+  </main>
+  <script src="assets/evaluation_metrics.js"></script>
+  <script>
+    const payload = window.DASHBOARD_EVALUATION_METRICS || { methods: [], chart_fields: [], tradeoff_explanation: [] };
+    const methods = payload.methods || [];
+    const fields = payload.chart_fields || [];
+    const charts = document.getElementById('charts');
+    const toFinite = value => {
+      if (value === null || value === undefined || value === '') return null;
+      const number = Number(value);
+      return Number.isFinite(number) ? number : null;
+    };
+    const fmt = value => {
+      const number = toFinite(value);
+      return number === null ? 'n/a' : number.toFixed(Math.abs(number) >= 100 ? 0 : 2);
+    };
+    const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g, character => ({
+      '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+    })[character]);
+    if (!methods.length) {
+      charts.innerHTML = `<section class="panel empty-state" role="status">${escapeHtml(payload.empty_message || 'No evaluation evidence is available.')}</section>`;
+    }
+    fields.forEach(field => {
+      const values = methods.map(method => toFinite(method[field.key])).filter(value => value !== null);
+      const min = values.length ? Math.min(...values) : 0;
+      const max = values.length ? Math.max(...values) : 0;
+      const span = max - min;
+      const section = document.createElement('section');
+      section.className = 'panel';
+      const direction = field.higher_is_better ? 'Higher is better' : 'Lower is better';
+      section.innerHTML = `<h2>${escapeHtml(field.label)} <span class="direction">${direction}</span></h2>` + methods.map(method => {
+        const value = toFinite(method[field.key]);
+        const normalized = value === null ? 0 : span <= Number.EPSILON
+          ? 1
+          : field.higher_is_better ? (value - min) / span : (max - value) / span;
+        const width = value === null ? 0 : Math.max(3, Math.min(100, normalized * 100));
+        return `<div class="chart-row"><strong>${escapeHtml(method.short_label || method.label)}</strong><div class="bar-track" aria-label="${direction}"><div class="bar" style="width:${width}%"></div></div><span>${fmt(value)}</span></div>`;
+      }).join('');
+      charts.appendChild(section);
+    });
+    document.getElementById('method-table').innerHTML = methods.length ? `
+      <table>
+        <thead><tr><th>Method</th><th>Edit cost</th><th>Utility retained</th><th>Risk reduction</th><th>Runtime</th><th>Ranking eligible</th><th>Status</th></tr></thead>
+        <tbody>
+          ${methods.map(method => `<tr>
+            <td><strong>${escapeHtml(method.label)}</strong><br>${escapeHtml(method.notes || '')}</td>
+            <td>${fmt(method.weighted_edit_cost)}</td>
+            <td>${fmt(method.utility_retained)}</td>
+            <td>${fmt(method.weather_risk_delta)}</td>
+            <td>${fmt(method.runtime_seconds)} sec</td>
+            <td>${method.ranking_eligible === null ? 'n/a' : method.ranking_eligible ? 'yes' : 'no'}</td>
+            <td>${escapeHtml(method.status || '')}</td>
+          </tr>`).join('')}
+        </tbody>
+      </table>` : `<p class="empty-state">${escapeHtml(payload.empty_message || 'No evaluation evidence is available.')}</p>`;
+    document.getElementById('tradeoff-list').innerHTML = (payload.tradeoff_explanation || [])
+      .map(item => `<li>${escapeHtml(item)}</li>`)
+      .join('');
+  </script>
+</body>
+</html>
+"""

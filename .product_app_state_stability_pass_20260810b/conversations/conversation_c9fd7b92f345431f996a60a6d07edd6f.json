@@ -1,0 +1,55 @@
+{
+  "conversation_id": "conversation_c9fd7b92f345431f996a60a6d07edd6f",
+  "created_at": "2026-08-10T16:47:12.458922+00:00",
+  "expires_at": "2026-09-09T16:47:40.650672+00:00",
+  "revision": 1,
+  "run_id": "california_coast_product_demo_v2",
+  "schema_version": "product-conversation-v1",
+  "session_id": "session_6fd09af737764c928b89c78c78e36402",
+  "trip_id": "california_coast_demo",
+  "turns": [
+    {
+      "assistant_message": "Experimental demo — deterministic adapter: I found one registered, independently evaluated repair. You can inspect its evidence, but acceptance remains disabled until W5.",
+      "client_message_id": "client_message_a09d52e5bbaf40289c62725938737dc7",
+      "completed_at": "2026-08-10T16:47:40.645704+00:00",
+      "context_revision": 7,
+      "created_at": "2026-08-10T16:47:40.635704+00:00",
+      "error_code": null,
+      "interpretation": {
+        "assistant_message": "Experimental demo — deterministic adapter: I found one registered, independently evaluated repair. You can inspect its evidence, but acceptance remains disabled until W5.",
+        "highlights": {
+          "candidate_ids": [],
+          "day_ids": [
+            7
+          ],
+          "segment_ids": [
+            "leg_golden_gate_bridge_san_francisco_international_airport"
+          ],
+          "stop_ids": []
+        },
+        "intents": [
+          {
+            "candidate_id": null,
+            "clarification_question": null,
+            "destination_day": null,
+            "preference": "reduce_contextual_risk",
+            "target_stop_id": null,
+            "type": "review_registered_repair"
+          }
+        ],
+        "permission": null,
+        "schema_version": "copilot-interpretation-v1",
+        "state": "proposal_ready"
+      },
+      "model": null,
+      "prompt_sha256": "4cb96797b5b93cc0530d631b4aa293ef4e8fdee7bb3fdf3fa702f0616ad0713f",
+      "prompt_version": "copilot-prompt-v1",
+      "provider": "deterministic",
+      "schema_version": "copilot-turn-v1",
+      "state": "completed",
+      "turn_id": "copilot_turn_4e41de56742f4050966d877fed479000",
+      "user_message": "Review the safer weather repair"
+    }
+  ],
+  "updated_at": "2026-08-10T16:47:40.650672+00:00"
+}

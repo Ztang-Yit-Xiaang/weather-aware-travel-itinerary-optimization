@@ -1,0 +1,193 @@
+{
+  "schema_version": "w1m-live-g1-evidence-v1",
+  "generated_at": "2026-08-05T01:15:00Z",
+  "phase": "W1M",
+  "gate": "G1",
+  "status": "verified",
+  "audited_input_sha256": "85876265fc5b72e4f552213254e7772238afb7526b24769d1f9186408e54cd60",
+  "audited_report_sha256": "515398940651f9e8d446d2280528a76392879a5bc58079b3d61161a25d1a9c2e",
+  "provider": {
+    "primary": "maplibre_pmtiles",
+    "atlas": "explicit_licensed_backup_only"
+  },
+  "archive": {
+    "source_build": "20260804",
+    "source_url": "https://build.protomaps.com/20260804.pmtiles",
+    "upstream_blake3": "665c468f538ffaebd6fdf5b1185982b105056577a32f2fdc15c87fddd4b24b95",
+    "sha256": "28f8ab0d2e58437bd945944c66594b9531fb17b41aac8a4f4e9531edbe6842c3",
+    "size": 796263584,
+    "bounds": [-123.0, 33.5, -117.5, 38.5],
+    "maxzoom": 15,
+    "workspace_bounds": [-122.478528, 34.101542, -118.289934, 37.8199],
+    "sample_tile_count": 139
+  },
+  "upstream_integrity": {
+    "maplibre_gl_npm_sha512_match": true,
+    "pmtiles_js_npm_sha512_match": true,
+    "protomaps_basemaps_npm_sha512_match": true,
+    "pmtiles_cli_zip_sha256": "8a983059b1e7a24f6930f677f5b7aa6d01e125eb2e15cb0f34bd11247e82df35",
+    "pmtiles_cli_release_digest_match": true
+  },
+  "closed_asset_evidence": {
+    "provenance_sha256": "382624ea32662936fa953f1268dc3f827a1bc1b2a1d1a281c49b94b150673022",
+    "preflight_sha256": "ceda14a9685b7fe10960d4b05a34e926fd0cce280cf4e95b33b472587842d428",
+    "live_verification_sha256": "855f0fbf62c8e0a6199c8dfc998ce197e6db36897dcf337f89ec513643e3a5b1",
+    "attribution_link_required": true,
+    "upstream_package_pins_required": true
+  },
+  "runtime": {
+    "docker_server": "29.6.1",
+    "docker_compose": "5.3.0",
+    "container_os": "linux_wsl2",
+    "nginx": "1.30.4",
+    "nginx_image_digest": "sha256:97d490c12ba55b4946b01546d1c3ed324e8d41ab1c9fcb2a616aa470620e5b46",
+    "host_binding": "127.0.0.1:8080",
+    "asset_mount_read_only": true,
+    "root_filesystem_read_only": true,
+    "no_new_privileges": true,
+    "host_container_archive_hash_match": true
+  },
+  "live_http": {
+    "status": "passed",
+    "manifested_asset_count": 19,
+    "range_status": 206,
+    "range_length": 1024,
+    "content_range": "bytes 0-1023/796263584",
+    "accept_ranges": "bytes",
+    "allowed_origin": "http://127.0.0.1:8127",
+    "wildcard_cors": false,
+    "foreign_origin_readable": false,
+    "encoded_traversal_rejected": true,
+    "unsafe_methods_rejected": true,
+    "unsatisfiable_range_rejected": true
+  },
+  "offline_replay": {
+    "status": "passed",
+    "network_internal": true,
+    "map_server_external_egress": false,
+    "fresh_client_external_egress": false,
+    "health_loaded": true,
+    "style_loaded": true,
+    "range_status": 206,
+    "normal_service_restored": true
+  },
+  "product_health": {
+    "schema_version": "product-health-v2",
+    "product_version": "0.2.0",
+    "core_ready": true,
+    "map_ready_code": "maplibre_ready",
+    "stopped_map_code": "maplibre_unavailable",
+    "recovered_map_code": "maplibre_ready",
+    "selected_copilot": "deterministic",
+    "atlas_auto_fallback": false
+  },
+  "browser": {
+    "controller": "codex_in_app_browser",
+    "url": "http://127.0.0.1:8127/app/map",
+    "title": "Itinerary Repair Copilot",
+    "meaningful_content": true,
+    "error_overlay": false,
+    "console_warning_or_error_count": 0,
+    "legacy_framing": false,
+    "renderer_scope": "schematic_preserved_until_w2",
+    "screenshot": "docs/audits/g1_live_app_browser.png",
+    "screenshot_sha256": "4ba91ecc426699ee901629698dda7007f8ec0354481a04c63520ac5b88a931ec",
+    "standalone_agent_browser_available": false
+  },
+  "tests": {
+    "focused_product_and_repository": 133,
+    "context_snapshot": 5,
+    "full_pytest": 444,
+    "ruff": "passed",
+    "compose_config": "passed",
+    "diff_check": "passed",
+    "warnings": ["existing Starlette TestClient httpx deprecation"]
+  },
+  "security": {
+    "tracked_secret_pattern_files": 0,
+    "container_log_secret_pattern": false,
+    "raw_secret_values_recorded": false,
+    "licensed_mapbox_assets_recorded": false
+  },
+  "selected_file_hashes": {
+    "src/itinerary_system/product_app/api.py": "26943494445584022aa821432e778189d4685cc05cff7f638b8963324c504a3f",
+    "src/itinerary_system/product_app/config.py": "42538594810e7cc1f792eeed2f4a05003c9d27c32d2f64c84329bf427809881a",
+    "src/itinerary_system/product_app/map_asset_contract.py": "1196c7ad97714b1eaa7ad7034f0353826eec2cb1082beb9f3b35c6a6f7f259f3",
+    "src/itinerary_system/product_app/runtime.py": "e48d2a985f7954b01e2822a35caa2ac23f79b51d4dadd300919192c47193fa71",
+    "scripts/validate_local_map_assets.py": "a80584f7f0fbd7a22b7385714aa9de8bfc3ba106e70a9c4562a1d657c2f9355b",
+    "scripts/finalize_local_map_assets.py": "b3be667d941ec6d2b95d2fbf7ff477b62b162f27258ededd30e7571ae1e66cd8",
+    "scripts/verify_live_map_service.py": "f904456ad79719d97ac6c7251b3988faddea95a671d266173fd386396057aaf7",
+    "docker/maplibre/docker-compose.yml": "558f04a1d52e9b51f09c6a9cbc87395c41f210db95cd2ab17b3132cb36b9da1f",
+    "docker/maplibre/nginx.conf.template": "42d3c46ddefb4e9e45897f2193802bd0677854fc617e27327f86a6199ca8c3aa",
+    "docker/maplibre/offline_probe.sh": "21fb7e00f29b1084bba986a35c37b6975dd388db4d0d69722d429ac68fd147bd",
+    "docker/maplibre/README.md": "b9c85e5f7d4dedf4de32b1e4927ae1ad78b91ec78260d55bb539764bec6cf4d7",
+    "tests/product_app/test_config_runtime.py": "9e5f95e4283075e00df4591f750db610cf2cb0661ced4746d1664938b1a014be",
+    "tests/product_app/test_map_asset_preflight.py": "43bea2b5230c726adfcb866bd8909902c1ab0483d42ea8ce8dde04e3c64e781c",
+    "tests/product_app/test_security_api.py": "c9fd783f071cf89f1fa2b251acd8db624dc0ee29050964d1682727d8a97e5746",
+    "results/quality/project_check_summary.json": "932b562d2c7932a908ed1d5748e121b7b6a4d5c24b6e1cfde8968f3793b095c9"
+  },
+  "commands": [
+    "python scripts/finalize_local_map_assets.py --asset-root docker/maplibre/assets --pmtiles-cli <temporary-pinned-pmtiles-1.30.0>",
+    "python scripts/validate_local_map_assets.py --asset-root docker/maplibre/assets --pmtiles-cli <temporary-pinned-pmtiles-1.30.0> --output docker/maplibre/assets/preflight.json",
+    "python scripts/verify_live_map_service.py --base-url http://127.0.0.1:8080 --origin http://127.0.0.1:8127 --asset-root docker/maplibre/assets --output docker/maplibre/assets/live-verification.json",
+    "docker network create --internal <ephemeral-network>; docker run <map-service>; docker run <fresh-client> /offline_probe.sh",
+    "python -m pytest tests/product_app tests/plans/test_repository.py -q --basetemp <unique-temporary-directory>",
+    "python scripts/run_project_checks.py with PYTEST_ADDOPTS=--basetemp=<unique-temporary-directory>",
+    "python -m ruff check src/itinerary_system/product_app tests/product_app scripts/run_product_app.py scripts/finalize_local_map_assets.py scripts/validate_local_map_assets.py scripts/verify_live_map_service.py",
+    "docker compose --env-file docker/maplibre/.env -f docker/maplibre/docker-compose.yml config",
+    "git diff --check"
+  ],
+  "audit_signoffs": [
+    {
+      "role": "WEB_IMPLEMENTATION_AUDITOR",
+      "agent": "/root/g1_web_implementation_auditor",
+      "independent": true,
+      "verdict": "PASS"
+    },
+    {
+      "role": "COPILOT_PRIVACY_SECURITY_AUDITOR",
+      "agent": "/root/g1_copilot_privacy_security_auditor",
+      "independent": true,
+      "verdict": "PASS"
+    },
+    {
+      "role": "MAP_ARTIFACT_INTEGRITY_AUDITOR",
+      "agent": "/root/g1_map_artifact_integrity_auditor",
+      "independent": true,
+      "verdict": "PASS"
+    },
+    {
+      "role": "CONTENT_AUDITOR",
+      "agent": "/root/g1_content_auditor",
+      "independent": true,
+      "verdict": "PASS"
+    },
+    {
+      "role": "USER_JOURNEY_BLACK_BOX_AUDITOR",
+      "agent": "/root/g1_user_journey_black_box_auditor",
+      "independent": true,
+      "verdict": "PASS"
+    },
+    {
+      "role": "PHASE_GATE_STATUS_AUDITOR",
+      "agent": "/root/g1_phase_gate_status_auditor",
+      "independent": true,
+      "verdict": "PASS"
+    }
+  ],
+  "required_audits": [
+    "WEB_IMPLEMENTATION_AUDITOR",
+    "COPILOT_PRIVACY_SECURITY_AUDITOR",
+    "MAP_ARTIFACT_INTEGRITY_AUDITOR",
+    "CONTENT_AUDITOR",
+    "USER_JOURNEY_BLACK_BOX_AUDITOR",
+    "PHASE_GATE_STATUS_AUDITOR"
+  ],
+  "gate_transition": {
+    "w1m": "verified",
+    "g1": "verified",
+    "w2": "ready_not_started",
+    "cp_010": "in_progress",
+    "research_statuses_changed": false
+  }
+}

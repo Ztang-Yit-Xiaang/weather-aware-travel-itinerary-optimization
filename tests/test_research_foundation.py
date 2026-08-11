@@ -36,6 +36,7 @@ from itinerary_system.routing import (
     osrm_cache_key,
 )
 from itinerary_system.utility_model import build_signal_matrix
+from scripts.build_road_route_cache import _configured_routing_anchors
 from scripts.check_route_source import check_route_source
 from scripts.summarize_phase0_readiness import load_phase0_readiness, readiness_markdown
 
@@ -265,6 +266,7 @@ def write_phase0_osrm_cache_files(output_dir: Path) -> None:
                         [right[0], right[1]],
                     ],
                     "raw": {
+                        "waypoints": [{"distance": 4.0}, {"distance": 6.0}],
                         "routes": [
                             {
                                 "distance": distance_m,
@@ -676,6 +678,49 @@ class ResearchFoundationTests(unittest.TestCase):
         self.assertTrue(requests["osrm_route_url"].str.startswith(OSRM_LOCAL_BASE_URL).all())
         self.assertTrue(requests["cache_path"].str.contains("open_osrm_route_").all())
 
+    def test_road_route_cache_builder_applies_audited_routing_anchor_overrides(self):
+        route_stops = pd.DataFrame(
+            [
+                {
+                    "comparison_type": "method",
+                    "comparison_label": "Method",
+                    "method": "test_method",
+                    "trip_days": 1,
+                    "day": 1,
+                    "stop_order": 1,
+                    "route_start_name": "Los Angeles International Airport",
+                    "route_start_latitude": 33.9416,
+                    "route_start_longitude": -118.4085,
+                    "attraction_name": "TCL Chinese Theatre",
+                    "latitude": 34.102,
+                    "longitude": -118.3409,
+                }
+            ]
+        )
+        anchors = _configured_routing_anchors(load_trip_config(CONFIG_PATH))
+
+        with temporary_directory() as output_dir:
+            result = build_road_route_cache_from_artifacts(
+                output_dir=output_dir,
+                route_stops_df=route_stops,
+                route_point_overrides=anchors,
+                write=False,
+            )
+
+        self.assertEqual(len(result.request_df), 1)
+        request = result.request_df.iloc[0]
+        self.assertAlmostEqual(float(request["origin_latitude"]), 33.942502)
+        self.assertAlmostEqual(float(request["origin_longitude"]), -118.407858)
+        self.assertAlmostEqual(float(request["origin_input_latitude"]), 33.9416)
+        self.assertAlmostEqual(float(request["origin_input_longitude"]), -118.4085)
+        self.assertEqual(request["origin_coordinate_source"], "configured_routing_anchor")
+        self.assertEqual(request["destination_coordinate_source"], "route_stops")
+        self.assertEqual(
+            request["cache_key"],
+            osrm_cache_key([(33.942502, -118.407858), (34.102, -118.3409)]),
+        )
+        self.assertAlmostEqual(float(route_stops.iloc[0]["route_start_latitude"]), 33.9416)
+
     def test_route_fetch_policy_blocks_public_osrm_without_explicit_approval(self):
         calls = []
 
@@ -750,9 +795,13 @@ class ResearchFoundationTests(unittest.TestCase):
                 output_dir=output_dir,
                 route_stops_df=phase0_route_stops_frame(),
             )
+            self.assertTrue(result.road_complete)
+            self.assertTrue(result.snap_complete)
             self.assertTrue(result.complete)
             self.assertEqual(len(result.cache_df), 3)
             self.assertTrue(result.audit_df["road_validated"].astype(bool).all())
+            self.assertTrue(result.audit_df["snap_validated"].astype(bool).all())
+            self.assertTrue(result.audit_df["max_snap_distance_m"].le(100.0).all())
 
             write_phase0_research_artifacts(
                 output_dir=output_dir,
@@ -782,6 +831,7 @@ class ResearchFoundationTests(unittest.TestCase):
             calls.append((points, base_url, timeout_seconds))
             left, right = points[0], points[-1]
             return {
+                "waypoints": [{"distance": 5.0}, {"distance": 7.0}],
                 "routes": [
                     {
                         "distance": 1234.0 + len(calls),
@@ -819,6 +869,7 @@ class ResearchFoundationTests(unittest.TestCase):
         self.assertTrue(audit["fetch_attempted"].astype(bool).all())
         self.assertTrue(audit["fetch_status"].eq("fetched_osrm_response").all())
         self.assertTrue(audit["status"].eq("fetched_osrm_validated").all())
+        self.assertTrue(audit["snap_validated"].astype(bool).all())
         self.assertTrue(cache["road_validated"].astype(bool).all())
 
     def test_build_road_route_cache_script_writes_validated_cache(self):
@@ -835,6 +886,7 @@ class ResearchFoundationTests(unittest.TestCase):
             passed = subprocess.run(command, capture_output=True, text=True, check=False)
             self.assertEqual(passed.returncode, 0, passed.stdout + passed.stderr)
             self.assertIn("PASSED", passed.stdout)
+            self.assertIn("Validated endpoint-snap legs: 3/3", passed.stdout)
             self.assertIn(str(output_dir / ROAD_ROUTE_REQUESTS_FILENAME), passed.stdout)
             cache = pd.read_csv(output_dir / ROAD_ROUTE_CACHE_FILENAME)
             audit = pd.read_csv(output_dir / ROAD_ROUTE_CACHE_AUDIT_FILENAME)

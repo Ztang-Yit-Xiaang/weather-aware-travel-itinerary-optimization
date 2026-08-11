@@ -1,0 +1,251 @@
+{
+  "schema_version": "product-audit-evidence-manifest-v1",
+  "audit_id": "aud0-w0-baseline-2026-08-03",
+  "captured_at_utc": "2026-08-03T16:08:38Z",
+  "repository": {
+    "name": "weather-aware-travel-itinerary-optimization",
+    "head_commit": "06fd4f49c3e467af2b1727eb6d51802ee71c0e47",
+    "working_tree": {
+      "dirty": true,
+      "porcelain_entry_count": 141,
+      "modified_entry_count": 50,
+      "deleted_entry_count": 4,
+      "untracked_entry_count": 87,
+      "interpretation": "Pre-existing user and multi-agent changes were preserved; counts identify the shared baseline and are not completion evidence."
+    }
+  },
+  "runtime": {
+    "python": "3.12.10",
+    "pytest": "9.1.1",
+    "ruff": "0.15.21"
+  },
+  "commands": [
+    {
+      "id": "changed_document_link_scan",
+      "command": "changed-document Markdown relative-link scan",
+      "exit_code": 0,
+      "result": "PASS: 21 Markdown files scanned; no broken relative links",
+      "evidence_category": "documentation_integrity",
+      "evidence_phase": "final_g0"
+    },
+    {
+      "id": "changed_document_encoding_scan",
+      "command": "changed-document UTF-8/encoding scan",
+      "exit_code": 0,
+      "result": "PASS: 22 authority, audit, and manifest files decoded as strict UTF-8 with no replacement characters",
+      "evidence_category": "documentation_integrity",
+      "evidence_phase": "final_g0"
+    },
+    {
+      "id": "evidence_manifest_json_validation",
+      "command": "python -m json.tool docs/audits/product_audit_evidence_manifest.json",
+      "exit_code": 0,
+      "result": "PASS after sign-off insertion and status promotion",
+      "evidence_category": "manifest_integrity",
+      "evidence_phase": "final_g0"
+    },
+    {
+      "id": "focused_product_pytest",
+      "command": "python -m pytest tests/product_app/test_product_app.py -q -p no:cacheprovider --basetemp $TEMP/itinerary_product_audit_w0",
+      "exit_code": 0,
+      "result": "8 passed, 1 warning in 10.00s",
+      "warning": "StarletteDeprecationWarning: FastAPI TestClient currently uses the deprecated httpx-backed compatibility path.",
+      "evidence_category": "focused_product_tests",
+      "evidence_phase": "final_g0",
+      "evidence_boundary": "Focused contract/API tests passed at baseline; this is not a final G0 rerun and does not verify the geographic map, complete user journey, mobile layouts, PWA, live provider, or visual fidelity."
+    },
+    {
+      "id": "focused_product_ruff",
+      "command": "python -m ruff check src/itinerary_system/product_app tests/product_app scripts/run_product_app.py",
+      "exit_code": 0,
+      "result": "All checks passed",
+      "evidence_category": "static_analysis",
+      "evidence_phase": "final_g0"
+    },
+    {
+      "id": "final_diff_check",
+      "command": "git diff --check",
+      "exit_code": 0,
+      "result": "Passed with line-ending conversion warnings only",
+      "evidence_category": "diff_integrity",
+      "evidence_phase": "final_g0"
+    }
+  ],
+  "evidence_categories": {
+    "documentation_integrity": "Final G0 link and strict UTF-8 scans passed",
+    "manifest_integrity": "Final JSON validation passed; pre-signoff and post-promotion document hashes are recorded",
+    "focused_product_tests": "Final G0 focused run passed; scope remains bounded",
+    "static_analysis": "Final G0 focused Ruff run passed",
+    "diff_integrity": "Final G0 diff check passed with line-ending warnings only",
+    "specialist_audits": "Nine independent specialist reports are materialized and their blocking findings are routed to later gates",
+    "gate_signoff": "Independent Content, Web, and Phase/Gate Status approvals passed"
+  },
+  "specialist_auditors": [
+    {
+      "identity": "design_system_auditor",
+      "task": "Audit design tokens, visual hierarchy, responsive composition, control states, contrast, and target sizing against the approved mockup.",
+      "independent_of_implementation": true,
+      "audit_work_status": "report_materialized",
+      "gate_signoff": "baseline_findings_accepted"
+    },
+    {
+      "identity": "map_artifact_auditor",
+      "task": "Audit route/stop artifacts, coordinate order, geographic rendering, alternative identity, null handling, and route/certificate lineage.",
+      "independent_of_implementation": true,
+      "audit_work_status": "report_materialized",
+      "gate_signoff": "baseline_findings_accepted"
+    },
+    {
+      "identity": "copilot_security_auditor",
+      "task": "Audit Copilot provider boundaries, Host/Origin/cache/CSP controls, secrets, transcript privacy, request limits, and permission integrity.",
+      "independent_of_implementation": true,
+      "audit_work_status": "report_materialized",
+      "gate_signoff": "baseline_findings_accepted"
+    },
+    {
+      "identity": "acceptance_persistence_auditor",
+      "task": "Audit PlanRepository acceptance, decision/pointer atomicity, revisions, persistence, restart, rollback, transcript/draft storage, and concurrency.",
+      "independent_of_implementation": true,
+      "audit_work_status": "report_materialized",
+      "gate_signoff": "baseline_findings_accepted"
+    },
+    {
+      "identity": "mobile_pwa_auditor",
+      "task": "Audit dedicated mobile routes, bottom navigation/sheets, safe areas, virtual keyboard, installability, cache policy, and offline truthfulness.",
+      "independent_of_implementation": true,
+      "audit_work_status": "report_materialized",
+      "gate_signoff": "baseline_findings_accepted"
+    },
+    {
+      "identity": "accessibility_auditor",
+      "task": "Audit semantics, names, keyboard access, focus, dialogs/dock, live regions, target size, contrast, and textual map alternatives.",
+      "independent_of_implementation": true,
+      "audit_work_status": "report_materialized",
+      "gate_signoff": "baseline_findings_accepted"
+    },
+    {
+      "identity": "visual_fidelity_auditor",
+      "task": "Score all eight approved mockup panels and audit desktop/mobile layout, map, Copilot, Compare, Evidence, density, and baseline coverage.",
+      "independent_of_implementation": true,
+      "audit_work_status": "report_materialized",
+      "gate_signoff": "baseline_findings_accepted"
+    },
+    {
+      "identity": "user_journey_black_box_auditor",
+      "task": "Run and audit the clean launch-to-restart user journey, including state persistence, console/network failures, offline behavior, and shutdown.",
+      "independent_of_implementation": true,
+      "audit_work_status": "report_materialized",
+      "gate_signoff": "baseline_findings_accepted"
+    },
+    {
+      "identity": "phase_gate_status_auditor",
+      "task": "Audit current phase/gate truth, cross-document consistency, requirement traceability, evidence sufficiency, and research/product non-propagation.",
+      "independent_of_implementation": true,
+      "audit_work_status": "report_materialized_and_reaudited",
+      "gate_signoff": "pass_pre_promotion"
+    }
+  ],
+  "required_g0_signoffs": [
+    {
+      "role": "Content Integrity Auditor",
+      "identity": "content_g0_reviewer",
+      "task": "Final post-correction review of planning/status/audit truth, research-product non-propagation, audit attribution, links, closure criteria, and acceptance language.",
+      "independent_of_implementation": true,
+      "review_mode": "read_only",
+      "status": "pass",
+      "reviewed_document_set_sha256": "6c5b23c834dfd3aace7168a3867c9c50f98a93e19084e2b83acf0ba5414230d0",
+      "reviewed_manifest_sha256": "3c5a624e58cec14d78d257586f5ee0dd8afbfe08abff1f5cfce126a25c4b6390"
+    },
+    {
+      "role": "Web Implementation Auditor",
+      "identity": "web_g0_reviewer",
+      "task": "Independently verify that the corrected G0 package truthfully describes the current frontend, service, launcher, persistence, tests, and future ownership.",
+      "independent_of_implementation": true,
+      "review_mode": "read_only",
+      "status": "pass",
+      "reviewed_input_set_sha256": "ed816e88337711e2256eb20d231a443cba5fbb6cd1e4370f49a7a78403ec7dfc"
+    },
+    {
+      "role": "Phase/Gate Status Auditor",
+      "identity": "phase_gate_status_auditor",
+      "task": "Final read-only G0 phase/status, traceability, evidence sufficiency, reviewer-independence, and research/product non-propagation re-audit.",
+      "independent_of_implementation": true,
+      "review_mode": "read_only",
+      "status": "pass_pre_promotion",
+      "reviewed_document_set_sha256": "32e33ffb725c8289955db22323e782a91d0a8d35488d7af69e7caa77000bc79d",
+      "digest_contract": "21 path=sha256 records sorted by path, UTF-8, LF-separated, terminal LF",
+      "reviewed_manifest_sha256": "3c5a624e58cec14d78d257586f5ee0dd8afbfe08abff1f5cfce126a25c4b6390"
+    }
+  ],
+  "harness_notes": [
+    "An initial pytest attempt used a nested repository-relative basetemp whose parent did not exist. Pytest reported six setup errors before product execution; the reproducible command above uses an existing operating-system temporary parent and passed all eight tests.",
+    "No raw host path, secret, credential, transcript, or mutation token is stored in this manifest."
+  ],
+  "document_sha256_pre_signoff": {
+    "README.md": "8738b44c4734793b12d9206ab09203dcab0eaf8f32f9faa5f6908f7f321340e3",
+    "docs/README.md": "97fee9353c379a55a80612c328e8ca64c9a52202743a1f10de828863c0e2e41c",
+    "docs/current/README.md": "e5326fafc8e35a3f5bb78289fb6dbca48f87f6d7e8aad47f2136afe774c69024",
+    "docs/current/current_problem_manifest.md": "640d3c00f1ae3e65a6f8c0546564a3dddb1de47af94782b7896ca34cd91777ec",
+    "docs/planning/README.md": "1ae71a4631119bb8002d7a443e7d6c078d9293b87a3c54d696c2fc08f5b34e66",
+    "docs/planning/current_execution_plan.md": "31d85f88a622e100a929382bdb542cd5da4182dd750b5c334188bd69c6cdcbcb",
+    "docs/planning/research_pipeline_and_gate_map.md": "c30987ec8821885177c16e81cd7c199cd9a16801ac6dd912b7121ede8eb03be3",
+    "docs/planning/itinerary_repair_copilot_implementation_plan.md": "97f0d44d0a258ec963b47e38d5e222161c176273419f8221b818eee8d3963449",
+    "docs/audits/acceptance_persistence_audit.md": "ddc0949ce2e0d010c8ae9d1a32f81bb48c46e40987a25c918f65fb011927f5f6",
+    "docs/audits/content_and_research_integrity_audit.md": "2dab9048b64f0c0d1908186b3216cfbf32ffb1b79a5120800fddaf9669c882de",
+    "docs/audits/copilot_privacy_security_audit.md": "1147c2202095e96d0b7759866939c352949ab7accad35f6cad875b879561e4ef",
+    "docs/audits/design_system_audit_report.md": "f850cb295c75426339425ecdcc2d978acf2c6ac9ab08dcd00f9d6fe29c8a2544",
+    "docs/audits/map_artifact_integrity_audit.md": "c921c549dd0217fbcaa5ca535c11fac21bbf0c808f86841b29b5ad5eca4a074c",
+    "docs/audits/mobile_pwa_audit.md": "54347c5f084241917b681830bae26520d2c6eaf0ce07c9c043397f1f38fd1b43",
+    "docs/audits/phase_gate_status_audit.md": "10c66f082c31b3d9e834eb532a1981467c6bfbc09216f89f7b70dc417ca54c95",
+    "docs/audits/product_accessibility_audit.md": "23b5fdd09d529409dbe26e5c0abd8e81b8230ff8840fcdf85bcf97577ccdc21e",
+    "docs/audits/product_audit_synthesis.md": "f7b593d8c1e4e4ffc1804d9cab1d18ef1ffd79b13b65287a3bedf07d7834f315",
+    "docs/audits/product_user_journey_audit.md": "21ca2c33e03bbf573f6990294776b8b0c19745fec9a52889d4a375af762162e0",
+    "docs/audits/uiux_audit_report.md": "b41c1b6073dc577b408e0aabce7361546eabd1b530d3688744d20169cdd5c4ed",
+    "docs/audits/visual_fidelity_audit_report.md": "8956fb4cc175baec7ea79d0340bb0f0c31e18ce920b64deaad450e6cb352c26f",
+    "docs/audits/web_frontend_implementation_audit.md": "4533ad317b33d71b9d714cf7356921611fa64674f1b9c9f45f396842a433959f"
+  },
+  "document_sha256_post_promotion": {
+    "README.md": "8738b44c4734793b12d9206ab09203dcab0eaf8f32f9faa5f6908f7f321340e3",
+    "docs/README.md": "97fee9353c379a55a80612c328e8ca64c9a52202743a1f10de828863c0e2e41c",
+    "docs/current/README.md": "e5326fafc8e35a3f5bb78289fb6dbca48f87f6d7e8aad47f2136afe774c69024",
+    "docs/current/current_problem_manifest.md": "59e6b7f8f89e08c0d30cfe94a277802b347245eee030d261df06df6e0787af9d",
+    "docs/planning/README.md": "1ae71a4631119bb8002d7a443e7d6c078d9293b87a3c54d696c2fc08f5b34e66",
+    "docs/planning/current_execution_plan.md": "6fcc22935c9f7f1628e2a2d6c3e58afc99c8392b4154f6ebc3f85ce3bbcf03f1",
+    "docs/planning/research_pipeline_and_gate_map.md": "1948c145b24af6ddf474b5a89d4c553d2aa37d9f32dda0289004c1ab9721a050",
+    "docs/planning/itinerary_repair_copilot_implementation_plan.md": "93dec93d56bfd5794ecc221211fedc3cc258baa7f0720a0a98ed11343e99ffb2",
+    "docs/audits/acceptance_persistence_audit.md": "ddc0949ce2e0d010c8ae9d1a32f81bb48c46e40987a25c918f65fb011927f5f6",
+    "docs/audits/content_and_research_integrity_audit.md": "2dab9048b64f0c0d1908186b3216cfbf32ffb1b79a5120800fddaf9669c882de",
+    "docs/audits/copilot_privacy_security_audit.md": "1147c2202095e96d0b7759866939c352949ab7accad35f6cad875b879561e4ef",
+    "docs/audits/design_system_audit_report.md": "f850cb295c75426339425ecdcc2d978acf2c6ac9ab08dcd00f9d6fe29c8a2544",
+    "docs/audits/map_artifact_integrity_audit.md": "c921c549dd0217fbcaa5ca535c11fac21bbf0c808f86841b29b5ad5eca4a074c",
+    "docs/audits/mobile_pwa_audit.md": "54347c5f084241917b681830bae26520d2c6eaf0ce07c9c043397f1f38fd1b43",
+    "docs/audits/phase_gate_status_audit.md": "10c66f082c31b3d9e834eb532a1981467c6bfbc09216f89f7b70dc417ca54c95",
+    "docs/audits/product_accessibility_audit.md": "23b5fdd09d529409dbe26e5c0abd8e81b8230ff8840fcdf85bcf97577ccdc21e",
+    "docs/audits/product_audit_synthesis.md": "345e486b0d3159e7c4bcc36de9a9d77666f6a3da813ccc8fef1f95bdbab76de1",
+    "docs/audits/product_user_journey_audit.md": "21ca2c33e03bbf573f6990294776b8b0c19745fec9a52889d4a375af762162e0",
+    "docs/audits/uiux_audit_report.md": "b41c1b6073dc577b408e0aabce7361546eabd1b530d3688744d20169cdd5c4ed",
+    "docs/audits/visual_fidelity_audit_report.md": "8956fb4cc175baec7ea79d0340bb0f0c31e18ce920b64deaad450e6cb352c26f",
+    "docs/audits/web_frontend_implementation_audit.md": "4533ad317b33d71b9d714cf7356921611fa64674f1b9c9f45f396842a433959f"
+  },
+  "source_sha256": {
+    "configs/product_app_registry.json": "68c8d79698dc6c31e6c8fe58e3d5329ef2f43445e895d187f58ced448941e061",
+    "scripts/run_product_app.py": "af989b352c8cea4c6ab20789913c05351b5d657aa802b3a6e8328348283afc55",
+    "src/itinerary_system/product_app/api.py": "fd2279543d27b801d19b4b0370394a1ce57ae9cff5e64cec1cc8ddf7dc9a0e45",
+    "src/itinerary_system/product_app/registry.py": "c4d465422c455e9a10979545efc88e0eceea0576781a9dae94149312f1e255b7",
+    "src/itinerary_system/product_app/service.py": "cf1532d9c5fd117e1a3f915aa34cb54099a81eaf54fd699c38a25832b83956b6",
+    "src/itinerary_system/product_app/workspace.py": "3ce4946828db8de3c12ad064e3786446d9e2ae79ddfe3d143cdf0da13f676fe7",
+    "src/itinerary_system/product_app/copilot.py": "efcbac65e5c9e6fb13f9a082eed64fab74c6a0579286202a6848bee1e27b24fa",
+    "src/itinerary_system/product_app/static/index.html": "b76540ed05f14cfae014de417995fb06a46ae6f839e06c62a73370ee4676f434",
+    "src/itinerary_system/product_app/static/css/app.css": "465514260835a2e61e21db5b4e3c0846c89a0df0a5ec2132a17e2f2504d64afc",
+    "src/itinerary_system/product_app/static/js/app.js": "5688ab08a9f2b2c7ea92d2c7b934cdc1ce15437ea1fc73facd449ea2238fe15d",
+    "tests/product_app/test_product_app.py": "d88be767c24baa0e174c23d38f3af592df3f6b93e2af62cf4bb00f6cbc307823"
+  },
+  "status": {
+    "audit_baseline": "captured",
+    "aud0": "verified",
+    "w0_g0": "verified",
+    "w1": "ready_deterministic_live_exit_atlas_docker_gated",
+    "product_acceptance": "not_verified",
+    "research_gate_effect": "none"
+  }
+}

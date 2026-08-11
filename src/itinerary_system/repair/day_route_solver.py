@@ -22,6 +22,26 @@ class DayRouteSolverConfig:
 
 
 @dataclass(frozen=True)
+class RouteSequenceEvaluation:
+    """Static route/schedule feasibility for a supplied day sequence."""
+
+    day: int
+    stop_sequence: tuple[str, ...]
+    route_sequence: tuple[str, ...]
+    route_pairs: tuple[tuple[str, str], ...]
+    travel_minutes: float
+    visit_minutes: float
+    waiting_minutes: float
+    total_minutes: float
+    feasible: bool
+    violations: tuple[str, ...]
+    route_evidence_ids: tuple[str, ...] = ()
+
+    def to_record(self) -> dict[str, Any]:
+        return asdict(self)
+
+
+@dataclass(frozen=True)
 class DayRouteCandidate:
     day: int
     stop_sequence: tuple[str, ...]
@@ -132,6 +152,97 @@ def solve_day_route_subproblem(
         candidates=tuple(candidates),
         required_route_pairs=tuple(required_pairs),
         publication_mode=config.strict_route_matrix,
+    )
+
+
+def evaluate_route_sequence(
+    route_matrix: RouteMatrix,
+    *,
+    day: int,
+    stop_sequence: tuple[str, ...],
+    stop_records: tuple[dict[str, Any], ...] | list[dict[str, Any]],
+    config: DayRouteSolverConfig | None = None,
+) -> RouteSequenceEvaluation:
+    """Evaluate a supplied sequence using only static route/schedule inputs."""
+
+    config = config or DayRouteSolverConfig()
+    lookup = {
+        str(record.get("stop_id") or record.get("poi_id") or record.get("name") or "").strip(): dict(record)
+        for record in stop_records
+    }
+    sequence = tuple(str(stop_id) for stop_id in stop_sequence)
+    route_parts: list[str] = []
+    if config.start_anchor_by_day.get(day):
+        route_parts.append(str(config.start_anchor_by_day[day]))
+    route_parts.extend(sequence)
+    if config.end_anchor_by_day.get(day):
+        route_parts.append(str(config.end_anchor_by_day[day]))
+    route_sequence = tuple(route_parts)
+    route_pairs = tuple(zip(route_sequence[:-1], route_sequence[1:], strict=False))
+    violations: list[str] = []
+    travel_minutes = 0.0
+    visit_minutes = 0.0
+    waiting_minutes = 0.0
+    current_time = float(_parse_minutes(config.day_start_time) or 0)
+    evidence_ids: list[str] = []
+    current_id = route_sequence[0] if route_sequence and route_sequence[0] not in sequence else None
+    for stop_id in sequence:
+        if current_id:
+            leg_minutes, evidence_id = _route_leg_minutes(
+                route_matrix,
+                current_id,
+                stop_id,
+                strict=config.strict_route_matrix,
+            )
+            if evidence_id:
+                evidence_ids.append(evidence_id)
+            if leg_minutes is None:
+                violations.append(f"missing_or_invalid_route:{current_id}->{stop_id}")
+                leg_minutes = 0.0
+            travel_minutes += float(leg_minutes)
+            current_time += float(leg_minutes)
+        stop = lookup.get(stop_id, {"stop_id": stop_id})
+        if stop_id not in lookup:
+            violations.append(f"unknown_stop:{stop_id}")
+        window_start, window_end = _opening_window(stop)
+        if config.enforce_opening_windows and window_start is not None and current_time < window_start:
+            waiting_minutes += float(window_start - current_time)
+            current_time = float(window_start)
+        if config.enforce_opening_windows and window_end is not None and current_time > window_end:
+            violations.append(f"opening_window_missed:{stop_id}")
+        duration = _visit_duration(stop, config.default_visit_minutes)
+        visit_minutes += duration
+        current_time += duration
+        current_id = stop_id
+    end_anchor = route_sequence[-1] if route_sequence and route_sequence[-1] not in sequence else None
+    if end_anchor and current_id:
+        leg_minutes, evidence_id = _route_leg_minutes(
+            route_matrix,
+            current_id,
+            end_anchor,
+            strict=config.strict_route_matrix,
+        )
+        if evidence_id:
+            evidence_ids.append(evidence_id)
+        if leg_minutes is None:
+            violations.append(f"missing_or_invalid_route:{current_id}->{end_anchor}")
+            leg_minutes = 0.0
+        travel_minutes += float(leg_minutes)
+    total_minutes = travel_minutes + visit_minutes + waiting_minutes
+    if total_minutes > config.max_day_minutes:
+        violations.append(f"day_time_exceeded:{day}")
+    return RouteSequenceEvaluation(
+        day=day,
+        stop_sequence=sequence,
+        route_sequence=route_sequence,
+        route_pairs=route_pairs,
+        travel_minutes=float(travel_minutes),
+        visit_minutes=float(visit_minutes),
+        waiting_minutes=float(waiting_minutes),
+        total_minutes=float(total_minutes),
+        feasible=not violations,
+        violations=tuple(dict.fromkeys(violations)),
+        route_evidence_ids=tuple(evidence_ids),
     )
 
 
@@ -259,14 +370,19 @@ def _solution_for_sequence(
     route_matrix: RouteMatrix,
 ) -> RepairSolution:
     parent = model.metadata["parent_plan"]
+    parent_day_by_stop = model.metadata.get("parent_day_by_stop", {})
     parent_day_sequence = set(_parent_day_sequence(model, day))
     selected: list[str] = []
     for stop_id in parent.sequence:
-        if model.metadata["parent_plan"].day_assignments.get(stop_id) == day:
+        if parent_day_by_stop.get(stop_id) == day:
             continue
         selected.append(stop_id)
     selected.extend(sequence)
-    day_assignments = {str(stop_id): int(parent_day) for stop_id, parent_day in parent.day_assignments.items() if stop_id in selected}
+    day_assignments = {
+        str(stop_id): int(parent_day)
+        for stop_id, parent_day in parent_day_by_stop.items()
+        if stop_id in selected
+    }
     for stop_id in sequence:
         day_assignments[str(stop_id)] = int(day)
     lodging_assignments = {str(raw_day): str(lodging) for raw_day, lodging in parent.lodging_assignments.items()}
@@ -335,7 +451,8 @@ def _anchor_from_day_stops(model: RepairModel, day: int, *keys: str) -> str:
 
 def _parent_day_sequence(model: RepairModel, day: int) -> tuple[str, ...]:
     parent = model.metadata["parent_plan"]
-    return tuple(str(stop_id) for stop_id in parent.sequence if parent.day_assignments.get(str(stop_id)) == day)
+    parent_day_by_stop = model.metadata.get("parent_day_by_stop", {})
+    return tuple(str(stop_id) for stop_id in parent.sequence if parent_day_by_stop.get(str(stop_id)) == day)
 
 
 def _stop_lookup(model: RepairModel) -> dict[str, dict[str, Any]]:

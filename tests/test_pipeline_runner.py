@@ -410,6 +410,38 @@ def test_production_generation_executor_wraps_optimizer_outputs_as_pipeline_arti
     assert metrics["production_route_stop_row_count"] == 2
 
 
+
+def test_production_executor_with_relative_output_root_does_not_duplicate_run_path(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+
+    def production_runner(**_kwargs):
+        return {
+            "production_method_comparison_df": phase0_method_frame(),
+            "production_method_route_stops_df": phase0_route_stops_frame(),
+        }
+
+    run = run_research_pipeline(
+        config_path=write_config(tmp_path / "config.yaml"),
+        catalog_snapshot_id="catalog_pipe",
+        context_snapshot_id="context_pipe",
+        output_root="runs",
+        run_id="relative_production_run",
+        executor=build_production_generation_executor(
+            all_business_df=pd.DataFrame({"name": ["Golden Gate Bridge"]}),
+            hotels_df=pd.DataFrame({"name": ["Optimizer Hotel"]}),
+            city_names=("San Francisco",),
+            production_runner=production_runner,
+        ),
+        strict=False,
+    )
+
+    physical_run_dir = tmp_path / run.output_dir
+    assert (physical_run_dir / "production_legacy" / "production_phase0_plan_artifacts.jsonl").exists()
+    assert not (physical_run_dir / run.output_dir / "production_legacy").exists()
+    metrics = json.loads((physical_run_dir / "metrics" / "metrics.json").read_text(encoding="utf-8"))
+    assert metrics["phase0_legacy_artifact_dir"] == "production_legacy"
+    assert metrics["production_legacy_artifact_dir"] == "production_legacy"
+
 def test_repair_pipeline_exports_parent_child_diff_and_explanation(tmp_path):
     def executor(context):
         assert context.mode == "repair"
@@ -437,6 +469,52 @@ def test_repair_pipeline_exports_parent_child_diff_and_explanation(tmp_path):
     assert manifest["mode"] == "repair"
     assert manifest["parent_plan_id"] == "parent_pipe"
     assert manifest["repair_request_id"] == "repair_pipe"
+
+
+def test_repair_pipeline_marks_missing_output_as_failed_and_bounds_long_artifact_names(tmp_path):
+    long_evidence_id = "repair_failure_" + "x" * 80
+    failed_planner = PlannerRun(
+        **{
+            **planner_run("planner_failed").__dict__,
+            "execution_status": "FAILED",
+            "solver_certification": "NO_CERTIFICATE",
+            "result_plan_id": None,
+            "error_summary": "bounded failure",
+        }
+    )
+
+    def executor(_context):
+        return PipelineExecutionResult(
+            planner_runs=(failed_planner,),
+            parent_plan=plan("parent_pipe"),
+            explanation_records=({"evidence_id": long_evidence_id, "status": "failed"},),
+            metrics={"method_status": "failed"},
+        )
+
+    run = run_research_pipeline(
+        config_path=write_config(tmp_path / "config.yaml"),
+        catalog_snapshot_id="catalog_pipe",
+        context_snapshot_id="context_pipe",
+        output_root=tmp_path / "runs",
+        run_id="failed_repair_run",
+        parent_plan_id="parent_pipe",
+        repair_request_id="repair_pipe",
+        executor=executor,
+        strict=True,
+    )
+
+    assert run.status == "failed"
+    manifest = json.loads((run.output_dir / "manifest.json").read_text(encoding="utf-8"))
+    metrics = json.loads((run.output_dir / "metrics" / "metrics.json").read_text(encoding="utf-8"))
+    assert manifest["planner_failure_count"] == 1
+    assert manifest["repair_output_missing"] is True
+    assert metrics["planner_failure_count"] == 1
+    assert metrics["repair_output_missing"] is True
+    explanation_path = run.output_dir / manifest["artifacts"]["explanations"][0]
+    assert explanation_path.exists()
+    assert len(explanation_path.stem) <= 40
+    explanation_record = json.loads(explanation_path.read_text(encoding="utf-8"))
+    assert explanation_record["evidence_id"] == long_evidence_id
 
 
 def test_strict_mode_writes_diagnostics_then_blocks_ineligible_plan(tmp_path):
@@ -541,6 +619,41 @@ def test_phase0_generation_executor_strict_mode_blocks_after_diagnostics(tmp_pat
     assert manifest["strict_failure_count"] == 1
 
 
+def test_progressive_repair_failure_retains_canonical_planner_provenance(tmp_path):
+    missing_matrix = RouteMatrix(
+        matrix_id="matrix_progressive_missing",
+        context_snapshot_id="context_pipe",
+        entity_ids=(),
+        cells={},
+    )
+    run = run_research_pipeline(
+        config_path=write_config(tmp_path / "config.yaml"),
+        catalog_snapshot_id="catalog_pipe",
+        context_snapshot_id="context_pipe",
+        output_root=tmp_path / "runs",
+        run_id="progressive_failure_run",
+        parent_plan_id="parent_progressive_pipe",
+        repair_request_id="repair_progressive_pipe",
+        executor=build_progressive_repair_executor(
+            parent_plan=progressive_parent_plan(),
+            repair_request=progressive_repair_request(),
+            route_matrix=missing_matrix,
+            day_route_config=progressive_day_route_config(),
+            publication_mode=True,
+        ),
+        strict=True,
+    )
+
+    assert run.status == "failed"
+    assert len(run.planner_runs) == 1
+    planner_record = run.planner_runs[0].to_record()
+    assert planner_record["method_requested"] == "progressive_sequential_lexicographic_repair"
+    assert planner_record["method_executed"] == "progressive_sequential_lexicographic_repair"
+    assert planner_record["execution_status"] == "FAILED"
+    assert planner_record["solver_certification"] == "NO_CERTIFICATE"
+    assert "missing route matrix cell" in planner_record["error_summary"]
+
+
 def test_progressive_repair_executor_exports_child_certificate_diff_and_explanation(tmp_path):
     run = run_research_pipeline(
         config_path=write_config(tmp_path / "config.yaml"),
@@ -574,6 +687,16 @@ def test_progressive_repair_executor_exports_child_certificate_diff_and_explanat
     assert manifest["artifact_counts"]["evaluations"] == 1
     assert manifest["artifact_counts"]["explanations"] == 1
     assert manifest["strict_failure_count"] == 0
+
+    planner_runs = [
+        json.loads(line)
+        for line in (run.output_dir / "planner_runs.jsonl").read_text(encoding="utf-8").splitlines()
+    ]
+    canonical_method = "progressive_sequential_lexicographic_repair"
+    assert any(
+        record["method_requested"] == canonical_method and record["method_executed"] == canonical_method
+        for record in planner_runs
+    )
 
     evaluation_path = run.output_dir / manifest["artifacts"]["evaluations"][0]
     evaluation = json.loads(evaluation_path.read_text(encoding="utf-8"))

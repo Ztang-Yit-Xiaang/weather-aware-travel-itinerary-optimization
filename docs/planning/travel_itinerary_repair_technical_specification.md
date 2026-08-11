@@ -1227,7 +1227,7 @@ Implement protocols, configuration, response models, and fake contract tests. Do
 
 ### ROUTE-001 — Unified routing provider and RouteMatrix
 
-**Phase 0.2 status:** Core `RouteMatrix`, provider protocol types, CSV/context loaders, explicit geodesic fallback matrix, and solver adapter are implemented. Validated provider completion and full benchmark matrix generation remain in ROUTE-002/ROUTE-003/Phase 4.
+**Current status:** Core `RouteMatrix`, provider protocol types, CSV/context loaders, explicit geodesic fallback matrix, solver adapter, content-addressed matrix IDs, and frozen source-bundle lineage are implemented. The real 42-request bundle remains incomplete and therefore cannot produce a strict publication matrix.
 
 **Files to create**
 
@@ -1256,6 +1256,8 @@ All `tau_ij` and distance values used by a solver come from a RouteMatrix with e
 
 ### ROUTE-002 — OSRM client
 
+**Current status:** Cache-first Route collection, explicit public-endpoint policy, query hashing, typed route parsing, and offline endpoint-snap audit are implemented. A general injected Table/Nearest client remains outside the current first-slice path; no publication claim depends on it.
+
 **Files to create**
 
 - `src/itinerary_system/routing/osrm_client.py`
@@ -1278,6 +1280,8 @@ Implement Table, Route, and Nearest calls with injected HTTP client, timeout, re
 ---
 
 ### ROUTE-003 — Local OSRM Docker
+
+**Current status:** Implemented and accepted locally. Digest-pinned OSRM `v26.5.0`, the fixed California PBF and SHA-256, localhost healthcheck, reviewed provenance, publication-ready 42-route bundle `route_bundle_e910cf488994b7a2`, and matrix `route_matrix_fde2c44a16a62ef3` are recorded in the E2 closeout artifacts.
 
 **Files to create**
 
@@ -1302,7 +1306,7 @@ Implement Table, Route, and Nearest calls with injected HTTP client, timeout, re
 
 ### ROUTE-004 — Replace geodesic travel inside solvers
 
-**Phase 0.2 status:** `multi_objective_route.py`, `hierarchical_gurobi.py`, and the route oracle wrapper accept injected route matrices/adapters. Publication mode now fails closed on missing, fallback, or non-road-validated cells; demo mode keeps explicit geodesic fallback behavior. Full pipeline calls still need validated matrix provisioning before publication comparisons.
+**Current status:** `multi_objective_route.py`, `hierarchical_gurobi.py`, the route oracle wrapper, evaluator, repair executors, and benchmark records accept injected route matrices. Publication mode fails closed on missing/fallback/nonvalidated cells, on an incomplete freeze manifest, on cache-hash drift, and on missing or inconsistent source-bundle lineage. The real provider-backed matrix is still pending E2 completion.
 
 **Files to modify**
 
@@ -1880,3 +1884,16 @@ The system is paper-ready only when all statements below are true:
 12. Secrets never enter artifacts.
 13. The notebook and CLI use the same pipeline runner.
 14. Full tests and strict evidence validation pass.
+
+## Product Application Boundary
+
+The local Itinerary Repair Copilot is additive. Its registry uses explicit safe
+relative run paths and one pinned default. Browser code may present but may not
+recompute plan, diff, route, evaluator, or certificate truth.
+
+Selections, typed drafts, fixture interpretations, permissions, and decisions
+use server-authoritative sessions with expected-revision checks. Acceptance
+writes an append-only decision and atomically updates a separate workspace
+pointer; it never edits a parent or child artifact. Unsupported fixture
+operations, missing certificates, mismatched lineage, incomplete exact search,
+and unavailable metrics fail closed.

@@ -1,0 +1,26 @@
+{
+  "schema_version": "product-session-snapshot-v1",
+  "session": {
+    "accepted_plan_id": "plan_e1c4f803691e3188",
+    "conversation_id": "conversation_1f18850a61934b62beb60c21a74995fd",
+    "created_at": "2026-08-10T16:12:29.096882+00:00",
+    "draft": [],
+    "last_accessed_at": "2026-08-10T16:12:51.810894+00:00",
+    "permission_decisions": [],
+    "proposal": null,
+    "revision": 0,
+    "run_id": "california_coast_product_demo_v2",
+    "selected_alternative_id": null,
+    "selected_candidate_id": null,
+    "selected_day": 7,
+    "selected_segment_id": null,
+    "selected_stop_id": null,
+    "session_id": "session_618624b37e8e474f9de3cdf4dee45a64",
+    "trip_id": "california_coast_demo"
+  },
+  "token_verifier": {
+    "algorithm": "sha256-salted-v1",
+    "digest": "13ebe99a18e6957dc7753cf7a0887b23d294f55d19ca1f524922c69d11e87a58",
+    "salt": "d15f7e9bc70d53807434ef016b2ce699"
+  }
+}

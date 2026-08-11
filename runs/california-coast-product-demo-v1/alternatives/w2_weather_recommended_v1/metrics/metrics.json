@@ -1,0 +1,12 @@
+{
+  "baseline_candidate_count": 3,
+  "baseline_failure_count": 0,
+  "baseline_feasible_candidate_count": 1,
+  "baseline_status": "completed",
+  "mode": "repair",
+  "planner_failure_count": 0,
+  "repair_output_missing": false,
+  "run_id": "w2_weather_recommended_v1",
+  "strict": true,
+  "strict_failure_count": 0
+}

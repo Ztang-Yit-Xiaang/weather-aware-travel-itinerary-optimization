@@ -1,0 +1,308 @@
+{
+  "_source_path": "configs/default_trip_config.yaml",
+  "bandit": {
+    "arms": [
+      "scenic_social",
+      "fastest_low_cost",
+      "balanced",
+      "high_must_go",
+      "low_detour",
+      "nature_heavy",
+      "scenic_parks",
+      "national_park_priority",
+      "city_nature_balanced",
+      "weather_safe_indoor_backup"
+    ],
+    "available_nature_arms": [
+      "nature_heavy",
+      "scenic_parks",
+      "national_park_priority",
+      "city_nature_balanced",
+      "weather_safe_indoor_backup"
+    ],
+    "candidate_size_grid": [
+      8,
+      12,
+      16
+    ],
+    "enabled": true,
+    "episode_grid": [
+      20,
+      40,
+      80
+    ],
+    "episodes": 40,
+    "exploration_scale": 0.25,
+    "seeds": [
+      42,
+      73,
+      101
+    ],
+    "top_k_gurobi_repairs": 3
+  },
+  "budget": {
+    "attraction_cost_per_day": 28,
+    "budget_mode": "approximate",
+    "food_cost_per_day": 72,
+    "hard_budget_multiplier": 1.2,
+    "local_transport_buffer_per_day": 18,
+    "user_budget": 2000
+  },
+  "data": {
+    "catalog_snapshot_id": "california_v1",
+    "context_snapshot_id": "context_static_demo_2026_06",
+    "refresh_policy": "never"
+  },
+  "diversity": {
+    "category_similarity_weight": 0.45,
+    "city_similarity_weight": 0.2,
+    "geo_similarity_weight": 0.25,
+    "method": "submodular_sqrt",
+    "mmr_lambda": 0.72,
+    "source_similarity_weight": 0.1
+  },
+  "enrichment": {
+    "cache_ttl_days": 30,
+    "overpass_radius_meters": 18000,
+    "run_live_apis": false,
+    "use_local_yelp_dataset": true,
+    "use_nps_api": false,
+    "use_open_meteo": true,
+    "use_osm": true,
+    "use_osrm": true,
+    "use_social_signals": true,
+    "use_wikidata": true,
+    "use_wikipedia": true,
+    "use_yelp": true,
+    "use_yelp_live_api": false,
+    "yelp_radius_meters": 2500
+  },
+  "hotels": {
+    "allow_visit_city_without_hotel": true,
+    "charge_hotel_only_for_overnight_base": true,
+    "hide_placeholder_hotels": true,
+    "hotel_price_fallback": 150,
+    "preferred_hotel_bonus": 3.0,
+    "preferred_hotels": {},
+    "use_curated_fallback": true
+  },
+  "interest": {
+    "axes": [
+      "nature",
+      "city",
+      "culture",
+      "history"
+    ],
+    "enabled": true,
+    "export_profiles": [
+      "nature_heavy",
+      "balanced_interest",
+      "city_heavy"
+    ],
+    "lambda_balance": 0.2,
+    "lambda_detour": 0.006,
+    "lambda_fit": 0.65,
+    "lambda_park": 0.35,
+    "lambda_season": 0.2,
+    "lambda_weather": 0.3,
+    "mode": "balanced_interest",
+    "presets": {
+      "balanced_interest": {
+        "city": 0.25,
+        "culture": 0.25,
+        "history": 0.25,
+        "nature": 0.25
+      },
+      "city_heavy": {
+        "city": 0.55,
+        "culture": 0.2,
+        "history": 0.1,
+        "nature": 0.15
+      },
+      "culture_heavy": {
+        "city": 0.2,
+        "culture": 0.55,
+        "history": 0.1,
+        "nature": 0.15
+      },
+      "history_heavy": {
+        "city": 0.2,
+        "culture": 0.15,
+        "history": 0.5,
+        "nature": 0.15
+      },
+      "nature_heavy": {
+        "city": 0.2,
+        "culture": 0.15,
+        "history": 0.1,
+        "nature": 0.55
+      }
+    },
+    "preview_saved_profile_match_threshold": 0.12,
+    "preview_top_n": 12,
+    "use_balance_objective": false,
+    "weights": {
+      "city": 0.25,
+      "culture": 0.25,
+      "history": 0.25,
+      "nature": 0.25
+    }
+  },
+  "learning_to_rank": {
+    "enabled": false,
+    "method": "bpr",
+    "min_pairwise_examples": 200
+  },
+  "map": {
+    "balanced_only_default_view": true,
+    "refresh_road_geometry": false,
+    "require_matching_artifact_metadata": true,
+    "show_debug_on_load": false
+  },
+  "map_dashboard": {
+    "customer_allow_preference_export": true,
+    "customer_day_options": "auto",
+    "customer_hide_research_controls": true,
+    "default_mode": "research",
+    "export_modes": [
+      "customer",
+      "research"
+    ]
+  },
+  "map_export": {
+    "externalize_layers": true,
+    "include_candidate_layers_in_share_map": false,
+    "include_debug_layers_in_share_map": false,
+    "lazy_load_optional_layers": true,
+    "lightweight_max_routes": 1,
+    "mode": "both",
+    "simplify_geometry_tolerance": 0.0008
+  },
+  "multi_objective": {
+    "diversity_bonus_weight": 0.12,
+    "epsilon_detour_minutes": 45,
+    "epsilon_weather_risk": 0.35,
+    "min_diversity_score": 2.5,
+    "secondary_travel_penalty": 0.005,
+    "use_epsilon_constraints": true
+  },
+  "nature": {
+    "enabled": true,
+    "la_inclusion_policy": "gateway_or_selected_or_explain",
+    "max_nature_detour_minutes": 240,
+    "max_single_day_drive_minutes_for_nature": 360,
+    "min_nature_days_for_nature_heavy": 2,
+    "min_nature_score_for_nature_heavy": 0.35,
+    "min_selected_nature_stops_for_nature_heavy": 2,
+    "national_park_bonus": 0.8,
+    "nps_api_key_env": "***REDACTED***",
+    "protected_area_bonus": 0.35,
+    "scenic_region_bonus": 0.3,
+    "state_park_bonus": 0.45,
+    "use_curated_nature_fallback": true,
+    "use_nps_api": false
+  },
+  "nature_detail_routes": {
+    "enabled": true,
+    "max_routes_per_site": 3,
+    "max_scenic_drive_km": 90,
+    "max_short_hike_km": 12,
+    "overpass_radius_meters": 25000,
+    "route_types": [
+      "scenic_drive",
+      "short_hike",
+      "viewpoint_walk"
+    ],
+    "site_scope": "all_nature_candidates",
+    "soft_score_weight": 0.06,
+    "use_curated_fallback": true,
+    "use_nps_metadata": true,
+    "use_osm": true
+  },
+  "optimization": {
+    "base_switch_penalty": 0.07,
+    "city_day_value_exponent": 0.82,
+    "gurobi_mip_gap": 0.05,
+    "gurobi_time_limit_seconds": 120,
+    "max_cities": 6,
+    "max_days_per_base_city": 3,
+    "max_pois_per_day": 4,
+    "min_days_per_base_city": 1,
+    "pass_through_city_bonus_weight": 0.18
+  },
+  "routing": {
+    "road_route_cache_path": "production_road_route_cache.csv"
+  },
+  "run": {
+    "repository_state_strict": false,
+    "role": "demonstration",
+    "run_id": "auto"
+  },
+  "social": {
+    "corridor_fit_weight": 0.3,
+    "detour_penalty_weight": 0.01,
+    "must_go_bonus_weight": 0.85,
+    "must_go_is_mandatory": false,
+    "social_score_weight": 1.1
+  },
+  "time": {
+    "daily_time_budget_minutes": 720,
+    "max_detour_minutes": 45,
+    "max_intercity_drive_minutes_per_day": 360
+  },
+  "transport": {
+    "airport_gateways": {
+      "Los Angeles": {
+        "code": "LAX",
+        "latitude": 33.9416,
+        "longitude": -118.4085,
+        "name": "Los Angeles International Airport",
+        "routing_latitude": 33.942502,
+        "routing_longitude": -118.407858
+      },
+      "San Francisco": {
+        "code": "SFO",
+        "latitude": 37.6213,
+        "longitude": -122.379,
+        "name": "San Francisco International Airport",
+        "routing_latitude": 37.617243,
+        "routing_longitude": -122.384195
+      }
+    }
+  },
+  "trip": {
+    "end_city_options": [
+      "Los Angeles",
+      "San Francisco"
+    ],
+    "interest_profile": "balanced_interest",
+    "scenario": "california_coast",
+    "scenario_city_universe": "auto",
+    "start_city_options": [
+      "San Francisco",
+      "Los Angeles"
+    ],
+    "state": "California",
+    "traveler_profile": "balanced",
+    "trip_days": 7
+  },
+  "trip_duration_comparison": {
+    "days": [
+      7,
+      9,
+      12
+    ],
+    "enabled": true,
+    "scale_budget_with_days": true
+  },
+  "utility": {
+    "bayes_prior_mean": 0.5,
+    "bayes_prior_strength": 6.0,
+    "corridor_fit_weight": 0.3,
+    "detour_penalty_weight": 0.01,
+    "method": "bayesian_ucb",
+    "must_go_bonus_weight": 0.85,
+    "uncertainty_bonus_kappa": 0.25,
+    "weather_risk_penalty_weight": 0.08
+  }
+}

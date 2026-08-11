@@ -1,0 +1,79 @@
+{
+  "schema_version": "w1m-map-runtime-evidence-v1",
+  "recorded_at": "2026-08-04",
+  "phase": "W1M",
+  "gate": "G1",
+  "decision": "MAP-DEC-002",
+  "implementation_status": "implemented",
+  "verification_status": "blocked",
+  "next_phase": {"phase": "W2", "status": "planned_not_ready"},
+  "primary_provider": "maplibre_pmtiles",
+  "backup_provider": "mapbox_atlas_v3_explicit_only",
+  "product_version": "0.2.0",
+  "verification": {
+    "focused_product_and_repository": {"passed": true, "count": 119, "warnings": 1},
+    "full_pytest": {"passed": true, "count": 430, "warnings": 1},
+    "ruff": {"passed": true},
+    "project_checks": {"passed": true},
+    "maplibre_compose_static_config": {"passed": true},
+    "javascript_syntax": {"passed": true},
+    "diff_check": {"passed": true},
+    "real_asset_preflight": {"passed": false, "code": "external_asset_package_not_staged"},
+    "live_range_cors": {"passed": false, "code": "live_map_service_not_started"},
+    "offline_local": {"passed": false, "code": "offline_local_not_run"},
+    "geographic_browser_renderer": {"passed": false, "code": "owned_by_w2"}
+  },
+  "pins": {
+    "maplibre_gl_js": "5.24.0",
+    "pmtiles_js": "4.4.1",
+    "protomaps_basemap_style": "5.7.2",
+    "pmtiles_cli": "1.30.0",
+    "nginx_image": "nginx@sha256:97d490c12ba55b4946b01546d1c3ed324e8d41ab1c9fcb2a616aa470620e5b46"
+  },
+  "blockers": [
+    "external_asset_package_not_staged",
+    "real_archive_preflight_not_run",
+    "live_map_service_not_started",
+    "live_http_206_cors_not_verified",
+    "offline_local_not_verified",
+    "live_evidence_audits_not_run"
+  ],
+  "preserved_legacy_sha256": {
+    "workspace_pointer.json": "a113d672e359850b7a93a6cd04a3477f5405f5b38b5be67fcf3943350a79c52d",
+    "decisions/decision_1902d7b134f04291b30eab7ec8ab1036.json": "b6a6700528f06c13166ad93e0c5ce51348361222e1aefaa6eb53322d17accd9b",
+    "decisions/decision_6551a39d3d2445869f335c11a72277e6.json": "13d3a70269ca7e1c70b39cae31e343e48ae7bf60e57b53dbb0a9aa3a5e72b1b9",
+    "decisions/decision_84bb9eb1ebcd4864b469871be654c30e.json": "b706efb8741c7672923e59fe85a47b2a69ad44b982512aa9c371fb9f092d5f2c"
+  },
+  "selected_file_sha256": {
+    "src/itinerary_system/product_app/config.py": "42538594810e7cc1f792eeed2f4a05003c9d27c32d2f64c84329bf427809881a",
+    "src/itinerary_system/product_app/models.py": "ce7bbd91f775572cc7c1c52164159e79560e79c643074582c0747929abc8485b",
+    "src/itinerary_system/product_app/runtime.py": "8b26d6488ad7c9fa10cc6f82c38cbd4f4d02e1643eda332ec1593eeb862552f2",
+    "src/itinerary_system/product_app/security.py": "da3adf640d93f10800efbe6f07945b923d409775121e5598459406100e1d3432",
+    "src/itinerary_system/product_app/map_asset_contract.py": "d8a7a7f2c99603d604f5c4364e6c5cecac8f13b0c71acf40a2c7db330719b926",
+    "src/itinerary_system/product_app/static/js/app.js": "625ba07d503fbcfd4f74bfecc89a04ecfd6430b9e2bd6cb113ce4075c4545528",
+    "scripts/run_product_app.py": "db8749ec6b9bfc8d11e86b7b8c09532e03e8667f3364da32c5842614d4db3bcc",
+    "scripts/validate_local_map_assets.py": "2b49eab20ac8311b006a9c2605fb1116e8980f050f56469ffc719848ad8db151",
+    "docker/maplibre/docker-compose.yml": "558f04a1d52e9b51f09c6a9cbc87395c41f210db95cd2ab17b3132cb36b9da1f",
+    "docker/maplibre/nginx.conf.template": "3a64bae280feaea4e079b16715e888661fc7b39d5da2fdd803c6b0a0c4d31d30",
+    "docker/maplibre/.env.example": "3ad39486cca0ffe1bbf5e6ae10ba07d7cf9a1def453624824b34b605ca6e5c72",
+    "docker/maplibre/provenance.example.json": "3bbe9a80e3f7653c784c02f7a5fcbd93eb0b995323c99ad222fbb2cb818d3843",
+    "docker/maplibre/README.md": "d6e0e0dcf2c817567def0fa3e33c39b77cd57da3330a0d3ac04ddf6a2aa326c8",
+    "tests/product_app/test_map_asset_preflight.py": "b759eb1bedb5b066013aeded0cf5d2fc186caafd59c3d8018053096a96a36a90"
+  },
+  "auditors": [
+    {"id": "maplibre_architecture_audit", "scope": "architecture_and_phase_boundary", "verdict": "pass_after_remediation", "independent": true, "read_only": true},
+    {"id": "maplibre_source_research", "scope": "source_provenance_pmtiles_and_licenses", "verdict": "pass_after_remediation", "independent": true, "read_only": true},
+    {"id": "maplibre_gate_audit", "scope": "phase_gate_status", "verdict": "pass", "independent": true, "read_only": true},
+    {"id": "maplibre_security_audit", "scope": "security_privacy", "verdict": "pass", "independent": true, "read_only": true},
+    {"id": "maplibre_journey_audit", "scope": "launcher_and_recovery_journey", "verdict": "pass", "independent": true, "read_only": true},
+    {"id": "maplibre_content_audit", "scope": "content_licensing_status", "verdict": "pass_after_remediation", "independent": true, "read_only": true}
+  ],
+  "status_invariants": {
+    "cp_010": "in-progress",
+    "w1": "implemented",
+    "w1m": "implemented_not_verified",
+    "g1": "blocked",
+    "w2": "planned_not_ready",
+    "research_statuses_changed": false
+  }
+}

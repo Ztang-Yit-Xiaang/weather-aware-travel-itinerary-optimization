@@ -1,0 +1,119 @@
+{
+  "catalog_id": "california_coast_demo_candidates_v1",
+  "generated_at": "2026-08-04T00:00:00+00:00",
+  "places": [
+    {
+      "access_points": [
+        {
+          "access_confidence": "provider_access_point",
+          "access_point_id": "bixby_creek_bridge_viewpoint_road_endpoint",
+          "access_type": "road_route_endpoint",
+          "coordinate": {
+            "latitude": 36.371479,
+            "longitude": -121.901894
+          },
+          "evidence_refs": [
+            "001da97c5482f649",
+            "26e91ac90b1bd16b"
+          ],
+          "road_validated": true,
+          "source_ref": "route_matrix_68ab535465b06808"
+        }
+      ],
+      "display_coordinate": {
+        "latitude": 36.3715,
+        "longitude": -121.9018
+      },
+      "name": "Bixby Creek Bridge Viewpoint",
+      "place_categories": [
+        "registered_candidate"
+      ],
+      "place_id": "bixby_creek_bridge_viewpoint",
+      "source_refs": [
+        "bixby_candidate_request_w2",
+        "registered_child_plan_f5ee52459659dcb5",
+        "registered_certificate_686ef65d376b2867",
+        "route_matrix_68ab535465b06808"
+      ]
+    },
+    {
+      "access_points": [
+        {
+          "access_confidence": "provider_access_point",
+          "access_point_id": "santa_barbara_museum_of_natural_history_sea_center_road_endpoint",
+          "access_type": "road_route_endpoint",
+          "coordinate": {
+            "latitude": 34.409383,
+            "longitude": -119.685364
+          },
+          "evidence_refs": [
+            "03d34a8e6a8a89bb",
+            "aa247cb3abc422f3"
+          ],
+          "road_validated": true,
+          "source_ref": "route_matrix_68ab535465b06808"
+        }
+      ],
+      "display_coordinate": {
+        "latitude": 34.4093803,
+        "longitude": -119.6853711
+      },
+      "name": "Santa Barbara Museum of Natural History Sea Center",
+      "place_categories": [
+        "registered_candidate"
+      ],
+      "place_id": "santa_barbara_museum_of_natural_history_sea_center",
+      "source_refs": [
+        "sea_center_candidate_request_w2",
+        "registered_child_plan_8aa919c8323dbac0",
+        "registered_certificate_5a6deef4c159d346",
+        "route_matrix_68ab535465b06808"
+      ]
+    }
+  ],
+  "schema_version": "product-poi-catalog-v1",
+  "sources": [
+    {
+      "retrieved_at": null,
+      "source_id": "bixby_candidate_request_w2",
+      "source_type": "curated_dataset",
+      "source_url": null
+    },
+    {
+      "retrieved_at": null,
+      "source_id": "registered_certificate_5a6deef4c159d346",
+      "source_type": "curated_dataset",
+      "source_url": null
+    },
+    {
+      "retrieved_at": null,
+      "source_id": "registered_certificate_686ef65d376b2867",
+      "source_type": "curated_dataset",
+      "source_url": null
+    },
+    {
+      "retrieved_at": null,
+      "source_id": "registered_child_plan_8aa919c8323dbac0",
+      "source_type": "curated_dataset",
+      "source_url": null
+    },
+    {
+      "retrieved_at": null,
+      "source_id": "registered_child_plan_f5ee52459659dcb5",
+      "source_type": "curated_dataset",
+      "source_url": null
+    },
+    {
+      "retrieved_at": null,
+      "source_id": "route_matrix_68ab535465b06808",
+      "source_type": "provider",
+      "source_url": null
+    },
+    {
+      "retrieved_at": null,
+      "source_id": "sea_center_candidate_request_w2",
+      "source_type": "curated_dataset",
+      "source_url": null
+    }
+  ]
+}

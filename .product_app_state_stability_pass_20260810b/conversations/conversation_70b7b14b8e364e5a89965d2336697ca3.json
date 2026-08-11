@@ -1,0 +1,12 @@
+{
+  "conversation_id": "conversation_70b7b14b8e364e5a89965d2336697ca3",
+  "created_at": "2026-08-10T16:29:05.387197+00:00",
+  "expires_at": "2026-09-09T16:29:05.387197+00:00",
+  "revision": 0,
+  "run_id": "california_coast_product_demo_v2",
+  "schema_version": "product-conversation-v1",
+  "session_id": "session_ba8d9772b62047eab0d70dbca9b02f11",
+  "trip_id": "california_coast_demo",
+  "turns": [],
+  "updated_at": "2026-08-10T16:29:05.387197+00:00"
+}

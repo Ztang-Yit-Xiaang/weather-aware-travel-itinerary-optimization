@@ -1,0 +1,279 @@
+{
+  "schema_version": "stability-browser-evidence-v2",
+  "ready_condition": "data-map-ready=true is set only after MapLibre idle, areTilesLoaded, and >=0.95 canvas coverage",
+  "records": [
+    {
+      "documentHeight": 900,
+      "mapStatus": "Map ready with loaded local tiles and road-validated route layers.",
+      "maps": [
+        {
+          "canvasHeight": 630,
+          "canvasWidth": 651,
+          "coverage": 0.9996928559531911,
+          "height": 629.6000366210938,
+          "left": 396.8000183105469,
+          "ready": "true",
+          "top": 151.60000610351562,
+          "width": 651.2000122070312
+        }
+      ],
+      "route": "/app/itinerary",
+      "selectedAlternativeLabel": null,
+      "selectedDay": "7",
+      "selectedSegmentId": null,
+      "selectedStopId": null,
+      "timestamp": "2026-08-10T16:38:56.875Z",
+      "viewport": {
+        "height": 900,
+        "width": 1440
+      }
+    },
+    {
+      "documentHeight": 900,
+      "mapStatus": "Map ready with loaded local tiles and road-validated route layers.",
+      "maps": [
+        {
+          "canvasHeight": 630,
+          "canvasWidth": 651,
+          "coverage": 0.9996928559531911,
+          "height": 629.6000366210938,
+          "left": 396.8000183105469,
+          "ready": "true",
+          "top": 151.60000610351562,
+          "width": 651.2000122070312
+        }
+      ],
+      "route": "/app/itinerary",
+      "selectedAlternativeLabel": null,
+      "selectedDay": "7",
+      "selectedSegmentId": null,
+      "selectedStopId": null,
+      "timestamp": "2026-08-10T16:38:59.000Z",
+      "viewport": {
+        "height": 900,
+        "width": 1440
+      }
+    },
+    {
+      "documentHeight": 900,
+      "mapStatus": "Map ready with loaded local tiles and road-validated route layers.",
+      "maps": [
+        {
+          "canvasHeight": 630,
+          "canvasWidth": 651,
+          "coverage": 0.9996928559531911,
+          "height": 629.6000366210938,
+          "left": 396.8000183105469,
+          "ready": "true",
+          "top": 151.60000610351562,
+          "width": 651.2000122070312
+        }
+      ],
+      "route": "/app/itinerary",
+      "selectedAlternativeLabel": null,
+      "selectedDay": "7",
+      "selectedSegmentId": null,
+      "selectedStopId": null,
+      "timestamp": "2026-08-10T16:39:05.338Z",
+      "viewport": {
+        "height": 900,
+        "width": 1440
+      }
+    },
+    {
+      "documentHeight": 900,
+      "mapStatus": "Map ready with loaded local tiles and road-validated route layers.",
+      "maps": [
+        {
+          "canvasHeight": 630,
+          "canvasWidth": 651,
+          "coverage": 0.9996928559531911,
+          "height": 629.6000366210938,
+          "left": 396.8000183105469,
+          "ready": "true",
+          "top": 151.60000610351562,
+          "width": 651.2000122070312
+        }
+      ],
+      "route": "/app/itinerary",
+      "selectedAlternativeLabel": null,
+      "selectedDay": "7",
+      "selectedSegmentId": null,
+      "selectedStopId": null,
+      "timestamp": "2026-08-10T16:39:05.743Z",
+      "viewport": {
+        "height": 900,
+        "width": 1440
+      }
+    },
+    {
+      "documentHeight": 900,
+      "mapStatus": "Map ready with loaded local tiles and road-validated route layers.",
+      "maps": [
+        {
+          "canvasHeight": 630,
+          "canvasWidth": 651,
+          "coverage": 0.9996928559531911,
+          "height": 629.6000366210938,
+          "left": 396.8000183105469,
+          "ready": "true",
+          "top": 151.60000610351562,
+          "width": 651.2000122070312
+        }
+      ],
+      "route": "/app/itinerary",
+      "selectedAlternativeLabel": null,
+      "selectedDay": "7",
+      "selectedSegmentId": null,
+      "selectedStopId": null,
+      "timestamp": "2026-08-10T16:39:06.147Z",
+      "viewport": {
+        "height": 900,
+        "width": 1440
+      }
+    },
+    {
+      "documentHeight": 768,
+      "mapStatus": "Map ready with loaded local tiles and road-validated route layers.",
+      "maps": [
+        {
+          "canvasHeight": 558,
+          "canvasWidth": 605,
+          "coverage": 0.9989533712564218,
+          "height": 558.4000244140625,
+          "left": 80.80000305175781,
+          "ready": "true",
+          "top": 147.60000610351562,
+          "width": 605.2000122070312
+        }
+      ],
+      "route": "/app/itinerary",
+      "selectedAlternativeLabel": null,
+      "selectedDay": "7",
+      "selectedSegmentId": null,
+      "selectedStopId": null,
+      "timestamp": "2026-08-10T16:39:06.264Z",
+      "viewport": {
+        "height": 768,
+        "width": 1024
+      }
+    },
+    {
+      "documentHeight": 900,
+      "mapStatus": "Map ready with loaded local tiles and road-validated route layers.",
+      "maps": [
+        {
+          "canvasHeight": 630,
+          "canvasWidth": 651,
+          "coverage": 0.9996928559531911,
+          "height": 629.6000366210938,
+          "left": 396.8000183105469,
+          "ready": "true",
+          "top": 151.60000610351562,
+          "width": 651.2000122070312
+        }
+      ],
+      "route": "/app/itinerary",
+      "selectedAlternativeLabel": null,
+      "selectedDay": "7",
+      "selectedSegmentId": null,
+      "selectedStopId": null,
+      "timestamp": "2026-08-10T16:39:06.382Z",
+      "viewport": {
+        "height": 900,
+        "width": 1440
+      }
+    },
+    {
+      "documentHeight": 768,
+      "mapStatus": null,
+      "maps": [
+        {
+          "canvasHeight": 298,
+          "canvasWidth": 261,
+          "coverage": 0.9978948208204393,
+          "height": 298.3999938964844,
+          "left": 97.5999984741211,
+          "ready": "true",
+          "top": 427.4250183105469,
+          "width": 261.20001220703125
+        },
+        {
+          "canvasHeight": 298,
+          "canvasWidth": 261,
+          "coverage": 0.9978948208204393,
+          "height": 298.3999938964844,
+          "left": 408,
+          "ready": "true",
+          "top": 427.4250183105469,
+          "width": 261.20001220703125
+        }
+      ],
+      "route": "/app/compare",
+      "selectedAlternativeLabel": "Recommended repair",
+      "selectedDay": "7",
+      "selectedSegmentId": null,
+      "selectedStopId": null,
+      "timestamp": "2026-08-10T16:39:09.560Z",
+      "viewport": {
+        "height": 768,
+        "width": 1024
+      }
+    },
+    {
+      "documentHeight": 800,
+      "mapStatus": "Map ready with loaded local tiles and road-validated route layers.",
+      "maps": [
+        {
+          "canvasHeight": 558,
+          "canvasWidth": 491,
+          "coverage": 0.9988767246683944,
+          "height": 558.4000244140625,
+          "left": 396.8000183105469,
+          "ready": "true",
+          "top": 151.60000610351562,
+          "width": 491.20001220703125
+        }
+      ],
+      "route": "/app/itinerary",
+      "selectedAlternativeLabel": null,
+      "selectedDay": "7",
+      "selectedSegmentId": null,
+      "selectedStopId": null,
+      "timestamp": "2026-08-10T16:39:13.073Z",
+      "viewport": {
+        "height": 800,
+        "width": 1280
+      }
+    },
+    {
+      "documentHeight": 924,
+      "mapStatus": "Map ready with loaded local tiles and road-validated route layers.",
+      "maps": [
+        {
+          "canvasHeight": 592,
+          "canvasWidth": 354,
+          "coverage": 0.9993247393693845,
+          "height": 592.4000244140625,
+          "left": 10.800000190734863,
+          "ready": "true",
+          "top": 135.60000610351562,
+          "width": 353.6000061035156
+        }
+      ],
+      "route": "/app/itinerary",
+      "selectedAlternativeLabel": null,
+      "selectedDay": "7",
+      "selectedSegmentId": null,
+      "selectedStopId": null,
+      "timestamp": "2026-08-10T16:39:15.105Z",
+      "viewport": {
+        "height": 844,
+        "width": 390
+      }
+    }
+  ],
+  "console": [],
+  "networkFailures": [],
+  "network_failure_method": "No browser console failures; local health/map/routing endpoints independently ready."
+}

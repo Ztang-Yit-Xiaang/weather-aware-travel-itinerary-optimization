@@ -9,8 +9,9 @@ from __future__ import annotations
 
 import json
 import math
+import os
 from collections.abc import Callable, Iterable, Mapping
-from dataclasses import asdict, dataclass, field
+from dataclasses import asdict, dataclass, field, replace
 from enum import StrEnum
 from pathlib import Path
 from typing import Any
@@ -21,7 +22,17 @@ from .evaluation import PlanEvaluationCertificate, PlanEvaluator, PlanEvaluatorC
 from .explanation import ContrastiveEvidence, EvidenceRecord, ExplanationClaim, WhyNotEvidence
 from .phase0_exporter import write_phase0_research_artifacts
 from .plans.repository import PlanRepository
+from .repair.baselines import (
+    DETERMINISTIC_CONTEXT_AWARE_HEURISTIC,
+    plan_deterministic_context_aware_heuristic,
+)
+from .repair.context import context_evaluation_requirements, contextualize_plan_for_evaluation
 from .repair.day_route_solver import DayRouteSolverConfig
+from .repair.exact_baselines import (
+    ExactBaselinePlanningResult,
+    plan_context_blind_solver,
+    plan_full_reoptimization,
+)
 from .repair.lexicographic import ObjectiveTolerances
 from .repair.progressive import repair_progressively
 from .research_artifacts import PlanArtifactV2, PlannerRun, stable_content_hash
@@ -176,7 +187,7 @@ def run_production_generation_executor(
     """Run the production optimizer and adapt its method outputs to canonical artifacts."""
 
     legacy_path = Path(legacy_subdir)
-    legacy_dir = legacy_path if legacy_path.is_absolute() else context.output_dir / legacy_path
+    legacy_dir = (legacy_path if legacy_path.is_absolute() else context.output_dir / legacy_path).resolve()
     legacy_dir.mkdir(parents=True, exist_ok=True)
     runner = production_runner or _default_production_generation_runner
     raw_outputs = runner(
@@ -235,7 +246,7 @@ def run_phase0_generation_executor(
     """Run Phase 0 generation exports and return canonical pipeline artifacts."""
 
     legacy_path = Path(legacy_subdir)
-    legacy_dir = legacy_path if legacy_path.is_absolute() else context.output_dir / legacy_path
+    legacy_dir = (legacy_path if legacy_path.is_absolute() else context.output_dir / legacy_path).resolve()
     export_result = write_phase0_research_artifacts(
         output_dir=legacy_dir,
         config=context.config,
@@ -273,6 +284,318 @@ def run_phase0_generation_executor(
     )
 
 
+def build_context_blind_solver_executor(
+    *,
+    parent_plan: PlanArtifactV2,
+    repair_request: Any,
+    route_matrix: RouteMatrix,
+    day_route_config: DayRouteSolverConfig | None = None,
+    evaluator_config: PlanEvaluatorConfig | None = None,
+    publication_mode: bool = False,
+    max_complete_candidates: int = 50_000,
+) -> PipelineExecutor:
+    """Build the exact context-blind finite-universe solver executor."""
+
+    def executor(context: PipelineRunContext) -> PipelineExecutionResult:
+        return run_context_blind_solver_executor(
+            context,
+            parent_plan=parent_plan,
+            repair_request=repair_request,
+            route_matrix=route_matrix,
+            day_route_config=day_route_config,
+            evaluator_config=evaluator_config,
+            publication_mode=publication_mode,
+            max_complete_candidates=max_complete_candidates,
+        )
+
+    return executor
+
+
+def run_context_blind_solver_executor(
+    context: PipelineRunContext,
+    *,
+    parent_plan: PlanArtifactV2,
+    repair_request: Any,
+    route_matrix: RouteMatrix,
+    day_route_config: DayRouteSolverConfig | None = None,
+    evaluator_config: PlanEvaluatorConfig | None = None,
+    publication_mode: bool = False,
+    max_complete_candidates: int = 50_000,
+) -> PipelineExecutionResult:
+    """Run static exact optimization and evaluate its output with the common context-aware evaluator."""
+
+    config = day_route_config or DayRouteSolverConfig(strict_route_matrix=publication_mode)
+    result = plan_context_blind_solver(
+        parent_plan,
+        repair_request,
+        route_matrix,
+        day_route_config=config,
+        publication_mode=publication_mode,
+        max_complete_candidates=max_complete_candidates,
+    )
+    return _exact_baseline_pipeline_result(
+        context,
+        result=result,
+        parent_plan=parent_plan,
+        repair_request=repair_request,
+        route_matrix=route_matrix,
+        day_route_config=config,
+        evaluator_config=evaluator_config,
+    )
+
+
+def build_full_reoptimization_executor(
+    *,
+    parent_plan: PlanArtifactV2,
+    repair_request: Any,
+    route_matrix: RouteMatrix,
+    day_route_config: DayRouteSolverConfig | None = None,
+    evaluator_config: PlanEvaluatorConfig | None = None,
+    publication_mode: bool = False,
+    max_complete_candidates: int = 50_000,
+) -> PipelineExecutor:
+    """Build exact context-aware full reoptimization without preservation objectives."""
+
+    def executor(context: PipelineRunContext) -> PipelineExecutionResult:
+        return run_full_reoptimization_executor(
+            context,
+            parent_plan=parent_plan,
+            repair_request=repair_request,
+            route_matrix=route_matrix,
+            day_route_config=day_route_config,
+            evaluator_config=evaluator_config,
+            publication_mode=publication_mode,
+            max_complete_candidates=max_complete_candidates,
+        )
+
+    return executor
+
+
+def run_full_reoptimization_executor(
+    context: PipelineRunContext,
+    *,
+    parent_plan: PlanArtifactV2,
+    repair_request: Any,
+    route_matrix: RouteMatrix,
+    day_route_config: DayRouteSolverConfig | None = None,
+    evaluator_config: PlanEvaluatorConfig | None = None,
+    publication_mode: bool = False,
+    max_complete_candidates: int = 50_000,
+) -> PipelineExecutionResult:
+    """Run exact context-aware reoptimization over the complete declared finite universe."""
+
+    config = _day_route_config_for_repair(
+        day_route_config or DayRouteSolverConfig(strict_route_matrix=publication_mode),
+        repair_request,
+    )
+    result = plan_full_reoptimization(
+        parent_plan,
+        repair_request,
+        route_matrix,
+        day_route_config=config,
+        publication_mode=publication_mode,
+        max_complete_candidates=max_complete_candidates,
+    )
+    return _exact_baseline_pipeline_result(
+        context,
+        result=result,
+        parent_plan=parent_plan,
+        repair_request=repair_request,
+        route_matrix=route_matrix,
+        day_route_config=config,
+        evaluator_config=evaluator_config,
+    )
+
+
+def _exact_baseline_pipeline_result(
+    context: PipelineRunContext,
+    *,
+    result: ExactBaselinePlanningResult,
+    parent_plan: PlanArtifactV2,
+    repair_request: Any,
+    route_matrix: RouteMatrix,
+    day_route_config: DayRouteSolverConfig,
+    evaluator_config: PlanEvaluatorConfig | None,
+) -> PipelineExecutionResult:
+    request_id = _repair_request_id(repair_request)
+    if context.parent_plan_id and context.parent_plan_id != parent_plan.plan_id:
+        raise ValueError("pipeline parent_plan_id does not match exact baseline parent_plan")
+    if context.repair_request_id and context.repair_request_id != request_id:
+        raise ValueError("pipeline repair_request_id does not match exact baseline request")
+    evaluations: tuple[PlanEvaluationCertificate | dict[str, Any], ...] = ()
+    explanations: tuple[dict[str, Any], ...] = ()
+    if result.child_plan is not None:
+        resolved_evaluator_config = _evaluator_config_for_repair(
+            evaluator_config or _evaluator_config_from_day_route_config(day_route_config, parent_plan=parent_plan),
+            repair_request,
+        )
+        evaluator = PlanEvaluator(
+            route_matrix=route_matrix,
+            planner_runs={result.planner_run.run_id: result.planner_run},
+            config=resolved_evaluator_config,
+            reference_plan=contextualize_plan_for_evaluation(parent_plan, repair_request),
+        )
+        evaluations = (evaluator.evaluate_final_plan(result.child_plan, planner_run=result.planner_run),)
+        selected_ids = [record.candidate_id for record in result.decision_records if record.selected]
+        explanations = (
+            {
+                "evidence_id": f"explain_{result.child_plan.plan_id}",
+                "evidence_type": "complete_finite_search_trace",
+                "parent_plan_id": parent_plan.plan_id,
+                "child_plan_id": result.child_plan.plan_id,
+                "method_id": result.method_id,
+                "search_complete": result.search_complete,
+                "candidate_count": result.candidate_count,
+                "claims": [
+                    {
+                        "claim_id": "selected_from_complete_finite_search",
+                        "evidence_refs": selected_ids,
+                    }
+                ],
+                "schema_version": "baseline-explanation-v1",
+            },
+        )
+    return PipelineExecutionResult(
+        planner_runs=(result.planner_run,),
+        output_plans=(result.child_plan,) if result.child_plan is not None else (),
+        evaluations=evaluations,
+        parent_plan=parent_plan,
+        diff_records=(result.diff_record,) if result.diff_record is not None else (),
+        route_records=(route_matrix,),
+        explanation_records=explanations,
+        request_records=(_repair_request_record(repair_request, context=context),),
+        metrics={
+            "baseline_status": result.status,
+            "baseline_search_complete": result.search_complete,
+            "baseline_candidate_count": result.candidate_count,
+            "baseline_feasible_candidate_count": sum(record.feasible for record in result.decision_records),
+            "baseline_failure_count": len(result.failure_reasons),
+        },
+        dashboard_records=(
+            {
+                **result.to_record(),
+                "dashboard_id": f"baseline_{stable_content_hash({'request': request_id, 'method': result.method_id})[:12]}",
+            },
+        ),
+    )
+
+
+def build_deterministic_context_aware_heuristic_executor(
+    *,
+    parent_plan: PlanArtifactV2,
+    repair_request: Any,
+    route_matrix: RouteMatrix,
+    day_route_config: DayRouteSolverConfig | None = None,
+    evaluator_config: PlanEvaluatorConfig | None = None,
+    ownership_policy: Any | None = None,
+    publication_mode: bool = False,
+) -> PipelineExecutor:
+    """Build the deterministic affected-day context-aware heuristic executor."""
+
+    def executor(context: PipelineRunContext) -> PipelineExecutionResult:
+        return run_deterministic_context_aware_heuristic_executor(
+            context,
+            parent_plan=parent_plan,
+            repair_request=repair_request,
+            route_matrix=route_matrix,
+            day_route_config=day_route_config,
+            evaluator_config=evaluator_config,
+            ownership_policy=ownership_policy,
+            publication_mode=publication_mode,
+        )
+
+    return executor
+
+
+def run_deterministic_context_aware_heuristic_executor(
+    context: PipelineRunContext,
+    *,
+    parent_plan: PlanArtifactV2,
+    repair_request: Any,
+    route_matrix: RouteMatrix,
+    day_route_config: DayRouteSolverConfig | None = None,
+    evaluator_config: PlanEvaluatorConfig | None = None,
+    ownership_policy: Any | None = None,
+    publication_mode: bool = False,
+) -> PipelineExecutionResult:
+    """Run the deterministic heuristic and emit canonical independently evaluated artifacts."""
+
+    request_id = _repair_request_id(repair_request)
+    if context.parent_plan_id and context.parent_plan_id != parent_plan.plan_id:
+        raise ValueError("pipeline parent_plan_id does not match heuristic parent_plan")
+    if context.repair_request_id and context.repair_request_id != request_id:
+        raise ValueError("pipeline repair_request_id does not match heuristic request")
+    resolved_day_config = _day_route_config_for_repair(
+        day_route_config or DayRouteSolverConfig(strict_route_matrix=publication_mode),
+        repair_request,
+    )
+    result = plan_deterministic_context_aware_heuristic(
+        parent_plan,
+        repair_request,
+        route_matrix,
+        day_route_config=resolved_day_config,
+        ownership_policy=ownership_policy,
+        publication_mode=publication_mode,
+    )
+    evaluations: tuple[PlanEvaluationCertificate | dict[str, Any], ...] = ()
+    explanations: tuple[dict[str, Any], ...] = ()
+    if result.child_plan is not None:
+        resolved_evaluator_config = _evaluator_config_for_repair(
+            evaluator_config
+            or _evaluator_config_from_day_route_config(resolved_day_config, parent_plan=parent_plan),
+            repair_request,
+        )
+        evaluator = PlanEvaluator(
+            route_matrix=route_matrix,
+            planner_runs={result.planner_run.run_id: result.planner_run},
+            config=resolved_evaluator_config,
+            reference_plan=contextualize_plan_for_evaluation(parent_plan, repair_request),
+        )
+        certificate = evaluator.evaluate_final_plan(result.child_plan, planner_run=result.planner_run)
+        evaluations = (certificate,)
+        explanations = (
+            {
+                "evidence_id": f"explain_{result.child_plan.plan_id}",
+                "evidence_type": "deterministic_candidate_trace",
+                "parent_plan_id": parent_plan.plan_id,
+                "child_plan_id": result.child_plan.plan_id,
+                "method_id": DETERMINISTIC_CONTEXT_AWARE_HEURISTIC,
+                "decision_record_ids": [record.candidate_id for record in result.decision_records],
+                "claims": [
+                    {
+                        "claim_id": "selected_from_deterministic_trace",
+                        "evidence_refs": [
+                            record.candidate_id for record in result.decision_records if record.selected
+                        ],
+                    }
+                ],
+                "schema_version": "baseline-explanation-v1",
+            },
+        )
+    return PipelineExecutionResult(
+        planner_runs=(result.planner_run,),
+        output_plans=(result.child_plan,) if result.child_plan is not None else (),
+        evaluations=evaluations,
+        parent_plan=parent_plan,
+        diff_records=(result.diff_record,) if result.diff_record is not None else (),
+        route_records=(route_matrix,),
+        explanation_records=explanations,
+        request_records=(_repair_request_record(repair_request, context=context),),
+        metrics={
+            "baseline_status": result.status,
+            "baseline_candidate_count": len(result.decision_records),
+            "baseline_feasible_candidate_count": sum(record.feasible for record in result.decision_records),
+            "baseline_failure_count": len(result.failure_reasons),
+        },
+        dashboard_records=(
+            {
+                **result.to_record(),
+                "dashboard_id": f"baseline_{stable_content_hash({'request': request_id, 'method': DETERMINISTIC_CONTEXT_AWARE_HEURISTIC})[:12]}",
+            },
+        ),
+    )
+
+
 def build_progressive_repair_executor(
     *,
     parent_plan: PlanArtifactV2,
@@ -284,6 +607,7 @@ def build_progressive_repair_executor(
     tolerances: ObjectiveTolerances | None = None,
     ownership_policy: Any | None = None,
     publication_mode: bool = False,
+    method_id: str = "progressive_sequential_lexicographic_repair",
     plan_repository: PlanRepository | None = None,
     repository_subdir: str | Path = "repair_workspace/plans",
 ) -> PipelineExecutor:
@@ -301,6 +625,7 @@ def build_progressive_repair_executor(
             tolerances=tolerances,
             ownership_policy=ownership_policy,
             publication_mode=publication_mode,
+            method_id=method_id,
             plan_repository=plan_repository,
             repository_subdir=repository_subdir,
         )
@@ -320,11 +645,15 @@ def run_progressive_repair_executor(
     tolerances: ObjectiveTolerances | None = None,
     ownership_policy: Any | None = None,
     publication_mode: bool = False,
+    method_id: str = "progressive_sequential_lexicographic_repair",
     plan_repository: PlanRepository | None = None,
     repository_subdir: str | Path = "repair_workspace/plans",
 ) -> PipelineExecutionResult:
     """Run progressive repair and translate the outcome to canonical pipeline artifacts."""
 
+    method_id = str(method_id).strip()
+    if not method_id:
+        raise ValueError("progressive repair method_id must not be empty")
     request_id = _repair_request_id(repair_request)
     if context.parent_plan_id and context.parent_plan_id != parent_plan.plan_id:
         raise ValueError("pipeline parent_plan_id does not match progressive repair parent_plan")
@@ -332,13 +661,22 @@ def run_progressive_repair_executor(
         raise ValueError("pipeline repair_request_id does not match progressive repair request")
     repository = plan_repository or _run_plan_repository(context.output_dir, repository_subdir)
     repository.save(parent_plan)
-    resolved_day_config = day_route_config or DayRouteSolverConfig(strict_route_matrix=publication_mode)
+    resolved_day_config = _day_route_config_for_repair(
+        day_route_config or DayRouteSolverConfig(strict_route_matrix=publication_mode),
+        repair_request,
+    )
     default_evaluator = None
     resolved_evaluator = evaluator
     if resolved_evaluator is None:
         default_evaluator = _PipelineRepairEvaluator(
             route_matrix=route_matrix,
-            config=evaluator_config or _evaluator_config_from_day_route_config(resolved_day_config),
+            config=_evaluator_config_for_repair(
+                evaluator_config
+            or _evaluator_config_from_day_route_config(resolved_day_config, parent_plan=parent_plan),
+                repair_request,
+            ),
+            method_id=method_id,
+            reference_plan=contextualize_plan_for_evaluation(parent_plan, repair_request),
         )
         resolved_evaluator = default_evaluator
     outcome = repair_progressively(
@@ -356,6 +694,30 @@ def run_progressive_repair_executor(
         matching_run = default_evaluator.planner_run_for_plan(outcome.child_plan.plan_id)
         if matching_run is not None:
             planner_runs.append(matching_run)
+    has_canonical_method_run = any(
+        run.method_requested == method_id and run.method_executed == method_id
+        for run in planner_runs
+    )
+    if not has_canonical_method_run:
+        diagnosis = getattr(outcome, "diagnosis", None)
+        failure_reasons = tuple(getattr(diagnosis, "failure_reasons", ()))
+        planner_runs.append(
+            PlannerRun(
+                run_id=f"{request_id}:{method_id}",
+                planning_request_id=request_id,
+                catalog_snapshot_id=parent_plan.catalog_snapshot_id,
+                context_snapshot_id=parent_plan.context_snapshot_id,
+                planner_specification_id=f"{method_id}-v1",
+                method_requested=method_id,
+                method_executed=method_id,
+                execution_status="COMPLETED" if outcome.child_plan is not None else "FAILED",
+                solver_certification="HEURISTIC_ONLY" if outcome.child_plan is not None else "NO_CERTIFICATE",
+                solver_backend="progressive_sequential_lexicographic_repair",
+                solver_status_raw=str(getattr(outcome, "status", "failed")),
+                result_plan_id=outcome.child_plan.plan_id if outcome.child_plan is not None else None,
+                error_summary=";".join(str(reason) for reason in failure_reasons),
+            )
+        )
     diff_records = (outcome.diff_record,) if outcome.diff_record else ()
     evaluation_records = (outcome.evaluation_record,) if outcome.evaluation_record else ()
     explanation_records = _repair_explanation_records(outcome, route_matrix=route_matrix)
@@ -439,8 +801,12 @@ def run_research_pipeline(
 
     artifact_paths = _write_execution_artifacts(output_dir, result)
     strict_failures = _strict_failure_count(result.evaluations)
+    planner_failures = _planner_failure_count(result.planner_runs)
+    repair_output_missing = mode == "repair" and not result.output_plans
     status = "completed"
-    if strict_failures:
+    if repair_output_missing:
+        status = "failed"
+    elif strict_failures:
         status = "failed_strict" if strict else "completed_with_warnings"
     metrics_path = _write_json(
         output_dir / "metrics" / "metrics.json",
@@ -449,6 +815,8 @@ def run_research_pipeline(
             "mode": mode,
             "strict": strict,
             "strict_failure_count": strict_failures,
+            "planner_failure_count": planner_failures,
+            "repair_output_missing": repair_output_missing,
             **result.metrics,
         },
     )
@@ -459,6 +827,7 @@ def run_research_pipeline(
         status=status,
         strict=strict,
         strict_failures=strict_failures,
+        planner_failures=planner_failures,
         artifact_paths={**artifact_paths, "metrics": [metrics_path]},
     )
     pipeline_run = PipelineRun(
@@ -585,6 +954,7 @@ def _write_manifest(
     status: str,
     strict: bool,
     strict_failures: int,
+    planner_failures: int,
     artifact_paths: dict[str, list[Path]],
 ) -> Path:
     relative_artifacts = {
@@ -596,6 +966,8 @@ def _write_manifest(
         "status": status,
         "strict": strict,
         "strict_failure_count": strict_failures,
+        "planner_failure_count": planner_failures,
+        "repair_output_missing": context.mode == "repair" and not result.output_plans,
         "catalog_snapshot_id": context.catalog_snapshot_id,
         "context_snapshot_id": context.context_snapshot_id,
         "parent_plan_id": context.parent_plan_id,
@@ -708,6 +1080,14 @@ def _strict_failure_count(evaluations: Iterable[PlanEvaluationCertificate | dict
     return count
 
 
+def _planner_failure_count(planner_runs: Iterable[PlannerRun | dict[str, Any]]) -> int:
+    return sum(
+        str(_record_from_artifact(planner_run).get("execution_status", "")).upper()
+        in {"FAILED", "ERROR"}
+        for planner_run in planner_runs
+    )
+
+
 def _coerce_execution_result(raw: PipelineExecutionResult | Mapping[str, Any]) -> PipelineExecutionResult:
     if isinstance(raw, PipelineExecutionResult):
         return raw
@@ -806,18 +1186,28 @@ def _phase0_route_records(route_rows: Iterable[Mapping[str, Any]]) -> tuple[dict
 class _PipelineRepairEvaluator:
     """Independent evaluator wrapper that creates planner-run evidence for generated child plans."""
 
-    def __init__(self, *, route_matrix: RouteMatrix, config: PlanEvaluatorConfig) -> None:
+    def __init__(
+        self,
+        *,
+        route_matrix: RouteMatrix,
+        config: PlanEvaluatorConfig,
+        method_id: str,
+        reference_plan: PlanArtifactV2,
+    ) -> None:
         self.route_matrix = route_matrix
         self.config = config
+        self.method_id = method_id
+        self.reference_plan = reference_plan
         self._planner_runs_by_plan_id: dict[str, PlannerRun] = {}
 
     def evaluate(self, child_plan: PlanArtifactV2) -> PlanEvaluationCertificate:
-        planner_run = _planner_run_for_child_plan(child_plan)
+        planner_run = _planner_run_for_child_plan(child_plan, method_id=self.method_id)
         self._planner_runs_by_plan_id[child_plan.plan_id] = planner_run
         evaluator = PlanEvaluator(
             route_matrix=self.route_matrix,
             planner_runs={planner_run.run_id: planner_run},
             config=self.config,
+            reference_plan=self.reference_plan,
         )
         return evaluator.evaluate_final_plan(child_plan, planner_run=planner_run)
 
@@ -830,7 +1220,11 @@ def _run_plan_repository(output_dir: Path, repository_subdir: str | Path) -> Pla
     return PlanRepository(path if path.is_absolute() else output_dir / path)
 
 
-def _evaluator_config_from_day_route_config(config: DayRouteSolverConfig) -> PlanEvaluatorConfig:
+def _evaluator_config_from_day_route_config(
+    config: DayRouteSolverConfig,
+    *,
+    parent_plan: PlanArtifactV2,
+) -> PlanEvaluatorConfig:
     return PlanEvaluatorConfig(
         strict_routes=config.strict_route_matrix,
         max_day_minutes=config.max_day_minutes,
@@ -839,18 +1233,41 @@ def _evaluator_config_from_day_route_config(config: DayRouteSolverConfig) -> Pla
         enforce_opening_windows=config.enforce_opening_windows,
         start_anchor_by_day=dict(config.start_anchor_by_day),
         end_anchor_by_day=dict(config.end_anchor_by_day),
+        require_lodging_assignments=bool(parent_plan.lodging_assignments),
     )
 
 
-def _planner_run_for_child_plan(child_plan: PlanArtifactV2) -> PlannerRun:
+def _day_route_config_for_repair(config: DayRouteSolverConfig, request: Any) -> DayRouteSolverConfig:
+    requirements = context_evaluation_requirements(request)
+    if requirements.max_day_minutes is None:
+        return config
+    return replace(config, max_day_minutes=min(config.max_day_minutes, requirements.max_day_minutes))
+
+
+def _evaluator_config_for_repair(config: PlanEvaluatorConfig, request: Any) -> PlanEvaluatorConfig:
+    requirements = context_evaluation_requirements(request)
+    max_day_minutes = config.max_day_minutes
+    if requirements.max_day_minutes is not None:
+        max_day_minutes = min(max_day_minutes, requirements.max_day_minutes)
+    return replace(
+        config,
+        max_day_minutes=max_day_minutes,
+        required_stop_ids=requirements.required_stop_ids,
+        excluded_stop_ids=requirements.excluded_stop_ids,
+        closed_route_ids=requirements.closed_route_ids,
+        unavailable_lodging_ids=requirements.unavailable_lodging_ids,
+    )
+
+
+def _planner_run_for_child_plan(child_plan: PlanArtifactV2, *, method_id: str) -> PlannerRun:
     return PlannerRun(
         run_id=child_plan.source_run_id,
         planning_request_id=child_plan.planning_request_id,
         catalog_snapshot_id=child_plan.catalog_snapshot_id,
         context_snapshot_id=child_plan.context_snapshot_id,
-        planner_specification_id="pipeline-progressive-repair-adapter-v1",
-        method_requested="progressive_repair",
-        method_executed="progressive_repair:repair-005",
+        planner_specification_id=f"pipeline-{method_id}-adapter-v1",
+        method_requested=method_id,
+        method_executed=method_id,
         execution_status="COMPLETED",
         solver_certification="FEASIBILITY_CERTIFIED",
         result_plan_id=child_plan.plan_id,
@@ -1074,10 +1491,12 @@ def _truthy(value: Any) -> bool:
 
 
 def _relative_artifact_path(path: Path, root: Path) -> str:
+    resolved_path = path.resolve()
+    resolved_root = root.resolve()
     try:
-        return path.relative_to(root).as_posix()
+        return resolved_path.relative_to(resolved_root).as_posix()
     except ValueError:
-        return str(path)
+        return str(resolved_path)
 
 
 def _record_from_artifact(artifact: Any) -> dict[str, Any]:
@@ -1085,6 +1504,8 @@ def _record_from_artifact(artifact: Any) -> dict[str, Any]:
         return {
             "matrix_id": artifact.matrix_id,
             "context_snapshot_id": artifact.context_snapshot_id,
+            "source_bundle_id": artifact.source_bundle_id,
+            "source_content_sha256": artifact.source_content_sha256,
             "entity_ids": list(artifact.entity_ids),
             "cells": [_jsonish(asdict(cell)) for cell in artifact.cells.values()],
             "schema_version": "route-matrix-v1",
@@ -1106,8 +1527,26 @@ def _record_id(record: Mapping[str, Any], *keys: str, prefix: str) -> str:
 
 def _write_json(path: Path, record: Mapping[str, Any]) -> Path:
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(_jsonish(record), indent=2, sort_keys=True, default=str) + "\n", encoding="utf-8")
+    writable_path = _windows_extended_path(path)
+    writable_path.write_text(
+        json.dumps(_jsonish(record), indent=2, sort_keys=True, default=str) + "\n",
+        encoding="utf-8",
+    )
     return path
+
+
+def _windows_extended_path(path: Path) -> Path:
+    if os.name != "nt":
+        return path
+    resolved = str(path.resolve())
+    backslash = chr(92)
+    extended_prefix = backslash * 2 + "?" + backslash
+    unc_prefix = backslash * 2
+    if resolved.startswith(extended_prefix):
+        return Path(resolved)
+    if resolved.startswith(unc_prefix):
+        return Path(extended_prefix + "UNC" + backslash + resolved.lstrip(backslash))
+    return Path(extended_prefix + resolved)
 
 
 def _jsonish(value: Any) -> Any:
@@ -1162,8 +1601,13 @@ def _default_run_id(
     )
 
 
-def _safe_filename(value: str) -> str:
-    return value.replace("/", "_").replace("\\", "_").replace(":", "_")
+def _safe_filename(value: str, *, max_length: int = 40) -> str:
+    clean = value.replace("/", "_").replace("\\", "_").replace(":", "_")
+    if len(clean) <= max_length:
+        return clean
+    suffix = stable_content_hash({"filename": clean})[:12]
+    prefix_length = max(1, max_length - len(suffix) - 1)
+    return f"{clean[:prefix_length]}_{suffix}"
 
 
 def _deep_merge_dicts(base: dict[str, Any], overrides: dict[str, Any]) -> dict[str, Any]:

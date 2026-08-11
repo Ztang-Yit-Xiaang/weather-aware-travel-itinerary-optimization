@@ -1,0 +1,54 @@
+{
+  "schema_version": "map-data-provenance-v1",
+  "source": "OpenStreetMap",
+  "source_url": "https://build.protomaps.com/REPLACE_YYYYMMDD.pmtiles",
+  "source_build": "REPLACE_YYYYMMDD",
+  "upstream_blake3": "REPLACE_WITH_64_LOWERCASE_HEX_CHARACTERS",
+  "license": "ODbL-1.0",
+  "attribution": "Protomaps | © OpenStreetMap contributors",
+  "attribution_url": "https://www.openstreetmap.org/copyright",
+  "artifact_url": "/data/california-coast-v1.pmtiles",
+  "artifact_sha256": "REPLACE_WITH_64_LOWERCASE_HEX_CHARACTERS",
+  "artifact_size": 0,
+  "bounds": [-123.0, 33.5, -117.5, 38.5],
+  "maxzoom": 15,
+  "generated_at": "REPLACE_WITH_ISO_8601_TIMESTAMP",
+  "extraction_command": "pmtiles extract SOURCE data/california-coast-v1.pmtiles --bbox=-123.0,33.5,-117.5,38.5 --maxzoom=15",
+  "header_json_sha256": "REPLACE_WITH_64_LOWERCASE_HEX_CHARACTERS",
+  "metadata_json_sha256": "REPLACE_WITH_64_LOWERCASE_HEX_CHARACTERS",
+  "verify_output_sha256": "REPLACE_WITH_64_LOWERCASE_HEX_CHARACTERS",
+  "tool_versions": {
+    "maplibre-gl": "5.24.0",
+    "pmtiles-js": "4.4.1",
+    "protomaps-basemap-style": "5.7.2",
+    "pmtiles-cli": "1.30.0"
+  },
+  "license_notices": {
+    "BSD-3-Clause": "licenses/BSD-3-Clause.txt",
+    "CC0-1.0": "licenses/CC0-1.0.txt",
+    "MIT": "licenses/MIT.txt",
+    "ODbL-1.0": "licenses/ODbL-1.0.txt",
+    "OFL-1.1": "licenses/OFL-1.1.txt",
+    "Protomaps-Data-Notices": "licenses/PROTOMAPS_DATA.txt"
+  },
+  "glyph_ranges": [
+    "fonts/REPLACE_FONTSTACK/0-255.pbf"
+  ],
+  "assets": [
+    {"path": "maplibre/maplibre-gl.js", "sha256": "REPLACE_WITH_SHA256", "license": "BSD-3-Clause"},
+    {"path": "maplibre/maplibre-gl.css", "sha256": "REPLACE_WITH_SHA256", "license": "BSD-3-Clause"},
+    {"path": "pmtiles/pmtiles.js", "sha256": "REPLACE_WITH_SHA256", "license": "BSD-3-Clause"},
+    {"path": "styles/protomaps-light.json", "sha256": "REPLACE_WITH_SHA256", "license": "CC0-1.0"},
+    {"path": "fonts/REPLACE_FONTSTACK/0-255.pbf", "sha256": "REPLACE_WITH_SHA256", "license": "OFL-1.1"},
+    {"path": "sprites/light.json", "sha256": "REPLACE_WITH_SHA256", "license": "MIT"},
+    {"path": "sprites/light.png", "sha256": "REPLACE_WITH_SHA256", "license": "MIT"},
+    {"path": "sprites/light@2x.json", "sha256": "REPLACE_WITH_SHA256", "license": "MIT"},
+    {"path": "sprites/light@2x.png", "sha256": "REPLACE_WITH_SHA256", "license": "MIT"},
+    {"path": "licenses/BSD-3-Clause.txt", "sha256": "REPLACE_WITH_SHA256", "license": "BSD-3-Clause"},
+    {"path": "licenses/CC0-1.0.txt", "sha256": "REPLACE_WITH_SHA256", "license": "CC0-1.0"},
+    {"path": "licenses/MIT.txt", "sha256": "REPLACE_WITH_SHA256", "license": "MIT"},
+    {"path": "licenses/ODbL-1.0.txt", "sha256": "REPLACE_WITH_SHA256", "license": "ODbL-1.0"},
+    {"path": "licenses/OFL-1.1.txt", "sha256": "REPLACE_WITH_SHA256", "license": "OFL-1.1"},
+    {"path": "licenses/PROTOMAPS_DATA.txt", "sha256": "REPLACE_WITH_SHA256", "license": "Protomaps-Data-Notices"}
+  ]
+}

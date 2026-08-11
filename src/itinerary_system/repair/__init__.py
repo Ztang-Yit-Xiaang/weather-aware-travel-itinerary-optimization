@@ -1,5 +1,11 @@
 """Parent-plan-aware repair components."""
 
+from .baselines import (
+    DETERMINISTIC_CONTEXT_AWARE_HEURISTIC,
+    BaselineDecisionRecord,
+    BaselinePlanningResult,
+    plan_deterministic_context_aware_heuristic,
+)
 from .change_variables import (
     ChangeVariableType,
     ObjectiveComponent,
@@ -16,7 +22,16 @@ from .day_route_solver import (
     DayRouteSolver,
     DayRouteSolverConfig,
     DayRouteSubproblemResult,
+    RouteSequenceEvaluation,
+    evaluate_route_sequence,
     solve_day_route_subproblem,
+)
+from .exact_baselines import (
+    CONTEXT_BLIND_SOLVER,
+    FULL_REOPTIMIZATION,
+    ExactBaselinePlanningResult,
+    plan_context_blind_solver,
+    plan_full_reoptimization,
 )
 from .lexicographic import (
     LexicographicRepairSolver,
@@ -57,12 +72,19 @@ from .progressive import (
 )
 
 __all__ = [
+    "BaselineDecisionRecord",
+    "BaselinePlanningResult",
+    "CONTEXT_BLIND_SOLVER",
     "CandidateEvaluationRecord",
+    "DETERMINISTIC_CONTEXT_AWARE_HEURISTIC",
     "ChangeVariableType",
     "DayRouteCandidate",
     "DayRouteSolver",
     "DayRouteSolverConfig",
     "DayRouteSubproblemResult",
+    "RouteSequenceEvaluation",
+    "ExactBaselinePlanningResult",
+    "FULL_REOPTIMIZATION",
     "LexicographicRepairSolver",
     "LexicographicResult",
     "LexicographicStageResult",
@@ -93,8 +115,12 @@ __all__ = [
     "build_repair_neighborhood",
     "change_weight",
     "diagnose_failure",
+    "evaluate_route_sequence",
     "extract_child_plan",
     "freeze_constraints",
+    "plan_context_blind_solver",
+    "plan_deterministic_context_aware_heuristic",
+    "plan_full_reoptimization",
     "planner_runs_from_lexicographic_result",
     "repair_progressively",
     "solve_day_route_subproblem",

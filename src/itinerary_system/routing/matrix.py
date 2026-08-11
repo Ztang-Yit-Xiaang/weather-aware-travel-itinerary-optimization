@@ -51,6 +51,8 @@ class RouteMatrixValidationReport:
     invalid_value_count: int
     missing_leg_count: int
     publication_ready: bool
+    source_bundle_id: str = ""
+    source_content_sha256: str = ""
     errors: tuple[str, ...] = ()
     warnings: tuple[str, ...] = ()
 
@@ -65,6 +67,8 @@ class RouteMatrixValidationReport:
             "invalid_value_count": self.invalid_value_count,
             "missing_leg_count": self.missing_leg_count,
             "publication_ready": self.publication_ready,
+            "source_bundle_id": self.source_bundle_id,
+            "source_content_sha256": self.source_content_sha256,
             "errors": list(self.errors),
             "warnings": list(self.warnings),
         }
@@ -138,6 +142,14 @@ def _positive_or_none(value: float | None, field_name: str) -> float | None:
     return float(value)
 
 
+def _nonnegative_or_none(value: float | None, field_name: str) -> float | None:
+    if value is None:
+        return None
+    if not math.isfinite(float(value)) or float(value) < 0:
+        raise ValueError(f"{field_name} must be nonnegative when present")
+    return float(value)
+
+
 @dataclass(frozen=True)
 class RouteMatrixCell:
     """One directed solver travel cell with route provenance."""
@@ -167,8 +179,9 @@ class RouteMatrixCell:
             raise ValueError("route matrix cell origin_id and destination_id are required")
         object.__setattr__(self, "origin_id", origin_id)
         object.__setattr__(self, "destination_id", destination_id)
-        object.__setattr__(self, "distance_m", _positive_or_none(self.distance_m, "distance_m"))
-        object.__setattr__(self, "duration_s", _positive_or_none(self.duration_s, "duration_s"))
+        value_validator = _nonnegative_or_none if origin_id == destination_id else _positive_or_none
+        object.__setattr__(self, "distance_m", value_validator(self.distance_m, "distance_m"))
+        object.__setattr__(self, "duration_s", value_validator(self.duration_s, "duration_s"))
         if self.fallback_used and self.road_validated:
             raise ValueError("fallback route matrix cells cannot be road validated")
         if not self.route_leg_id:
@@ -239,6 +252,8 @@ class RouteMatrix:
     context_snapshot_id: str
     entity_ids: tuple[str, ...]
     cells: Mapping[tuple[str, str], RouteMatrixCell] = field(default_factory=dict)
+    source_bundle_id: str = ""
+    source_content_sha256: str = ""
 
     def __post_init__(self) -> None:
         entity_ids = tuple(_normalize_entity_id(value) for value in self.entity_ids if _normalize_entity_id(value))
@@ -259,6 +274,21 @@ class RouteMatrix:
     def cell(self, origin_id: str, destination_id: str) -> RouteMatrixCell:
         origin = _normalize_entity_id(origin_id)
         destination = _normalize_entity_id(destination_id)
+        if origin and origin == destination:
+            return RouteMatrixCell(
+                origin_id=origin,
+                destination_id=destination,
+                distance_m=0.0,
+                duration_s=0.0,
+                road_validated=True,
+                fallback_used=False,
+                provider="deterministic_identity",
+                context_snapshot_id=self.context_snapshot_id,
+                routing_status="identity_zero_distance",
+                geometry_source="identity",
+                distance_source="identity",
+                duration_source="identity",
+            )
         try:
             return self.cells[(origin, destination)]
         except KeyError as exc:
@@ -358,6 +388,8 @@ def validate_route_matrix(
         invalid_value_count=int(invalid),
         missing_leg_count=int(missing),
         publication_ready=publication_ready,
+        source_bundle_id=matrix.source_bundle_id,
+        source_content_sha256=matrix.source_content_sha256,
         errors=tuple(errors),
         warnings=tuple(warnings),
     )
@@ -372,6 +404,8 @@ def route_matrix_to_frame(matrix: RouteMatrix) -> pd.DataFrame:
         rows.append(
             {
                 "matrix_id": matrix.matrix_id,
+                "source_bundle_id": matrix.source_bundle_id,
+                "source_content_sha256": matrix.source_content_sha256,
                 "context_snapshot_id": cell.context_snapshot_id or matrix.context_snapshot_id,
                 "origin_id": cell.origin_id,
                 "destination_id": cell.destination_id,
@@ -426,10 +460,17 @@ def build_validated_route_matrix_from_cache(
     *,
     required_sequences: Sequence[Sequence[str]] = (),
     require_publication_ready: bool = False,
+    source_bundle_id: str = "",
+    expected_source_sha256: str = "",
 ) -> tuple[RouteMatrix, RouteMatrixValidationReport]:
     """Load route evidence, write matrix artifacts, and validate publication readiness."""
 
-    matrix = load_route_matrix_from_cache(path, context_snapshot_id)
+    matrix = load_route_matrix_from_cache(
+        path,
+        context_snapshot_id,
+        source_bundle_id=source_bundle_id,
+        expected_source_sha256=expected_source_sha256,
+    )
     report = write_validated_route_matrix_artifacts(
         matrix,
         output_dir,
@@ -439,19 +480,33 @@ def build_validated_route_matrix_from_cache(
     return matrix, report
 
 
-def load_route_matrix_from_cache(path: Path, context_snapshot_id: str) -> RouteMatrix:
-    """Load a RouteMatrix from a route cache or route_options CSV file."""
+def load_route_matrix_from_cache(
+    path: Path,
+    context_snapshot_id: str,
+    *,
+    source_bundle_id: str = "",
+    expected_source_sha256: str = "",
+) -> RouteMatrix:
+    """Load a content-addressed RouteMatrix from route evidence."""
 
     matrix_path = Path(path)
     if not matrix_path.exists():
         raise RouteMatrixMissing(f"route matrix cache not found: {matrix_path}")
+    source_sha256 = hashlib.sha256(matrix_path.read_bytes()).hexdigest()
+    if expected_source_sha256 and source_sha256.lower() != str(expected_source_sha256).lower():
+        raise RouteMatrixNotPublicationEligible(
+            "route cache SHA-256 does not match the frozen evidence manifest"
+        )
+    matrix_id = f"route_matrix_{_stable_hash({'source_sha256': source_sha256, 'context_snapshot_id': context_snapshot_id})}"
     frame = pd.read_csv(matrix_path)
     if frame.empty:
         return RouteMatrix(
-            matrix_id=f"route_matrix_{context_snapshot_id}",
+            matrix_id=matrix_id,
             context_snapshot_id=str(context_snapshot_id),
             entity_ids=(),
             cells={},
+            source_bundle_id=str(source_bundle_id),
+            source_content_sha256=source_sha256,
         )
     cells: dict[tuple[str, str], RouteMatrixCell] = {}
     for _, row in frame.iterrows():
@@ -482,10 +537,12 @@ def load_route_matrix_from_cache(path: Path, context_snapshot_id: str) -> RouteM
         )
         cells[(cell.origin_id, cell.destination_id)] = cell
     return RouteMatrix(
-        matrix_id=f"{matrix_path.stem}_{_stable_hash(str(matrix_path))}",
+        matrix_id=matrix_id,
         context_snapshot_id=str(context_snapshot_id),
         entity_ids=(),
         cells=cells,
+        source_bundle_id=str(source_bundle_id),
+        source_content_sha256=source_sha256,
     )
 
 

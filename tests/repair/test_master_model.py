@@ -10,6 +10,7 @@ from itinerary_system.plans import (
 )
 from itinerary_system.repair import RepairRadius, build_repair_neighborhood
 from itinerary_system.repair.change_variables import ChangeVariableType
+from itinerary_system.repair.context import PlannerContextMode
 from itinerary_system.repair.master_model import RepairSolution, build_repair_master_model
 from itinerary_system.research_artifacts import PlanArtifactV2
 from itinerary_system.routing import RouteMatrix
@@ -117,6 +118,33 @@ class RepairMasterModelTests(unittest.TestCase):
         self.assertEqual(model.required_route_pairs, (("poi_b", "poi_c"),))
         self.assertTrue(any(change.change_type == ChangeVariableType.DELETE_STOP for change in model.variables.change_variables))
         self.assertTrue(any(change.change_type == ChangeVariableType.ADD_STOP for change in model.variables.change_variables))
+
+    def test_context_aware_model_compiles_selection_and_evidence_overlays(self):
+        parent = parent_plan()
+        repair_request = request(
+            affected_days=(2,),
+            weather_risk_overrides={"poi_c": 0.95},
+            weather_feasible={"poi_c": False},
+            must_include=("poi_e",),
+        )
+        neighborhood = build_repair_neighborhood(parent, repair_request, RepairRadius.SAME_DAY_REPLACEMENT)
+
+        aware = build_repair_master_model(parent, repair_request, neighborhood, empty_matrix())
+        blind = build_repair_master_model(
+            parent,
+            repair_request,
+            neighborhood,
+            empty_matrix(),
+            planner_context_mode=PlannerContextMode.BLIND,
+        )
+
+        self.assertEqual(aware.variables.decision_variable("select_stop[poi_c]").fixed_value, 0)
+        self.assertEqual(aware.variables.decision_variable("select_stop[poi_e]").fixed_value, 1)
+        self.assertIsNone(blind.variables.decision_variable("select_stop[poi_c]").fixed_value)
+        self.assertIsNone(blind.variables.decision_variable("select_stop[poi_e]").fixed_value)
+        stop_by_id = {stop["stop_id"]: stop for stop in aware.metadata["parent_selected_stops"]}
+        self.assertEqual(stop_by_id["poi_c"]["weather_risk"], 0.95)
+        self.assertFalse(stop_by_id["poi_c"]["weather_feasible"])
 
     def test_locked_poi_cannot_be_deleted_or_relaxed(self):
         parent = parent_plan()

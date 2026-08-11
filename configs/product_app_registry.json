@@ -1,0 +1,35 @@
+{
+  "schema_version": "product-run-registry-v1",
+  "runs": [
+    {
+      "run_id": "e3ux_weather_repair_demo_v6",
+      "trip_id": "california_coast_demo",
+      "label": "California weather-repair fixture · v6",
+      "relative_path": "runs/e3ux-weather-repair-demo-v6",
+      "manifest_sha256": "bcc65f820f6555211915bd129552dd6d6b674902ef1da6510b120b661ff6f2dc",
+      "capabilities": [
+        "read_only_artifacts",
+        "fixture_copilot",
+        "typed_drafts",
+        "registered_preview",
+        "experimental_pointer_decisions"
+      ],
+      "default": false
+    },
+    {
+      "run_id": "california_coast_product_demo_v2",
+      "trip_id": "california_coast_demo",
+      "label": "California Coast interactive demo · v2",
+      "relative_path": "runs/california-coast-product-demo-v2",
+      "manifest_sha256": "925eea6e5722a782d48f657efa931e18536e502a7803a839a983747ed79b5e40",
+      "capabilities": [
+        "read_only_artifacts",
+        "fixture_copilot",
+        "typed_drafts",
+        "registered_preview",
+        "multi_plan_product_demo"
+      ],
+      "default": true
+    }
+  ]
+}

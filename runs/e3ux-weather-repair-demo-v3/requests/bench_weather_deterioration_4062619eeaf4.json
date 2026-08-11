@@ -1,0 +1,177 @@
+{
+  "baseline_route": [
+    {
+      "attraction_name": "Hollywood Walk of Fame",
+      "city": "Los Angeles",
+      "day": 1,
+      "latitude": 34.1016,
+      "longitude": -118.3269,
+      "poi_id": "hollywood_walk_of_fame",
+      "source_confidence": 0.2,
+      "source_list": "curated_social_must_go",
+      "stop_order": 1
+    },
+    {
+      "attraction_name": "TCL Chinese Theatre",
+      "city": "Los Angeles",
+      "day": 2,
+      "latitude": 34.102,
+      "longitude": -118.3409,
+      "poi_id": "tcl_chinese_theatre",
+      "source_confidence": 0.2,
+      "source_list": "curated_social_must_go",
+      "stop_order": 1
+    },
+    {
+      "attraction_name": "Griffith Observatory",
+      "city": "Los Angeles",
+      "day": 3,
+      "latitude": 34.1184,
+      "longitude": -118.3004,
+      "poi_id": "griffith_observatory",
+      "source_confidence": 0.2,
+      "source_list": "curated_social_must_go",
+      "stop_order": 1
+    },
+    {
+      "attraction_name": "Stearns Wharf",
+      "city": "Santa Barbara",
+      "day": 4,
+      "latitude": 34.4100137734,
+      "longitude": -119.6855497819,
+      "poi_id": "stearns_wharf",
+      "source_confidence": 0.45,
+      "source_list": "curated_social_must_go|yelp",
+      "stop_order": 1
+    },
+    {
+      "attraction_name": "Surf N Wear's Beach House",
+      "city": "Santa Barbara",
+      "day": 4,
+      "latitude": 34.4128205,
+      "longitude": -119.6892567,
+      "poi_id": "surf_n_wear_s_beach_house",
+      "source_confidence": 0.25,
+      "source_list": "yelp",
+      "stop_order": 2
+    },
+    {
+      "attraction_name": "Wheel Fun Rentals - 24 E Mason St",
+      "city": "Santa Barbara",
+      "day": 5,
+      "latitude": 34.4136345,
+      "longitude": -119.6894577,
+      "poi_id": "wheel_fun_rentals_24_e_mason_st",
+      "source_confidence": 0.25,
+      "source_list": "yelp",
+      "stop_order": 1
+    },
+    {
+      "attraction_name": "California Trike",
+      "city": "Santa Barbara",
+      "day": 5,
+      "latitude": 34.4130426063,
+      "longitude": -119.688835144,
+      "poi_id": "california_trike",
+      "source_confidence": 0.25,
+      "source_list": "yelp",
+      "stop_order": 2
+    },
+    {
+      "attraction_name": "MOXI - The Wolf Museum Of Exploration + Innovation",
+      "city": "Santa Barbara",
+      "day": 6,
+      "latitude": 34.4134819,
+      "longitude": -119.6916514,
+      "poi_id": "moxi_the_wolf_museum_of_exploration_innovation",
+      "source_confidence": 0.25,
+      "source_list": "yelp",
+      "stop_order": 1
+    },
+    {
+      "attraction_name": "Golden Gate Bridge",
+      "city": "San Francisco",
+      "day": 7,
+      "latitude": 37.8199,
+      "longitude": -122.4783,
+      "poi_id": "golden_gate_bridge",
+      "source_confidence": 0.2,
+      "source_list": "curated_social_must_go",
+      "stop_order": 1
+    }
+  ],
+  "candidate_pois": [
+    {
+      "benchmark_candidate_source": "frozen_catalog",
+      "benchmark_synthetic": false,
+      "city": "Monterey",
+      "day": 7,
+      "final_poi_value": 1.5104617648130412,
+      "latitude": 36.3715,
+      "longitude": -121.9018,
+      "name": "Bixby Creek Bridge Viewpoint",
+      "route_snap_distance_m": 8.751045603,
+      "route_snap_validated": true,
+      "source_confidence": 0.45,
+      "source_list": "curated_social_must_go",
+      "stop_id": "bixby_creek_bridge_viewpoint",
+      "stop_order": 2,
+      "visit_duration_minutes": 45,
+      "weather_risk": 0.1,
+      "weather_sensitivity": 0.54209375
+    }
+  ],
+  "confirmed_constraints": {
+    "affected_days": [
+      7
+    ],
+    "benchmark": "bench-001",
+    "catalog_snapshot_id": "california_v1",
+    "context_snapshot_id": "context_static_demo_2026_06",
+    "disruption_family": "weather_deterioration",
+    "disruption_id": "bench_weather_deterioration_4062619eeaf4",
+    "observation_status": "synthetic",
+    "observed": false,
+    "parent_plan_id": "plan_e1c4f803691e3188",
+    "seed": 0,
+    "synthetic": true,
+    "target_stop_ids": [
+      "golden_gate_bridge"
+    ],
+    "weather_feasible": {
+      "golden_gate_bridge": false
+    },
+    "weather_risk_overrides": {
+      "golden_gate_bridge": 0.95
+    }
+  },
+  "evidence_records": [
+    {
+      "affected_days": [
+        7
+      ],
+      "disruption_family": "weather_deterioration",
+      "evidence_id": "evidence_bench_weather_deterioration_4062619eeaf4",
+      "observed": false,
+      "schema_version": "benchmark-disruption-evidence-v1",
+      "source_status": "synthetic",
+      "source_type": "benchmark_disruption",
+      "synthetic": true,
+      "target_stop_ids": [
+        "golden_gate_bridge"
+      ]
+    }
+  ],
+  "kind": "progressive_repair",
+  "parent_plan_id": "plan_e1c4f803691e3188",
+  "parsed_intent": null,
+  "repair_request_id": "bench_weather_deterioration_4062619eeaf4",
+  "request_id": "bench_weather_deterioration_4062619eeaf4",
+  "schema_version": "progressive-repair-request-v1",
+  "tolerance_profile": {
+    "max_daily_travel_minutes": 720.0,
+    "max_stop_weather_risk": 0.45
+  },
+  "travel_graph": {},
+  "user_intent": "Repair weather deterioration affecting golden_gate_bridge."
+}

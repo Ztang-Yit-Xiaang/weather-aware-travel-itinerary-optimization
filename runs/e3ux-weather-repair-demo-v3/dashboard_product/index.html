@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="color-scheme" content="light" />
+  <title>Itinerary Repair Review</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+        integrity="sha256-p4NxAoJBhIINfQ3ynh9tOeOH9CHf9Zy0YTHUklFQ4VY="
+        crossorigin="" />
+  <link rel="stylesheet" href="assets/product.css" />
+</head>
+<body data-product-mode="customer">
+  <a class="skip-link" href="#product-main">Skip to itinerary review</a>
+  <header class="product-header">
+    <div>
+      <p class="eyebrow">Read-only artifact review</p>
+      <h1>Itinerary Repair Review</h1>
+      <p id="trip-subtitle" class="header-subtitle">Loading immutable run artifacts…</p>
+    </div>
+    <div class="header-actions" aria-label="Dashboard mode">
+      <div class="mode-switch" role="group" aria-label="Presentation mode">
+        <button type="button" data-mode="customer" aria-pressed="true">Trip view</button>
+        <button type="button" data-mode="research" aria-pressed="false">Evidence view</button>
+      </div>
+      <span class="read-only-badge">Read-only</span>
+    </div>
+  </header>
+  <div id="product-status" class="sr-status" role="status" aria-live="polite">
+    Loading product dashboard.
+  </div>
+  <main id="product-main" class="product-grid">
+    <section id="issue-region" class="panel issue-region" aria-labelledby="issue-title">
+      <div class="section-heading">
+        <div>
+          <p class="section-kicker">What happened</p>
+          <h2 id="issue-title">Issue and result</h2>
+        </div>
+        <div id="truth-state-chips" class="state-chips" aria-label="Artifact states"></div>
+      </div>
+      <div id="issue-content"></div>
+    </section>
+
+    <section id="timeline-region" class="panel timeline-region" aria-labelledby="timeline-title">
+      <div class="section-heading">
+        <div>
+          <p class="section-kicker">Accepted itinerary</p>
+          <h2 id="timeline-title">Day by day</h2>
+        </div>
+        <span id="day-count" class="metric-badge"></span>
+      </div>
+      <div id="timeline-list" class="timeline-list" aria-label="Itinerary days"></div>
+    </section>
+
+    <section id="repair-region" class="panel repair-region" aria-labelledby="repair-title">
+      <div class="section-heading">
+        <div>
+          <p class="section-kicker">Recommended result</p>
+          <h2 id="repair-title">Repair and tradeoffs</h2>
+        </div>
+      </div>
+      <div id="repair-content"></div>
+    </section>
+
+    <section id="comparison-region" class="panel comparison-region" aria-labelledby="comparison-title">
+      <div class="section-heading">
+        <div>
+          <p class="section-kicker">What changed</p>
+          <h2 id="comparison-title">Original and repaired plan</h2>
+        </div>
+        <span class="direction-note">Directions are shown per metric</span>
+      </div>
+      <div id="comparison-content"></div>
+      <div id="method-landscape" class="method-landscape"></div>
+    </section>
+
+    <section id="evidence-region" class="panel evidence-region" aria-labelledby="evidence-title">
+      <div class="section-heading">
+        <div>
+          <p class="section-kicker">Why trust it</p>
+          <h2 id="evidence-title">Certificate and evidence</h2>
+        </div>
+      </div>
+      <div id="evidence-content"></div>
+    </section>
+
+    <section id="map-region" class="panel map-region" aria-labelledby="map-title">
+      <div class="section-heading">
+        <div>
+          <p class="section-kicker">Route context</p>
+          <h2 id="map-title">Selected day map</h2>
+        </div>
+        <span id="map-day-label" class="metric-badge"></span>
+      </div>
+      <div id="product-map" role="img" aria-label="Original and repaired itinerary route map"></div>
+      <p id="map-status" class="map-status" role="status"></p>
+      <details class="map-alternative">
+        <summary>Text alternative for the map</summary>
+        <p id="map-alternative-text"></p>
+      </details>
+    </section>
+
+    <section id="research-region" class="panel research-region" data-research-only
+             aria-labelledby="research-title" hidden>
+      <div class="section-heading">
+        <div>
+          <p class="section-kicker">Artifact provenance</p>
+          <h2 id="research-title">Research evidence</h2>
+        </div>
+      </div>
+      <div id="research-content"></div>
+    </section>
+  </main>
+  <footer>
+    This product artifact presents existing evidence. It does not execute, accept,
+    persist, or grant permission for a repair.
+  </footer>
+  <script src="assets/product_data.js"></script>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+          integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+          crossorigin=""></script>
+  <script src="assets/product_ui.js"></script>
+  <script src="assets/product_map.js"></script>
+</body>
+</html>

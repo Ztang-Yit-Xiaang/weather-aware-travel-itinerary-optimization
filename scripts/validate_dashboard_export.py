@@ -535,22 +535,31 @@ def validate(figure_dir: Path, output_dir: Path) -> tuple[list[str], list[str]]:
     if evaluation_path.exists():
         try:
             evaluation_data = read_json(evaluation_path)
-            found = {str(method.get("method")) for method in evaluation_data.get("methods", [])}
-            required = {
-                "hierarchical_gurobi_pipeline",
-                "hierarchical_greedy_baseline",
-                "hierarchical_bandit_gurobi_repair",
+            methods = evaluation_data.get("methods", [])
+            found = {str(method.get("method")) for method in methods}
+            canonical = {
+                "context_blind_solver",
+                "deterministic_context_aware_heuristic",
+                "progressive_sequential_lexicographic_repair",
+                "full_reoptimization",
             }
-            missing = required.difference(found)
-            if missing:
-                errors.append(f"Evaluation metrics missing methods {sorted(missing)}: {evaluation_path}")
+            unexpected = found.difference(canonical)
+            if unexpected:
+                errors.append(f"Evaluation metrics contain noncanonical methods {sorted(unexpected)}: {evaluation_path}")
+            available = evaluation_data.get("available") is True
+            if available and not methods:
+                errors.append(f"Evaluation metrics claim availability without method evidence: {evaluation_path}")
+            if not available:
+                if methods:
+                    errors.append(f"Unavailable evaluation metrics must not contain method rows: {evaluation_path}")
+                if evaluation_data.get("data_status") != "not_available":
+                    errors.append(f"Unavailable evaluation metrics need data_status='not_available': {evaluation_path}")
+                if not str(evaluation_data.get("empty_message") or "").strip():
+                    errors.append(f"Unavailable evaluation metrics need an honest empty message: {evaluation_path}")
             for key in [
-                "comparison_score",
-                "route_distance_km",
-                "route_time_minutes",
-                "nature_score",
-                "weather_risk",
-                "selected_nature_stops",
+                "weighted_edit_cost",
+                "utility_retained",
+                "weather_risk_delta",
                 "runtime_seconds",
             ]:
                 if not any(field.get("key") == key for field in evaluation_data.get("chart_fields", [])):

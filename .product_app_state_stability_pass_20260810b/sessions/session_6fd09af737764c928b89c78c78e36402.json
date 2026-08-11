@@ -1,0 +1,26 @@
+{
+  "schema_version": "product-session-snapshot-v1",
+  "session": {
+    "accepted_plan_id": "plan_e1c4f803691e3188",
+    "conversation_id": "conversation_c9fd7b92f345431f996a60a6d07edd6f",
+    "created_at": "2026-08-10T16:47:12.456483+00:00",
+    "draft": [],
+    "last_accessed_at": "2026-08-11T15:37:04.375737+00:00",
+    "permission_decisions": [],
+    "proposal": null,
+    "revision": 9,
+    "run_id": "california_coast_product_demo_v2",
+    "selected_alternative_id": "plan_f5ee52459659dcb5",
+    "selected_candidate_id": null,
+    "selected_day": 7,
+    "selected_segment_id": "leg_bixby_creek_bridge_viewpoint_san_francisco_international_airport",
+    "selected_stop_id": null,
+    "session_id": "session_6fd09af737764c928b89c78c78e36402",
+    "trip_id": "california_coast_demo"
+  },
+  "token_verifier": {
+    "algorithm": "sha256-salted-v1",
+    "digest": "57a3ab8aaa7f6631517032fc91574b9f577274ac216d777c70a838f04562bd57",
+    "salt": "c820223797fbb78349e8f3a5e50b755b"
+  }
+}

@@ -1,0 +1,46 @@
+{
+  "added_stops": [
+    {
+      "cost": 1.0,
+      "day": 7,
+      "order": 2,
+      "owner_strength": "",
+      "stop_id": "bixby_creek_bridge_viewpoint"
+    }
+  ],
+  "child_plan_id": "plan_f5ee52459659dcb5",
+  "day_moves": [],
+  "deleted_stops": [
+    {
+      "cost": 2.0,
+      "day": 7,
+      "order": 1,
+      "owner_strength": "",
+      "stop_id": "golden_gate_bridge"
+    }
+  ],
+  "diff_id": "diff_367bd571d9a8b665",
+  "lodging_changes": [],
+  "parent_plan_id": "plan_e1c4f803691e3188",
+  "reorder_changes": [],
+  "road_changes": [
+    {
+      "cost": 3.0,
+      "day": 7,
+      "from_route_id": "route_plan_e1c4f803691e3188_day_7",
+      "owner_strength": "",
+      "to_route_id": "route_matrix:route_matrix_68ab535465b06808:day:7:ce3aeed211b6da5f"
+    }
+  ],
+  "schema_version": "plan-diff-v1",
+  "time_shifts": [],
+  "unchanged_days": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6
+  ],
+  "weighted_edit_cost": 6.0
+}

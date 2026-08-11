@@ -1,0 +1,97 @@
+{
+  "schema_version": "w2-v2-g2-g3-revalidation-evidence-v1",
+  "generated_date": "2026-08-05",
+  "timezone": "America/Chicago",
+  "track": "CP-010",
+  "gate_status": "verified",
+  "default_run": {
+    "run_id": "california_coast_product_demo_v2",
+    "manifest_sha256": "925eea6e5722a782d48f657efa931e18536e502a7803a839a983747ed79b5e40",
+    "declared_file_count": 26,
+    "actual_file_count": 26,
+    "hash_mismatch_count": 0
+  },
+  "routes": {
+    "plan_count": 3,
+    "legs_per_plan": 16,
+    "continuity_gap_count": 0,
+    "fallback_leg_count": 0,
+    "day4_first_leg": "the_line_la->stearns_wharf",
+    "day4_first_leg_duration_seconds": 6784.4,
+    "day4_first_leg_geometry_points": 2108,
+    "parent_minutes": 654.536667,
+    "recommended_minutes": 650.57,
+    "low_driving_minutes": 595.463333
+  },
+  "evaluated_children": {
+    "recommended": {
+      "plan_id": "plan_f5ee52459659dcb5",
+      "diff_id": "diff_367bd571d9a8b665",
+      "certificate_id": "cert_686ef65d376b2867",
+      "evaluation_status": "PASSED"
+    },
+    "low_driving": {
+      "plan_id": "plan_8aa919c8323dbac0",
+      "diff_id": "diff_ea97896a586cb3af",
+      "certificate_id": "cert_5a6deef4c159d346",
+      "evaluation_status": "PASSED"
+    }
+  },
+  "browser": {
+    "desktop_viewport": [1440, 900],
+    "mobile_viewport": [390, 844],
+    "mobile_client_width": 390,
+    "mobile_scroll_width": 390,
+    "horizontal_document_overflow": false,
+    "hidden_map_descendant_count": 13,
+    "hidden_map_focusability_violation_count": 0,
+    "preview_refresh_restore": "passed",
+    "preview_undo_cleanup": "passed",
+    "console_critical_error_count": 0
+  },
+  "tests": {
+    "focused_product_and_repository": {
+      "passed": 195,
+      "warnings": 1
+    },
+    "context_snapshot": {
+      "passed": 5
+    },
+    "full_pytest": {
+      "passed": 506,
+      "warnings": 1
+    },
+    "ruff": "passed",
+    "node_syntax": "passed",
+    "diff_check": "passed",
+    "project_check_summary": "results/quality/project_check_summary.json"
+  },
+  "source_sha256": {
+    "configs/product_app_registry.json": "f800e2dcce55cf74ea4c8fdb2a3cfcb81a4cc7792ea015ba212f4b1a4392dbb3",
+    "scripts/build_product_demo.py": "5941359ff59414dfffc486ac3f46642183b4dcbd7683f0dd78bec9c380c16522",
+    "src/itinerary_system/product_app/draft_compiler.py": "80901bd480597fa2d3cfa29b240fb57f9bfdd85e8e319058ee3f20c7b761e21b",
+    "src/itinerary_system/product_app/product_demo.py": "3c216e0851dc90961db3eeb0a63c56e948c5f399b6beddfeabb27cf40a5d4c36",
+    "src/itinerary_system/product_app/static/js/app.js": "26ae3c3c7e132bb968bac32dc94aceb16f147b6c20c6cb146d5db841fffb678b",
+    "src/itinerary_system/product_app/static/js/map.js": "91efea4ccd3ba04998bdb4b0ee46c04d5093e9b02e84d0b975c690ee144286e5",
+    "src/itinerary_system/product_app/static/css/app.css": "73091e4fb050f38985e8b78d8f146ca32e7ebef754c51b9d2d5716834fbfe332",
+    "src/itinerary_system/product_app/static/index.html": "ebb9c52521dcd812cb298b2f41f29e6dd8f969b6ba0d96842b7d96314b1fd23c"
+  },
+  "independent_audits": {
+    "route_artifact_integrity": "pass",
+    "solver_evaluator": "pass",
+    "browser_user_journey": "pass",
+    "security_state": "pass",
+    "accessibility_content_source_api_tests": "pass_after_fix_live_reassigned",
+    "accessibility_dynamic_dom": "pass",
+    "phase_gate_status": "pass_after_fix"
+  },
+  "live_health": {
+    "schema_version": "product-health-v2",
+    "core_ready": true,
+    "map_code": "maplibre_ready",
+    "overall_status": "degraded",
+    "degraded_reason": "legacy_state_deferred"
+  },
+  "next_product_phase": "W4_ready",
+  "research_status_changed": false
+}

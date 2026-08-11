@@ -1,0 +1,184 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="color-scheme" content="light">
+    <meta name="theme-color" content="#f4f7f5">
+    <link rel="icon" href="data:,">
+    <title>Itinerary Repair Copilot</title>
+    <link rel="stylesheet" href="/static/css/app.css?v=20260810-stability5">
+    <script type="module" src="/static/js/app.js?v=20260810-stability5"></script>
+  </head>
+  <body>
+    <a class="skip-link" href="#main-workspace">Skip to workspace</a>
+    <div id="loading-screen" class="loading-screen" role="status">
+      <span class="spinner" aria-hidden="true"></span>
+      <p>Validating local product readiness…</p>
+      <div class="direct-file-help">
+        <strong>This HTML file is not the application launcher.</strong>
+        <p>Close this tab, then double-click <code>OPEN_ITINERARY_COPILOT.cmd</code> in the repository root and keep its terminal open.</p>
+        <p>The running application opens at <a href="http://127.0.0.1:8127/app">http://127.0.0.1:8127/app</a>.</p>
+      </div>
+    </div>
+
+    <div id="app-shell" class="app-shell" hidden>
+      <header class="topbar">
+        <div class="brand">
+          <span class="brand-mark" aria-hidden="true">IR</span>
+          <div>
+            <strong>Itinerary Repair Copilot</strong>
+            <span>Context-aware, inspectable itinerary repair</span>
+          </div>
+        </div>
+        <ol class="flow" aria-label="Repair workflow">
+          <li class="is-complete"><b>1</b><span>Parent plan</span></li>
+          <li class="is-complete"><b>2</b><span>Disruption</span></li>
+          <li><b>3</b><span>Repair</span></li>
+          <li><b>4</b><span>Evaluate</span></li>
+          <li><b>5</b><span>Decide</span></li>
+        </ol>
+        <div class="top-actions">
+          <span class="experiment-badge">Experimental demo</span>
+          <button class="icon-button" id="help-button" type="button" aria-label="About this demo">?</button>
+        </div>
+      </header>
+
+      <div id="runtime-banner" class="runtime-banner" role="status" hidden></div>
+
+      <div class="desktop-shell">
+        <nav class="navigation-rail" aria-label="Primary">
+          <button class="nav-item is-active" data-route="/app/itinerary" type="button"><span aria-hidden="true">IT</span><span>Itinerary</span></button>
+          <button class="nav-item" data-route="/app/map" type="button"><span aria-hidden="true">MP</span><span>Map</span></button>
+          <button class="nav-item" data-route="/app/repairs" type="button"><span aria-hidden="true">RP</span><span>Repairs</span></button>
+          <button class="nav-item" data-route="/app/compare" type="button"><span aria-hidden="true">CP</span><span>Compare</span></button>
+          <button class="nav-item" data-route="/app/evidence" type="button"><span aria-hidden="true">EV</span><span>Evidence</span></button>
+          <span class="nav-spacer"></span>
+          <button class="nav-item" id="settings-button" type="button"><span aria-hidden="true">ST</span><span>Settings</span></button>
+        </nav>
+
+        <aside class="itinerary-rail" aria-labelledby="trip-title">
+          <div class="eyebrow">Active workspace</div>
+          <h1 id="trip-title">Loading itinerary</h1>
+          <div id="trip-metrics" class="trip-metrics"></div>
+          <div id="day-list" class="day-list" role="list" aria-label="Itinerary days"></div>
+        </aside>
+
+        <main id="main-workspace" class="main-workspace" tabindex="-1">
+          <div class="workspace-toolbar" role="toolbar" aria-label="Map actions">
+            <button class="toolbar-button is-active" id="map-select-button" type="button" aria-pressed="true"><span>Select</span></button>
+            <button class="toolbar-button" id="map-edit-button" type="button" aria-pressed="false" aria-controls="workspace-content"><span>Edit</span></button>
+            <button class="toolbar-button" id="layers-button" type="button"><span>Layers</span></button>
+            <button class="toolbar-button" id="open-copilot" type="button"><span>Open Copilot</span></button>
+            <span id="run-label" class="run-label"></span>
+          </div>
+          <section id="workspace-content" class="workspace-content" aria-label="Workspace view"></section>
+          <section id="metric-strip" class="metric-strip" aria-label="Repair summary"></section>
+        </main>
+
+        <aside id="repair-panel" class="repair-panel" aria-labelledby="repair-heading"></aside>
+      </div>
+
+      <nav class="mobile-nav" aria-label="Mobile navigation">
+        <button data-route="/app/itinerary" type="button"><span aria-hidden="true">IT</span>Itinerary</button>
+        <button data-route="/app/map" type="button"><span aria-hidden="true">MP</span>Map</button>
+        <button data-route="/app/repairs" type="button"><span aria-hidden="true">RP</span>Repairs</button>
+        <button data-route="/app/compare" type="button"><span aria-hidden="true">CP</span>Compare</button>
+        <button data-route="/app/evidence" type="button"><span aria-hidden="true">EV</span>Evidence</button>
+      </nav>
+
+      <aside id="copilot-dock" class="copilot-dock" role="complementary" aria-labelledby="copilot-title" hidden>
+        <div id="dock-resizer" class="dock-resizer" role="separator" aria-orientation="vertical" aria-label="Resize Copilot panel" aria-valuemin="320" aria-valuemax="560" aria-valuenow="440" tabindex="0"></div>
+        <header class="dock-header">
+          <div>
+            <span class="eyebrow" id="copilot-provider-label">Copilot provider</span>
+            <h2 id="copilot-title">Trip Copilot</h2>
+          </div>
+          <div class="dock-header-actions">
+            <button class="icon-button" id="transcript-settings-button" type="button" aria-label="Open transcript settings">⋯</button>
+            <button class="icon-button" id="close-copilot" type="button" aria-label="Close Copilot">×</button>
+          </div>
+        </header>
+        <div id="context-chips" class="context-chips" aria-label="Visible Copilot context"></div>
+        <p id="copilot-disclosure" class="copilot-disclosure"></p>
+        <div id="copilot-lifecycle" class="copilot-lifecycle" role="status" aria-live="polite" aria-atomic="true">Idle</div>
+        <div id="conversation" class="conversation" aria-label="Copilot conversation"></div>
+        <div class="quick-prompts" aria-label="Example requests">
+          <button type="button" data-prompt="Review the safer weather repair">Review risk repair</button>
+          <button type="button" data-prompt="Keep the original plan">Keep original</button>
+        </div>
+        <form id="copilot-form" class="composer">
+          <label class="sr-only" for="copilot-input">Ask about the trip</label>
+          <textarea id="copilot-input" rows="2" maxlength="2000" aria-describedby="copilot-disclosure copilot-lifecycle" placeholder="Ask about this trip…"></textarea>
+          <button class="send-button" type="submit" aria-label="Send message">→</button>
+        </form>
+      </aside>
+    </div>
+
+    <dialog id="transcript-settings-dialog" aria-labelledby="transcript-settings-title">
+      <section class="dialog-card transcript-settings-card">
+        <header>
+          <div>
+            <span class="eyebrow">Local privacy controls</span>
+            <h2 id="transcript-settings-title">Transcript settings</h2>
+          </div>
+          <button class="icon-button" id="close-transcript-settings" type="button" aria-label="Close transcript settings">×</button>
+        </header>
+        <p>Copilot transcripts are stored only in local product state and expire after 30 days. Deleting transcripts does not delete the trip, draft, evaluation, or research artifacts.</p>
+        <div class="transcript-actions">
+          <button id="delete-current-conversation" type="button">Delete this conversation</button>
+          <button id="delete-all-conversations" class="danger-button" type="button">Delete all conversations</button>
+        </div>
+      </section>
+    </dialog>
+
+    <dialog id="map-edit-dialog" class="edit-dialog" aria-labelledby="map-edit-title">
+      <section class="dialog-card">
+        <header>
+          <div>
+            <span class="eyebrow">Typed draft operation</span>
+            <h2 id="map-edit-title">Create a repair draft</h2>
+          </div>
+          <button class="icon-button" id="close-map-edit" type="button" aria-label="Close map edit">×</button>
+        </header>
+        <div id="typed-edit-surface"></div>
+        <details class="legacy-edit-controls">
+        <summary>Registered repair shortcuts</summary>
+        <fieldset class="w3-controls">
+        <legend>Persistent controlled draft</legend>
+        <p class="dialog-guidance">Drafts edit the accepted plan and generate a new evaluated repair. Registered repairs remain immutable reference artifacts.</p>
+        <p id="edit-target">Select a stop on the map first.</p>
+        <label for="destination-day">Move to day</label>
+        <select id="destination-day"></select>
+        <label for="registered-candidate">Registered route-evidenced candidate</label>
+        <select id="registered-candidate"></select>
+        <div class="edit-actions">
+          <button id="draft-keep" value="none" type="button">Keep stop</button>
+          <button id="draft-move" value="none" type="button">Move day</button>
+          <button id="draft-lock" value="none" type="button">Lock stop</button>
+          <button id="draft-flexible" value="none" type="button">Mark flexible</button>
+          <button id="draft-feedback" value="none" type="button">Reduce route risk</button>
+          <button id="draft-replace" value="none" type="button">Replace nearby</button>
+          <button id="draft-add" value="none" type="button">Add candidate</button>
+        </div>
+        <footer>
+          <button id="draft-undo" value="none" type="button">Undo</button>
+          <button id="draft-preview" class="primary" value="none" type="button">Preview repair</button>
+        </footer>
+        </fieldset>
+        </details>
+      </section>
+    </dialog>
+
+    <dialog id="info-dialog" class="info-dialog" aria-labelledby="info-dialog-title">
+      <form method="dialog" class="dialog-card">
+        <header><h2 id="info-dialog-title">About this prototype</h2><button class="icon-button" value="close" aria-label="Close">×</button></header>
+        <p>This local, fixture-first product reads immutable research artifacts. W3 persists typed drafts, runs deterministic repair, and independently evaluates eligible children; acceptance remains disabled until the W5 repository transaction exists.</p>
+        <p>Unsupported route policies remain unavailable rather than simulated. This interface is not E5 participant-study evidence.</p>
+        <button class="primary" value="close">Got it</button>
+      </form>
+    </dialog>
+
+    <div id="toast-region" class="toast-region" aria-live="assertive" aria-atomic="true"></div>
+  </body>
+</html>

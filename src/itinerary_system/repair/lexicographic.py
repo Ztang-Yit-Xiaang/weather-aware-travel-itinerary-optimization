@@ -358,7 +358,10 @@ def _parent_baseline_solution(model: RepairModel) -> RepairSolution:
     parent = model.metadata["parent_plan"]
     return RepairSolution(
         selected_stop_ids=tuple(model.metadata["ordered_stop_ids"][: len(parent.selected_stops)]),
-        day_assignments={str(stop_id): int(day) for stop_id, day in parent.day_assignments.items()},
+        day_assignments={
+            str(stop_id): int(day)
+            for stop_id, day in model.metadata.get("parent_day_by_stop", {}).items()
+        },
         lodging_assignments={str(day): str(lodging) for day, lodging in parent.lodging_assignments.items()},
         route_ids_by_day={int(day): str(route_id) for day, route_id in parent.route_ids_by_day.items()},
         metadata={"candidate_id": "parent_baseline"},

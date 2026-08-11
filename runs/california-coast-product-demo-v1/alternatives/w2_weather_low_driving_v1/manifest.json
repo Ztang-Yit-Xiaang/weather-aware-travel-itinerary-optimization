@@ -1,0 +1,65 @@
+{
+  "artifact_counts": {
+    "diffs": 1,
+    "evaluations": 1,
+    "explanations": 1,
+    "planner_runs": 1,
+    "plans": 1,
+    "requests": 1,
+    "routing": 1
+  },
+  "artifacts": {
+    "dashboard": [
+      "dashboard/baseline_2c112b3e36b0.json"
+    ],
+    "diffs": [
+      "diffs/diff_85878483718da45c.json"
+    ],
+    "evaluations": [
+      "evaluations/cert_2d7ef2f6fe5b6572.json"
+    ],
+    "explanations": [
+      "explanations/explain_plan_37018c91aacc87b3.json"
+    ],
+    "metrics": [
+      "metrics/metrics.json"
+    ],
+    "planner_runs": [
+      "planner_runs.jsonl"
+    ],
+    "plans": [
+      "plans/plan_e1c4f803691e3188.json",
+      "plans/plan_37018c91aacc87b3.json"
+    ],
+    "requests": [
+      "requests/w2_weather_low_driving_v1.json"
+    ],
+    "routing": [
+      "routing/route_matrix_68ab535465b06808.json"
+    ]
+  },
+  "catalog_snapshot_id": "california_v1",
+  "context_snapshot_id": "context_static_demo_2026_06",
+  "mode": "repair",
+  "parent_plan_id": "plan_e1c4f803691e3188",
+  "pipeline_run": {
+    "evaluation_ids": [
+      "cert_2d7ef2f6fe5b6572"
+    ],
+    "output_plan_ids": [
+      "plan_37018c91aacc87b3"
+    ],
+    "planner_run_ids": [
+      "w2_weather_low_driving_v1_d_a6009acbd3e1"
+    ]
+  },
+  "planner_failure_count": 0,
+  "refresh_policy": "never",
+  "repair_output_missing": false,
+  "repair_request_id": "w2_weather_low_driving_v1",
+  "run_id": "w2_weather_low_driving_v1",
+  "schema_version": "pipeline-manifest-v1",
+  "status": "completed",
+  "strict": true,
+  "strict_failure_count": 0
+}

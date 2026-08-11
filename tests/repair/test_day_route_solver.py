@@ -1,4 +1,5 @@
 import unittest
+from dataclasses import replace
 from types import SimpleNamespace
 
 from itinerary_system.plans import ConstraintScope, ConstraintStrength, OwnedConstraint, RelaxationPolicy
@@ -134,6 +135,62 @@ def config(strict: bool = False) -> DayRouteSolverConfig:
 
 
 class DayRouteSolverTests(unittest.TestCase):
+    def test_empty_parent_lodging_is_not_a_fixed_lodging_violation(self):
+        parent = replace(
+            parent_plan(),
+            selected_stops=tuple(
+                {key: value for key, value in stop.items() if key != "lodging_id"}
+                for stop in parent_plan().selected_stops
+            ),
+            lodging_assignments={},
+        )
+        repair_request = request()
+        neighborhood = build_repair_neighborhood(parent, repair_request, RepairRadius.SAME_DAY_REPLACEMENT)
+        model = build_repair_master_model(parent, repair_request, neighborhood, route_matrix())
+
+        result = solve_day_route_subproblem(
+            model,
+            route_matrix(),
+            day=2,
+            config=config(),
+            candidate_sequences=(("poi_b", "poi_c"),),
+        )
+
+        self.assertTrue(result.candidates[0].feasible)
+        self.assertFalse(
+            any("fix_assign_lodging" in violation for violation in result.candidates[0].violations)
+        )
+
+    def test_label_keyed_parent_day_assignments_use_canonical_stop_ids(self):
+        parent = replace(
+            parent_plan(),
+            day_assignments={
+                "Ferry Building": 1,
+                "Golden Gate Bridge": 2,
+                "Redwood Grove": 2,
+                "Big Sur Coast": 3,
+            },
+        )
+        repair_request = request()
+        neighborhood = build_repair_neighborhood(parent, repair_request, RepairRadius.SAME_DAY_REPLACEMENT)
+        model = build_repair_master_model(parent, repair_request, neighborhood, route_matrix())
+
+        result = solve_day_route_subproblem(
+            model,
+            route_matrix(),
+            day=2,
+            config=config(),
+            candidate_sequences=(("poi_b", "poi_c"),),
+        )
+
+        candidate = result.feasible_candidates[0]
+        self.assertEqual(candidate.repair_solution.day_assignments["poi_b"], 2)
+        self.assertEqual(candidate.repair_solution.day_assignments["poi_c"], 2)
+        self.assertEqual(
+            set(candidate.repair_solution.day_assignments),
+            {"poi_a", "poi_b", "poi_c", "poi_d"},
+        )
+
     def test_route_matrix_backed_candidate_uses_matrix_durations_and_extracts_solution(self):
         model = repair_model()
 

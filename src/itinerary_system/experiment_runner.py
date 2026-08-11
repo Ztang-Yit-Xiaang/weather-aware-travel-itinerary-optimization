@@ -11,6 +11,7 @@ import numpy as np
 import pandas as pd
 from geopy.distance import geodesic
 
+from . import blueprint_core
 from ._legacy import import_legacy_module
 from .artifact_metadata import write_artifact_metadata
 from .bandit_candidate_selector import build_bandit_arms, run_bandit_gurobi_stress_benchmark, run_bandit_search
@@ -421,11 +422,15 @@ def _airport_gateway(config: TripConfig, city: str) -> dict | None:
     if not isinstance(raw, dict):
         return None
     try:
+        latitude = float(raw.get("latitude"))
+        longitude = float(raw.get("longitude"))
         return {
             "code": str(raw.get("code", "")).strip(),
             "name": str(raw.get("name", "")).strip() or f"{city} airport",
-            "latitude": float(raw.get("latitude")),
-            "longitude": float(raw.get("longitude")),
+            "latitude": latitude,
+            "longitude": longitude,
+            "routing_latitude": float(raw.get("routing_latitude", latitude)),
+            "routing_longitude": float(raw.get("routing_longitude", longitude)),
         }
     except Exception:
         return None
@@ -479,15 +484,15 @@ def _annotate_route_sequence(route_df: pd.DataFrame, trip: dict, config: TripCon
         first_mask = output["day"].astype(int).eq(min_day)
         output.loc[first_mask, "route_start_city"] = gateway_start
         output.loc[first_mask, "route_start_name"] = start_airport["name"]
-        output.loc[first_mask, "route_start_latitude"] = start_airport["latitude"]
-        output.loc[first_mask, "route_start_longitude"] = start_airport["longitude"]
+        output.loc[first_mask, "route_start_latitude"] = start_airport["routing_latitude"]
+        output.loc[first_mask, "route_start_longitude"] = start_airport["routing_longitude"]
         output.loc[first_mask, "route_start_airport_code"] = start_airport["code"]
     if end_airport is not None:
         last_mask = output["day"].astype(int).eq(max_day)
         output.loc[last_mask, "route_end_city"] = gateway_end
         output.loc[last_mask, "route_end_name"] = end_airport["name"]
-        output.loc[last_mask, "route_end_latitude"] = end_airport["latitude"]
-        output.loc[last_mask, "route_end_longitude"] = end_airport["longitude"]
+        output.loc[last_mask, "route_end_latitude"] = end_airport["routing_latitude"]
+        output.loc[last_mask, "route_end_longitude"] = end_airport["routing_longitude"]
         output.loc[last_mask, "route_end_airport_code"] = end_airport["code"]
     violation_results = output.apply(_stop_in_allowed_segment, axis=1)
     output["sequence_violation_flag"] = [not item[0] for item in violation_results]
@@ -1501,11 +1506,12 @@ def _solve_greedy_day_route(
     route_start: tuple[float, float],
     route_end: tuple[float, float],
     available_visit_minutes: float,
+    remaining_budget: float,
     max_stops: int,
 ) -> tuple[pd.DataFrame, dict]:
     if candidate_pool.empty:
         return pd.DataFrame(), {
-            "solver_status": "FAILED",
+            "solver_status": "EMPTY_DAY",
             "objective_value": np.nan,
             "optimality_gap": np.nan,
             "runtime_seconds": 0.0,
@@ -1514,6 +1520,7 @@ def _solve_greedy_day_route(
     selected_rows = []
     current_lat, current_lon = route_start
     spent_minutes = 0.0
+    spent_cost = 0.0
     while len(selected_rows) < max_stops and not remaining.empty:
         remaining["travel_from_current"] = remaining.apply(
             lambda row: (
@@ -1529,6 +1536,7 @@ def _solve_greedy_day_route(
             axis=1,
         )
         remaining["visit_minutes_est"] = remaining.apply(_estimate_visit_minutes_from_row, axis=1)
+        remaining["estimated_stop_cost"] = _estimated_route_stop_costs(remaining)
         remaining["greedy_step_score"] = (
             _numeric_column(remaining, "route_candidate_score")
             - 0.015 * remaining["travel_from_current"]
@@ -1541,6 +1549,9 @@ def _solve_greedy_day_route(
             + remaining["travel_to_end"]
             <= float(available_visit_minutes)
         ].copy()
+        feasible = feasible[
+            spent_cost + feasible["estimated_stop_cost"] <= float(remaining_budget) + 1e-9
+        ].copy()
         if feasible.empty:
             break
         next_row = feasible.sort_values(
@@ -1548,6 +1559,7 @@ def _solve_greedy_day_route(
         ).iloc[0]
         selected_rows.append(next_row)
         spent_minutes += float(next_row["travel_from_current"]) + float(next_row["visit_minutes_est"])
+        spent_cost += float(next_row["estimated_stop_cost"])
         current_lat = float(next_row["latitude"])
         current_lon = float(next_row["longitude"])
         remaining = remaining[remaining["name"].astype(str) != str(next_row["name"])].reset_index(drop=True)
@@ -1563,11 +1575,29 @@ def _solve_greedy_day_route(
     }
 
 
-def _estimated_route_stop_cost(frame: pd.DataFrame) -> float:
+def _placeholder_candidate_mask(frame: pd.DataFrame) -> pd.Series:
     if frame.empty:
-        return 0.0
+        return pd.Series(False, index=frame.index, dtype=bool)
+    names = frame.get("name", pd.Series("", index=frame.index)).fillna("").astype(str)
+    categories = frame.get("category", pd.Series("", index=frame.index)).fillna("").astype(str)
+    return (names + " " + categories).str.lower().str.contains(
+        "catalog pending|data_ingestion_needed", regex=True, na=False
+    )
+
+
+def _without_placeholder_candidates(frame: pd.DataFrame) -> pd.DataFrame:
+    return frame.loc[~_placeholder_candidate_mask(frame)].copy()
+
+
+def _estimated_route_stop_costs(frame: pd.DataFrame) -> pd.Series:
+    if frame.empty:
+        return pd.Series(dtype=float, index=frame.index)
     gurobi_itinerary_solver = import_legacy_module("gurobi_itinerary_solver")
-    return float(frame.apply(gurobi_itinerary_solver.estimate_local_route_cost, axis=1).sum())
+    return frame.apply(gurobi_itinerary_solver.estimate_local_route_cost, axis=1).astype(float)
+
+
+def _estimated_route_stop_cost(frame: pd.DataFrame) -> float:
+    return float(_estimated_route_stop_costs(frame).sum())
 
 
 def _solve_legacy_local_gurobi_day_route(
@@ -2404,6 +2434,7 @@ def _hierarchical_method_route_outputs(
                 max_candidates=candidate_size,
                 previous_city=previous_city,
             )
+            candidate_pool = _without_placeholder_candidates(candidate_pool)
 
             day_route_budget = max(0.0, float(remaining_route_budget))
             if local_solver == "legacy_gurobi":
@@ -2435,6 +2466,7 @@ def _hierarchical_method_route_outputs(
                     route_start=(route_start_latitude, route_start_longitude),
                     route_end=(route_end_latitude, route_end_longitude),
                     available_visit_minutes=available_visit_minutes,
+                    remaining_budget=day_route_budget,
                     max_stops=stops_per_day,
                 )
                 route_type_label = f"{route_type}_hierarchical_greedy"
@@ -2454,6 +2486,10 @@ def _hierarchical_method_route_outputs(
                         fallback_pool = fallback_pool[
                             ~fallback_pool["name"].astype(str).map(_place_key).isin(used_place_keys)
                         ].copy()
+                fallback_pool = _without_placeholder_candidates(fallback_pool)
+                if not fallback_pool.empty:
+                    fallback_costs = _estimated_route_stop_costs(fallback_pool)
+                    fallback_pool = fallback_pool.loc[fallback_costs <= day_route_budget + 1e-9].copy()
                 selected_df = fallback_pool.head(1).copy()
             if selected_df.empty:
                 notes.append(f"Day {day_number} had no sequence-compatible POI candidates.")
@@ -2538,7 +2574,7 @@ def _hierarchical_method_route_outputs(
         lowered_statuses = [str(day_status).lower() for day_status in day_statuses]
         if any("no route" in day_status or day_status == "failed" for day_status in lowered_statuses):
             status = "FAILED"
-        elif lowered_statuses and all(day_status == "heuristic" for day_status in lowered_statuses):
+        elif lowered_statuses and all(day_status in {"heuristic", "empty_day"} for day_status in lowered_statuses):
             status = "HEURISTIC"
         elif any("heuristic" in day_status or "after_gurobi_error" in day_status for day_status in lowered_statuses):
             status = "HEURISTIC_FALLBACK"
@@ -2564,7 +2600,7 @@ def _bandit_route_stop_rows(
     enriched_df: pd.DataFrame,
     budget_df: pd.DataFrame | None = None,
 ) -> tuple[pd.DataFrame, dict]:
-    blueprint_trip_map = import_legacy_module("blueprint_trip_map")
+    blueprint_trip_map = blueprint_core
     bandit_runs_df = _load_frame_from_context_or_csv(
         context, ["bandit_stress_runs_df"], output_dir / "production_bandit_stress_runs.csv"
     )
@@ -3137,7 +3173,7 @@ def build_route_matrix_comparison(
     trip_days_grid: list[int] | None = None,
     primary_city: str | None = None,
 ) -> tuple[pd.DataFrame, pd.DataFrame]:
-    blueprint_trip_map = import_legacy_module("blueprint_trip_map")
+    blueprint_trip_map = blueprint_core
     output_dir = Path(output_dir or _first_context_value(context, "OUTPUT_DIR", default="results/outputs"))
     output_dir.mkdir(parents=True, exist_ok=True)
     city_summary_df = _load_frame_from_context_or_csv(
@@ -3437,7 +3473,7 @@ def build_trip_length_comparison(
     trip_days_grid: list[int] | None = None,
     primary_city: str | None = None,
 ) -> tuple[pd.DataFrame, pd.DataFrame]:
-    blueprint_trip_map = import_legacy_module("blueprint_trip_map")
+    blueprint_trip_map = blueprint_core
     output_dir = Path(output_dir or _first_context_value(context, "OUTPUT_DIR", default="results/outputs"))
     output_dir.mkdir(parents=True, exist_ok=True)
     city_summary_df = _load_frame_from_context_or_csv(
@@ -3620,7 +3656,7 @@ def build_production_method_comparison(
     output_dir: str | Path | None = None,
     primary_city: str | None = None,
 ) -> tuple[pd.DataFrame, pd.DataFrame]:
-    blueprint_trip_map = import_legacy_module("blueprint_trip_map")
+    blueprint_trip_map = blueprint_core
     output_dir = Path(output_dir or _first_context_value(context, "OUTPUT_DIR", default="results/outputs"))
     output_dir.mkdir(parents=True, exist_ok=True)
     city_summary_df = _load_frame_from_context_or_csv(

@@ -1,0 +1,11 @@
+ARG OSRM_BASE=ghcr.io/project-osrm/osrm-backend@sha256:aa6a1de3a71dafffd0ba39340542524f66e6841fc19bf7874a0e6a7967837f56
+FROM ${OSRM_BASE}
+
+# 为 OSRM 创建固定 UID/GID 的非 root 用户
+RUN addgroup -S -g 10001 osrm \
+    && adduser -S -D -H -u 10001 -G osrm osrm \
+    && mkdir -p /data \
+    && chown -R 10001:10001 /data
+
+WORKDIR /data
+USER 10001:10001

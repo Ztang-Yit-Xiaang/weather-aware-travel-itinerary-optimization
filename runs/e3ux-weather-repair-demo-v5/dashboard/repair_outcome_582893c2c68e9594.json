@@ -1,0 +1,910 @@
+{
+  "accepted_radius": "same_stop_time_shift",
+  "attempts": [
+    {
+      "attempt_id": "repair_attempt_11e875a1ea0726fc",
+      "candidate_count": 3,
+      "candidate_evaluations": [
+        {
+          "candidate_id": "day_route:7:ce3aeed211b6da5f",
+          "child_plan_id": "plan_7a706ef44466f240",
+          "comparison_eligibility": "eligible",
+          "component_values": {
+            "added_stop_count": 1.0,
+            "constraint_relaxation_count": 0.0,
+            "contextual_burden_proxy": 38.0,
+            "day_move_count": 0.0,
+            "deleted_stop_count": 1.0,
+            "fixed_assignment_violation_count": 0.0,
+            "hard_and_booked_relaxation": 0.0,
+            "hard_or_booked_relaxation_count": 0.0,
+            "locked_violation_count": 0.0,
+            "lodging_change_count": 7.0,
+            "ownership_weighted_change": 41.0,
+            "road_change_count": 1.0,
+            "utility_proxy_change": 3.0,
+            "validation_violation_count": 0.0,
+            "weighted_edit_cost": 41.0
+          },
+          "eligible": true,
+          "evaluation_id": "cert_e68c2d7c0d169a3e",
+          "evaluation_status": "PASSED",
+          "hard_or_booked_relaxation_count": 0.0,
+          "reason": "",
+          "weighted_edit_cost": 41.0
+        }
+      ],
+      "day_route_results": [
+        {
+          "candidates": [
+            {
+              "day": 7,
+              "feasible": false,
+              "repair_solution": {
+                "day_assignments": {
+                  "california_trike": 5,
+                  "golden_gate_bridge": 7,
+                  "griffith_observatory": 3,
+                  "hollywood_walk_of_fame": 1,
+                  "moxi_the_wolf_museum_of_exploration_innovation": 6,
+                  "stearns_wharf": 4,
+                  "surf_n_wear_s_beach_house": 4,
+                  "tcl_chinese_theatre": 2,
+                  "wheel_fun_rentals_24_e_mason_st": 5
+                },
+                "lodging_assignments": {},
+                "metadata": {
+                  "candidate_id": "day_route:7:08f78a187eb2a3ac",
+                  "day_sequences": {
+                    "7": [
+                      "golden_gate_bridge"
+                    ]
+                  },
+                  "replaced_stop_ids": []
+                },
+                "relaxed_constraint_ids": [],
+                "route_ids_by_day": {
+                  "1": "route_plan_e1c4f803691e3188_day_1",
+                  "2": "route_plan_e1c4f803691e3188_day_2",
+                  "3": "route_plan_e1c4f803691e3188_day_3",
+                  "4": "route_plan_e1c4f803691e3188_day_4",
+                  "5": "route_plan_e1c4f803691e3188_day_5",
+                  "6": "route_plan_e1c4f803691e3188_day_6",
+                  "7": "route_plan_e1c4f803691e3188_day_7"
+                },
+                "selected_stop_ids": [
+                  "hollywood_walk_of_fame",
+                  "tcl_chinese_theatre",
+                  "griffith_observatory",
+                  "stearns_wharf",
+                  "surf_n_wear_s_beach_house",
+                  "wheel_fun_rentals_24_e_mason_st",
+                  "california_trike",
+                  "moxi_the_wolf_museum_of_exploration_innovation",
+                  "golden_gate_bridge"
+                ]
+              },
+              "route_evidence_ids": [
+                "leg_hotel_milo_santa_barbara_golden_gate_bridge",
+                "leg_golden_gate_bridge_san_francisco_international_airport"
+              ],
+              "route_pairs": [
+                [
+                  "hotel_milo_santa_barbara",
+                  "golden_gate_bridge"
+                ],
+                [
+                  "golden_gate_bridge",
+                  "san_francisco_international_airport"
+                ]
+              ],
+              "route_sequence": [
+                "hotel_milo_santa_barbara",
+                "golden_gate_bridge",
+                "san_francisco_international_airport"
+              ],
+              "stop_sequence": [
+                "golden_gate_bridge"
+              ],
+              "total_minutes": 497.64,
+              "travel_minutes": 437.64,
+              "violations": [
+                "fix_select_stop[golden_gate_bridge]:golden_gate_bridge",
+                "context_excluded_stop_selected:golden_gate_bridge"
+              ],
+              "visit_minutes": 60.0,
+              "waiting_minutes": 0.0
+            },
+            {
+              "day": 7,
+              "feasible": true,
+              "repair_solution": {
+                "day_assignments": {
+                  "bixby_creek_bridge_viewpoint": 7,
+                  "california_trike": 5,
+                  "griffith_observatory": 3,
+                  "hollywood_walk_of_fame": 1,
+                  "moxi_the_wolf_museum_of_exploration_innovation": 6,
+                  "stearns_wharf": 4,
+                  "surf_n_wear_s_beach_house": 4,
+                  "tcl_chinese_theatre": 2,
+                  "wheel_fun_rentals_24_e_mason_st": 5
+                },
+                "lodging_assignments": {},
+                "metadata": {
+                  "candidate_id": "day_route:7:ce3aeed211b6da5f",
+                  "day_sequences": {
+                    "7": [
+                      "bixby_creek_bridge_viewpoint"
+                    ]
+                  },
+                  "replaced_stop_ids": [
+                    "golden_gate_bridge"
+                  ]
+                },
+                "relaxed_constraint_ids": [],
+                "route_ids_by_day": {
+                  "1": "route_plan_e1c4f803691e3188_day_1",
+                  "2": "route_plan_e1c4f803691e3188_day_2",
+                  "3": "route_plan_e1c4f803691e3188_day_3",
+                  "4": "route_plan_e1c4f803691e3188_day_4",
+                  "5": "route_plan_e1c4f803691e3188_day_5",
+                  "6": "route_plan_e1c4f803691e3188_day_6",
+                  "7": "route_matrix:route_matrix_68ab535465b06808:day:7:ce3aeed211b6da5f"
+                },
+                "selected_stop_ids": [
+                  "hollywood_walk_of_fame",
+                  "tcl_chinese_theatre",
+                  "griffith_observatory",
+                  "stearns_wharf",
+                  "surf_n_wear_s_beach_house",
+                  "wheel_fun_rentals_24_e_mason_st",
+                  "california_trike",
+                  "moxi_the_wolf_museum_of_exploration_innovation",
+                  "bixby_creek_bridge_viewpoint"
+                ]
+              },
+              "route_evidence_ids": [
+                "leg_hotel_milo_santa_barbara_bixby_creek_bridge_viewpoint",
+                "leg_bixby_creek_bridge_viewpoint_san_francisco_international_airport"
+              ],
+              "route_pairs": [
+                [
+                  "hotel_milo_santa_barbara",
+                  "bixby_creek_bridge_viewpoint"
+                ],
+                [
+                  "bixby_creek_bridge_viewpoint",
+                  "san_francisco_international_airport"
+                ]
+              ],
+              "route_sequence": [
+                "hotel_milo_santa_barbara",
+                "bixby_creek_bridge_viewpoint",
+                "san_francisco_international_airport"
+              ],
+              "stop_sequence": [
+                "bixby_creek_bridge_viewpoint"
+              ],
+              "total_minutes": 478.6733333333334,
+              "travel_minutes": 433.6733333333334,
+              "violations": [],
+              "visit_minutes": 45.0,
+              "waiting_minutes": 0.0
+            },
+            {
+              "day": 7,
+              "feasible": false,
+              "repair_solution": {
+                "day_assignments": {
+                  "bixby_creek_bridge_viewpoint": 7,
+                  "california_trike": 5,
+                  "golden_gate_bridge": 7,
+                  "griffith_observatory": 3,
+                  "hollywood_walk_of_fame": 1,
+                  "moxi_the_wolf_museum_of_exploration_innovation": 6,
+                  "stearns_wharf": 4,
+                  "surf_n_wear_s_beach_house": 4,
+                  "tcl_chinese_theatre": 2,
+                  "wheel_fun_rentals_24_e_mason_st": 5
+                },
+                "lodging_assignments": {},
+                "metadata": {
+                  "candidate_id": "day_route:7:ab3554d57b1e426f",
+                  "day_sequences": {
+                    "7": [
+                      "golden_gate_bridge",
+                      "bixby_creek_bridge_viewpoint"
+                    ]
+                  },
+                  "replaced_stop_ids": []
+                },
+                "relaxed_constraint_ids": [],
+                "route_ids_by_day": {
+                  "1": "route_plan_e1c4f803691e3188_day_1",
+                  "2": "route_plan_e1c4f803691e3188_day_2",
+                  "3": "route_plan_e1c4f803691e3188_day_3",
+                  "4": "route_plan_e1c4f803691e3188_day_4",
+                  "5": "route_plan_e1c4f803691e3188_day_5",
+                  "6": "route_plan_e1c4f803691e3188_day_6",
+                  "7": "route_matrix:route_matrix_68ab535465b06808:day:7:ab3554d57b1e426f"
+                },
+                "selected_stop_ids": [
+                  "hollywood_walk_of_fame",
+                  "tcl_chinese_theatre",
+                  "griffith_observatory",
+                  "stearns_wharf",
+                  "surf_n_wear_s_beach_house",
+                  "wheel_fun_rentals_24_e_mason_st",
+                  "california_trike",
+                  "moxi_the_wolf_museum_of_exploration_innovation",
+                  "golden_gate_bridge",
+                  "bixby_creek_bridge_viewpoint"
+                ]
+              },
+              "route_evidence_ids": [
+                "leg_hotel_milo_santa_barbara_golden_gate_bridge",
+                "leg_golden_gate_bridge_bixby_creek_bridge_viewpoint",
+                "leg_bixby_creek_bridge_viewpoint_san_francisco_international_airport"
+              ],
+              "route_pairs": [
+                [
+                  "hotel_milo_santa_barbara",
+                  "golden_gate_bridge"
+                ],
+                [
+                  "golden_gate_bridge",
+                  "bixby_creek_bridge_viewpoint"
+                ],
+                [
+                  "bixby_creek_bridge_viewpoint",
+                  "san_francisco_international_airport"
+                ]
+              ],
+              "route_sequence": [
+                "hotel_milo_santa_barbara",
+                "golden_gate_bridge",
+                "bixby_creek_bridge_viewpoint",
+                "san_francisco_international_airport"
+              ],
+              "stop_sequence": [
+                "golden_gate_bridge",
+                "bixby_creek_bridge_viewpoint"
+              ],
+              "total_minutes": 834.9066666666666,
+              "travel_minutes": 729.9066666666666,
+              "violations": [
+                "day_time_exceeded:7",
+                "fix_select_stop[golden_gate_bridge]:golden_gate_bridge",
+                "context_excluded_stop_selected:golden_gate_bridge"
+              ],
+              "visit_minutes": 105.0,
+              "waiting_minutes": 0.0
+            }
+          ],
+          "day": 7,
+          "matrix_id": "route_matrix_68ab535465b06808",
+          "model_id": "repair_model_e597c62793814644",
+          "publication_mode": true,
+          "required_route_pairs": [
+            [
+              "hotel_milo_santa_barbara",
+              "golden_gate_bridge"
+            ],
+            [
+              "golden_gate_bridge",
+              "san_francisco_international_airport"
+            ],
+            [
+              "hotel_milo_santa_barbara",
+              "bixby_creek_bridge_viewpoint"
+            ],
+            [
+              "bixby_creek_bridge_viewpoint",
+              "san_francisco_international_airport"
+            ],
+            [
+              "golden_gate_bridge",
+              "bixby_creek_bridge_viewpoint"
+            ]
+          ]
+        }
+      ],
+      "failure_reasons": [],
+      "feasible_candidate_count": 1,
+      "model_id": "repair_model_e597c62793814644",
+      "planner_runs": [
+        {
+          "best_bound": 0.0,
+          "catalog_snapshot_id": "california_v1",
+          "completed_at": "",
+          "content_hash": "e3ad758ff8eed391",
+          "context_snapshot_id": "context_static_demo_2026_06",
+          "error_class": "",
+          "error_summary": "",
+          "execution_status": "COMPLETED",
+          "fallback_reason": "",
+          "method_executed": "lexicographic_repair:enumeration",
+          "method_requested": "lexicographic_repair",
+          "objective_value": 0.0,
+          "optimality_gap": 0.0,
+          "parent_run_id": null,
+          "planner_specification_id": "repair-003-lexicographic-v1",
+          "planning_request_id": "bench_weather_deterioration_4062619eeaf4",
+          "result_plan_id": null,
+          "run_id": "run_3ff5636caef81ca1",
+          "runtime_seconds": null,
+          "schema_version": "planner-run-v1",
+          "solver_backend": "enumeration",
+          "solver_certification": "FEASIBILITY_CERTIFIED",
+          "solver_status_raw": "",
+          "solver_version": "",
+          "started_at": ""
+        },
+        {
+          "best_bound": 41.0,
+          "catalog_snapshot_id": "california_v1",
+          "completed_at": "",
+          "content_hash": "84eec7a8e2068268",
+          "context_snapshot_id": "context_static_demo_2026_06",
+          "error_class": "",
+          "error_summary": "",
+          "execution_status": "COMPLETED",
+          "fallback_reason": "",
+          "method_executed": "lexicographic_repair:enumeration",
+          "method_requested": "lexicographic_repair",
+          "objective_value": 41.0,
+          "optimality_gap": 0.0,
+          "parent_run_id": "run_3ff5636caef81ca1",
+          "planner_specification_id": "repair-003-lexicographic-v1",
+          "planning_request_id": "bench_weather_deterioration_4062619eeaf4",
+          "result_plan_id": null,
+          "run_id": "run_958b83a51fed0e31",
+          "runtime_seconds": null,
+          "schema_version": "planner-run-v1",
+          "solver_backend": "enumeration",
+          "solver_certification": "FEASIBILITY_CERTIFIED",
+          "solver_status_raw": "",
+          "solver_version": "",
+          "started_at": ""
+        },
+        {
+          "best_bound": 38.0,
+          "catalog_snapshot_id": "california_v1",
+          "completed_at": "",
+          "content_hash": "a6466765c3e2bfbc",
+          "context_snapshot_id": "context_static_demo_2026_06",
+          "error_class": "",
+          "error_summary": "",
+          "execution_status": "COMPLETED",
+          "fallback_reason": "",
+          "method_executed": "lexicographic_repair:enumeration",
+          "method_requested": "lexicographic_repair",
+          "objective_value": 38.0,
+          "optimality_gap": 0.0,
+          "parent_run_id": "run_958b83a51fed0e31",
+          "planner_specification_id": "repair-003-lexicographic-v1",
+          "planning_request_id": "bench_weather_deterioration_4062619eeaf4",
+          "result_plan_id": null,
+          "run_id": "run_076e8bf84eb17d22",
+          "runtime_seconds": null,
+          "schema_version": "planner-run-v1",
+          "solver_backend": "enumeration",
+          "solver_certification": "FEASIBILITY_CERTIFIED",
+          "solver_status_raw": "",
+          "solver_version": "",
+          "started_at": ""
+        },
+        {
+          "best_bound": 3.0,
+          "catalog_snapshot_id": "california_v1",
+          "completed_at": "",
+          "content_hash": "20e6fd23d64ea649",
+          "context_snapshot_id": "context_static_demo_2026_06",
+          "error_class": "",
+          "error_summary": "",
+          "execution_status": "COMPLETED",
+          "fallback_reason": "",
+          "method_executed": "lexicographic_repair:enumeration",
+          "method_requested": "lexicographic_repair",
+          "objective_value": 3.0,
+          "optimality_gap": 0.0,
+          "parent_run_id": "run_076e8bf84eb17d22",
+          "planner_specification_id": "repair-003-lexicographic-v1",
+          "planning_request_id": "bench_weather_deterioration_4062619eeaf4",
+          "result_plan_id": null,
+          "run_id": "run_2cbd2ea237063d81",
+          "runtime_seconds": null,
+          "schema_version": "planner-run-v1",
+          "solver_backend": "enumeration",
+          "solver_certification": "FEASIBILITY_CERTIFIED",
+          "solver_status_raw": "",
+          "solver_version": "",
+          "started_at": ""
+        }
+      ],
+      "radius": "same_stop_time_shift",
+      "selected_child_plan_id": "plan_7a706ef44466f240",
+      "selected_diff_id": "diff_1923c674931ec053",
+      "selected_evaluation_id": "cert_e68c2d7c0d169a3e",
+      "stage_records": [
+        {
+          "best_bound": 0.0,
+          "candidate_count": 1,
+          "fixed_limit": 0.0,
+          "fixed_tolerance": 0.0,
+          "objective_value": 0.0,
+          "optimality_gap": 0.0,
+          "selected_candidate_id": "day_route:7:ce3aeed211b6da5f",
+          "stage": "hard_and_booked_relaxation",
+          "status": "OPTIMAL"
+        },
+        {
+          "best_bound": 41.0,
+          "candidate_count": 1,
+          "fixed_limit": 41.0,
+          "fixed_tolerance": 0.0,
+          "objective_value": 41.0,
+          "optimality_gap": 0.0,
+          "selected_candidate_id": "day_route:7:ce3aeed211b6da5f",
+          "stage": "ownership_weighted_change",
+          "status": "OPTIMAL"
+        },
+        {
+          "best_bound": 38.0,
+          "candidate_count": 1,
+          "fixed_limit": 38.0,
+          "fixed_tolerance": 0.0,
+          "objective_value": 38.0,
+          "optimality_gap": 0.0,
+          "selected_candidate_id": "day_route:7:ce3aeed211b6da5f",
+          "stage": "contextual_burden_proxy",
+          "status": "OPTIMAL"
+        },
+        {
+          "best_bound": 3.0,
+          "candidate_count": 1,
+          "fixed_limit": 3.0,
+          "fixed_tolerance": 0.0,
+          "objective_value": 3.0,
+          "optimality_gap": 0.0,
+          "selected_candidate_id": "day_route:7:ce3aeed211b6da5f",
+          "stage": "utility_proxy_change",
+          "status": "OPTIMAL"
+        }
+      ],
+      "status": "accepted"
+    }
+  ],
+  "child_plan": {
+    "catalog_snapshot_id": "california_v1",
+    "certificate_id": null,
+    "change_components": {
+      "weighted_edit_cost": 6.0
+    },
+    "content_hash": "a7e7a0d888278daf",
+    "context_exposure_components": {},
+    "context_snapshot_id": "context_static_demo_2026_06",
+    "created_at": "2026-07-25T21:46:46.771294+00:00",
+    "day_assignments": {
+      "bixby_creek_bridge_viewpoint": 7,
+      "california_trike": 5,
+      "griffith_observatory": 3,
+      "hollywood_walk_of_fame": 1,
+      "moxi_the_wolf_museum_of_exploration_innovation": 6,
+      "stearns_wharf": 4,
+      "surf_n_wear_s_beach_house": 4,
+      "tcl_chinese_theatre": 2,
+      "wheel_fun_rentals_24_e_mason_st": 5
+    },
+    "lodging_assignments": {},
+    "modeled_metrics": {},
+    "ordered_days": [
+      {
+        "day": 1,
+        "stop_ids": [
+          "hollywood_walk_of_fame"
+        ]
+      },
+      {
+        "day": 2,
+        "stop_ids": [
+          "tcl_chinese_theatre"
+        ]
+      },
+      {
+        "day": 3,
+        "stop_ids": [
+          "griffith_observatory"
+        ]
+      },
+      {
+        "day": 4,
+        "stop_ids": [
+          "stearns_wharf",
+          "surf_n_wear_s_beach_house"
+        ]
+      },
+      {
+        "day": 5,
+        "stop_ids": [
+          "wheel_fun_rentals_24_e_mason_st",
+          "california_trike"
+        ]
+      },
+      {
+        "day": 6,
+        "stop_ids": [
+          "moxi_the_wolf_museum_of_exploration_innovation"
+        ]
+      },
+      {
+        "day": 7,
+        "stop_ids": [
+          "bixby_creek_bridge_viewpoint"
+        ]
+      }
+    ],
+    "owned_constraints": [],
+    "parent_plan_id": "plan_e1c4f803691e3188",
+    "plan_id": "plan_7a706ef44466f240",
+    "planning_request_id": "bench_weather_deterioration_4062619eeaf4",
+    "route_ids_by_day": {
+      "1": "route_plan_e1c4f803691e3188_day_1",
+      "2": "route_plan_e1c4f803691e3188_day_2",
+      "3": "route_plan_e1c4f803691e3188_day_3",
+      "4": "route_plan_e1c4f803691e3188_day_4",
+      "5": "route_plan_e1c4f803691e3188_day_5",
+      "6": "route_plan_e1c4f803691e3188_day_6",
+      "7": "route_matrix:route_matrix_68ab535465b06808:day:7:ce3aeed211b6da5f"
+    },
+    "schema_version": "plan-artifact-v2",
+    "selected_stops": [
+      {
+        "attraction_name": "Hollywood Walk of Fame",
+        "city": "Los Angeles",
+        "day": 1,
+        "latitude": 34.1016,
+        "longitude": -118.3269,
+        "poi_id": "hollywood_walk_of_fame",
+        "source_confidence": 0.2,
+        "source_list": "curated_social_must_go",
+        "stop_id": "hollywood_walk_of_fame",
+        "stop_order": 1
+      },
+      {
+        "attraction_name": "TCL Chinese Theatre",
+        "city": "Los Angeles",
+        "day": 2,
+        "latitude": 34.102,
+        "longitude": -118.3409,
+        "poi_id": "tcl_chinese_theatre",
+        "source_confidence": 0.2,
+        "source_list": "curated_social_must_go",
+        "stop_id": "tcl_chinese_theatre",
+        "stop_order": 1
+      },
+      {
+        "attraction_name": "Griffith Observatory",
+        "city": "Los Angeles",
+        "day": 3,
+        "latitude": 34.1184,
+        "longitude": -118.3004,
+        "poi_id": "griffith_observatory",
+        "source_confidence": 0.2,
+        "source_list": "curated_social_must_go",
+        "stop_id": "griffith_observatory",
+        "stop_order": 1
+      },
+      {
+        "attraction_name": "Stearns Wharf",
+        "city": "Santa Barbara",
+        "day": 4,
+        "latitude": 34.4100137734,
+        "longitude": -119.6855497819,
+        "poi_id": "stearns_wharf",
+        "source_confidence": 0.45,
+        "source_list": "curated_social_must_go|yelp",
+        "stop_id": "stearns_wharf",
+        "stop_order": 1
+      },
+      {
+        "attraction_name": "Surf N Wear's Beach House",
+        "city": "Santa Barbara",
+        "day": 4,
+        "latitude": 34.4128205,
+        "longitude": -119.6892567,
+        "poi_id": "surf_n_wear_s_beach_house",
+        "source_confidence": 0.25,
+        "source_list": "yelp",
+        "stop_id": "surf_n_wear_s_beach_house",
+        "stop_order": 2
+      },
+      {
+        "attraction_name": "Wheel Fun Rentals - 24 E Mason St",
+        "city": "Santa Barbara",
+        "day": 5,
+        "latitude": 34.4136345,
+        "longitude": -119.6894577,
+        "poi_id": "wheel_fun_rentals_24_e_mason_st",
+        "source_confidence": 0.25,
+        "source_list": "yelp",
+        "stop_id": "wheel_fun_rentals_24_e_mason_st",
+        "stop_order": 1
+      },
+      {
+        "attraction_name": "California Trike",
+        "city": "Santa Barbara",
+        "day": 5,
+        "latitude": 34.4130426063,
+        "longitude": -119.688835144,
+        "poi_id": "california_trike",
+        "source_confidence": 0.25,
+        "source_list": "yelp",
+        "stop_id": "california_trike",
+        "stop_order": 2
+      },
+      {
+        "attraction_name": "MOXI - The Wolf Museum Of Exploration + Innovation",
+        "city": "Santa Barbara",
+        "day": 6,
+        "latitude": 34.4134819,
+        "longitude": -119.6916514,
+        "poi_id": "moxi_the_wolf_museum_of_exploration_innovation",
+        "source_confidence": 0.25,
+        "source_list": "yelp",
+        "stop_id": "moxi_the_wolf_museum_of_exploration_innovation",
+        "stop_order": 1
+      },
+      {
+        "benchmark_candidate_source": "frozen_catalog",
+        "benchmark_synthetic": false,
+        "city": "Monterey",
+        "day": 7,
+        "final_poi_value": 1.5104617648130412,
+        "latitude": 36.3715,
+        "longitude": -121.9018,
+        "name": "Bixby Creek Bridge Viewpoint",
+        "route_snap_distance_m": 8.751045603,
+        "route_snap_validated": true,
+        "source_confidence": 0.45,
+        "source_list": "curated_social_must_go",
+        "stop_id": "bixby_creek_bridge_viewpoint",
+        "stop_order": 2,
+        "visit_duration_minutes": 45,
+        "weather_risk": 0.1,
+        "weather_sensitivity": 0.54209375
+      }
+    ],
+    "sequence": [
+      "hollywood_walk_of_fame",
+      "tcl_chinese_theatre",
+      "griffith_observatory",
+      "stearns_wharf",
+      "surf_n_wear_s_beach_house",
+      "wheel_fun_rentals_24_e_mason_st",
+      "california_trike",
+      "moxi_the_wolf_museum_of_exploration_innovation",
+      "bixby_creek_bridge_viewpoint"
+    ],
+    "source_run_id": "bench_weather_deterioration_4062619eeaf4:repair_master"
+  },
+  "child_plan_id": "plan_7a706ef44466f240",
+  "dashboard_id": "repair_outcome_582893c2c68e9594",
+  "diagnosis": null,
+  "diff_id": "diff_1923c674931ec053",
+  "diff_record": {
+    "added_stops": [
+      {
+        "cost": 1.0,
+        "day": 7,
+        "order": 2,
+        "owner_strength": "",
+        "stop_id": "bixby_creek_bridge_viewpoint"
+      }
+    ],
+    "child_plan_id": "plan_7a706ef44466f240",
+    "day_moves": [],
+    "deleted_stops": [
+      {
+        "cost": 2.0,
+        "day": 7,
+        "order": 1,
+        "owner_strength": "",
+        "stop_id": "golden_gate_bridge"
+      }
+    ],
+    "diff_id": "diff_1923c674931ec053",
+    "lodging_changes": [],
+    "parent_plan_id": "plan_e1c4f803691e3188",
+    "reorder_changes": [],
+    "road_changes": [
+      {
+        "cost": 3.0,
+        "day": 7,
+        "from_route_id": "route_plan_e1c4f803691e3188_day_7",
+        "owner_strength": "",
+        "to_route_id": "route_matrix:route_matrix_68ab535465b06808:day:7:ce3aeed211b6da5f"
+      }
+    ],
+    "schema_version": "plan-diff-v1",
+    "time_shifts": [],
+    "unchanged_days": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6
+    ],
+    "weighted_edit_cost": 6.0
+  },
+  "evaluation_id": "cert_e68c2d7c0d169a3e",
+  "evaluation_record": {
+    "artifact_grounding_status": "PASSED",
+    "blocking_warning_count": 0,
+    "certificate_id": "cert_e68c2d7c0d169a3e",
+    "comparison_eligibility": "eligible",
+    "content_hash": "57435715b1034ead",
+    "diff_id": "diff_1923c674931ec053",
+    "eligible": true,
+    "evaluated_at": "2026-07-25T21:46:46.771294+00:00",
+    "evaluation_id": "cert_e68c2d7c0d169a3e",
+    "evaluation_status": "PASSED",
+    "evaluator_version": "verify-001-plan-evaluator-v1",
+    "failure_count": 0,
+    "failures": [],
+    "hard_feasibility_status": "PASSED",
+    "metrics": {
+      "preservation_rate": 0.8888888888888888,
+      "preserved_stop_count": 8.0,
+      "route_fallback_leg_count": 0.0,
+      "route_missing_leg_count": 0.0,
+      "route_present_leg_count": 16.0,
+      "route_required_leg_count": 16.0,
+      "route_road_validated_leg_count": 16.0,
+      "selected_stop_count": 9.0,
+      "sequence_stop_count": 9.0,
+      "utility_retained": 1.0,
+      "weather_risk_delta": 0.85
+    },
+    "nonblocking_warning_count": 0,
+    "plan_content_hash": "a7e7a0d888278daf",
+    "plan_id": "plan_7a706ef44466f240",
+    "reward_eligibility": true,
+    "route_validation": {
+      "context_snapshot_id": "context_static_demo_2026_06",
+      "errors": [],
+      "fallback_leg_count": 0,
+      "invalid_value_count": 0,
+      "matrix_id": "route_matrix_68ab535465b06808",
+      "missing_leg_count": 0,
+      "present_leg_count": 16,
+      "publication_ready": true,
+      "required_leg_count": 16,
+      "road_validated_leg_count": 16,
+      "source_bundle_id": "route_bundle_a60c80047098a3b6",
+      "source_content_sha256": "3d2ded2d2a862aa6bcf026429b0a0376386928cfa3af109758301d1647584f71",
+      "warnings": []
+    },
+    "schema_version": "plan-evaluation-certificate-v1",
+    "source_run_id": "bench_weather_deterioration_4062619eeaf4:repair_master",
+    "warning_count": 0,
+    "warnings": []
+  },
+  "parent_plan_id": "plan_e1c4f803691e3188",
+  "planner_runs": [
+    {
+      "best_bound": 0.0,
+      "catalog_snapshot_id": "california_v1",
+      "completed_at": "",
+      "content_hash": "e3ad758ff8eed391",
+      "context_snapshot_id": "context_static_demo_2026_06",
+      "error_class": "",
+      "error_summary": "",
+      "execution_status": "COMPLETED",
+      "fallback_reason": "",
+      "method_executed": "lexicographic_repair:enumeration",
+      "method_requested": "lexicographic_repair",
+      "objective_value": 0.0,
+      "optimality_gap": 0.0,
+      "parent_run_id": null,
+      "planner_specification_id": "repair-003-lexicographic-v1",
+      "planning_request_id": "bench_weather_deterioration_4062619eeaf4",
+      "result_plan_id": null,
+      "run_id": "run_3ff5636caef81ca1",
+      "runtime_seconds": null,
+      "schema_version": "planner-run-v1",
+      "solver_backend": "enumeration",
+      "solver_certification": "FEASIBILITY_CERTIFIED",
+      "solver_status_raw": "",
+      "solver_version": "",
+      "started_at": ""
+    },
+    {
+      "best_bound": 41.0,
+      "catalog_snapshot_id": "california_v1",
+      "completed_at": "",
+      "content_hash": "84eec7a8e2068268",
+      "context_snapshot_id": "context_static_demo_2026_06",
+      "error_class": "",
+      "error_summary": "",
+      "execution_status": "COMPLETED",
+      "fallback_reason": "",
+      "method_executed": "lexicographic_repair:enumeration",
+      "method_requested": "lexicographic_repair",
+      "objective_value": 41.0,
+      "optimality_gap": 0.0,
+      "parent_run_id": "run_3ff5636caef81ca1",
+      "planner_specification_id": "repair-003-lexicographic-v1",
+      "planning_request_id": "bench_weather_deterioration_4062619eeaf4",
+      "result_plan_id": null,
+      "run_id": "run_958b83a51fed0e31",
+      "runtime_seconds": null,
+      "schema_version": "planner-run-v1",
+      "solver_backend": "enumeration",
+      "solver_certification": "FEASIBILITY_CERTIFIED",
+      "solver_status_raw": "",
+      "solver_version": "",
+      "started_at": ""
+    },
+    {
+      "best_bound": 38.0,
+      "catalog_snapshot_id": "california_v1",
+      "completed_at": "",
+      "content_hash": "a6466765c3e2bfbc",
+      "context_snapshot_id": "context_static_demo_2026_06",
+      "error_class": "",
+      "error_summary": "",
+      "execution_status": "COMPLETED",
+      "fallback_reason": "",
+      "method_executed": "lexicographic_repair:enumeration",
+      "method_requested": "lexicographic_repair",
+      "objective_value": 38.0,
+      "optimality_gap": 0.0,
+      "parent_run_id": "run_958b83a51fed0e31",
+      "planner_specification_id": "repair-003-lexicographic-v1",
+      "planning_request_id": "bench_weather_deterioration_4062619eeaf4",
+      "result_plan_id": null,
+      "run_id": "run_076e8bf84eb17d22",
+      "runtime_seconds": null,
+      "schema_version": "planner-run-v1",
+      "solver_backend": "enumeration",
+      "solver_certification": "FEASIBILITY_CERTIFIED",
+      "solver_status_raw": "",
+      "solver_version": "",
+      "started_at": ""
+    },
+    {
+      "best_bound": 3.0,
+      "catalog_snapshot_id": "california_v1",
+      "completed_at": "",
+      "content_hash": "20e6fd23d64ea649",
+      "context_snapshot_id": "context_static_demo_2026_06",
+      "error_class": "",
+      "error_summary": "",
+      "execution_status": "COMPLETED",
+      "fallback_reason": "",
+      "method_executed": "lexicographic_repair:enumeration",
+      "method_requested": "lexicographic_repair",
+      "objective_value": 3.0,
+      "optimality_gap": 0.0,
+      "parent_run_id": "run_076e8bf84eb17d22",
+      "planner_specification_id": "repair-003-lexicographic-v1",
+      "planning_request_id": "bench_weather_deterioration_4062619eeaf4",
+      "result_plan_id": null,
+      "run_id": "run_2cbd2ea237063d81",
+      "runtime_seconds": null,
+      "schema_version": "planner-run-v1",
+      "solver_backend": "enumeration",
+      "solver_certification": "FEASIBILITY_CERTIFIED",
+      "solver_status_raw": "",
+      "solver_version": "",
+      "started_at": ""
+    }
+  ],
+  "repair_outcome_id": "repair_outcome_582893c2c68e9594",
+  "repair_request_id": "bench_weather_deterioration_4062619eeaf4",
+  "schema_version": "repair-outcome-dashboard-v1",
+  "status": "accepted"
+}

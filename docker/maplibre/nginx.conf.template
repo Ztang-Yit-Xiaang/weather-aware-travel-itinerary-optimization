@@ -1,0 +1,42 @@
+server {
+    listen 80 default_server;
+    server_name _;
+
+    server_tokens off;
+    autoindex off;
+    gzip off;
+    sendfile on;
+    max_ranges 1;
+
+    add_header Access-Control-Allow-Origin "${PRODUCT_APP_ORIGIN}" always;
+    add_header Access-Control-Allow-Methods "GET, HEAD, OPTIONS" always;
+    add_header Access-Control-Allow-Headers "Range" always;
+    add_header Access-Control-Expose-Headers "Accept-Ranges, Content-Length, Content-Range, ETag" always;
+    add_header Vary "Origin" always;
+    add_header Accept-Ranges "bytes" always;
+    add_header X-Content-Type-Options "nosniff" always;
+    add_header X-Frame-Options "DENY" always;
+    add_header Referrer-Policy "no-referrer" always;
+
+    if ($request_uri ~* "(%2e|%2f|%5c|\\|\.\.)") {
+        return 400;
+    }
+
+    if ($request_method !~ ^(GET|HEAD|OPTIONS)$) {
+        return 405;
+    }
+
+    if ($request_method = OPTIONS) {
+        return 204;
+    }
+
+    location = /healthz {
+        default_type text/plain;
+        return 200 "ok\n";
+    }
+
+    location / {
+        root /map-assets;
+        try_files $uri =404;
+    }
+}

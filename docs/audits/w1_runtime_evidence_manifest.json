@@ -1,0 +1,112 @@
+{
+  "schema_version": "w1-runtime-evidence-v1",
+  "recorded_at": "2026-08-03T19:27:05.4813637Z",
+  "updated_at": "2026-08-03T20:28:14.7994338Z",
+  "phase": "W1",
+  "gate": "G1",
+  "implementation_status": "implemented",
+  "gate_status": "blocked",
+  "product_id": "itinerary-repair-copilot",
+  "default_run": "e3ux_weather_repair_demo_v6",
+  "default_run_manifest_sha256": "bcc65f820f6555211915bd129552dd6d6b674902ef1da6510b120b661ff6f2dc",
+  "verification": {
+    "focused_tests": {"passed": true, "count": 89, "warnings": 1},
+    "full_tests": {"passed": true, "count": 400, "warnings": 1},
+    "ruff": {"passed": true},
+    "project_checks": {"passed": true},
+    "atlas_compose_static_config": {"passed": true},
+    "javascript_syntax": {"passed": true},
+    "diff_check": {"passed": true},
+    "interactive_browser": {"passed": true, "code": "canonical_http_app_loaded"}
+  },
+  "runtime_snapshot": {
+    "schema_version": "product-health-v1",
+    "status": "degraded",
+    "core_ready": true,
+    "components": {
+      "registry": "registry_ready",
+      "default_workspace": "workspace_ready",
+      "state_store": "state_store_ready",
+      "atlas": "atlas_unavailable",
+      "openai": "deterministic_adapter_selected"
+    }
+  },
+  "external_preflight": {
+    "docker_cli": "29.6.1",
+    "docker_compose": "5.3.0",
+    "docker_server_available": true,
+    "docker_server_version": "29.6.1",
+    "docker_engine": "linux",
+    "docker_hello_world": "passed",
+    "wsl_status": "verified_wsl2",
+    "wsl_version": "2.7.11.0",
+    "wsl_kernel": "6.18.33.2",
+    "wsl_distributions": {"Ubuntu": 2, "docker-desktop": 2},
+    "free_space_gib": 41.15,
+    "atlas_token_present": false,
+    "atlas_license_present": false,
+    "openai_key_present": false,
+    "atlas_port_accepting": false
+  },
+  "environment_evidence": {
+    "source": "user_power_shell_transcript_and_docker_desktop_screenshot",
+    "recorded_at": "2026-08-03T20:28:14.7994338Z",
+    "contains_credentials": false
+  },
+  "blockers": [
+    "atlas_credentials_unavailable",
+    "atlas_image_digest_unresolved",
+    "atlas_assets_unavailable",
+    "atlas_live_preflight_not_run"
+  ],
+  "preserved_legacy_sha256": {
+    "workspace_pointer.json": "a113d672e359850b7a93a6cd04a3477f5405f5b38b5be67fcf3943350a79c52d",
+    "decisions/decision_1902d7b134f04291b30eab7ec8ab1036.json": "b6a6700528f06c13166ad93e0c5ce51348361222e1aefaa6eb53322d17accd9b",
+    "decisions/decision_6551a39d3d2445869f335c11a72277e6.json": "13d3a70269ca7e1c70b39cae31e343e48ae7bf60e57b53dbb0a9aa3a5e72b1b9",
+    "decisions/decision_84bb9eb1ebcd4864b469871be654c30e.json": "b706efb8741c7672923e59fe85a47b2a69ad44b982512aa9c371fb9f092d5f2c"
+  },
+  "selected_file_sha256": {
+    "configs/product_app_registry.json": "2cf0d90e83d6b6a1a49ba2ea57ffcca5dbec93879f0f661cfaf2d9fea2ca004c",
+    "src/itinerary_system/product_app/runtime.py": "0676b940aa7746fddf9841e00b202aa7fdae1d5070bd6660e87a131aa9b50a19",
+    "src/itinerary_system/product_app/security.py": "5156e3ea3e4203f4aba590ed2f8203dda781429a3f0ec9980dfc30023fd8b632",
+    "src/itinerary_system/product_app/persistence.py": "6ebbfa68bf892228dfa86688271d46525e41194848efbbb19f10634b33cb1158",
+    "src/itinerary_system/product_app/api.py": "72012aacdc5745556a96dda14e971d76c3b7dc45710e9b408227dfddb07acf29",
+    "src/itinerary_system/product_app/workspace.py": "42fa038bae1059136ecbae276cc8904bd4134262e2a79fd2d0519223afa1814f",
+    "scripts/run_product_app.py": "b5780f7e41deff25b4a0d60b5b23a8f575a2e5a1421148321e61ef2c6f8198f3",
+    "src/itinerary_system/product_app/static/index.html": "ef999fa413f9c652a4e98e55a59ee97da1c49fd4667f6496f8aac138dddbcf0f",
+    "src/itinerary_system/product_app/static/js/app.js": "e8043b0a233ecf27a6799183fc29d648d905b768a1622f31a4e4374bdc4f98c0",
+    "docker/atlas/docker-compose.yml": "26abe064bd836d71d1e1f6cd564990ca8af598a06dc356b7a85e640a48c9da39",
+    "docker/atlas/nginx.conf.template": "cdb5590907306d2bef7e663f67e23e50bfa8ec0e7603d025d825d8ed7daff41f",
+    "tests/product_app/test_launcher.py": "1061953c698a5170d4623bdd27aff94488395fe26078b346cdc3bb62d7981ff4"
+  },
+  "auditors": [
+    {"id": "w1_web_auditor", "scope": "web_implementation", "verdict": "pass_after_remediation", "independent": true, "read_only": true},
+    {"id": "w1_security_auditor", "scope": "copilot_privacy_security", "verdict": "pass_after_remediation", "independent": true, "read_only": true},
+    {"id": "w1_map_integrity_auditor", "scope": "map_artifact_integrity", "verdict": "pass_after_remediation", "independent": true, "read_only": true},
+    {"id": "w1_content_auditor", "scope": "content_truthfulness", "verdict": "pass_after_remediation", "independent": true, "read_only": true},
+    {"id": "w1_user_journey_auditor", "scope": "deterministic_user_journey", "verdict": "pass_after_remediation", "independent": true, "read_only": true},
+    {"id": "w1_phase_gate_auditor", "scope": "phase_gate_status", "verdict": "pass_after_closeout", "independent": true, "read_only": true}
+  ],
+  "status_invariants": {
+    "cp_010": "in-progress",
+    "w1": "implemented",
+    "g1": "blocked",
+    "w2": "planned_not_ready",
+    "research_statuses_changed": false
+  },
+  "post_closeout_repairs": [
+    {
+      "id": "direct_file_launch_recovery",
+      "trigger": "user_opened_static_index_with_file_url",
+      "result": "pass_after_independent_user_journey_reaudit",
+      "canonical_url": "http://127.0.0.1:8127/app",
+      "core_ready": true,
+      "file_sha256": {
+        "README.md": "4a70feb48897ffd3bb4d63838de155b511c70cd36a518be4da623050159d0a34",
+        "src/itinerary_system/product_app/static/index.html": "ef999fa413f9c652a4e98e55a59ee97da1c49fd4667f6496f8aac138dddbcf0f",
+        "src/itinerary_system/product_app/static/css/app.css": "0c94f3da63926701fdb92aeb6e7baf249f8220bbf89a09de38039effc26b954f",
+        "tests/product_app/test_frontend_contract.py": "0172ba741f0b432d839cd18a3538bff594797cf5c0bd7f78f786b8890764e828"
+      }
+    }
+  ]
+}

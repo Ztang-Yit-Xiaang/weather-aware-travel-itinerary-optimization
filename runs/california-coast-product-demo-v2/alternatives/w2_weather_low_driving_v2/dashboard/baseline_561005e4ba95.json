@@ -1,0 +1,87 @@
+{
+  "child_plan_id": "plan_8aa919c8323dbac0",
+  "dashboard_id": "baseline_561005e4ba95",
+  "decision_records": [
+    {
+      "candidate_id": "day_route:7:08f78a187eb2a3ac",
+      "contextual_burden": null,
+      "day": 7,
+      "feasible": false,
+      "selected": false,
+      "stop_sequence": [
+        "golden_gate_bridge"
+      ],
+      "travel_minutes": 437.64,
+      "utility": null,
+      "violations": [
+        "fix_select_stop[golden_gate_bridge]:golden_gate_bridge",
+        "context_excluded_stop_selected:golden_gate_bridge"
+      ]
+    },
+    {
+      "candidate_id": "day_route:7:39f52a34f8994522",
+      "contextual_burden": 0.1,
+      "day": 7,
+      "feasible": true,
+      "selected": true,
+      "stop_sequence": [
+        "santa_barbara_museum_of_natural_history_sea_center"
+      ],
+      "travel_minutes": 378.56666666666666,
+      "utility": 0.6613132306435597,
+      "violations": []
+    },
+    {
+      "candidate_id": "day_route:7:16b5e96763b02ed3",
+      "contextual_burden": null,
+      "day": 7,
+      "feasible": false,
+      "selected": false,
+      "stop_sequence": [
+        "golden_gate_bridge",
+        "santa_barbara_museum_of_natural_history_sea_center"
+      ],
+      "travel_minutes": 1183.3533333333335,
+      "utility": null,
+      "violations": [
+        "day_time_exceeded:7",
+        "fix_select_stop[golden_gate_bridge]:golden_gate_bridge",
+        "context_excluded_stop_selected:golden_gate_bridge"
+      ]
+    }
+  ],
+  "diff_id": "diff_ea97896a586cb3af",
+  "failure_reasons": [],
+  "method_id": "deterministic_context_aware_heuristic",
+  "parent_plan_id": "plan_e1c4f803691e3188",
+  "planner_run": {
+    "best_bound": null,
+    "catalog_snapshot_id": "california_v1",
+    "completed_at": "",
+    "content_hash": "101ec8e3f7a67002",
+    "context_snapshot_id": "context_static_demo_2026_06",
+    "error_class": "",
+    "error_summary": "",
+    "execution_status": "COMPLETED",
+    "fallback_reason": "",
+    "method_executed": "deterministic_context_aware_heuristic",
+    "method_requested": "deterministic_context_aware_heuristic",
+    "objective_value": null,
+    "optimality_gap": null,
+    "parent_run_id": null,
+    "planner_specification_id": "deterministic-context-aware-heuristic-v1",
+    "planning_request_id": "w2_weather_low_driving_v2",
+    "result_plan_id": "plan_8aa919c8323dbac0",
+    "run_id": "w2_weather_low_driving_v2:deterministic_context_aware_heuristic",
+    "runtime_seconds": null,
+    "schema_version": "planner-run-v1",
+    "solver_backend": "",
+    "solver_certification": "HEURISTIC_ONLY",
+    "solver_status_raw": "",
+    "solver_version": "",
+    "started_at": ""
+  },
+  "request_id": "w2_weather_low_driving_v2",
+  "schema_version": "baseline-planning-result-v1",
+  "status": "completed"
+}

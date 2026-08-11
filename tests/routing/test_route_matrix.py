@@ -68,6 +68,17 @@ class RouteMatrixTests(unittest.TestCase):
         with self.assertRaises(RouteMatrixMissing):
             adapter.assert_publication_ready()
 
+    def test_identity_cell_is_publication_eligible_zero_travel(self):
+        matrix = matrix_from_minutes({("a", "b"): 12.0})
+
+        identity = matrix.cell("a", "a")
+
+        identity.require_publication_eligible()
+        self.assertEqual(identity.distance_m, 0.0)
+        self.assertEqual(identity.duration_s, 0.0)
+        self.assertEqual(matrix.duration_minutes("a", "a", strict=True), 0.0)
+        self.assertEqual(identity.provider, "deterministic_identity")
+
     def test_missing_cell_raises_clear_error(self):
         matrix = matrix_from_minutes({("a", "b"): 12.0})
         adapter = SolverRouteMatrixAdapter(matrix, mode="publication")
@@ -163,6 +174,36 @@ class RouteMatrixTests(unittest.TestCase):
 
         self.assertEqual(matrix.duration_minutes("start", "poi_a", strict=True), 10.0)
         self.assertEqual(matrix.leg("start", "poi_a", strict=True).provider, "unit_cache")
+
+
+    def test_loaded_matrix_id_hashes_content_not_file_location(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            first_path = Path(temp_dir) / "first.csv"
+            second_path = Path(temp_dir) / "renamed.csv"
+            frame = pd.DataFrame(
+                [
+                    {
+                        "origin_id": "start",
+                        "destination_id": "end",
+                        "distance_m": 1000.0,
+                        "duration_s": 600.0,
+                        "road_validated": True,
+                        "fallback_used": False,
+                    }
+                ]
+            )
+            frame.to_csv(first_path, index=False)
+            second_path.write_bytes(first_path.read_bytes())
+
+            first = load_route_matrix_from_cache(first_path, "context_unit")
+            renamed = load_route_matrix_from_cache(second_path, "context_unit")
+            frame.loc[0, "duration_s"] = 601.0
+            frame.to_csv(second_path, index=False)
+            changed = load_route_matrix_from_cache(second_path, "context_unit")
+
+        self.assertEqual(first.matrix_id, renamed.matrix_id)
+        self.assertNotEqual(first.matrix_id, changed.matrix_id)
+        self.assertTrue(first.matrix_id.startswith("route_matrix_"))
 
     def test_build_validated_route_matrix_script_requires_publication_ready(self):
         with tempfile.TemporaryDirectory() as temp_dir:

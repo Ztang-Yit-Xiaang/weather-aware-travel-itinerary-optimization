@@ -1,0 +1,85 @@
+{
+  "schema_version": "w2-g2-evidence-manifest-v1",
+  "generated_date": "2026-08-04",
+  "timezone": "America/Chicago",
+  "track": "CP-010",
+  "gate_status": "verified",
+  "artifact": {
+    "run_id": "california_coast_product_demo_v1",
+    "manifest_sha256": "56728434b2f53a796202d7cf10e7e519dd652a96dc2aadf3a626ede10ee585ad",
+    "inventory_file_count": 26,
+    "parent_plan_id": "plan_e1c4f803691e3188",
+    "child_plan_ids": [
+      "plan_3f341b2c989837d2",
+      "plan_37018c91aacc87b3"
+    ]
+  },
+  "browser": {
+    "url": "http://127.0.0.1:8127/app",
+    "desktop_viewport": [1280, 900],
+    "mobile_viewport": [390, 844],
+    "mobile_capture": {
+      "png_width": 390,
+      "png_height": 844,
+      "css_inner_width": 390,
+      "css_inner_height": 846,
+      "device_pixel_ratio": 1.0,
+      "document_client_width": 390,
+      "document_scroll_width": 390,
+      "document_client_height": 846,
+      "document_scroll_height": 988,
+      "text_route_open": true
+    },
+    "console_entry_count": 0,
+    "observed_asset_origins": [
+      "http://127.0.0.1:8127",
+      "http://127.0.0.1:8080"
+    ],
+    "host_network_disabled": false
+  },
+  "screenshots": [
+    {
+      "path": "docs/audits/w2_g2_selected_evidence_1280.png",
+      "viewport": [1280, 900],
+      "bytes": 126002,
+      "sha256": "dc0b3d906833bc05aa3e760428805dcfa4c9aef55aecd64dd9773d642dbfcb16"
+    },
+    {
+      "path": "docs/audits/w2_g2_map_390.png",
+      "viewport": [390, 844],
+      "bytes": 54430,
+      "sha256": "e38431b1a0a5e0a253009fb8cc524b885dc409884999bbede63c80cdef41fce8"
+    },
+    {
+      "path": "docs/audits/w2_g2_map_text_390.png",
+      "viewport": [390, 844],
+      "bytes": 52207,
+      "sha256": "48d7bc274392113ef9b448b92f2dcf6ea22e18fe1ec839ef5341c10841cb748a"
+    }
+  ],
+  "tests": {
+    "focused_product_and_repository": {
+      "passed": 154,
+      "warnings": 1
+    },
+    "context_snapshot": {
+      "passed": 5
+    },
+    "full_pytest": {
+      "passed": 465,
+      "warnings": 1
+    },
+    "ruff": "passed",
+    "node_syntax": "passed",
+    "diff_check": "passed"
+  },
+  "independent_audits": {
+    "map_artifact_integrity": "pass",
+    "web_accessibility": "pass",
+    "content_truth_user_journey": "pass",
+    "security_runtime": "pass",
+    "phase_gate_status": "pass",
+    "visual_responsive_evidence": "pass"
+  },
+  "research_status_changed": false
+}

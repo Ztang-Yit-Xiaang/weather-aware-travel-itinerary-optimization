@@ -2,203 +2,226 @@
 
 # Weather-Aware Travel Itinerary Optimization
 
-**A route-planning research tool for building multi-day trips that respect weather, travel time, hotels, budgets, and traveler interests.**
+### Plan less. Adapt smarter. Keep the trip worth taking.
 
-[![Python 3.12](https://img.shields.io/badge/Python-3.12-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
-[![Gurobi](https://img.shields.io/badge/Gurobi-Route%20Optimization-EE3524?style=for-the-badge)](https://www.gurobi.com/)
-[![Folium](https://img.shields.io/badge/Folium-Interactive%20Maps-77B829?style=for-the-badge)](https://python-visualization.github.io/folium/)
-[![OpenStreetMap](https://img.shields.io/badge/OpenStreetMap-Place%20Data-7EBC6F?style=for-the-badge&logo=openstreetmap&logoColor=white)](https://www.openstreetmap.org/)
+An inspectable research prototype that detects weather disruptions, repairs multi-day itineraries, and explains the tradeoffs between route time, traveler preferences, budget, and feasibility.
 
-[GitHub Repository](https://github.com/Ztang-Yit-Xiaang/weather-aware-travel-itinerary-optimization)
+[![Python 3.12](https://img.shields.io/badge/Python-3.12-3776AB?style=flat-square&logo=python&logoColor=white)](https://www.python.org/)
+[![FastAPI](https://img.shields.io/badge/FastAPI-Product_API-009688?style=flat-square&logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/)
+[![Gurobi](https://img.shields.io/badge/Gurobi-Optimization-EE3524?style=flat-square)](https://www.gurobi.com/)
+[![OpenStreetMap](https://img.shields.io/badge/OpenStreetMap-Route_Evidence-7EBC6F?style=flat-square&logo=openstreetmap&logoColor=white)](https://www.openstreetmap.org/)
+[![License](https://img.shields.io/badge/License-MIT-0D5350?style=flat-square)](LICENSE)
+
+[Quick start](#quick-start) · [Demo](#product-walkthrough) · [How it works](#how-it-works) · [Research](#research-and-documentation)
 
 </div>
 
-![Full dashboard preview](docs/assets/full_dashboard_preview.png)
+![Itinerary Repair Copilot workspace](docs/assets/readme/itinerary-workspace.png)
 
-## Why This Tool?
+## What this project does
 
-Travel planning is not just picking the top-rated attractions. A good itinerary also has to answer very human questions:
+Travel plans break when weather, closures, travel time, or booking constraints change. This project turns that disruption into a constrained repair problem: preserve as much of the original trip as possible, replace what no longer works, and keep every recommendation inspectable.
 
-- Can I actually visit these places in one day?
-- Is the route wasting too much time in the car?
-- Should rainy or high-risk outdoor stops be replaced?
-- Where should I stay overnight?
-- What changes if I want more nature, city, culture, or history?
+- Detects weather-affected stops in a multi-day itinerary.
+- Builds route-aware alternatives from place, hotel, weather, and travel-time evidence.
+- Balances feasibility, preservation, edit cost, budget, and traveler interests.
+- Compares hierarchical Gurobi, greedy, and hybrid bandit + small-Gurobi methods.
+- Presents the result in desktop and mobile trip, repair, comparison, and evidence views.
+- Offers a local deterministic Copilot; an OpenAI-backed mode is optional and explicit.
 
-This project turns those questions into a working research prototype. It collects place and hotel candidates, scores them with context, builds route options, repairs routes with optimization, and exports map dashboards that make the result inspectable.
+> **Prototype status:** `/app` is an experimental research interface, not a booking product. Repair acceptance remains disabled until the repository transaction workflow is implemented and verified.
 
-## What Can It Do?
+## Product walkthrough
 
-- Build multi-day California trip plans with city, scenic, and nature-aware stops.
-- Compare route strategies such as hierarchical Gurobi, greedy baselines, and hybrid bandit + small Gurobi repair.
-- Switch between 7-day, 9-day, and 12-day route artifacts.
-- Use a customer-facing trip planner view for quick inspection and a research/test view for deeper debugging.
-- Inspect selected hotels, candidate hotels, route variants, map layers, playback, active stop details, city details, nature exploration, and debug summaries.
-- Preview interest profiles across nature, city, culture, and history.
-- Compare method metrics in a separate evaluation dashboard.
-- Export lightweight maps for sharing and larger dashboards for research/debugging.
-- Keep data-source uncertainty visible through enrichment and validation artifacts.
+The animation below is assembled from verified browser captures of the real application. It shows the trip workspace, deterministic Copilot, and side-by-side repair comparison.
 
-## Try The Dashboard
+<div align="center">
 
-The fastest way to see the project is to serve the generated dashboard locally:
+![Animated walkthrough of the Itinerary Repair Copilot](docs/assets/readme/product-walkthrough.gif)
 
-```bash
+</div>
+
+<table>
+  <tr>
+    <td width="58%">
+      <img src="docs/assets/readme/copilot-demo.png" alt="Deterministic itinerary repair Copilot open beside the route map">
+      <br><sub><b>Explainable assistance.</b> Discuss a disruption without allowing the assistant to silently change the trip.</sub>
+    </td>
+    <td width="42%">
+      <img src="docs/assets/readme/repair-comparison.png" alt="Original and repaired route comparison">
+      <br><sub><b>Visible tradeoffs.</b> Compare route evidence, risk, preservation, and edit cost before choosing.</sub>
+    </td>
+  </tr>
+  <tr>
+    <td colspan="2" align="center">
+      <img src="docs/assets/readme/mobile-trip.png" alt="Mobile itinerary repair interface" width="390">
+      <br><sub><b>Responsive inspection.</b> The essential trip and map workflow remains available on a narrow viewport.</sub>
+    </td>
+  </tr>
+</table>
+
+Full-size stability evidence is preserved in [`results/stability_pass_8127/verified_20260810`](results/stability_pass_8127/verified_20260810/).
+
+## Quick start
+
+### Windows launcher
+
+1. Clone or download the repository.
+2. Double-click [`OPEN_ITINERARY_COPILOT.cmd`](OPEN_ITINERARY_COPILOT.cmd).
+3. Keep the terminal open while using the app at `http://127.0.0.1:8127/app`.
+4. Press `Ctrl+C` in the terminal when finished.
+
+The launcher starts a loopback-only service, validates the pinned demo run, waits for its health check, and opens the correct page. Do **not** open `src/itinerary_system/product_app/static/index.html` directly: the page requires the application API and will not work from a `file:///` URL.
+
+### Command line
+
+```powershell
+python -m pip install -e .
+python scripts/run_product_app.py --open
+```
+
+The current product demo reads immutable artifacts from:
+
+```text
+runs/e3ux-weather-repair-demo-v6/
+```
+
+The older generated research dashboard is still available:
+
+```powershell
 python scripts/serve_dashboard.py
 ```
 
-Then open the URL printed in the terminal. The newest generated dashboard folder is:
+Open the URL printed in the terminal. GitHub does not render the repository's local HTML dashboards inline, so they must be served or opened locally.
 
-```text
-results/figures/full_interactive_dashboard/
+## How it works
+
+```mermaid
+flowchart LR
+    A["Places, hotels, weather, and routes"] --> B["Context and evidence scoring"]
+    B --> C["Candidate day plans"]
+    C --> D["Constrained itinerary repair"]
+    D --> E["Evaluation and certificates"]
+    E --> F["Trip, compare, and evidence views"]
 ```
 
-Useful entry points:
+1. **Collect context** — Load candidate attractions, hotels, weather signals, road routes, and traveler preferences.
+2. **Score candidates** — Measure interest fit, nature and scenic value, detour cost, and data confidence.
+3. **Construct alternatives** — Build feasible city and day structures for the requested trip length.
+4. **Optimize or repair** — Apply exact, heuristic, or hybrid methods while minimizing unnecessary changes.
+5. **Expose evidence** — Export maps, metrics, explanations, and validation artifacts instead of returning a black-box route.
 
-| Page | Use It For |
+## Demo snapshot
+
+| Dimension | Included in the current demo |
 | --- | --- |
-| `index.html` | Full map dashboard with customer/research mode toggle |
-| `customer.html` | Cleaner customer-facing trip planner view |
-| `research.html` | Research/test view with route layers, city details, nature exploration, and debug panels |
-| `evaluation.html` | Static method-comparison dashboard |
+| Scenario | Weather-aware California coast itinerary repair |
+| Corridor | Los Angeles to San Francisco |
+| Trip | 7 days, 9 recorded stops, 1 affected day |
+| Candidate catalog | 228 city/place candidates across seven California regions |
+| Repair signals | Contextual risk, preservation, edit cost, eligibility, and route evidence |
+| Route variants | 7-day, 9-day, and 12-day research artifacts |
+| Interfaces | Trip, map edit, repairs, compare, evidence, settings, and Copilot |
 
-The lightweight share map can also be opened directly:
+The broader generated artifacts also include customer-facing and research/debug dashboards, lightweight share maps, method comparisons, route playback, hotel candidates, nature exploration, and interest-profile previews.
 
-```text
-results/figures/lightweight_share_map.html
-```
+## Run the research pipeline
 
-> GitHub usually will not render local HTML dashboards inline. Serve the repo locally or download/open the HTML files from your machine.
+Install the package, then execute the production notebook with a trip configuration:
 
-## Run An Optimization Pipeline
-
-Install the project, then execute the production notebook with a trip config:
-
-```bash
-pip install -e .
-
-TRIP_CONFIG_PATH="configs/nature_trip_config.yaml" \
-python -m jupyter nbconvert \
-  --to notebook \
-  --execute notebook/production_system_blueprint.ipynb \
-  --output production_system_blueprint_nature_executed.ipynb \
-  --output-dir notebook \
-  --ExecutePreprocessor.timeout=1800 \
+```powershell
+python -m pip install -e .
+$env:TRIP_CONFIG_PATH = "configs/nature_trip_config.yaml"
+python -m jupyter nbconvert `
+  --to notebook `
+  --execute notebook/production_system_blueprint.ipynb `
+  --output production_system_blueprint_nature_executed.ipynb `
+  --output-dir notebook `
+  --ExecutePreprocessor.timeout=1800 `
   --ExecutePreprocessor.kernel_name=python3
 ```
 
-Useful validation commands:
+A valid local Gurobi license is required for Gurobi-backed optimization routes.
 
-```bash
+## Optional OpenAI Copilot
+
+The Copilot starts in **Deterministic demo** mode. Requests stay on the computer and no API key is needed. To explicitly select the OpenAI adapter, create a local, Git-ignored `.env.local` file:
+
+```dotenv
+PRODUCT_COPILOT_ADAPTER=openai
+OPENAI_API_KEY=replace-with-your-local-key
+OPENAI_COPILOT_MODEL=gpt-5.6-terra
+```
+
+The provider receives the visible itinerary context, current message, and a bounded recent conversation window. It has no tools and cannot directly change a plan, booking, permission, or acceptance decision. Local transcripts expire after 30 days and can be deleted from Copilot settings. Never place an API key in a tracked file, screenshot, issue, or chat message.
+
+Inspect the selected provider without making a billed request:
+
+```powershell
+$health = Invoke-RestMethod http://127.0.0.1:8127/api/health
+$health.components.openai
+```
+
+## Project structure
+
+```text
+weather-aware-travel-itinerary-optimization/
+├── configs/                 Trip and product configurations
+├── docs/                    Research, methods, audits, and engineering notes
+├── notebook/                Exploration and production notebooks
+├── report/                  Course reports, proposals, and presentation material
+├── results/                 Generated maps, dashboards, figures, and evidence
+├── runs/                    Immutable experiment and product-demo artifacts
+├── scripts/                 Launch, export, validation, and pipeline commands
+├── src/itinerary_system/    Reusable planning, repair, and product modules
+└── tests/                   Pipeline, optimization, API, and interface tests
+```
+
+## Validation
+
+Run the full automated suite and static checks:
+
+```powershell
 python -m pytest
+python -m ruff check src tests scripts
 python scripts/validate_dashboard_export.py
 python scripts/validate_nature_route_pipeline.py --strict
 ```
 
-If you use the Gurobi routes, make sure a valid local Gurobi license is available.
+Focused product-app checks:
 
-## Current Demo Data
-
-The current generated artifacts focus on a California Statewide Nature demo with a Los Angeles to San Francisco corridor.
-
-| Artifact | Current Snapshot |
-| --- | --- |
-| Candidate catalog | 228 city/place candidates across San Diego, Los Angeles, Santa Barbara, San Luis Obispo, Monterey, Santa Cruz, and San Francisco |
-| Dashboard scenario | California Statewide Nature, nature-heavy interest profile |
-| Customer dashboard route | 7-day saved route artifact with 7 visible stops |
-| Default route method | Method · Hierarchical + Bandit + Small Gurobi Repair |
-| Method CSV snapshot | The method comparison CSV reports 16 selected attractions for the hybrid repair method and about 2041.80 used from a 2213.14 buffered trip budget |
-| Route index | 33 route records, including 8 customer-visible options and 25 research-only records |
-| Route variants | 7-day, 9-day, and 12-day comparison artifacts |
-| Validation summary | `python scripts/validate_dashboard_export.py` passes; `production_map_validation_summary.json` reports 97 PASS checks |
-
-The method comparison artifacts are intentionally research-facing. For example, the evaluation dashboard compares hierarchical Gurobi, hierarchical greedy, and bandit + repair artifacts and keeps solver/status labels visible instead of hiding fallback behavior.
-
-## How It Works
-
-```mermaid
-flowchart LR
-    A["Collect places, hotels, weather, and route context"] --> B["Score destinations and data quality"]
-    B --> C["Build candidate city and day plans"]
-    C --> D["Optimize or repair route segments"]
-    D --> E["Export maps, dashboards, and validation reports"]
+```powershell
+python -m pytest tests/product_app -q
+python -m ruff check src/itinerary_system/product_app tests/product_app scripts/run_product_app.py
 ```
 
-Plain-English version:
+## Research and documentation
 
-1. The pipeline gathers candidate attractions, hotels, nature regions, social must-go places, weather context, and route geometry.
-2. It scores places by value, interest fit, scenic/nature signals, detour cost, and data confidence.
-3. It proposes route structures across cities and trip lengths.
-4. It uses optimization and heuristic repair to produce usable day-by-day route artifacts.
-5. It exports customer, research, and evaluation dashboards so a person can inspect the route, not just trust a black-box answer.
+Start with the [documentation index](docs/README.md), then use the focused references below.
 
-## Interest Profiles
-
-The planner separates **pace** from **interest**:
-
-- Pace: relaxed, balanced, explorer.
-- Interest: nature, city, culture, history.
-
-Saved profile artifacts currently include balanced, nature-heavy, city-heavy, culture-heavy, and history-heavy score comparisons. Browser-side interest controls are clearly labeled previews; true optimized route changes come from rerunning the Python pipeline.
-
-## Project Structure
-
-```text
-weather-aware-travel-itinerary-optimization/
-├── configs/                 # Trip and nature-aware planning configs
-├── docs/                    # Classified documentation index and project notes
-├── notebook/                # Original and production notebooks
-├── report/                  # Final report, proposal drafts, screenshots
-├── results/                 # Generated outputs, maps, dashboards, caches
-├── scripts/                 # Dashboard serving and validation helpers
-├── src/itinerary_system/    # Reusable itinerary planning modules
-└── tests/                   # Pipeline and export tests
-```
-
-## Documentation
-
-Start with the [documentation index](docs/README.md) when you want to find a file by purpose.
-
-### Literature Review
-
-Start with the onboarding guide, then use the integrated eight-paper review, evidence matrix, and repair-gap review before opening the full evidence bank.
-
-| Literature Document | Read It For |
+| Document | Purpose |
 | --- | --- |
-| [Literature onboarding guide](docs/literature/literature_onboarding_guide.md) | First read for the project problem, four research areas, terminology, research gap, roadmap, and next study scope |
-| [Integrated core literature review](docs/literature/core_paper_reading_cards.md) | Detailed eight-paper learning sequence plus professor-recommended companion papers on neuro-symbolic routing and travel-plan evaluation |
-| [Project evidence matrix](docs/literature/evidence_matrix.md) | Feature-by-feature map from current implementation status to supporting papers, scoring caveats, and remaining novelty |
-| [Repair gap review](docs/literature/repair_gap_review.md) | Consolidated related-work, novelty, search, metric, and claim-boundary review for ownership-aware repair |
-| [Literature deep read study report](docs/literature/literature_deep_read_study_report.md) | Detailed evidence bank for all local PDFs; use after the onboarding guide, not as the first read |
+| [Itinerary repair method](docs/methods/repair_method.md) | Repair thesis, records, experiments, and claim boundaries |
+| [Nature-aware model extension](docs/methods/nature_aware_model_extension.md) | Interest profiles, nature regions, route balance, and export architecture |
+| [Literature onboarding guide](docs/literature/literature_onboarding_guide.md) | Problem framing, terminology, research gap, and reading path |
+| [Evidence matrix](docs/literature/evidence_matrix.md) | Implementation-to-literature traceability and remaining novelty |
+| [Product audit synthesis](docs/audits/product_audit_synthesis.md) | Current product failures, evidence, and gate status |
+| [Copilot implementation plan](docs/planning/itinerary_repair_copilot_implementation_plan.md) | Product contracts, phases, tests, and verification status |
+| [Technical specification](docs/planning/travel_itinerary_repair_technical_specification.md) | Parent-plan-aware repair implementation contract |
+| [IE 5533 final report](report/IE_5533_Final_Report.pdf) | Original formulation, methods, and academic background |
 
-### Project And Engineering Docs
+## Known limitations
 
-| Document | What It Covers |
-| --- | --- |
-| [Nature-aware model extension](docs/methods/nature_aware_model_extension.md) | Interest bars, nature regions, route balance, map export architecture |
-| [Itinerary repair method](docs/methods/repair_method.md) | Repair-method thesis, records, experiments, claims, and Phase 0 evidence path |
-| [Research stabilization plan](docs/planning/research_stabilization_and_publication_plan.md) | Publication-oriented research plan, readiness gates, and venue strategy |
-| [Repair technical specification](docs/planning/travel_itinerary_repair_technical_specification.md) | Implementation contract for parent-plan-aware itinerary repair work |
-| [Data dictionary](docs/reference/data_dictionary.md) | Core data records, evidence roles, routing eligibility, and immediate fix scope |
-| [Code quality workflow](docs/reference/code_quality_workflow.md) | Formatting, tests, validation, generated artifact policy |
-| [IE 5533 final report](report/IE_5533_Final_Report.pdf) | Original course-report formulation and background |
-| [Progress report for Prof. Xie](report/prof_xie_progress_report.pdf) | Current progress, limitations, and research questions |
-| [Supervisor proposal](report/chi2027_supervisor_proposal.pdf) | Publication-oriented proposal and supervision request |
-| [Faculty match memo](report/cse_faculty_match_memo.pdf) | Potential UMN faculty matches across CS, DS, transportation, ME, and ISyE |
-| [Contributing guide](CONTRIBUTING.md) | Setup, checks, artifact policy, and PR expectations |
-
-## Limitations
-
-- The dashboard is a static export. Customer controls can switch saved artifacts or show preview-only routes, but they do not rerun Gurobi in the browser.
-- Generated artifacts can become stale after config or code changes. Re-run the pipeline before using the maps as final evidence.
-- Live data sources may fall back to cached or curated data. The audit files are part of the research story, not noise to hide.
-- Nationwide travel planning is a roadmap. The current strongest demo is California-focused; national-scale routing needs stronger data adapters, route graph generation, and validation.
-- Waiting time and congestion are modeled with proxy signals, not direct ground-truth queue measurements.
+- The strongest current demo is California-focused; nationwide routing requires additional data adapters and validation.
+- Some generated dashboards switch between saved artifacts or preview routes but do not rerun Gurobi in the browser.
+- Live sources may fall back to cached or curated data; provenance and uncertainty remain visible in audit artifacts.
+- Congestion and waiting time use proxy signals rather than direct ground-truth queue measurements.
+- Generated artifacts can become stale after code or configuration changes and should be rebuilt before being cited as final evidence.
 
 ## Contributing
 
-Contributions are welcome, especially around data adapters, dashboard clarity, validation, and user-study preparation. Start with [CONTRIBUTING.md](CONTRIBUTING.md).
+Contributions are welcome, especially around data adapters, route evidence, optimization baselines, dashboard clarity, and user-study preparation. See [CONTRIBUTING.md](CONTRIBUTING.md) for setup and quality checks.
 
 ## License
 
-This project is for academic and research purposes. See [LICENSE](LICENSE).
+Released under the [MIT License](LICENSE) for academic and research use.

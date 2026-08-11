@@ -1,0 +1,14 @@
+{
+  "provider_id": "REPLACE_WITH_REVIEWED_PROVIDER_ID",
+  "provider_kind": "local_osrm",
+  "endpoint": "http://127.0.0.1:5000",
+  "osrm_image": "ghcr.io/project-osrm/osrm-backend@sha256:REPLACE_WITH_APPROVED_IMAGE_DIGEST",
+  "osrm_release": "REPLACE_WITH_REVIEWED_OSRM_RELEASE",
+  "osm_pbf_url": "REPLACE_WITH_APPROVED_EXTRACT_URL",
+  "osm_pbf_sha256": "REPLACE_WITH_PUBLISHED_OR_INDEPENDENTLY_VERIFIED_SHA256",
+  "routing_profile": "driving/car.lua",
+  "license_or_terms": "REPLACE_WITH_REVIEWED_DATA_AND_ROUTING_TERMS",
+  "license_url": "REPLACE_WITH_AUTHORITATIVE_LICENSE_URL",
+  "reviewed_by": "REPLACE_WITH_REVIEWER",
+  "reviewed_at": "REPLACE_WITH_ISO_8601_REVIEW_TIMESTAMP"
+}

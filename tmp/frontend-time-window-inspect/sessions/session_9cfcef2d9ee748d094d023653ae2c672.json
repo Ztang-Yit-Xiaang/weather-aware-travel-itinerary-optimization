@@ -1,0 +1,39 @@
+{
+  "schema_version": "product-session-snapshot-v1",
+  "session": {
+    "accepted_plan_id": "plan_e1c4f803691e3188",
+    "conversation_id": "conversation_f08a727706dd4d0ca2018aa5e03b11c5",
+    "created_at": "2026-08-08T23:32:16.528570+00:00",
+    "draft": [
+      {
+        "created_at": "2026-08-08T23:32:16.921574+00:00",
+        "evidence_refs": [],
+        "operation_id": "operation_3ec2dc3d2cda429c95cb3b7b4944a2e8",
+        "parameters": {
+          "earliest_arrival": "10:00",
+          "latest_departure": null
+        },
+        "source": "typed_stop_editor",
+        "target": "stearns_wharf",
+        "type": "set_stop_time_window"
+      }
+    ],
+    "last_accessed_at": "2026-08-08T23:32:16.939590+00:00",
+    "permission_decisions": [],
+    "proposal": null,
+    "revision": 1,
+    "run_id": "california_coast_product_demo_v2",
+    "selected_alternative_id": null,
+    "selected_candidate_id": null,
+    "selected_day": 7,
+    "selected_segment_id": null,
+    "selected_stop_id": null,
+    "session_id": "session_9cfcef2d9ee748d094d023653ae2c672",
+    "trip_id": "california_coast_demo"
+  },
+  "token_verifier": {
+    "algorithm": "sha256-salted-v1",
+    "digest": "0b4e4404fd61bf894e87e6c9935cbb2cefa3acdf19f748ec2277f650e2818857",
+    "salt": "eb1707e97d7efc29fc883d09353ba095"
+  }
+}

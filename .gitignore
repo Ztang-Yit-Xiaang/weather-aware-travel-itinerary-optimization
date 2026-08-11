@@ -57,3 +57,13 @@ report/figures/*
 results/figures/Ideal copy.png
 # Python package metadata
 *.egg-info/
+tmp_pytest/
+docker/osrm/.env
+docker/atlas/.env
+docker/atlas/assets/
+docker/atlas/*.license
+docker/maplibre/.env
+docker/maplibre/assets/
+.product_app_state/
+.env.local
+.codex_backups/

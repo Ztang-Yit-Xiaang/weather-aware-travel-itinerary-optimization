@@ -1,0 +1,72 @@
+{
+  "schema_version": "w3-g3-evidence-manifest-v1",
+  "generated_date": "2026-08-05",
+  "timezone": "America/Chicago",
+  "track": "CP-010",
+  "gate_status": "verified",
+  "default_run": {
+    "run_id": "california_coast_product_demo_v1",
+    "manifest_sha256": "56728434b2f53a796202d7cf10e7e519dd652a96dc2aadf3a626ede10ee585ad",
+    "artifact_files_changed": 0
+  },
+  "contracts": {
+    "session_schema": "workspace-context-v1",
+    "snapshot_schema": "product-session-snapshot-v1",
+    "preview_schema": "draft-preview-v1",
+    "canonical_operation_count": 7,
+    "w5_acceptance_enabled": false
+  },
+  "browser": {
+    "url": "http://127.0.0.1:8127/app",
+    "desktop_journey": "passed",
+    "ineligible_reason": "no_feasible_evaluated_child",
+    "eligible_child_plan_id": "plan_c12aa2c626b69fc3",
+    "eligible_certificate_id": "cert_2224e335ad68a6fc",
+    "road_validated_legs": 16,
+    "required_legs": 16,
+    "restart_restore": "passed",
+    "console_warning_error_count": 0,
+    "mobile_viewport": [390, 844],
+    "mobile_client_width": 390,
+    "mobile_scroll_width": 390,
+    "horizontal_overflow": false
+  },
+  "tests": {
+    "focused_product_and_repository": {
+      "passed": 189,
+      "warnings": 1
+    },
+    "context_snapshot": {
+      "passed": 5
+    },
+    "full_pytest": {
+      "passed": 500,
+      "warnings": 1
+    },
+    "ruff": "passed",
+    "node_syntax": "passed",
+    "diff_check": "passed"
+  },
+  "source_sha256": {
+    "models.py": "942b9b41c9e80fe024f84a00b3e932f280cd4d00b728a228a896937eabb49231",
+    "persistence.py": "4b821989cc0a51d9697bfcbd36dfb7c5dab9b8aa506384716c0e69de1fdc93d4",
+    "workspace.py": "7936eadec597141639ecf360f38423193a4e39e967edc0597a9030e9e3028bb2",
+    "draft_compiler.py": "f4315c33744e9509516a8bdb6cda6ce1821af01f4aa9742fd2e7a93da4518ca9",
+    "service.py": "36e5e435b0255f151038f5ba488710faa15c04543b7fd508fb32e2e54277d228",
+    "api.py": "d12047bee34828813616bb9226aa34e28e03a961c0fd5e533a52f6014d422ea5",
+    "security.py": "507328853a9f1deb6fc03a0873a91b5f2178abffcfdca737be7cab69d54add6d",
+    "static/js/app.js": "a4b41d3b288117d4cedc30ca50bfdb3eb880349666a6cbfd47e87321709b34ee",
+    "static/index.html": "b706186e2bc05eb332eeee4e4b10af357858b03fbfbcc2c7ca60cc0fafb12943"
+  },
+  "independent_audits": {
+    "draft_state": "pass",
+    "solver_evaluator_artifact_integrity": "pass",
+    "security_integrity": "pass",
+    "web_accessibility": "pass",
+    "content_truth": "pass",
+    "user_journey_black_box": "pass",
+    "phase_gate_status": "pass"
+  },
+  "next_product_phase": "W4_ready",
+  "research_status_changed": false
+}

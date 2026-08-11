@@ -3247,3 +3247,1145 @@ Entries record Codex-assisted work sessions, findings, validation, conclusions, 
 
 - Review whether the next step should prioritize concrete benchmark method factory presets or notebook migration.
 
+
+## Permission-aware counterfactual clarification extension
+
+### Task
+
+Add a disabled-by-default, deterministic research extension for permission-aware counterfactual repair and consequence-grounded clarification without changing the E1-E4 publication pipeline.
+
+### Files changed
+
+- Added `src/itinerary_system/interaction/` with typed interaction records, frozen/rule-based semantic providers, allow-listed patch compilation, permission policy, isolated and frozen probe executors, consequence analysis, critical-tradeoff selection, deterministic clarification policy, controller, immutable interaction pipeline entry point, and CLI.
+- Added `scripts/run_permission_aware_repair.py` as the non-default, non-interactive CLI wrapper.
+- Updated `src/itinerary_system/__init__.py` with public interaction exports.
+- Added `tests/interaction/test_patch_compiler.py`, `test_permission_policy.py`, `test_probe_executor.py`, `test_consequence_and_clarification.py`, and `test_pipeline_integration.py`.
+- Added `docs/planning/permission_aware_counterfactual_clarification_plan.md`.
+- Added only a labeled design/scaffold note to the deferred E5 section of `docs/planning/current_execution_plan.md`; E3, E4, the immediate queue, and E5 completion status were not changed.
+
+### Existing components reused
+
+- Reused `OwnedConstraint`, ownership/relaxation enums, `PlanArtifactV2`, `PlanDiff`, `RepairRequest`, `RepairRadius`, `ProgressiveRepairController`, append-only `PlanRepository`, `RouteMatrix`, independent evaluation/certificate artifacts, explanation evidence, and `run_research_pipeline()` for authorized continuation runs.
+- Did not add a second ownership model, plan model, diff model, repair solver, evaluator, certificate, route matrix, or accepted-plan repository.
+
+### Tests run
+
+- `python -m ruff check src tests scripts` -> passed (`All checks passed!`).
+- `python -m pytest tests/benchmark/test_publication_method_factory.py -q` -> passed (`1 passed in 3.23s`).
+- `python -m pytest` -> passed (`238 passed in 71.89s`).
+- `python -m pytest tests/interaction -q` during focused development -> passed (`17 passed in 2.39s`).
+- `python scripts/run_permission_aware_repair.py --help` -> passed and displayed frozen-fixture, continuation, permission-decision, route-cache, and question-budget options.
+- `git diff --check` -> passed; only existing LF-to-CRLF warnings were reported.
+
+### Artifacts generated
+
+- Focused tests generated immutable interaction and authorized-continuation run fixtures only under pytest temporary directories.
+- No real E3 result, production interaction run, participant-study artifact, or publication claim was generated.
+
+### Default E3 behavior
+
+- Unchanged. `InteractionOptions.clarification_mode` defaults to `disabled`, whose narrow entry point delegates directly to the existing pipeline without interaction directories or manifest fields.
+- The current four required E3 method IDs and method provenance remain unchanged.
+- The synthetic four-method publication-mode integration test passes.
+- No E2 route matrix, frozen input hash, evaluator-owned ranking metric, or current benchmark factory was modified by this task.
+
+### Unresolved limitations
+
+- No live LLM client and no reinforcement-learning policy were implemented.
+- The CLI uses frozen probe fixtures for deterministic replay. An actual authorized continuation requires a supplied frozen route cache and the existing progressive repair adapter.
+- Probe time budgets are recorded and passed into typed requests; backend-specific hard interruption remains limited by current solver/controller support.
+- Numerical burden fields remain unknown rather than zero when parent and hypothetical artifacts lack paired evidence.
+- No participant study, calibrated semantic probability, novelty claim, or E5 completion claim exists.
+- The real E3 paired benchmark remains incomplete and was not rerun; prior scalability limits on the full-reoptimization baseline remain outside this task.
+
+### Planning truth found stale
+
+- The request named `docs/current/current_execution_plan.md`, but the repository authority is `docs/planning/current_execution_plan.md`.
+- Older detailed phase plans still contain proposed or missing-status language that does not match current implemented components; the current execution plan and problem manifest were treated as authoritative.
+
+## E3 real evidence diagnostic and correctness fixes - 2026-07-22
+
+### Outcome
+
+- Expanded the conservative E3 route universe to immutable bundle `route_bundle_a60c80047098a3b6` and matrix `route_matrix_68ab535465b06808`; 223/223 cells are road-and-snap validated with no fallback.
+- Completed immutable 24-row diagnostic `e3-real-production-20260722-expanded-v13-budget720-cap1`.
+- Closeout: 8 ranking-eligible rows, 16 retained failures, complete method provenance and route lineage, `evidence_complete: true`, and `publication_ready: true`.
+- This is not a complete four-method comparison: both exact methods refused every scenario at diagnostic cap 1, and road-closure plus reduced-driving-tolerance remain infeasible for both non-exact methods.
+
+### Correctness changes
+
+- Added exact candidate-space lower-bound preflight and fail-fast cap refusal.
+- Added complete E3 route-coverage preflight, frozen catalog snap audit, and route-evidence expansion CLIs.
+- Corrected label-keyed parent day assignments to canonical POI IDs without mutating frozen parent artifacts.
+- Corrected empty lodging validation and made independent evaluator lodging requirements explicit and parent-derived.
+- Preserved canonical progressive method provenance even when inner lexicographic runs exist.
+- Corrected publication route-evidence semantics for failed runs without output plans while retaining output-certificate requirements for failed strict plans.
+- Parameterized normal disruption travel budgets from the benchmark daily limit; the reduced-driving scenario retains its explicit 180-minute tolerance.
+
+### Validation
+
+- `python -m ruff check .` -> passed.
+- `python -m pytest -q` -> 251 passed.
+- Real v13 process exited cleanly; closeout and all 24 immutable pipeline run directories were read back.
+- OSRM remained bound to `127.0.0.1:5000`; no container, route bundle, or prior immutable run was removed.
+
+## 2026-07-25: Exact Baselines Optimization & E3 Benchmark Execution v14
+
+### Summary
+
+- Implemented zero-overhead preflight assignment duration pruning ($\sum \text{durations} > \text{max\_day\_minutes}$) and budget pruning in `src/itinerary_system/repair/exact_baselines.py`.
+- Preserved strict candidate enumeration cap preflight checking (`complete_candidate_limit_exceeded`) without generating false optimality claims.
+- Diagnosed physical infeasibility root causes for `road_closure` (no alternate unclosed intercity route in the frozen matrix for Day 4) and `reduced_driving_tolerance` (Day 7 travel time > 180 min threshold).
+- Executed `scripts/run_e3_publication_benchmark.py` with candidate budget 50,000 (`e3_real_california_20260725_optimized_v14_cap50000`). Closeout reports `publication_ready: true`, 8 ranking-eligible PASSED rows, 16 retained failure rows.
+
+### Validation
+
+- `python scripts/run_project_checks.py` -> PASS ruff (0.9s), PASS context_snapshot_pytest (2.0s), PASS full_pytest (34.7s).
+- `python -m ruff check .` -> All checks passed.
+- `python -m pytest -q` -> 251 passed in 33.78s.
+
+## 2026-07-29: Phase A Plan Reconciliation and E3.UX Definition
+
+### Phase ID
+
+- Phase A — repository and plan reconciliation.
+- New planned phase: E3.UX — Artifact-Grounded Product Dashboard Reframe.
+
+### Files changed
+
+- Added `docs/current/current_repository_truth_2026_07.md`.
+- Added `docs/current/ui_skill_application_record.md`.
+- Added `docs/planning/e3_user_facing_dashboard_reframe_phase_plan.md`.
+- Added `docs/reports/current_plan_reconciliation_report.md`.
+- Updated `docs/planning/current_execution_plan.md`.
+- Updated `docs/planning/research_pipeline_and_gate_map.md`.
+- Reconciled `docs/planning/e3_exact_baseline_scalability_phase_plan.md` from
+  stale `ready`/v13 wording to `blocked` on D1 with current v14 evidence and the
+  verified E3.2 handoff.
+- Added planned CP-009 to `docs/current/current_problem_manifest.md`; CP-009 is
+  not resolved.
+
+### Tests run
+
+- Focused subsystem matrix using the configured shared pytest temp root:
+  `102 passed`, then 31 setup errors caused by `WinError 5` while scanning
+  `.codex_tmp_pytest/pytest/pytest-of-Ztang_Yit_Xiaang`.
+- The same focused matrix with isolated
+  `--basetemp tmp_test/codex_phasea_pytest_20260729_019faf6d`:
+  `133 passed in 16.23s`.
+- The matrix covered pipeline entry/run/artifact lineage, plans/diff/repository,
+  route matrix, progressive and exact repair, independent evaluation,
+  explanations, benchmark/disruption contracts, interaction, dashboard
+  contracts, and Folium renderer/selector/core boundaries.
+
+### Artifact paths inspected
+
+- `tmp_test/research_pipeline_raw/e3-real-production-20260725-optimized-v14-cap50000/closeout.json`
+- `tmp_test/research_pipeline_raw/e3-real-production-20260725-optimized-v14-cap50000/benchmark/manifest.json`
+- `tmp_test/research_pipeline_raw/e3-real-production-20260725-optimized-v14-cap50000/benchmark/metrics/benchmark_metrics.jsonl`
+- `tmp_test/research_pipeline_raw/e3-real-production-20260725-optimized-v14-cap50000/inputs/manifest.json`
+- `tmp_test/research_pipeline_raw/e3-real-production-20260725-optimized-v14-cap50000/inputs/route_coverage_preflight.json`
+
+The v14 root was read only and remains immutable.
+
+### Browser widths
+
+- No new browser run occurred in Phase A because no UI implementation changed.
+- The E3.C4 closeout remains pending at 390px.
+- E3.UX4 now requires 1440, 1024, 768, 430, 390, and 360px, plus the
+  Folium selector's natural expanded width.
+
+### Remaining limitations
+
+- E3.C4 is `implemented`, not `verified`; the 430px open selector still exceeds
+  the 390px viewport and the final mobile dashboard assertion remains pending.
+- E3.1 is `blocked` on D1; all 12 exact v14 cells remain cap-refused at 50,000.
+- E3.3 and E4 remain `blocked`.
+- E3.UX and E3.UX0-E3.UX4 remain `planned`; no product dashboard code exists.
+- E3.UX5 and E5 remain `deferred` and disabled by default.
+
+### Exact gate status
+
+- `verified`: E1, E2, E3.0, E3.M, E3.2, E3.C1, E3.C2, E3.C3.
+- `in-progress`: E3.C.
+- `implemented`: E3.C4.
+- `planned`: E3.UX, E3.UX0, E3.UX1, E3.UX2, E3.UX3, E3.UX4, CP-009.
+- `blocked`: E3.1, E3.3, E4.
+- `deferred`: E3.UX5, E5.
+
+## 2026-07-29: Phase B Code Mastery Documentation
+
+### Phase ID
+
+- Phase B — code mastery documentation.
+
+### Files changed
+
+- Added `docs/code_mastery/00_start_here.md` through
+  `docs/code_mastery/15_glossary.md`.
+- Added 12 repository-specific Mermaid diagrams under
+  `docs/code_mastery/diagrams/`.
+- Added `docs/reports/code_mastery_report.md`.
+
+### Verification
+
+- `python -m pytest --basetemp tmp_test\codex_phaseb_collect_20260729_019faf6d --collect-only -q`
+  -> `288 tests collected in 3.58s`.
+- The package references current modules/tests and preserves E3.1/E3.3/E4,
+  E3.C4, E3.UX, and E5 status boundaries.
+- No runtime source, generated dashboard, legacy parity oracle, or immutable
+  E3 artifact was changed.
+
+### Remaining limitation
+
+- The testing guide records the current shared pytest temp-root `WinError 5`
+  and the verified unique `--basetemp` workaround.
+- Phase C browser evidence has not yet run; E3.C4 remains `implemented`.
+## 2026-07-29 — E3.C4 verified mobile closeout
+
+### Phase
+
+- E3.C4 — renderer/UI controller decomposition
+
+### Files changed
+
+- `src/itinerary_system/blueprint_route_selector.py`: added the mobile-only
+  selector containment rule.
+- `tests/test_blueprint_route_selector.py`: added the responsive CSS contract.
+- `tests/test_blueprint_renderer_parity.py`: froze the reviewed E3.C4
+  full-HTML signature while retaining all data/Leaflet assertions.
+- `scripts/run_project_checks.py`: isolated the full pytest subprocess under a
+  unique repository-local base temp directory.
+- Updated current truth, manifest, execution/gate plans, code-size audit, UI
+  skill record, E3.C4 phase plan, and the closeout report.
+
+### Tests and artifacts
+
+- Focused E3.C4: 23 passed.
+- Benchmark/evaluator/interaction regressions: 81 passed.
+- Ruff: passed.
+- Dashboard export validator: passed.
+- Project checks: passed; full pytest 289 passed.
+- Same-worktree Folium render:
+  `tmp_test/codex_e3c4_focused_green_20260729/test_package_renderer_matches_0/figures/package_renderer.html`.
+- Reviewed normalized Folium HTML SHA-256:
+  `a06583549a135688e62d663ff5c6197074e96f3a0bad57d5cb791f37273fc2bb`.
+- Browser widths: 1440, 768, 520, and 390px for Folium and modular dashboards.
+- Screenshots:
+  `docs/reports/e3c4_folium_mobile_before.png`,
+  `docs/reports/e3c4_folium_mobile_after.png`,
+  `docs/reports/e3c4_modular_mobile.png`, and
+  `docs/reports/e3c4_modular_desktop.png`.
+
+### Status and limitations
+
+- E3.C4 is `verified`.
+- E3.UX0–E3.UX4 are unblocked on the additive `dashboard_product/` path.
+- The historical generated Folium file remains the before artifact; the next
+  normal export will contain the verified source rule.
+- D1/E3.1/E3.3/E4, E5, and E3.UX5 are unchanged.
+
+## 2026-07-29 — E3.UX0–E3.UX4 verified product-dashboard closeout
+
+### Phase IDs
+
+- E3.UX0 — current UI and artifact audit.
+- E3.UX1 — product information architecture and design system.
+- E3.UX2 — read-only artifact-grounded customer dashboard.
+- E3.UX3 — research/evidence and comparison views.
+- E3.UX4 — responsive, accessibility, integrity, and browser verification.
+
+### Code and tests
+
+- Added package-owned product contracts, adapter, shared view models, semantic
+  assets/controllers, and a non-overwritable renderer under
+  `src/itinerary_system/product_dashboard_*.py`.
+- Added export, screenshot-registration, and validation scripts.
+- Added 26 focused tests under `tests/product_dashboard/` for canonical
+  loading, lineage/hash/path/finite-value enforcement, exact-cap versus
+  infeasibility truth, permission provenance, customer/research view models,
+  rendering, security, host-path suppression, non-overwrite, screenshot
+  hashes, and UX5 exclusion.
+
+### Artifacts and reports
+
+- Canonical source run:
+  `tmp_test/research_pipeline_raw/e3-real-production-20260725-optimized-v14-cap50000/pipeline_runs/benchmark_158cf6d48be8`.
+- Final derived product run:
+  `runs/e3ux-weather-repair-demo-v6`.
+- Product path:
+  `runs/e3ux-weather-repair-demo-v6/dashboard_product/`.
+- Manifest schema `product-dashboard-manifest-v1`; product version `1.0.0`.
+- Added E3.UX0 audit, E3.UX1 design contract, desktop/tablet/mobile Mermaid
+  wireframes, reframe/testing/browser/accessibility/artifact-integrity reports,
+  and updated code-mastery/current planning documents.
+
+### Verification
+
+- Product focused: 26 passed.
+- Legacy E3.C focused: 23 passed in 13.39s.
+- Legacy regression matrix: 81 passed in 13.79s.
+- Ruff across `src tests scripts`: passed.
+- Legacy dashboard validator: passed.
+- Product dashboard validator and source/asset/screenshot hash readback: passed.
+- Project checks: Ruff, context snapshot, and full pytest passed.
+- Full pytest: 315 passed in 46.95s.
+- Markdown local-link and mojibake checks: passed.
+- Browser widths: 1440, 1024, 768, 430, 390, and 360px.
+- Browser result: no document overflow, clipped control, product console issue,
+  incomplete image, or map initialization failure; customer/research, day/map,
+  evidence, failure, certificate, hash, focus, touch-target, and contrast flows
+  pass.
+- Screenshots and SHA-256 values are registered in the product manifest.
+
+### Corrections found during browser/accessibility verification
+
+- Added product-owned essential Leaflet layout/control CSS so a missing remote
+  Leaflet stylesheet cannot expand panes into normal document flow.
+- Darkened the warning token from `#a65a10` to `#854306`; the repeated
+  computed-style audit passed 196 visible leaf-text nodes with zero WCAG AA
+  threshold failures.
+
+### Exact gate status and limitations
+
+- `verified`: E3.UX, E3.UX0, E3.UX1, E3.UX2, E3.UX3, E3.UX4, and CP-009.
+- `blocked` and unchanged: D1/E3.1, E3.3, E4.
+- `deferred` and unchanged: E3.UX5 and E5.
+- The UI is read-only. It supplies no interaction, user-study, exact-completion,
+  four-method superiority, or publication claim.
+- Visible focus and native keyboard semantics were verified. The browser
+  backend did not synthesize locator-level Enter activation; this limitation is
+  disclosed in the accessibility report rather than overstated.
+
+## 2026-07-29 — Product dashboard discoverability launcher
+
+### Phase
+
+- E3.UX4 follow-up — discoverability without legacy replacement.
+
+### Changes
+
+- Added `OPEN_PRODUCT_DASHBOARD.cmd` at the repository root. Double-clicking it
+  validates the v6 entry path, reuses `scripts/serve_dashboard.py`, and opens
+  the product page over localhost.
+- Added a prominent README section that identifies the redesigned launcher and
+  explicitly distinguishes the existing legacy-dashboard command.
+- Updated the product reframe report with the launcher boundary.
+
+### Compatibility
+
+- The legacy server default, Folium map, modular dashboard, hashes, and
+  optimizer/evaluator/benchmark semantics are unchanged.
+- The authoritative product artifact remains
+  `runs/e3ux-weather-repair-demo-v6/dashboard_product/`.
+
+## 2026-08-05 — W4 Copilot provider and transcript implementation handoffs
+
+### Phase and status boundary
+
+- W4 — Copilot provider, prompt engineering, and local transcript persistence.
+- W4 is `in-progress`; G4 has not been promoted or verified.
+- CP-010 and every research status remain unchanged. W5 acceptance and Keep
+  original transactions remain disabled.
+
+### Multi-agent ownership and handoffs
+
+- `EXECUTION_ORCHESTRATOR` froze the shared `models.py` contracts and retained
+  ownership of cross-module integration, status integrity, and final review.
+- `w4_copilot_contract` exclusively owned `product_app/copilot.py` and
+  `tests/product_app/test_copilot_contracts.py`.
+- `w4_prompt_engineering` exclusively owned `product_app/copilot_prompt.py`,
+  `tests/product_app/test_copilot_prompt.py`, the 72-case prompt fixture, and
+  `scripts/evaluate_copilot_prompt.py`.
+- `w4_conversations` exclusively owned `product_app/conversations.py`, the
+  conversation-only persistence additions, and
+  `tests/product_app/test_conversations.py`.
+- `w4_browser_journey` owns the independent browser-journey evidence boundary;
+  `w4_privacy_tests` owns privacy/security regression evidence; and
+  `w4_docs_handoff` owns only `README.md`, `docs/README.md`, and this log entry.
+- Shared paths were not edited by workers without an orchestrator handoff;
+  implementation agents do not provide their own independent G4 sign-off.
+
+### Implementation evidence present at this documentation checkpoint
+
+- The deterministic adapter remains the default. OpenAI requires explicit
+  `PRODUCT_COPILOT_ADAPTER=openai`; there is no silent provider fallback.
+- The repository-root `.env.local` loader accepts only an allow-list, does not
+  execute shell syntax, does not overwrite process environment values, and
+  reports stable secret-free errors. `.env.local` is Git-ignored.
+- The provider boundary targets `gpt-5.6-terra`, uses strict typed Responses
+  output with no tools and `store=false`, bounds timeout/history/output, and
+  permits one retry only for transient failures.
+- Local conversation persistence, 30-day expiry, authenticated read, delete
+  current, and confirmed delete-all paths are present. Transcript data is kept
+  out of health, logs, evidence downloads, and immutable research artifacts.
+- The browser identifies Deterministic demo versus OpenAI Copilot, displays the
+  outbound-data disclosure, restores local turns, exposes delete controls, and
+  keeps provider proposals advisory.
+
+These statements describe inspected code at an in-progress checkpoint. They
+are not a G4 verdict. Focused, product-wide, browser, live-provider, and eight
+independent audit gates still determine whether W4 may become verified.
+
+## 2026-08-07 - W4R.0 status and corrective interaction contract start
+
+### Scope and status
+
+- Started W4R at `in-progress` with planning/status production edits only.
+- Preserved W4 as `implemented` offline, G4R as `planned` and not verified,
+  G4 as `blocked`, and W5-W8 as `planned`.
+- Recorded the enforced product order
+  `W4 -> W4R -> G4R -> G4 -> W5`.
+- Preserved the independent research order
+  `D1 -> E3.1 -> E3.3 -> E4`; no research status changed.
+
+### Defects recorded
+
+- Direct map editing lacks complete catalog-stop drag, custom-waypoint drag,
+  empty-map confirmation, runtime snap, and route-segment editing workflows.
+- Every ordered adjacent itinerary pair must render validated route geometry or
+  an explicit unvalidated gap; a silently missing line is not accepted.
+- Compare requires exact option selection, active-preview support, instance-owned
+  map controllers, and exact Evidence resolution.
+- Accept and Keep remain fail-closed until the W5 repository/ledger/pointer
+  transaction exists; W4R must present that boundary truthfully.
+
+### Files changed
+
+- `docs/current/current_problem_manifest.md`
+- `docs/planning/current_execution_plan.md`
+- `docs/planning/research_pipeline_and_gate_map.md`
+- `docs/planning/itinerary_repair_copilot_implementation_plan.md`
+- `CODEX_EDIT_LOG.md`
+
+No product source, test source, immutable run, frozen dashboard, or research
+artifact was changed by this status-edit package.
+
+### Verification
+
+- Focused local Markdown link, balanced-fence, and whitespace scan: passed for
+  the four edited authority files.
+- Status consistency scan: passed; required W4R/G4R and independent research
+  sequence are present, and no old direct W4-to-W5 sequence remains.
+- `python -m pytest tests\plans\test_repository.py -q --basetemp <unique-temp>`
+  -> `4 passed in 0.96s`.
+- `git diff --check -- <five assigned paths>` -> passed; Git reported only the
+  existing LF-to-CRLF working-copy warnings.
+
+### Remaining boundary
+
+- This documentation establishes W4R entry and scope only. It is not evidence
+  that W4R code is implemented or that G4R/G4 passed.
+- G4 still requires newly authorized post-fix live-provider evidence.
+- W5 decision mutations remain disabled.
+
+## 2026-08-08 - W4R route-integrity and direct-interaction checkpoint
+
+### Status boundary
+
+- W4R remains `in-progress`; G4R is not verified and G4 remains blocked.
+- W5 acceptance and Keep-original mutations remain disabled.
+- Product work did not advance D1/E3.1, E3.3, E4, E3.UX5, or E5.
+
+### Implemented checkpoint
+
+- Added `product-geography-v2`: every required itinerary connection is either
+  a road-validated LineString or an explicit null-geometry gap. The California
+  demo exposes three hash-distinct plans, each with 17 route-path nodes and
+  16/16 validated legs.
+- Added loopback-only OSRM readiness and authenticated, revision-checked,
+  non-mutating snap preview with normal, warning/confirmation, and rejected
+  distance states.
+- Replaced the singleton map lifecycle with an instance-owned MapLibre
+  controller and added Select/Edit modes, stop and exact route-leg selection,
+  keyboard route alternatives, exploratory raw-point semantics, and explicit
+  route-gap text.
+- Corrected route selection to use immutable `route_leg_id` rather than the
+  internal GeoJSON feature ID.
+- Corrected evaluated preview geography. A fresh child may reuse registered
+  route geometry only when its route-relevant sequence, stops, days,
+  coordinates, and lodging projection exactly match the source child; lineage
+  is rewritten to the new child ID/hash. Otherwise geography remains
+  unavailable.
+- Corrected route-feedback targeting and certificate messaging. The live
+  route-feedback -> Preview -> refresh journey now retains one typed draft, an
+  eligible/PASSED proposal, a current certificate, and a visible map canvas.
+
+### Verification
+
+- Product/PlanRepository regression: 463 passed, one known Starlette
+  TestClient deprecation warning.
+- Focused preview/controller/frontend regression after live fixes: 40 passed.
+- Focused route-selection regression: 12 passed.
+- JavaScript syntax, Ruff, and diff checks passed for the changed slice.
+- Independent route-artifact comparison found 48/48 required legs, zero gaps,
+  and zero plan/hash/matrix/geometry mismatches.
+- Independent security audit passed authentication, revision, Host, Origin,
+  schema/body-size, cache, CSP, and redaction boundaries.
+- Root live browser regression confirmed one map canvas immediately after
+  evaluated Preview and after refresh, current PASSED certificate text, and no
+  console warnings/errors.
+
+### Independent blocking findings
+
+- G4R remains blocked: exploratory placement cannot append an executable
+  custom waypoint; catalog/custom drag, POI discovery, richer stop/timeline
+  editing, and route-policy editing are incomplete.
+- Compare still requires in-place exact option selection and baseline/option
+  maps; mobile/tablet workflows and accessibility sizing/hierarchy remain
+  incomplete. Separate remediation batches are in progress.
+- Accept/Keep remain intentionally closed until the W5 repository, decision
+  journal, and atomic-pointer transaction exists.
+
+### D1 research audit
+
+- Frozen v14 remains unchanged. All 12 exact cells still refused at the
+  50,000 cap.
+- A new prerequisite blocker, D1-S0 benchmark semantic validity, was recorded:
+  Phase 0 dropped source lodging assignments; synthetic hotel replacement IDs
+  lack catalog/access/route evidence; passing non-exact hotel rows were
+  zero-edit no-ops; and lodging decisions are not coupled to route anchors.
+- `gurobi_exact_v2.py` is currently a representation/index scaffold and does
+  not optimize. D1-S0 must pass before a representative exact solve, followed
+  by D1-A or D1-B and a new immutable rerun. No research status was promoted.
+
+## 2026-08-08 - W4R Compare, responsive, and affected-route remediation
+
+### Implemented
+
+- Added exact in-place Compare selection with separate baseline and option
+  MapLibre controllers, exact plan/content-hash/evidence resolution, pane-local
+  text and failure states, a mobile Baseline/Option toggle, and no silent first
+  alternative fallback. Selecting an option no longer navigates to Evidence.
+- Fixed the initial Compare baseline regression so the accepted map is created
+  before an option is selected. A subsequent blank-pane audit led to deferred
+  controller startup, explicit map sizing, post-ready resize, and camera
+  synchronization only after both maps finish their initial fitted view.
+- Improved responsive and accessibility contracts: 44px critical targets,
+  readable support text, compact scrollable mobile inspector/draft sheets,
+  reachable toolbar scrolling, wrapping technical IDs, and removal of the
+  whole-workspace `aria-live` region.
+- Extended authenticated snap preview for an exact accepted-plan route leg.
+  The server resolves authoritative endpoints and obtains predecessor-to-snap
+  and snap-to-successor road legs from loopback OSRM while leaving the session
+  revision, draft, parent, and workspace unchanged.
+- Hardened affected-route evidence after an independent adversarial failure.
+  Preview legs now require the exact runtime-OSRM provenance contract, a
+  64-character lowercase SHA-256 query hash, finite positive metrics, bounded
+  finite geometry, timezone-aware retrieval time, and finite nonnegative snap
+  diagnostics.
+
+### Verification
+
+- Product-app plus PlanRepository regression after Compare/mobile integration:
+  `482 passed`, with one known Starlette TestClient/httpx deprecation warning.
+- Final independent affected-route/provenance re-audit: `104 passed`, with the
+  same known warning. Adversarial null-offset timestamps, untrusted/invalid
+  snaps, malformed hashes, non-finite geometry, and source/status mismatches
+  all failed closed.
+- Compare focused contract regression: `23 passed`; integrated Compare,
+  geographic frontend, responsive, controller, and frontend contracts also
+  passed after stale assertions were migrated.
+- Ruff passed for the entire product application, product tests, and launcher.
+  JavaScript syntax and repository-wide `git diff --check` passed.
+- `scripts/run_project_checks.py` passed Ruff, context-snapshot tests, and the
+  full `816 passed` repository suite. A duplicate pytest module basename was
+  resolved by renaming the product test to
+  `tests/product_app/test_product_route_coverage.py`; full collection now
+  accounts for all 816 tests without import ambiguity.
+- Live affected-route request on the replacement service returned two
+  road-validated, non-fallback GeoJSON legs with query evidence and expiry;
+  revision remained 0 and the draft remained empty.
+- Live Compare verified exact in-place selection, exact Evidence binding, and
+  one baseline/two selected canvases before the blank-pane visual audit. The
+  later camera/layout remediation has deterministic coverage but still awaits
+  a post-fix independent visual re-audit.
+
+### Gate boundary and remaining work
+
+- W4R remains `in-progress`; G4R remains unverified. No status was promoted.
+- Independent pre-remediation Compare audit failed because mounted canvases
+  appeared blank despite ready status. The fix is implemented, but browser
+  availability prevented a post-fix independent screenshot in this checkpoint.
+- Snap preview remains deliberately `persisted:false`; confirmed custom
+  waypoint append/revise/undo, catalog/custom drag, route-aware POI discovery,
+  richer stop/timeline/constraint editing, and full mobile route equivalence
+  remain required.
+- G4 live provider evaluation and W5 acceptance/Keep transactions remain
+  blocked by their existing gates. D1-S0 remains independent and blocked.
+
+## 2026-08-08 - W4R confirmed custom-waypoint integrity slice
+
+### Implemented
+
+- Added a server-owned, revision-checked confirmation path for route-checked
+  custom stops and route-only waypoints. The browser confirms only the preview
+  ID and user-entered metadata; it cannot submit authoritative snapped
+  coordinates, access points, route geometry, or route evidence.
+- Added explicit `map-edit-capabilities-v1` states. Confirmed waypoint add and
+  relocation are enabled as route-checked interactions, while evaluated repair
+  remains truthfully unavailable until the draft compiler/evaluator supports
+  these operations.
+- Added stable waypoint identity, one-time preview consumption, warning
+  acknowledgement, ordered draft persistence, refresh restoration, Undo, and
+  custom-waypoint relocation. Catalog markers remain immutable and
+  non-draggable.
+- Added strict duration-mode and role validation, exact two-leg road-evidence
+  validation, selected-access-point provenance, and stable insertion context.
+- Hardened persisted-session trust after independent adversarial findings.
+  Confirmed map operations are reduced and validated during restore, read,
+  authentication, mutation, and waypoint resolution. Malformed or
+  semantically inconsistent snapshots fail with
+  `confirmed_map_draft_invalid` without rewriting stored bytes or appending a
+  new operation.
+- Replaced the permissive browser reducer with a fail-closed executable
+  reducer. Invalid operations are ignored whole; no partial marker or route is
+  displayed as route-checked.
+- Added selected-marker-before-drag, Cancel/Escape restoration, accessible
+  keyboard/text relocation controls, draft waypoint/route overlay rendering,
+  and truthful route-checked-versus-evaluated copy.
+
+### Verification
+
+- Settled focused backend/frontend/geography/security regression:
+  `142 passed`, with one known Starlette TestClient/httpx deprecation warning.
+- Full product application plus `PlanRepository` regression: `543 passed`,
+  with the same known warning.
+- Independent confirmed-waypoint integrity audit: PASS; `110 passed` plus an
+  executable adversarial JavaScript reducer check, syntax checks, Ruff,
+  whitespace validation, and secret/raw-path scanning.
+- A real API-confirmed operation was passed into the actual JavaScript reducer
+  and resolved as exactly one waypoint with exactly two validated road legs.
+- Tampered restart cases covering missing authoritative fields, changed
+  metadata, and changed insertion context failed with HTTP 409; stored bytes
+  remained unchanged.
+- Independent route-waypoint relocation preserved stable identity, null visit
+  duration, stored insertion context, exact-one append semantics, Undo, and the
+  immutable parent hash.
+- JavaScript syntax checks, product-wide Ruff, and repository-wide
+  `git diff --check` passed. One test was made deterministic by choosing a
+  known parent-plan stop instead of relying on set iteration order.
+
+### Gate boundary and remaining work
+
+- W4R remains `in-progress`; G4R and G4 remain unverified/blocked. This slice
+  does not promote any product or research gate.
+- The running product process must be restarted before live browser testing of
+  the new endpoints and cache-busted frontend assets.
+- Live pointer/drag, layout, and Compare post-fix visual verification remains
+  pending. The independent audit for this slice was code/API focused.
+- Confirmed custom map operations currently stop at truthful route-checked
+  feedback. Compiler/evaluator support, route-aware POI replacement/discovery,
+  richer stop editing, and W5 acceptance/Keep transactions remain later work.
+- D1-S0 lodging semantic validity remains an independent research blocker;
+  no frozen research artifact or status was changed.
+
+## 2026-08-08 - W4R route-aware POI discovery and registered replacement slice
+
+### Implemented
+
+- Added a hash-pinned California Coast product POI catalog with two exact,
+  source-bound registered replacements: Bixby Creek Bridge Viewpoint and the
+  Santa Barbara Sea Center. Display coordinates remain separate from the
+  router-selected access points. Access is labeled as a provider route point,
+  not as a verified venue entrance.
+- Added deterministic catalog generation and verification. The builder binds
+  the product package, registered child artifacts, certificates, and frozen
+  route matrix; it refuses output outside the configured catalog directory.
+- Added authenticated, revision-checked, read-only route-aware candidate
+  discovery for an exact day, route leg, and optional replacement target.
+  Replacement burden uses the exact two-leg baseline:
+  `T(i,c) + T(c,j) - T(i,target) - T(target,j)`.
+- Added explicit candidate states and nullable evidence. Both current frozen
+  candidates are independently evaluated feasible, but neither is ranked or
+  labeled recommended. Missing opening hours, weather, parking, walking,
+  waiting, visit duration, descriptions, and URLs remain `Unavailable`.
+- Added bounded candidate and route-access layers, keyboard/touch candidate
+  controls, strict exact-selection state, safe external-link handling, and an
+  explicit registered-mapping-only `replace_nearby` action. Discovery never
+  commits a draft automatically.
+- Hardened the complete API-to-browser trust boundary after independent
+  adversarial findings. Route-matrix schema, entity index, header provenance,
+  raw route cells, access evidence, candidate burden, evaluator evidence,
+  precheck state, registered mapping, route roles, and browser cross-field
+  consistency now fail closed.
+
+### Verification
+
+- Settled backend catalog/burden/POI API suite: `85 passed`, with one known
+  Starlette TestClient/httpx deprecation warning.
+- Settled frontend API-to-actual-normalizer suite: `35 passed`, with the same
+  warning. Nine forged cross-field payload families are rejected.
+- Independent POI integrity audit: PASS WITH LIMITATIONS; `99 passed` plus
+  Ruff, three JavaScript syntax checks, deterministic catalog regeneration,
+  repository-wide whitespace validation, and secret/raw-path/placeholder
+  scans.
+- The independent exact journey discovered two candidates, appended exactly
+  one `replace_nearby` draft, produced eligible child
+  `plan_f5ee52459659dcb5`, and preserved both parent-plan hashes. Accept and
+  Keep-original continued to fail closed with HTTP 409 until W5.
+- Additional map/controller/security/W3 regression after cache-token migration:
+  `77 passed`. Geographic/frontend normalization regression: `25 passed`.
+- Full product application plus `PlanRepository` regression was completed as
+  three isolated, non-overlapping shards after the monolithic command exceeded
+  its time limit: `207 + 223 + 166 = 596 passed`, with the same known warning.
+- The approved shell now cache-busts the POI JavaScript and CSS assets with
+  `20260808-w4r-poi1`.
+
+### Gate boundary and remaining work
+
+- W4R remains `in-progress`; G4R and G4 remain unverified/blocked. No product
+  or research status was promoted.
+- This is a frozen two-candidate deterministic catalog, not a general POI
+  provider. It does not claim opening-hours, weather, availability, semantic
+  recommendation, or verified entrance evidence.
+- Only registered candidates can currently compile into executable
+  `replace_nearby` operations. General place ingestion and arbitrary candidate
+  confirmation remain unavailable.
+- The running product process must be restarted before live browser testing.
+  Live visual, touch, mobile, and post-fix Compare audits are still pending.
+- Rich role/time/duration/order/attribute-level stop editing, route-policy
+  editing, W5 acceptance, and D1-S0 exact-research recovery remain later work.
+
+## 2026-08-08 - W4R typed stop editor and route-issue integrity slice
+
+### Implemented
+
+- Added a closed `product-typed-edit-capabilities-v1` contract for role, day,
+  order, duration, time-window, commitment, attribute-constraint, route
+  preference, and route-issue actions. Each operation declares whether it is
+  enabled, its feedback tier, whether evaluated Preview can execute it, and a
+  stable blocking code.
+- Added strict persistent typed drafts for stop role/order/duration/time-window,
+  commitment, independent attribute constraints, and exact accepted-route-leg
+  user issue reports. These survive restart and support Undo.
+- Added authenticated `POST /api/sessions/{session_id}/draft/impact-preview`,
+  bound to the exact session revision and immutable parent plan/hash. It
+  reports changed attributes and draft/evaluated capability, and explicitly
+  returns `not_certified`; it never emits eligibility or certificate claims.
+- Enabled only `set_stop_day` through the existing deterministic repair
+  pipeline. A real Griffith Observatory Day 3 to Day 4 request currently
+  returns a truthful `no_feasible_evaluated_child` without fabricating a child,
+  diff, or certificate. Same-day requests fail as `draft_no_effect`.
+- Kept stop role/order/duration/time-window/commitment/attribute edits and route
+  issue reports draft-only because the current evaluator does not model them.
+  Route preference remains disabled because local OSRM/evaluator cannot execute
+  it truthfully.
+- Added shared conflict accounting across legacy and typed day/order/attribute
+  operations, protected commitment enforcement, exact target revalidation on
+  restore/read/mutation, and fail-closed handling for stale or tampered drafts.
+- Replaced the limited stop/route inspector with human-readable accepted-plan
+  details, seven typed stop-edit forms, an exact route-issue form, draft impact
+  summaries, explicit feedback tiers, unavailable-state rendering, responsive
+  mobile forms, and keyboard/touch-sized actions.
+- Hardened the UI so child-plan features cannot open accepted-plan edit actions,
+  impact rows are rebound to the exact ordered session draft and capabilities,
+  raw target IDs do not dominate primary content, and null/string/nonpositive
+  route metrics render `Unavailable` rather than zero.
+
+### Verification
+
+- Backend typed contract suite: `14 passed`; post-hardening
+  waypoint/workspace/product trust regression: `35 passed`; broader impacted
+  backend regression: `89 passed`.
+- Frontend typed/geographic/POI/waypoint/Compare/responsive integration:
+  `69 passed`, including an actual nonempty backend payload through the real
+  JavaScript normalizers and executable forged-payload cases.
+- Root cross-module regression: `159 passed`, with one known Starlette
+  TestClient/httpx deprecation warning.
+- Independent typed stop/route integrity audit: PASS for this deterministic
+  slice; `133 passed` plus API forgery, restart/Undo, immutable-parent hash,
+  executable JavaScript adversarial, Ruff, and whitespace checks.
+- JavaScript syntax, executable typed-editor adversarial tests, product-wide
+  Ruff, and repository-wide `git diff --check` passed.
+
+### Gate boundary and remaining work
+
+- W4R remains `in-progress`; G4R and G4 remain unverified/blocked. No product
+  or research status was promoted.
+- Draft-only operations intentionally cannot run evaluated repair. Their solver
+  and independent evaluator semantics must be implemented before they can
+  become decision-eligible.
+- Protected `must_keep`/`booked` permission acquisition is not enabled; those
+  strengths fail closed. Route preference remains disabled.
+- The running product process must be restarted before live browser testing of
+  `20260808-w4r-typed1`. Live visual, touch, mobile, and manual screen-reader
+  audits remain required before G4R verification.
+- W5 acceptance and Keep-original remain disabled. D1-S0 exact-research
+  recovery remains separate and blocked.
+
+## 2026-08-08 - W4R independently evaluated same-day stop reorder
+
+### Implemented
+
+- Promoted only `set_stop_order` from draft-only feedback to an independently
+  evaluated direct edit. The operation is restricted to the stop's accepted
+  day and uses a zero-based server contract while the UI presents human
+  one-based positions.
+- Added pre-append and restore validation against the immutable parent's exact
+  in-day order. Wrong-day, Boolean/out-of-range, no-effect, stale, and
+  conflicting requests fail before revision or draft mutation.
+- Added deterministic direct-edit compilation that creates an immutable child,
+  updates `selected_stops`, `ordered_days`, the global sequence, and
+  content-addressed per-day route identities, then validates the complete
+  frozen route matrix.
+- Added exact reorder and road-change `PlanDiff` records, a fresh independent
+  `PlanEvaluator` certificate, and `product-geography-v2` bound to the new
+  child identity. The representative Day 4 reorder has 16/16 required
+  road-validated legs and zero gaps.
+- Added strict response identities for session revision, ordered draft
+  operations, parent/child, diff, certificate, route evidence, and geography.
+  The browser recomputes the draft hash and rejects identity, revision,
+  route-chain, endpoint, distance, provenance, and geography forgeries before
+  changing session state.
+- Removed inherited aggregate travel, utility, contextual-risk, and edit
+  metrics that the direct evaluator did not recompute. Only the exact selected
+  attraction count is retained; all other missing metrics remain unavailable.
+- Made impact and Preview agree for mixed drafts. A reorder combined with any
+  non-order operation is non-executable and reports
+  `draft_evaluated_operation_combination_unsupported` before Preview.
+- Added evaluated-edit evidence UI, a fixed-day reorder form, responsive
+  keyboard/touch controls, human-readable blocking text, and cache-busted
+  `20260808-w4r-typed2` assets.
+
+### Verification
+
+- Root regression across reorder compiler/API/frontend, typed-edit contracts,
+  W3 workspace/preview, geography, security, product API, `PlanDiff`, and
+  `PlanEvaluator`: `123 passed`, with one known Starlette TestClient/httpx
+  deprecation warning.
+- Independent frozen-boundary audit: PASS; `18 passed` for backend plus actual
+  API-to-JavaScript and forgery cases, and `5 passed` for certificate freshness
+  and W5-deferred guardrails.
+- Focused `PlanDiff`/`PlanEvaluator` regression: `15 passed`. Frontend
+  integration: `14 passed`; actual reorder/legacy/mixed/forgery contract:
+  `4 passed`.
+- JavaScript syntax, executable typed-editor adversarial checks, scoped Ruff,
+  and repository-wide `git diff --check` passed.
+
+### Gate boundary and remaining work
+
+- This is an implemented and independently verified feature slice, not W4R or
+  G4R completion. CP-010/W4R remains `in-progress`; G4R remains unverified; G4
+  remains blocked; W5 acceptance and Keep-original remain disabled.
+- Role, duration, time-window, commitment, attribute-constraint, route-issue,
+  and route-preference changes are not newly evaluator-enabled. Duration lacks
+  a typed diff, departure-window semantics are not modeled losslessly, and
+  unsupported route policies remain unavailable.
+- Mixed-operation evaluated preview is intentionally unsupported. The browser
+  validates route structure, endpoints, distance, and provenance, but the
+  current evidence contract has no per-leg hash for every interior polyline
+  coordinate.
+- Stop-by-stop opening-window accounting remains unavailable. Live visual,
+  accessibility, mobile/touch, and full black-box journey audits still require
+  a restarted product process and are mandatory before G4R verification.
+- The D1-S0 lodging-semantic repair and exact Gurobi recovery remain a separate
+  blocked research workstream; no research status or frozen artifact changed.
+
+## 2026-08-08 - W4R independently evaluated exact visit duration
+
+### Implemented
+
+- Promoted only canonical `set_stop_duration` `exact` mode to independently
+  evaluated preview. Exact values must be integer minutes from 15 through 480
+  and repeat the same value in preferred/minimum/maximum fields. Boolean,
+  float, string, missing, unequal, and out-of-range values fail before draft
+  mutation.
+- Kept `preferred`, `minimum`, `maximum`, and `range` duration semantics
+  draft-only with the stable `duration_mode_evaluation_not_supported` blocker;
+  the scalar evaluator cannot enforce those modes or their objective penalties
+  losslessly.
+- Added a versioned `plan-diff-v2` only when typed `DurationChange` records are
+  present. Historical and non-duration diffs retain the exact
+  `plan-diff-v1` serialization. Duration changes preserve raw missingness,
+  canonical before/after constraints, scalar sources, evaluator accounting
+  sources, delta, ownership strength, and cost-policy evidence; they are not
+  misreported as time shifts.
+- Added deterministic exact-duration compilation to an immutable child with a
+  new identity/hash. The child changes only the target duration constraint and
+  `visit_duration_minutes`; route sequence, route identities, and all 16
+  cached-OSRM legs remain unchanged and are revalidated with zero gaps and
+  fallbacks.
+- Added independently recomputed parent/child schedule accounting, fresh
+  evaluator certificate evidence, and exact API identities for the diff,
+  schedule, certificate warnings/failures, route matrix, child geography, and
+  ordered draft. Schedule evidence exposes travel, visit, conditional opening
+  wait, day limit, slack, and overrun.
+- Made the schedule scope explicit: parking/drop-off, walking transfer, queue
+  wait, and service buffers remain unavailable, and all fixture opening
+  windows are missing. The resulting eligible example is therefore
+  `PASSED_WITH_WARNINGS` with `incomplete_evidence`, not a claim of complete
+  itinerary-time validation.
+- Added a truthful infeasible journey: two 480-minute Day 4 edits produce a
+  fresh `day_time_exceeded` failure with a positive modeled overrun, an
+  ineligible proposal, full route evidence, and no acceptance path.
+- Hardened the API-to-browser contract against ordinary and coherently
+  self-rehashed diff, schedule, certificate, route, proposal, and cost-policy
+  forgeries. The UI shows explicit-versus-fallback duration, modeled schedule
+  components, exact slack/overrun, missing evidence, and W5-disabled state.
+- Corrected evaluator missingness globally: `weather_risk_delta` is emitted
+  only when parent and child have the same sequenced stop universe and complete
+  finite weather-risk evidence. Missing or non-finite risk now remains absent,
+  and the product renders `Unavailable` rather than fabricated zero.
+- Duration preview decision eligibility follows independent hard evaluation,
+  while `ranking_eligible` is always false because no evaluator-owned ranking
+  criterion exists. `acceptance_eligible` remains false with the W5 blocker.
+  The approved shell cache-busts duration assets as
+  `20260808-w4r-duration1`.
+
+### Verification
+
+- Backend exact-duration/diff/evaluator/API regression: `78 passed`, with one
+  known Starlette TestClient/httpx deprecation warning.
+- Frontend eligible/ineligible API-to-JavaScript, coherent-rehash, reorder,
+  and contract regression: `7 passed`; broader frontend integration:
+  `31 passed`.
+- Root current-files integration across duration, reorder, typed drafts, W3
+  preview/workspace, geography, security, `PlanDiff`, and `PlanEvaluator`:
+  `151 passed`, with the same known warning.
+- Independent duration audit: PASS. Its branches covered `49` core
+  duration/diff/evaluator tests, `44` route/browser regression tests, targeted
+  missingness and API-to-browser checks, `6/6` raw zero/non-finite rejection
+  probes, and `18` final PlanEvaluator/PlanDiff regressions.
+- JavaScript syntax, executable typed-editor adversarial checks, Python
+  compileall, scoped Ruff, cache-token assertions, and repository-wide
+  `git diff --check` passed.
+
+### Gate boundary and remaining work
+
+- This is an implemented and independently verified feature slice, not W4R or
+  G4R completion. CP-010/W4R remains `in-progress`; G4R remains unverified; G4
+  remains blocked; W5 acceptance and Keep-original remain disabled.
+- Non-exact duration modes remain draft-only. Time-window departure semantics,
+  role changes, commitment/attribute constraints, and supported route-policy
+  evaluation still require separate lossless diff/evaluator contracts.
+- Schedule totals are partial modeled accounting, not complete real-world
+  visit duration: opening windows, parking, walking, queueing, and service
+  buffers remain unavailable for this fixture.
+- No live visual, manual accessibility, mobile/touch, or complete black-box
+  audit was performed for the new duration UI. The stale running product
+  process must be restarted before those independent G4R audits.
+- The D1-S0 lodging-semantic repair and exact Gurobi recovery remain separate
+  blocked research work; no frozen research artifact or status changed.
+
+## 2026-08-08 - W4R independently evaluated stop time windows
+
+### Implemented
+
+- Promoted only canonical `set_stop_time_window` edits to independently
+  evaluated preview. Requests use the exact
+  `{earliest_arrival: HH:MM|null, latest_departure: HH:MM|null}` contract,
+  require at least one bound, reject non-zero-padded clocks, Boolean/extra
+  fields, cross-midnight ranges, duplicates, stale revisions, wrong targets,
+  no-effect writes, and unsupported mixed-operation drafts before unintended
+  persistence.
+- Added the trip-owned `stop-time-window-constraint-v1` field without
+  rewriting place opening-hour or scheduled arrival/departure aliases.
+  Earliest arrival is explicitly modeled as service admission: the raw road
+  arrival remains unchanged and a separate required-window wait advances
+  service start. Latest departure is checked after the modeled visit rather
+  than as a latest-start shortcut.
+- Added conditional `plan-diff-v3` serialization with typed
+  `TimeWindowChange` records and ownership-weighted cost evidence. Existing
+  non-time-window v1 and duration-only v2 diff shapes remain unchanged; time
+  windows are never represented as generic time shifts.
+- Added deterministic immutable-child compilation, complete revalidation of
+  the unchanged 16-leg frozen road route, and a fresh independent evaluator
+  certificate. Feasible earliest-only, latest-departure violation, and
+  earliest-wait day-overrun cases produce distinct truthful outcomes with
+  positive violation accounting where applicable.
+- Added hash-bound parent/child schedule evidence with the registered demo's
+  configured 09:00 day start, exact ordered incoming route leg and query hash,
+  raw road arrival, opening-window value/source or explicit unavailability,
+  opening wait, required-window wait, service start, visit value/source,
+  departure, latest-departure status and overrun, blocking codes, and complete
+  trace order for all nine accepted stops.
+- Hardened both server and browser boundaries against coherently rehashed
+  trace removal/reordering, shifted day start and arrivals, modified route
+  durations, invented opening evidence, altered visit sources, bounds, waits,
+  blockers, statuses, certificate evidence, and cost policy. Missing opening
+  evidence remains missing and is never converted to zero or a checked claim.
+- Added evaluated time-window UI evidence that distinguishes route arrival,
+  place opening evidence, trip-required wait, service start, visit, and
+  departure. Decision eligibility follows the independent certificate;
+  `ranking_eligible` remains false and W5 acceptance remains disabled. Assets
+  are cache-busted as `20260808-w4r-timewindow1`.
+
+### Verification
+
+- Backend time-window developer suite: `17 passed`; seven-file impacted
+  backend regression: `104 passed`.
+- Root current-file split runs: `17 passed` for the time-window backend,
+  `23 passed` for `PlanDiff` and `PlanEvaluator`, and `52 passed` for the
+  time-window/duration/reorder/typed/geographic frontend integration. Each
+  completed with only the known Starlette TestClient/httpx deprecation
+  warning where applicable.
+- Independent time-window audit: PASS. Clean authoritative runs were
+  `40 passed` for backend/diff/evaluator, `3 passed` for the actual
+  API-to-JavaScript adversarial contract, and `14 passed` for typed
+  capability/session regression.
+- JavaScript syntax, executable typed-editor adversarial checks, scoped Ruff,
+  Python compilation, and scoped whitespace checks passed. A larger combined
+  pytest process reached 100% without reported failures but hung during
+  Windows post-test cleanup; it was terminated and is deliberately excluded
+  from pass counts.
+
+### Gate boundary and remaining work
+
+- This is an implemented and independently verified feature slice, not W4R
+  or G4R completion. CP-010/W4R remains `in-progress`; G4R remains unverified;
+  G4 remains blocked; W5 acceptance and Keep-original remain disabled.
+- The browser verifier is intentionally pinned to this registered demo's
+  09:00 day start. All nine demo stops lack source-backed opening windows and
+  use the disclosed 45-minute configured visit fallback. A future runtime
+  configuration or source-backed opening-window rollout requires separately
+  validated workspace evaluator-configuration and source identities.
+- No live browser, mobile/touch, visual, manual screen-reader, or complete
+  black-box audit was performed for this slice because the running product
+  process still needs a user-controlled restart. Those audits remain required
+  before G4R verification.
+- Role, commitment, attribute-constraint, and supported route-policy
+  evaluation remain separate work. The D1-S0 lodging-semantic repair and exact
+  Gurobi recovery remain a separate blocked research workstream; no frozen
+  research artifact or status changed.
+
+## 2026-08-08 - W4R independently evaluated itinerary-stop roles
+
+### Implemented
+
+- Promoted only the non-structural, visit-bearing `set_stop_role` values
+  `attraction`, `activity`, `meal`, `rest_stop`, and `scenic_stop` to
+  independently evaluated preview. Structural roles (`lodging`,
+  `transport_hub`, `route_waypoint`, `origin`, and `destination`) remain
+  draft-only with the stable `stop_role_evaluation_not_supported` blocker.
+- Added a distinct nullable trip-owned `itinerary_role` plus
+  `itinerary_role_source`; map/plan display role and place categories remain
+  separate and unchanged. Missing parent role evidence stays explicitly
+  unavailable, and the editor no longer silently defaults it to attraction.
+- Added conditional `plan-diff-v4` serialization with typed `RoleChange`
+  records, exact raw-source missingness, role-specific ownership strength, and
+  disclosed cost. Existing v1 through v3 diff shapes remain unchanged.
+- Added deterministic immutable-child compilation and fresh independent
+  evaluation. Role edits preserve stop order, days, route IDs, all 16 validated
+  cached-OSRM legs, and modeled schedule accounting. Unrecomputed utility,
+  contextual-risk, recommendation, and ranking metrics remain unavailable.
+- Added parent-bound, deterministic, sanitized role-constraint evidence.
+  Existence locks do not block or weight role changes; role-scoped constraints
+  are value-aware, explicit-permission mismatches fail closed, and only the
+  documented weighted-mismatch policy may proceed with a warning and cost.
+- Added explicit semantic scope: itinerary role is a trip-specific user
+  assertion, does not change place identity or category, has no inferred
+  semantic-fit/recommendation claim, and has no route or schedule effect for
+  the evaluated subset.
+- Hardened API restore and browser consumption. The full proposal is
+  HMAC-SHA256 authenticated with the in-memory session mutation token; only a
+  salted verifier is stored. Restore verifies the HMAC, recompiles, reconstructs
+  the exact timestamp-bound certificate, and exact-compares role impact, diff,
+  geography, route, schedule, constraint, and certificate evidence. The
+  browser independently recomputes the HMAC before accepting the proposal.
+- Duplicate, stale, mixed-operation, malformed-parent, wrong-role, structural,
+  certificate timestamp/hash, ownership, route, schedule, geography, and
+  coherently rehashed forgery cases fail closed. W5 acceptance remains disabled
+  and `ranking_eligible` remains false.
+- Cache-busted the evaluated-role frontend assets as
+  `20260808-w4r-role2`.
+
+### Verification
+
+- Backend role suite: `23 passed`; impacted diff/evaluator/geography/typed
+  regression: `50 passed`; prior evaluated order/duration/time-window/W3
+  regression: `85 passed`.
+- Frontend actual API-to-JavaScript/HMAC harness: `3 passed`; five-slice
+  integration: `23 passed`; full eleven-file frontend boundary: `86 passed`.
+- Root current-files role/API/frontend/PlanDiff/evaluator gate: `53 passed`.
+- Independent role audit: PASS with `53 passed` for the role boundary and
+  `73 passed` for prior evaluated-slice regression.
+- JavaScript syntax, executable adversarial checks, scoped Ruff, Python
+  compilation, and repository-wide `git diff --check` passed. TestClient runs
+  retain only the known Starlette/httpx deprecation warning.
+
+### Gate boundary and remaining work
+
+- This is an implemented and independently verified feature slice, not W4R or
+  G4R completion. CP-010/W4R remains `in-progress`; G4R remains unverified; G4
+  remains blocked; W5 acceptance and Keep-original remain disabled.
+- Historical PlanDiff v1 through v3 ownership-cost logic still collapses some
+  non-role constraint relations by target. It did not affect the registered
+  demo or this role-v4 slice, but a versioned relation-specific migration is
+  required before claiming general attribute-level ownership compliance.
+- The integrity boundary assumes the existing loopback single-user model.
+  An adversary holding both state-file write access and the live bearer token
+  is outside scope and is not claimed to be cryptographically prevented.
+- Structural role semantics, commitment and attribute-constraint evaluation,
+  supported route-policy evaluation, and live browser/mobile/accessibility
+  audits remain separate work. The D1-S0 lodging-semantic repair and exact
+  Gurobi recovery remain a separate blocked research workstream; no frozen
+  research artifact or phase status changed.
+
+## 2026-08-08 - PlanDiff v5 relation-specific ownership and cost evidence
+
+### Implemented
+
+- Replaced target-wide ownership weighting for newly owned non-role changes
+  with an explicit relation-to-attribute mapping covering existence, day,
+  start time, end time, exact duration, required time window, and one-based
+  stop order. Existence locks no longer weight unrelated day, time, duration,
+  window, or order edits.
+- Added conditional `plan-diff-v5` serialization. V5 is emitted only when an
+  actual changed attribute has relevant active accepted-parent ownership
+  evidence; unconstrained historical v1 through v4 outputs retain their prior
+  schemas. Role evidence remains separately versioned under v4.
+- Added deterministic, parent-hash-bound ownership evidence with sanitized
+  constraint rows, exact before/after values, satisfaction before/after,
+  strongest applicable strength, policy weights, delta scale, and finite cost
+  for every listed diff change. The evidence explicitly makes no permission,
+  feasibility, ranking, or acceptance claim.
+- Preserved raw missingness and strict schemas: booleans are not integers;
+  exact durations require equal integer values from 15 through 480; time
+  windows allow either one-sided bound but reject both-null and cross-midnight
+  values; start/end aliases remain independent; order evidence is one-based
+  and deliberately excludes editor `sequence_index` aliases.
+- Bound serialized evidence back to the exact typed PlanDiff universe. Kind,
+  target, changed attributes, before/after values, owner strength, delta,
+  cost, satisfaction rows, selected constraints, and the complete consumed
+  constraint-ID set must all match. Coherently rehashed substitutions and
+  unused constraint rows fail closed.
+- Required child owned constraints to exactly match the accepted parent before
+  v5 cost derivation, preventing child-side injection, removal, or strength
+  upgrade. Relevant malformed, duplicate, or contradictory constraints fail
+  deterministically regardless of input order.
+- Kept lodging and road relation ownership explicitly unmigrated. Their
+  ordinary base-cost rows remain represented when v5 is active, but legacy
+  lodging/road ownership cannot be mixed into v5 evidence.
+- Kept the migration domain-only: the registered product compiler verifier
+  rejects `plan-diff-v5` with `draft_pipeline_diff_invalid`. No browser,
+  product capability, evaluator eligibility, W5 transaction, or status was
+  activated by this slice.
+
+### Verification
+
+- Root focused v5 adversarial suite: `19 passed`; PlanDiff and PlanEvaluator
+  compatibility: `27 passed`.
+- Independent audit: PASS with `46 passed` for v5/diff/evaluator, `46 passed`
+  for evaluated order/duration product regression, `40 passed` for evaluated
+  time-window/role regression, and `8 passed` for model/repository
+  compatibility: **140 clean authoritative passes** total.
+- One combined 86-test run printed `86 passed` but the Windows wrapper timed
+  out during cleanup; it was excluded and replaced by the two clean-exit
+  product regression splits above.
+- Python compilation, scoped Ruff, and scoped whitespace checks passed. Only
+  existing LF-to-CRLF notices remain.
+
+### Gate boundary and remaining work
+
+- This is an implemented and independently verified domain-foundation slice,
+  not product activation or W4R/G4R completion. CP-010/W4R remains
+  `in-progress`; G4R remains unverified; G4 remains blocked; W5 acceptance and
+  Keep-original remain disabled.
+- A future product consumer must resolve the evidence parent content hash
+  against the authoritative accepted parent artifact before enabling v5.
+  Lodging/road relation migration and role-v4 unification remain separate.
+- Live browser, mobile/touch, visual, accessibility, and complete black-box
+  audits still require the user-controlled product-process restart. The D1-S0
+  lodging-semantic repair and exact Gurobi recovery remain a separate blocked
+  research workstream; no frozen research artifact or phase status changed.

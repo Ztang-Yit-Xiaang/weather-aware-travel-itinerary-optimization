@@ -7,7 +7,7 @@ import json
 import math
 import urllib.parse
 import urllib.request
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
@@ -54,6 +54,11 @@ ROAD_ROUTE_CACHE_AUDIT_COLUMNS = [
     "cache_path",
     "status",
     "road_validated",
+    "origin_snap_distance_m",
+    "destination_snap_distance_m",
+    "max_snap_distance_m",
+    "snap_threshold_m",
+    "snap_validated",
     "reason",
     "fetch_attempted",
     "fetch_status",
@@ -69,6 +74,12 @@ ROAD_ROUTE_REQUEST_COLUMNS = [
     "origin_longitude",
     "destination_latitude",
     "destination_longitude",
+    "origin_input_latitude",
+    "origin_input_longitude",
+    "destination_input_latitude",
+    "destination_input_longitude",
+    "origin_coordinate_source",
+    "destination_coordinate_source",
     "cache_key",
     "cache_path",
     "osrm_route_url",
@@ -150,6 +161,16 @@ def _payload_route(payload: dict[str, Any]) -> dict[str, Any]:
         return raw_routes[0]
     return {}
 
+
+
+def _endpoint_snap_distances(payload: dict[str, Any]) -> tuple[float, float]:
+    raw = payload.get("raw") if isinstance(payload.get("raw"), dict) else payload
+    waypoints = raw.get("waypoints", []) if isinstance(raw, dict) else []
+    if not isinstance(waypoints, list) or len(waypoints) < 2:
+        return math.nan, math.nan
+    origin = _safe_float(waypoints[0].get("distance") if isinstance(waypoints[0], dict) else None)
+    destination = _safe_float(waypoints[-1].get("distance") if isinstance(waypoints[-1], dict) else None)
+    return origin, destination
 
 def _latlon_geometry(payload: dict[str, Any]) -> list[list[float]]:
     latlon = payload.get("latlon_geometry")
@@ -267,11 +288,25 @@ def _route_points_for_day(day_rows: pd.DataFrame) -> list[dict[str, Any]]:
     return points
 
 
-def iter_route_leg_requests(route_stops_df: pd.DataFrame) -> list[dict[str, Any]]:
+def iter_route_leg_requests(
+    route_stops_df: pd.DataFrame,
+    *,
+    route_point_overrides: Mapping[str, tuple[float, float]] | None = None,
+) -> list[dict[str, Any]]:
     """Return ordered leg requests from production method route stops."""
 
     if route_stops_df.empty:
         return []
+    normalized_overrides: dict[str, tuple[float, float]] = {}
+    for label, coordinates in (route_point_overrides or {}).items():
+        try:
+            latitude, longitude = float(coordinates[0]), float(coordinates[1])
+        except (IndexError, TypeError, ValueError) as exc:
+            raise ValueError(f"invalid routing anchor for {label!r}") from exc
+        if not math.isfinite(latitude) or not math.isfinite(longitude):
+            raise ValueError(f"invalid routing anchor for {label!r}")
+        normalized_overrides[route_anchor_key(label)] = (latitude, longitude)
+
     frame = route_stops_df.copy()
     if "comparison_type" in frame.columns:
         method_rows = frame[frame["comparison_type"].astype(str).eq("method")].copy()
@@ -291,10 +326,11 @@ def iter_route_leg_requests(route_stops_df: pd.DataFrame) -> list[dict[str, Any]
         for day, day_rows in day_groups:
             points = _route_points_for_day(day_rows)
             for leg_index, (left, right) in enumerate(zip(points[:-1], points[1:], strict=False), start=1):
-                point_pair = [
-                    (float(left["latitude"]), float(left["longitude"])),
-                    (float(right["latitude"]), float(right["longitude"])),
-                ]
+                left_input = (float(left["latitude"]), float(left["longitude"]))
+                right_input = (float(right["latitude"]), float(right["longitude"]))
+                left_override = normalized_overrides.get(route_anchor_key(left["label"]))
+                right_override = normalized_overrides.get(route_anchor_key(right["label"]))
+                point_pair = [left_override or left_input, right_override or right_input]
                 cache_key = osrm_cache_key(point_pair)
                 dedupe_key = (route_anchor_key(left["label"]), route_anchor_key(right["label"]), cache_key)
                 if dedupe_key in seen:
@@ -307,10 +343,20 @@ def iter_route_leg_requests(route_stops_df: pd.DataFrame) -> list[dict[str, Any]
                         "leg_index": leg_index,
                         "origin_label": left["label"],
                         "destination_label": right["label"],
-                        "origin_latitude": left["latitude"],
-                        "origin_longitude": left["longitude"],
-                        "destination_latitude": right["latitude"],
-                        "destination_longitude": right["longitude"],
+                        "origin_latitude": point_pair[0][0],
+                        "origin_longitude": point_pair[0][1],
+                        "destination_latitude": point_pair[1][0],
+                        "destination_longitude": point_pair[1][1],
+                        "origin_input_latitude": left_input[0],
+                        "origin_input_longitude": left_input[1],
+                        "destination_input_latitude": right_input[0],
+                        "destination_input_longitude": right_input[1],
+                        "origin_coordinate_source": (
+                            "configured_routing_anchor" if left_override is not None else "route_stops"
+                        ),
+                        "destination_coordinate_source": (
+                            "configured_routing_anchor" if right_override is not None else "route_stops"
+                        ),
                         "points": point_pair,
                         "cache_key": cache_key,
                     }
@@ -366,8 +412,20 @@ class RoadRouteCacheBuildResult:
     request_path: Path
 
     @property
-    def complete(self) -> bool:
+    def road_complete(self) -> bool:
         return not self.audit_df.empty and bool(self.audit_df["road_validated"].astype(bool).all())
+
+    @property
+    def snap_complete(self) -> bool:
+        return (
+            not self.audit_df.empty
+            and "snap_validated" in self.audit_df.columns
+            and bool(self.audit_df["snap_validated"].astype(bool).all())
+        )
+
+    @property
+    def complete(self) -> bool:
+        return self.road_complete and self.snap_complete
 
 
 def build_road_route_cache_from_artifacts(
@@ -379,6 +437,8 @@ def build_road_route_cache_from_artifacts(
     osrm_base_url: str = OSRM_LOCAL_BASE_URL,
     request_timeout_seconds: int = 35,
     allow_public_osrm: bool = False,
+    max_snap_distance_m: float = 100.0,
+    route_point_overrides: Mapping[str, tuple[float, float]] | None = None,
     osrm_fetcher: Callable[[list[tuple[float, float]], str, int], dict[str, Any]] | None = None,
     write: bool = True,
 ) -> RoadRouteCacheBuildResult:
@@ -386,6 +446,8 @@ def build_road_route_cache_from_artifacts(
 
     if fetch_missing:
         validate_route_fetch_policy(osrm_base_url, allow_public_osrm=allow_public_osrm)
+    if not math.isfinite(float(max_snap_distance_m)) or float(max_snap_distance_m) <= 0:
+        raise ValueError("max_snap_distance_m must be a positive finite value")
 
     output_path = Path(output_dir)
     if route_stops_df is None:
@@ -400,7 +462,10 @@ def build_road_route_cache_from_artifacts(
     audit_rows: list[dict[str, Any]] = []
     request_rows: list[dict[str, Any]] = []
 
-    for request in iter_route_leg_requests(route_stops_df):
+    for request in iter_route_leg_requests(
+        route_stops_df,
+        route_point_overrides=route_point_overrides,
+    ):
         request_cache_path = osrm_cache_dir / f"open_osrm_route_{request['cache_key']}.json"
         request_rows.append(
             {
@@ -413,6 +478,12 @@ def build_road_route_cache_from_artifacts(
                 "origin_longitude": request["origin_longitude"],
                 "destination_latitude": request["destination_latitude"],
                 "destination_longitude": request["destination_longitude"],
+                "origin_input_latitude": request["origin_input_latitude"],
+                "origin_input_longitude": request["origin_input_longitude"],
+                "destination_input_latitude": request["destination_input_latitude"],
+                "destination_input_longitude": request["destination_input_longitude"],
+                "origin_coordinate_source": request["origin_coordinate_source"],
+                "destination_coordinate_source": request["destination_coordinate_source"],
                 "cache_key": request["cache_key"],
                 "cache_path": str(request_cache_path),
                 "osrm_route_url": osrm_route_url(request["points"], osrm_base_url=osrm_base_url),
@@ -443,13 +514,25 @@ def build_road_route_cache_from_artifacts(
                 fetch_status = f"osrm_fetch_error:{type(exc).__name__}"
                 status = fetch_status
                 reason = fetch_status
+        origin_snap_distance_m = math.nan
+        destination_snap_distance_m = math.nan
         if payload is not None:
             row, status = _cache_row_from_payload(request, payload)
+            origin_snap_distance_m, destination_snap_distance_m = _endpoint_snap_distances(payload)
             if fetch_attempted and row is not None:
                 status = "fetched_osrm_validated"
             elif fetch_attempted and row is None:
                 status = f"fetched_osrm_invalid:{status}"
             reason = "" if row is not None else status
+        snap_distances_present = math.isfinite(origin_snap_distance_m) and math.isfinite(destination_snap_distance_m)
+        observed_max_snap_distance_m = (
+            max(origin_snap_distance_m, destination_snap_distance_m) if snap_distances_present else math.nan
+        )
+        snap_validated = bool(
+            row is not None
+            and snap_distances_present
+            and observed_max_snap_distance_m <= float(max_snap_distance_m)
+        )
         if row is not None:
             rows.append(row)
         audit_rows.append(
@@ -463,6 +546,11 @@ def build_road_route_cache_from_artifacts(
                 "cache_path": str(request_cache_path),
                 "status": status,
                 "road_validated": row is not None,
+                "origin_snap_distance_m": origin_snap_distance_m,
+                "destination_snap_distance_m": destination_snap_distance_m,
+                "max_snap_distance_m": observed_max_snap_distance_m,
+                "snap_threshold_m": float(max_snap_distance_m),
+                "snap_validated": snap_validated,
                 "reason": reason,
                 "fetch_attempted": fetch_attempted,
                 "fetch_status": fetch_status,

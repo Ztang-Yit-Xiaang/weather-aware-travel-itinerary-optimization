@@ -1,0 +1,135 @@
+{
+  "asset_hashes": {
+    "assets/product.css": "0f43b9595676b0fa1f9af3b40e7d91aef8cfe59d48f8cdd3354cc2587f2bc315",
+    "assets/product_data.js": "06d927bc95202ddfb375b3da3ebf8a3190be515bd35411bd153588c4817fa35d",
+    "assets/product_map.js": "e949af9237725a68bd4e8e2913d78ea8988f21d2eb530e4874c5a570cab324bd",
+    "assets/product_ui.js": "1658e01567e3f38d3d968dc85c14b2094fbc93d7e9e52e87657d828e7877e58f",
+    "index.html": "d4df5460966272106ce8dce693c6b72b54a9b5e26089fe04635695a16c5ca013",
+    "screenshots/product_dashboard_desktop_1440.png": "5a5f9475c823e8ecbe3ded78b8ca9e24898e47c79878bc0a1f5c7e423b7d5810",
+    "screenshots/product_dashboard_evidence_390.png": "a04c9b79f3c6e30c18d63a64d8181d7e34bedf03bf1e521711fd61fc1f1fbf97",
+    "screenshots/product_dashboard_mobile_390.png": "9662a2e3495b8696e6f2b00a9d4deaf3f1596f6ec9f216f6e183e902d0600a8a"
+  },
+  "certificate_id": "cert_e68c2d7c0d169a3e",
+  "child_content_hash": "a7e7a0d888278daf",
+  "child_plan_id": "plan_7a706ef44466f240",
+  "compatibility_boundary": "Read-only presentation of canonical run artifacts. It does not replace or mutate the optimizer, evaluator, benchmark, route model, plan repository, legacy dashboard, Folium renderer, or interaction authority.",
+  "diff_id": "diff_1923c674931ec053",
+  "executed_method_ids": [
+    "lexicographic_repair:enumeration",
+    "progressive_sequential_lexicographic_repair"
+  ],
+  "explanation_ids": [
+    "repair_explanation_b54c99988319083e"
+  ],
+  "generated_at": "2026-07-29T21:19:20.957176+00:00",
+  "parent_content_hash": "20b540fdc5ed5cc9",
+  "parent_plan_id": "plan_e1c4f803691e3188",
+  "product_version": "1.0.0",
+  "requested_method_ids": [
+    "lexicographic_repair",
+    "progressive_sequential_lexicographic_repair"
+  ],
+  "route_matrix_id": "route_matrix_68ab535465b06808",
+  "run_id": "e3ux_weather_repair_demo_v6",
+  "run_manifest_path": "../manifest.json",
+  "run_status": "completed",
+  "schema_version": "product-dashboard-manifest-v1",
+  "source_artifact_refs": {
+    "benchmark_metrics": [
+      "benchmark/metrics/benchmark_metrics.jsonl"
+    ],
+    "benchmark_planner_runs": [
+      "benchmark/planner_runs/benchmark_04df2e9193e5.jsonl",
+      "benchmark/planner_runs/benchmark_8b48e6810f3e.jsonl",
+      "benchmark/planner_runs/benchmark_158cf6d48be8.jsonl",
+      "benchmark/planner_runs/benchmark_3d2f5564b823.jsonl",
+      "benchmark/planner_runs/benchmark_4e0f4a26d5b1.jsonl",
+      "benchmark/planner_runs/benchmark_a78ffd318dab.jsonl",
+      "benchmark/planner_runs/benchmark_bee8faae342e.jsonl",
+      "benchmark/planner_runs/benchmark_86ced848dc96.jsonl",
+      "benchmark/planner_runs/benchmark_04db0946251c.jsonl",
+      "benchmark/planner_runs/benchmark_9747a91a9c9c.jsonl",
+      "benchmark/planner_runs/benchmark_bf7fc18736cf.jsonl",
+      "benchmark/planner_runs/benchmark_14b10d4e97ce.jsonl",
+      "benchmark/planner_runs/benchmark_08ea9cd456f2.jsonl",
+      "benchmark/planner_runs/benchmark_7c92090c5892.jsonl",
+      "benchmark/planner_runs/benchmark_d4ae32491bfb.jsonl",
+      "benchmark/planner_runs/benchmark_e54fc222723e.jsonl",
+      "benchmark/planner_runs/benchmark_50ca154c5aab.jsonl",
+      "benchmark/planner_runs/benchmark_bf019d1beb1b.jsonl",
+      "benchmark/planner_runs/benchmark_99dbf9025111.jsonl",
+      "benchmark/planner_runs/benchmark_a1ba8f048b70.jsonl",
+      "benchmark/planner_runs/benchmark_5375993c986d.jsonl",
+      "benchmark/planner_runs/benchmark_0b7aa660cdbc.jsonl",
+      "benchmark/planner_runs/benchmark_3532d68e3d9d.jsonl",
+      "benchmark/planner_runs/benchmark_2f25e250592e.jsonl"
+    ],
+    "diffs": [
+      "diffs/diff_1923c674931ec053.json"
+    ],
+    "evaluations": [
+      "evaluations/cert_e68c2d7c0d169a3e.json"
+    ],
+    "explanations": [
+      "explanations/repair_explanation_b54c99988319083e.json"
+    ],
+    "metrics": [
+      "metrics/metrics.json"
+    ],
+    "planner_runs": [
+      "planner_runs.jsonl"
+    ],
+    "plans": [
+      "plans/plan_e1c4f803691e3188.json",
+      "plans/plan_7a706ef44466f240.json"
+    ],
+    "requests": [
+      "requests/bench_weather_deterioration_4062619eeaf4.json"
+    ],
+    "routing": [
+      "routing/route_matrix_68ab535465b06808.json"
+    ]
+  },
+  "source_content_hashes": {
+    "benchmark/metrics/benchmark_metrics.jsonl": "0cf705a349d4d8415fa14428b5c3bd4de7a84b6fc8bf6c0612290b9b6e86a59c",
+    "benchmark/planner_runs/benchmark_04db0946251c.jsonl": "b939d00e6b3beedfe139d4e84feaef41c0a81bce458152932c0d4f112eac6d07",
+    "benchmark/planner_runs/benchmark_04df2e9193e5.jsonl": "05174cae6da3e6f137da874f7172dc16a216b94f52990fc6ac0218bdfc7798f4",
+    "benchmark/planner_runs/benchmark_08ea9cd456f2.jsonl": "23fcee9afaaaeb5c059f3ca74a28b0c70458a12c69152f0f11187af85adc508b",
+    "benchmark/planner_runs/benchmark_0b7aa660cdbc.jsonl": "5a307b724be9375a84e72fdf73ec320f1e0b65849986a9821be1d7b1df61ffa9",
+    "benchmark/planner_runs/benchmark_14b10d4e97ce.jsonl": "49f357687f3a26fc0645ab41a68b5631cd01b151c0be01648139aa79837c55c8",
+    "benchmark/planner_runs/benchmark_158cf6d48be8.jsonl": "4cbd315e8484e902d289474a4c7847c94bae303dfb4bbac7dd7bc0af101a8969",
+    "benchmark/planner_runs/benchmark_2f25e250592e.jsonl": "2244c124096ee526fedc48be9619a3337e88fa3587cc1f79d1ad7963104c3ecb",
+    "benchmark/planner_runs/benchmark_3532d68e3d9d.jsonl": "840500cb80b799a4017cbc0f134366988f527d219eaffd70909a070af85a9417",
+    "benchmark/planner_runs/benchmark_3d2f5564b823.jsonl": "87428eac177a2eb7544fca91ffa79008c702b8cbf38fd2812c6053f21c39d216",
+    "benchmark/planner_runs/benchmark_4e0f4a26d5b1.jsonl": "a69a58a5c945b6483ca4f6942049d8b44502fa80ec20ddcbfb46081ab9b5e48b",
+    "benchmark/planner_runs/benchmark_50ca154c5aab.jsonl": "0082c14309ccc8ef29237e01dbec395d22a3cd3db13bb158e3af1e51e9cbd950",
+    "benchmark/planner_runs/benchmark_5375993c986d.jsonl": "86622b42093c78af2fefbcd487933d14a846ed34969703b3836d7fe4eb67d70f",
+    "benchmark/planner_runs/benchmark_7c92090c5892.jsonl": "ad53edc82eba5e52a444eacefeb6d75b2f945033159185d92924c7a0c4fc4588",
+    "benchmark/planner_runs/benchmark_86ced848dc96.jsonl": "697368372dce4f5aeab3a440681641c1ffaa4d448a0096e8136a99692f239113",
+    "benchmark/planner_runs/benchmark_8b48e6810f3e.jsonl": "1cf60ddd0e80ccb948612a9fcdf72dcc380546e0c5a9f49b73e8d35366a294a7",
+    "benchmark/planner_runs/benchmark_9747a91a9c9c.jsonl": "29c7d4c545a53a276f926bd4728956d22153dc091594d5cc8a29e44f91be751a",
+    "benchmark/planner_runs/benchmark_99dbf9025111.jsonl": "104f04889ce8249c6449f226eae44b728f346a2cfc300ad5b7325e42862cada0",
+    "benchmark/planner_runs/benchmark_a1ba8f048b70.jsonl": "8b5d87ea45b537064089705dcceff64e1da397090843101eea22c7ff5847e04d",
+    "benchmark/planner_runs/benchmark_a78ffd318dab.jsonl": "aeafb6328428d8b88556c84ad0b0a9fb785684162a994367470071ffb84272e8",
+    "benchmark/planner_runs/benchmark_bee8faae342e.jsonl": "c78a08f1ee6bc84404296c88b84360707a7f3cf3ab8710f6b68b4eeba43f9a0b",
+    "benchmark/planner_runs/benchmark_bf019d1beb1b.jsonl": "cc4ad86d549d8ac2df831e49fbc1b27ecf69837f3c5139ab4867efbb1083deb9",
+    "benchmark/planner_runs/benchmark_bf7fc18736cf.jsonl": "4a2cd8cba22970dc098ff6b48e2f25ff56d362c953d8c736ceedf7dc94d6a2b7",
+    "benchmark/planner_runs/benchmark_d4ae32491bfb.jsonl": "52006a1892905530d16232d7ab0c2890e9f3b052bc4a8f256d27ed1f9128dd0b",
+    "benchmark/planner_runs/benchmark_e54fc222723e.jsonl": "d0f090bb099a8905bc2cebc137da9caf4f6685e32acde2683cde2821f09c17db",
+    "diffs/diff_1923c674931ec053.json": "7eb2660449a5bc011caa639f0381448d0b30f5dbda944251b97834356dcbd357",
+    "evaluations/cert_e68c2d7c0d169a3e.json": "fb756f8b84043933b3fd383f34a6ac9dc375e6ec132a8df905f413398d9a3a05",
+    "explanations/repair_explanation_b54c99988319083e.json": "3641d2299fcbe5f87885a12cc7e2269be5bcc730858f2239eb94154a23fd577f",
+    "metrics/metrics.json": "32e4f272406a6d4c822ea4d60fa577c78658619a7aae26c56f1b352b577f9ebd",
+    "planner_runs.jsonl": "4cbd315e8484e902d289474a4c7847c94bae303dfb4bbac7dd7bc0af101a8969",
+    "plans/plan_7a706ef44466f240.json": "7b1cfc19002d81b5a406340010863a9446b999109be1ffa03b7eee7fe82a1866",
+    "plans/plan_e1c4f803691e3188.json": "4036ca84db5b1194ddacdc82aab344141104edf81eba6b42a1b05af950f8939d",
+    "requests/bench_weather_deterioration_4062619eeaf4.json": "4044fec09dc1096696937a214a4ed600168508e29b5362f40180cd7fc21757f5",
+    "routing/route_matrix_68ab535465b06808.json": "6f3b5b8eda1a9f73e28b6404ef15126086dbd7861c683790af6f6e87b41b4677"
+  },
+  "truth_states": [
+    "interaction_mode_disabled",
+    "eligible_repair",
+    "failed_method",
+    "exact_search_incomplete"
+  ]
+}

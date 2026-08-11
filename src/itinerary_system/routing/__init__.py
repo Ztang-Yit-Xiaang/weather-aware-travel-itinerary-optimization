@@ -1,6 +1,11 @@
 """Routing provenance models and validation helpers."""
 
 from .cache import ROAD_ROUTE_CACHE_FILENAME, RoadRouteCache, load_road_route_cache, route_anchor_key
+from .evidence_bundle import (
+    ROUTE_EVIDENCE_MANIFEST_FILENAME,
+    RouteEvidenceBundleAudit,
+    freeze_route_evidence_bundle,
+)
 from .legacy_cache_audit import LEGACY_ROUTE_CACHE_AUDIT_FILENAME, audit_legacy_route_cache
 from .matrix import (
     RouteMatrix,
@@ -44,9 +49,11 @@ __all__ = [
     "ROAD_ROUTE_CACHE_AUDIT_FILENAME",
     "ROAD_ROUTE_CACHE_FILENAME",
     "ROAD_ROUTE_REQUESTS_FILENAME",
+    "ROUTE_EVIDENCE_MANIFEST_FILENAME",
     "LEGACY_ROUTE_CACHE_AUDIT_FILENAME",
     "RoadRouteCache",
     "RoadRouteCacheBuildResult",
+    "RouteEvidenceBundleAudit",
     "RouteLegRequest",
     "RouteLegResult",
     "RouteMatrix",
@@ -67,6 +74,7 @@ __all__ = [
     "build_route_matrix_from_context",
     "audit_legacy_route_cache",
     "fetch_osrm_payload",
+    "freeze_route_evidence_bundle",
     "geodesic_fallback_matrix",
     "is_public_osrm_base_url",
     "load_road_route_cache",

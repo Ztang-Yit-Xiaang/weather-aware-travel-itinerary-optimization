@@ -1,0 +1,47 @@
+services:
+  maplibre:
+    image: ${MAP_NGINX_IMAGE:?Set MAP_NGINX_IMAGE to a reviewed digest-pinned nginx stable-alpine image}
+    ports:
+      - "127.0.0.1:8080:80"
+    environment:
+      PRODUCT_APP_ORIGIN: ${PRODUCT_APP_ORIGIN:-http://127.0.0.1:8127}
+    entrypoint: ["/bin/sh", "-eu", "-c"]
+    command:
+      - |
+        origin="$${PRODUCT_APP_ORIGIN}"
+        port="$${origin#http://127.0.0.1:}"
+        if [ "$${port}" = "$${origin}" ]; then
+          port="$${origin#http://localhost:}"
+        fi
+        case "$${port}" in
+          ''|*[!0-9]*) echo "invalid PRODUCT_APP_ORIGIN" >&2; exit 64 ;;
+        esac
+        if [ "$${port}" -lt 1 ] || [ "$${port}" -gt 65535 ]; then
+          echo "invalid PRODUCT_APP_ORIGIN" >&2
+          exit 64
+        fi
+        exec /docker-entrypoint.sh nginx -g 'daemon off;'
+    volumes:
+      - type: bind
+        source: ${MAP_ASSET_ROOT:?Set MAP_ASSET_ROOT to the external local-map asset directory}
+        target: /map-assets
+        read_only: true
+      - type: bind
+        source: ./nginx.conf.template
+        target: /etc/nginx/templates/default.conf.template
+        read_only: true
+    read_only: true
+    tmpfs:
+      - /etc/nginx/conf.d
+      - /var/cache/nginx
+      - /var/run
+      - /tmp
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O - http://127.0.0.1/healthz | grep -qx ok"]
+      interval: 10s
+      timeout: 2s
+      retries: 3
+      start_period: 5s
+    restart: unless-stopped

@@ -1,0 +1,40 @@
+{
+  "artifact_hashes": {
+    "cache_audit": "cb2f4576e09cb4334393853b113e1d220eeee10c458d7f34299875983e696b24",
+    "provider_provenance": "fcb6328ad210261e2ff260cd337eeb44cf4b27e5a296b626abb7f7b33f13db65",
+    "requests": "90a86924d2cdfa5093dd423240933c29be19f691cdb23525c2e65e95c8b0983c",
+    "validated_cache": "2bbd690b690cd75ef8708dc4256755b7c9662394b4fd1745e423d275ad3cda09"
+  },
+  "bundle_id": "route_bundle_e910cf488994b7a2",
+  "cache_alignment_valid": true,
+  "cache_row_count": 42,
+  "earliest_retrieved_at": "2026-07-11T17:30:47.751919+00:00",
+  "errors": [],
+  "expected_request_count": 42,
+  "fallback_free": true,
+  "freshness_valid": true,
+  "generated_at": "2026-07-20T20:23:44.246513+00:00",
+  "latest_retrieved_at": "2026-07-18T14:11:05.642951+00:00",
+  "max_allowed_cache_age_days": 30.0,
+  "maximum_cache_age_days": 9.120098317060187,
+  "output_dir": "tmp_test/research_pipeline_raw/e2-raw-production-20260711/production_legacy",
+  "provider_counts": {
+    "cached_osrm": 42
+  },
+  "provider_provenance_valid": true,
+  "publication_ready": true,
+  "request_audit_alignment_valid": true,
+  "request_count": 42,
+  "request_set_hash": "b5a66699c18d0b78",
+  "road_validation_complete": true,
+  "schema_version": "route-evidence-bundle-v1",
+  "snap_validated_count": 42,
+  "snap_validation_complete": true,
+  "status_counts": {
+    "cached_osrm_validated": 38,
+    "fetched_osrm_validated": 4
+  },
+  "unique_request_count": 42,
+  "validated_route_count": 42,
+  "warnings": []
+}

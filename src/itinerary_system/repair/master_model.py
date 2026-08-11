@@ -26,6 +26,12 @@ from .change_variables import (
     VariableDomain,
     change_weight,
 )
+from .context import (
+    ContextSelectionRequirements,
+    PlannerContextMode,
+    context_selection_requirements,
+    contextualize_stop_records,
+)
 from .neighborhood import RepairNeighborhood, build_parent_plan_index
 
 
@@ -81,13 +87,30 @@ class RepairModel:
                     0 if constraint.required_value == 0 else None,
                 )
             elif constraint.constraint_type == "fixed_lodging":
-                actual = solution.lodging_assignments.get(str(constraint.target_id))
+                actual = solution.lodging_assignments.get(
+                    str(constraint.target_id),
+                    "" if constraint.required_value == "" else None,
+                )
             elif constraint.constraint_type == "fixed_relaxation":
                 actual = 1 if constraint.target_id in relaxed else 0
             else:
                 continue
             if actual != constraint.required_value:
                 violations.append(f"{constraint.constraint_id}:{constraint.target_id}")
+        for stop_id in self.metadata.get("context_conflict_stop_ids", ()):
+            violations.append(f"context_selection_conflict:{stop_id}")
+        for stop_id in self.metadata.get("context_required_stop_ids", ()):
+            if stop_id not in selected:
+                violations.append(f"context_required_stop_missing:{stop_id}")
+        for stop_id in self.metadata.get("context_excluded_stop_ids", ()):
+            if stop_id in selected:
+                violations.append(f"context_excluded_stop_selected:{stop_id}")
+        for route_id in solution.route_ids_by_day.values():
+            if str(route_id) in set(self.metadata.get("context_closed_route_ids", ())):
+                violations.append(f"context_closed_route_selected:{route_id}")
+        for lodging_id in solution.lodging_assignments.values():
+            if str(lodging_id) in set(self.metadata.get("context_unavailable_lodging_ids", ())):
+                violations.append(f"context_unavailable_lodging_selected:{lodging_id}")
         for constraint_id in self.metadata.get("locked_constraint_ids", ()):
             if constraint_id in relaxed:
                 violations.append(f"locked_constraint_relaxed:{constraint_id}")
@@ -214,6 +237,7 @@ class RepairMasterModel:
         *,
         ownership_policy: OwnershipPolicy | None = None,
         publication_mode: bool = False,
+        planner_context_mode: PlannerContextMode | str = PlannerContextMode.AWARE,
     ) -> None:
         self.parent = parent
         self.request = request
@@ -221,6 +245,7 @@ class RepairMasterModel:
         self.route_matrix = route_matrix
         self.ownership_policy = ownership_policy or OwnershipPolicy()
         self.publication_mode = publication_mode
+        self.planner_context_mode = PlannerContextMode(str(planner_context_mode))
 
     def build(self) -> RepairModel:
         return build_repair_master_model(
@@ -230,6 +255,7 @@ class RepairMasterModel:
             self.route_matrix,
             ownership_policy=self.ownership_policy,
             publication_mode=self.publication_mode,
+            planner_context_mode=self.planner_context_mode,
         )
 
 
@@ -241,19 +267,33 @@ def build_repair_master_model(
     *,
     ownership_policy: OwnershipPolicy | None = None,
     publication_mode: bool = False,
+    planner_context_mode: PlannerContextMode | str = PlannerContextMode.AWARE,
 ) -> RepairModel:
     """Build a solver-neutral master model with repair variables and constraints."""
 
     if publication_mode and matrix is None:
         raise RouteMatrixMissing("repair master publication mode requires a RouteMatrix")
     policy = ownership_policy or OwnershipPolicy()
+    context_mode = PlannerContextMode(str(planner_context_mode))
     index = build_parent_plan_index(parent)
-    candidate_stops = _candidate_stops(request)
+    parent_stops = contextualize_stop_records(parent.selected_stops, request)
+    candidate_stops = contextualize_stop_records(_candidate_stops(request), request)
+    selection_requirements = context_selection_requirements(
+        request,
+        (*parent_stops, *candidate_stops),
+        mode=context_mode,
+    )
     active_constraints = active_owned_constraints(tuple(dict(record) for record in parent.owned_constraints))
     allow_booked = _allow_booked_relaxation(request)
     owner_strengths = _owner_strengths_by_target(active_constraints, policy)
     ordered_stop_ids = (*index.stop_ids, *tuple(stop["stop_id"] for stop in candidate_stops))
-    selection_variables = _selection_variables(index, candidate_stops, neighborhood, active_constraints)
+    selection_variables = _selection_variables(
+        index,
+        candidate_stops,
+        neighborhood,
+        active_constraints,
+        selection_requirements,
+    )
     day_variables = _day_assignment_variables(index, candidate_stops, neighborhood, active_constraints)
     lodging_variables = _lodging_variables(index, candidate_stops, neighborhood, active_constraints, allow_booked)
     relaxation_variables = _relaxation_variables(active_constraints, neighborhood, allow_booked)
@@ -286,8 +326,17 @@ def build_repair_master_model(
         "catalog_snapshot_id": parent.catalog_snapshot_id,
         "context_snapshot_id": parent.context_snapshot_id,
         "owned_constraints": tuple(dict(record) for record in parent.owned_constraints),
-        "parent_selected_stops": tuple(dict(stop) for stop in parent.selected_stops),
+        "parent_selected_stops": tuple(parent_stops),
+        "parent_day_by_stop": dict(index.stop_day),
         "candidate_stops": tuple(candidate_stops),
+        "planner_context_mode": context_mode.value,
+        "context_required_stop_ids": selection_requirements.required_stop_ids,
+        "context_excluded_stop_ids": selection_requirements.excluded_stop_ids,
+        "context_conflict_stop_ids": selection_requirements.conflict_stop_ids,
+        "context_closed_route_ids": _context_values(request, "closed_route_ids") if context_mode == PlannerContextMode.AWARE else (),
+        "context_unavailable_lodging_ids": _context_values(request, "unavailable_lodging_ids")
+        if context_mode == PlannerContextMode.AWARE
+        else (),
         "ordered_stop_ids": ordered_stop_ids,
         "locked_constraint_ids": tuple(
             constraint.constraint_id for constraint in active_constraints if constraint.strength == ConstraintStrength.LOCKED
@@ -307,6 +356,7 @@ def build_repair_master_model(
         "request_id": request_id,
         "neighborhood": neighborhood.to_record(),
         "route_matrix_id": matrix.matrix_id if matrix is not None else None,
+        "planner_context_mode": context_mode.value,
     }
     return RepairModel(
         model_id=f"repair_model_{stable_content_hash(model_seed)}",
@@ -323,17 +373,40 @@ def build_repair_master_model(
     )
 
 
+def _context_values(request: Any, key: str) -> tuple[str, ...]:
+    raw_constraints = getattr(request, "confirmed_constraints", {})
+    if not isinstance(raw_constraints, dict):
+        return ()
+    raw = raw_constraints.get(key, ())
+    if isinstance(raw, str):
+        values = (raw,)
+    else:
+        try:
+            values = tuple(raw)
+        except TypeError:
+            values = (raw,)
+    return tuple(sorted(str(value).strip() for value in values if str(value).strip()))
+
+
 def _selection_variables(
     index: Any,
     candidate_stops: tuple[dict[str, Any], ...],
     neighborhood: RepairNeighborhood,
     constraints: tuple[OwnedConstraint, ...],
+    context_requirements: ContextSelectionRequirements,
 ) -> list[RepairDecisionVariable]:
     locked_stops = _locked_stop_ids(constraints)
     variables: list[RepairDecisionVariable] = []
     editable = set(neighborhood.editable_stop_ids)
+    required = set(context_requirements.required_stop_ids)
+    excluded = set(context_requirements.excluded_stop_ids)
     for stop_id in index.stop_ids:
-        fixed = 1 if stop_id in locked_stops or stop_id not in editable else None
+        if stop_id in required:
+            fixed = 1
+        elif stop_id in excluded:
+            fixed = 0
+        else:
+            fixed = 1 if stop_id in locked_stops or stop_id not in editable else None
         variables.append(
             RepairDecisionVariable(
                 name=f"select_stop[{stop_id}]",
@@ -343,7 +416,7 @@ def _selection_variables(
                 parent_value=1,
                 allowed_values=(0, 1),
                 lower_bound=1.0 if fixed == 1 else 0.0,
-                upper_bound=1.0,
+                upper_bound=0.0 if fixed == 0 else 1.0,
                 fixed_value=fixed,
                 day=index.stop_day.get(stop_id),
                 reason_codes=_fixed_reasons(fixed, "locked_or_outside_neighborhood"),
@@ -353,7 +426,12 @@ def _selection_variables(
         stop_id = stop["stop_id"]
         day = _coerce_int(stop.get("day"))
         editable_candidate = day is None or day in set(neighborhood.editable_days)
-        fixed = None if editable_candidate else 0
+        if stop_id in required:
+            fixed = 1
+        elif stop_id in excluded:
+            fixed = 0
+        else:
+            fixed = None if editable_candidate else 0
         variables.append(
             RepairDecisionVariable(
                 name=f"select_stop[{stop_id}]",
@@ -726,10 +804,12 @@ def _ordered_solution_stop_ids(model: RepairModel, solution: RepairSolution) -> 
     emitted: set[str] = set()
     ordered: list[str] = []
     parent = model.metadata["parent_plan"]
+    parent_day_by_stop = model.metadata.get("parent_day_by_stop", {})
     for stop_id in parent.sequence:
-        day = parent.day_assignments.get(str(stop_id))
-        override = day_sequences.get(str(day)) if day is not None else None
-        if override:
+        day = parent_day_by_stop.get(str(stop_id))
+        override_key = str(day) if day is not None else ""
+        override = day_sequences.get(override_key)
+        if override_key in day_sequences:
             for override_stop_id in override:
                 stop_text = str(override_stop_id)
                 if stop_text not in emitted:

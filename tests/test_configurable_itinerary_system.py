@@ -1,3 +1,4 @@
+import hashlib
 import json
 import shutil
 import subprocess
@@ -24,9 +25,17 @@ from itinerary_system.bandit_candidate_selector import (
 )
 from itinerary_system.budget import estimate_budget_range
 from itinerary_system.config import load_trip_config
+from itinerary_system.dashboard_assets import dashboard_stylesheet
+from itinerary_system.dashboard_data_loader import dashboard_data_loader_script
+from itinerary_system.dashboard_map_controls import dashboard_map_controls_script
+from itinerary_system.dashboard_ui import dashboard_ui_script
 from itinerary_system.data_enrichment import canonical_poi_columns
 from itinerary_system.diversity import mmr_select_candidates, submodular_diversity
-from itinerary_system.experiment_runner import _ensure_required_anchor_stops, _write_route_anchor_audit
+from itinerary_system.experiment_runner import (
+    _annotate_route_sequence,
+    _ensure_required_anchor_stops,
+    _write_route_anchor_audit,
+)
 from itinerary_system.hierarchical_gurobi import candidate_plans, solve_hierarchical_trip_with_gurobi
 from itinerary_system.map_exporter import export_map_artifacts
 from itinerary_system.multi_objective_route import solve_multi_objective_route
@@ -626,6 +635,86 @@ class ConfigurableItinerarySystemTests(unittest.TestCase):
         self.assertEqual(by_anchor.loc["Los Angeles", "role"], "gateway")
         self.assertTrue(bool(by_anchor.loc["Los Angeles", "gateway_or_base"]))
 
+    def test_route_sequence_uses_explicit_airport_routing_anchors(self):
+        config = load_trip_config(CONFIG_PATH)
+        route_stops = pd.DataFrame(
+            [
+                {
+                    "day": 1,
+                    "stop_order": 1,
+                    "attraction_name": "TCL Chinese Theatre",
+                    "city": "Los Angeles",
+                    "latitude": 34.102,
+                    "longitude": -118.3409,
+                },
+                {
+                    "day": 7,
+                    "stop_order": 1,
+                    "attraction_name": "Golden Gate Bridge",
+                    "city": "San Francisco",
+                    "latitude": 37.8199,
+                    "longitude": -122.4783,
+                },
+            ]
+        )
+
+        output = _annotate_route_sequence(
+            route_stops,
+            {"gateway_start": "Los Angeles", "gateway_end": "San Francisco"},
+            config,
+        )
+
+        first = output.loc[output["day"].eq(1)].iloc[0]
+        last = output.loc[output["day"].eq(7)].iloc[0]
+        gateways = config.get("transport", "airport_gateways", {})
+        self.assertAlmostEqual(float(first["route_start_latitude"]), 33.942502)
+        self.assertAlmostEqual(float(first["route_start_longitude"]), -118.407858)
+        self.assertAlmostEqual(float(last["route_end_latitude"]), 37.617243)
+        self.assertAlmostEqual(float(last["route_end_longitude"]), -122.384195)
+        self.assertAlmostEqual(float(gateways["Los Angeles"]["latitude"]), 33.9416)
+        self.assertAlmostEqual(float(gateways["San Francisco"]["longitude"]), -122.379)
+
+    def test_route_sequence_falls_back_to_gateway_location_without_routing_anchor(self):
+        config = load_trip_config(
+            CONFIG_PATH,
+            overrides={
+                "transport": {
+                    "airport_gateways": {
+                        "Test City": {
+                            "code": "TST",
+                            "name": "Test Airport",
+                            "latitude": 10.25,
+                            "longitude": -20.5,
+                        }
+                    }
+                }
+            },
+        )
+        route_stops = pd.DataFrame(
+            [
+                {
+                    "day": 1,
+                    "stop_order": 1,
+                    "attraction_name": "Test Stop",
+                    "city": "Test City",
+                    "latitude": 10.3,
+                    "longitude": -20.4,
+                }
+            ]
+        )
+
+        output = _annotate_route_sequence(
+            route_stops,
+            {"gateway_start": "Test City", "gateway_end": "Test City"},
+            config,
+        )
+
+        row = output.iloc[0]
+        self.assertAlmostEqual(float(row["route_start_latitude"]), 10.25)
+        self.assertAlmostEqual(float(row["route_start_longitude"]), -20.5)
+        self.assertAlmostEqual(float(row["route_end_latitude"]), 10.25)
+        self.assertAlmostEqual(float(row["route_end_longitude"]), -20.5)
+
     def test_required_anchor_stops_survive_feasible_base_day_selection(self):
         config = load_trip_config(
             CONFIG_PATH,
@@ -1188,6 +1277,11 @@ class ConfigurableItinerarySystemTests(unittest.TestCase):
         self.assertIn("Debug summary", customer_html)
         self.assertIn("route-selector", customer_html)
         self.assertIn('data-mode-section="research"', customer_html)
+        self.assertEqual(style_css, dashboard_stylesheet())
+        self.assertEqual(
+            hashlib.sha256(style_css.encode("utf-8")).hexdigest(),
+            "82e968c2b88007b7aa8be6cf8d2e4c1413fde68fdcfb23db2e357afef01d2b1f",
+        )
         self.assertIn("height: 100vh", style_css)
         self.assertIn(".dashboard-panel", style_css)
         self.assertIn(".dashboard-panel.collapsed", style_css)
@@ -1200,6 +1294,11 @@ class ConfigurableItinerarySystemTests(unittest.TestCase):
         self.assertIn(".nature-card", style_css)
         self.assertIn(".nature-route-mini-card", style_css)
         self.assertIn(".interest-axis", style_css)
+        self.assertEqual(map_js, dashboard_map_controls_script())
+        self.assertEqual(
+            hashlib.sha256(map_js.encode("utf-8")).hexdigest(),
+            "a6f1be3515033e832852a6e7b2cd10b642c2d72d68071c65b4927d4e23997bde",
+        )
         self.assertIn('L.map("map"', map_js)
         self.assertIn("drawDefaultRoute", map_js)
         self.assertIn("renderRouteSelector", map_js)
@@ -1229,6 +1328,11 @@ class ConfigurableItinerarySystemTests(unittest.TestCase):
         self.assertIn("renderCustomerControls(index)", map_js)
         self.assertIn("window.dashboardMap", map_js)
         self.assertNotIn("alert(", map_js)
+        self.assertEqual(dashboard_js, dashboard_ui_script())
+        self.assertEqual(
+            hashlib.sha256(dashboard_js.encode("utf-8")).hexdigest(),
+            "3506e86ef671e467c3a61634c76e0ea08ced4d41c1623a54fd9bfb734b7fce74",
+        )
         self.assertIn("renderActiveStopDetail", dashboard_js)
         self.assertIn("renderCityDetails", dashboard_js)
         self.assertIn("renderHotelChoices", dashboard_js)
@@ -1264,6 +1368,11 @@ class ConfigurableItinerarySystemTests(unittest.TestCase):
         self.assertIn("data-toggle-hotel-candidates", dashboard_js)
         self.assertIn("Method Evaluation Dashboard", evaluation_html)
         self.assertIn("assets/evaluation_metrics.js", evaluation_html)
+        self.assertEqual(loader_js, dashboard_data_loader_script())
+        self.assertEqual(
+            hashlib.sha256(loader_js.encode("utf-8")).hexdigest(),
+            "aafebd304c2e08d5cbf6df5b78196cbe787cbc246ee2ff17f704f23bcaea0409",
+        )
         self.assertIn("dashboardIsFileMode", loader_js)
         self.assertIn("loadScriptOnce", loader_js)
         self.assertIn("loadDashboardAsset", loader_js)
@@ -1425,14 +1534,10 @@ class ConfigurableItinerarySystemTests(unittest.TestCase):
         self.assertIn("poi_json", set(report["artifact_type"]))
         self.assertIn("poi_js_fallback", set(report["artifact_type"]))
         self.assertTrue(report["notes"].astype(str).str.contains("optional_layer").any())
-        self.assertEqual(
-            {
-                "hierarchical_gurobi_pipeline",
-                "hierarchical_greedy_baseline",
-                "hierarchical_bandit_gurobi_repair",
-            },
-            {method["method"] for method in evaluation_payload["methods"]},
-        )
+        self.assertFalse(evaluation_payload["available"])
+        self.assertEqual(evaluation_payload["data_status"], "not_available")
+        self.assertEqual(evaluation_payload["methods"], [])
+        self.assertTrue(evaluation_payload["empty_message"])
 
     def test_dashboard_validation_script_passes_and_fails_actionably(self):
         config = load_trip_config(
@@ -1549,22 +1654,19 @@ class ConfigurableItinerarySystemTests(unittest.TestCase):
             self.assertNotEqual(failed.returncode, 0)
             self.assertIn("route GeoJSON", failed.stdout)
 
-    def test_production_notebook_reloads_dashboard_exporter(self):
+    def test_production_notebook_uses_authoritative_pipeline_entrypoint(self):
         notebook = json.loads(
             (REPO_ROOT / "notebook" / "production_system_blueprint.ipynb").read_text(encoding="utf-8")
         )
         notebook_text = "\n".join("".join(cell.get("source", [])) for cell in notebook.get("cells", []))
 
-        self.assertIn("import itinerary_system.map_exporter as map_exporter_module", notebook_text)
-        self.assertLess(notebook_text.index("map_exporter_module"), notebook_text.index("map_renderer_module"))
-        self.assertIn("import itinerary_system.map_exporter as map_exporter", notebook_text)
-        self.assertIn("map_exporter = importlib.reload(map_exporter)", notebook_text)
-        self.assertIn('print("Using map exporter:", map_exporter.__file__)', notebook_text)
-        self.assertIn('NATURE_DEMO_CONFIG_PATH = PROJECT_ROOT / "configs" / "nature_trip_config.yaml"', notebook_text)
-        self.assertIn('CONFIG_PATH = Path(os.getenv("TRIP_CONFIG_PATH", NATURE_DEMO_CONFIG_PATH))', notebook_text)
-        self.assertIn("validate_dashboard_export.py", notebook_text)
-        self.assertIn("validate_nature_route_pipeline.py", notebook_text)
-        self.assertIn('"--strict"', notebook_text)
+        self.assertIn("run_research_pipeline.py", notebook_text)
+        self.assertIn('"--input-mode", "frozen-artifacts"', notebook_text)
+        self.assertIn('"--refresh-policy", "never"', notebook_text)
+        self.assertIn("manifest.json", notebook_text)
+        self.assertNotIn("requests.get", notebook_text)
+        self.assertNotIn("gurobipy", notebook_text)
+        self.assertNotIn("geodesic", notebook_text)
 
     def test_generated_large_outputs_are_ignored(self):
         gitignore = (REPO_ROOT / ".gitignore").read_text(encoding="utf-8")

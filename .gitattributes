@@ -27,3 +27,6 @@ results/route_deltas/product_pfeiffer_point_lobos_20260908_v1/raw_response.json 
 results/route_deltas/product_pfeiffer_point_lobos_20260908_v1/source-provenance.json text eol=lf
 runs/e3ux-weather-repair-demo-v6/dashboard_product/manifest.json text eol=lf
 runs/e3ux-weather-repair-demo-v6/manifest.json text eol=lf
+
+# Small portfolio previews are stored as regular Git blobs.
+docs/portfolio-previews/*.gif -filter -diff -merge -text

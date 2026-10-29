@@ -123,7 +123,7 @@ def test_real_replace_accept_restart_duration_accept_restart(tmp_path):
                 "output": {key: value for key, value in output.items() if key != "mutation_token"},
             }
         )
-        (tmp_path / "exact_chain_io.json").write_text(json.dumps(evidence, indent=2, sort_keys=True), encoding="utf-8")
+        (tmp_path / "exact_chain_io.json").write_text(json.dumps(evidence, sort_keys=True), encoding="utf-8")
         assert response.status_code == 200, response.text
         return output
 
@@ -236,7 +236,7 @@ def test_real_replace_accept_restart_duration_accept_restart(tmp_path):
             "c_route_validation": snapshot_c["certificate"]["route_validation"],
             "c_geometry_hash": stable_content_hash(snapshot_c["geography_plan"]),
         }
-        (tmp_path / "exact_chain_io.json").write_text(json.dumps(evidence, indent=2, sort_keys=True), encoding="utf-8")
+        (tmp_path / "exact_chain_io.json").write_text(json.dumps(evidence, sort_keys=True), encoding="utf-8")
 
 
 @pytest.fixture(scope="module")

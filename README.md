@@ -18,6 +18,19 @@ An inspectable research prototype that detects weather disruptions, repairs mult
 
 ![Itinerary Repair Copilot workspace](docs/assets/readme/itinerary-workspace.png)
 
+<!-- BEGIN portfolio-project-animations -->
+## Animated project guide
+
+These self-contained SVG animations explain the project workflow. They are illustrative guides, not recorded experiments or new performance results. Static content remains available when reduced motion is requested.
+
+### Itinerary repair
+
+![Itinerary repair — illustrative animation](docs/portfolio-animations/context-aware-travel-itinerary-optimization.svg)
+
+Illustrative disruption and route repair. Stops, routes and movement are schematic, not live travel data.
+
+<!-- END portfolio-project-animations -->
+
 ## What this project does
 
 Travel plans break when weather, closures, travel time, or booking constraints change. This project turns that disruption into a constrained repair problem: preserve as much of the original trip as possible, replace what no longer works, and keep every recommendation inspectable.

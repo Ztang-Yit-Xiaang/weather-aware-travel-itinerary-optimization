@@ -75,3 +75,15 @@ docker/maplibre/assets/
 tmp/
 node_modules/
 results/repairs/
+
+# Generated local evidence; publish selected reports under docs/reports/.
+/output/visualizations/
+/results/audits/
+/results/chat_stability_assessment_*/
+/results/chat_variation_review_*/
+/results/e2e/
+/results/interest_regions_*/
+/results/product_app/
+/results/regression/
+/results/response_aware_*/
+/results/route_deltas/

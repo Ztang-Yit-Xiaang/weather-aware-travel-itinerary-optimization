@@ -230,9 +230,7 @@ def product_run_factory(tmp_path: Path):
                 "method_id": "progressive_sequential_lexicographic_repair",
                 "status": "completed",
                 "benchmark_ranking_eligible": True,
-                "benchmark_planner_method_executed_ids": [
-                    "progressive_sequential_lexicographic_repair"
-                ],
+                "benchmark_planner_method_executed_ids": ["progressive_sequential_lexicographic_repair"],
                 "preservation_weighted_edit_cost": 3.0,
                 "quality_utility_retained": 0.9,
                 "quality_route_validated": True,
@@ -280,9 +278,7 @@ def product_run_factory(tmp_path: Path):
         _write_json(run_dir / "metrics/metrics.json", {"accepted_radius": 4})
         _write_jsonl(run_dir / "planner_runs.jsonl", planner_rows)
         _write_jsonl(run_dir / "benchmark/metrics.jsonl", benchmark_rows)
-        _write_jsonl(
-            run_dir / "benchmark/planner_runs.jsonl", benchmark_planner_runs
-        )
+        _write_jsonl(run_dir / "benchmark/planner_runs.jsonl", benchmark_planner_runs)
         _write_json(run_dir / "manifest.json", manifest)
         return run_dir
 

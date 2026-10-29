@@ -92,9 +92,15 @@ def test_completed_older_child_response_cannot_replace_distinct_newer_child(tmp_
                 map_configuration_http_file = map_configuration_http_file or name
 
         page.on("response", record_response)
-        with _preserve_browser_evidence(context, page, evidence, {
-            "console_errors": console_errors, "request_failures": request_failures,
-        }):
+        with _preserve_browser_evidence(
+            context,
+            page,
+            evidence,
+            {
+                "console_errors": console_errors,
+                "request_failures": request_failures,
+            },
+        ):
             page.goto(f"{BASE_URL}/app/itinerary", wait_until="domcontentloaded")
             expect(page.locator("#app-shell")).to_be_visible(timeout=20_000)
             initial = _map_ack(page)
@@ -129,7 +135,9 @@ def test_completed_older_child_response_cannot_replace_distinct_newer_child(tmp_
             assert _map_ack(page)["rendered_map_plan_id"] == initial["rendered_map_plan_id"]
             expect(page.locator(".map-stage")).to_have_attribute("data-preview-state", "PREVIEW_RUNNING")
 
-            with page.expect_response(lambda response: response.url.endswith("/draft/undo") and response.status == 200) as undone:
+            with page.expect_response(
+                lambda response: response.url.endswith("/draft/undo") and response.status == 200
+            ) as undone:
                 page.locator("#inline-undo").click()
             assert undone.value.json()["session"]["draft"] == []
             undo_records = [row for row in records if urlsplit(row["url"]).path.endswith("/draft/undo")]
@@ -144,7 +152,9 @@ def test_completed_older_child_response_cannot_replace_distinct_newer_child(tmp_
             proposal = b["proposal"]
             assert proposal["state"] == "eligible"
             assert proposal["child_plan_id"] != a["proposal"]["child_plan_id"]
-            expect(page.locator(".map-stage")).to_have_attribute("data-preview-state", "PREVIEW_RENDERED", timeout=40_000)
+            expect(page.locator(".map-stage")).to_have_attribute(
+                "data-preview-state", "PREVIEW_RENDERED", timeout=40_000
+            )
             before_release = _map_ack(page)
             expected_geometry = _independent_geometry_hash(page, proposal["geography_plan"])
             a_geometry = _independent_geometry_hash(page, a["proposal"]["geography_plan"])
@@ -157,23 +167,37 @@ def test_completed_older_child_response_cannot_replace_distinct_newer_child(tmp_
             b_rendered_at = page.evaluate("new Date().toISOString()")
 
             def surfaces():
-                metrics = page.locator('.metric[data-plan-id]').evaluate_all("elements => elements.map(e => ({plan_id:e.dataset.planId,content_hash:e.dataset.planContentHash,text:e.innerText}))")
-                assert metrics and all(row["plan_id"] == proposal["child_plan_id"] and row["content_hash"] == proposal["child_plan_content_hash"] for row in metrics)
+                metrics = page.locator(".metric[data-plan-id]").evaluate_all(
+                    "elements => elements.map(e => ({plan_id:e.dataset.planId,content_hash:e.dataset.planContentHash,text:e.innerText}))"
+                )
+                assert metrics and all(
+                    row["plan_id"] == proposal["child_plan_id"]
+                    and row["content_hash"] == proposal["child_plan_content_hash"]
+                    for row in metrics
+                )
                 expect(page.locator('.day-card[data-day="5"]')).to_contain_text("Point Lobos")
                 page.locator('[data-route="/app/evidence"]').first.click()
-                view = page.locator('[data-evidence-plan-id]')
+                view = page.locator("[data-evidence-plan-id]")
                 expect(view).to_have_attribute("data-evidence-plan-id", proposal["child_plan_id"])
                 expect(view).to_have_attribute("data-plan-content-hash", proposal["child_plan_content_hash"])
                 expect(view).to_have_attribute("data-evaluation-id", proposal["certificate_id"])
                 expect(view).to_contain_text(proposal["diff_id"])
-                result = {"metrics": metrics, "evidence": view.evaluate("e => ({...e.dataset})"), "diff_id": proposal["diff_id"]}
-                page.locator('#evidence-back').click()
-                expect(page.locator(".map-stage")).to_have_attribute("data-preview-state", "PREVIEW_RENDERED", timeout=40_000)
+                result = {
+                    "metrics": metrics,
+                    "evidence": view.evaluate("e => ({...e.dataset})"),
+                    "diff_id": proposal["diff_id"],
+                }
+                page.locator("#evidence-back").click()
+                expect(page.locator(".map-stage")).to_have_attribute(
+                    "data-preview-state", "PREVIEW_RENDERED", timeout=40_000
+                )
                 return result
 
             before_surfaces = surfaces()
             page.evaluate("window.__completedPreviewRace.release()")
-            expect(page.locator("#toast-region")).to_contain_text("An older preview response was ignored", timeout=15_000)
+            expect(page.locator("#toast-region")).to_contain_text(
+                "An older preview response was ignored", timeout=15_000
+            )
             after_release = _map_ack(page)
             assert after_release == before_release
             after_surfaces = surfaces()
@@ -188,29 +212,54 @@ def test_completed_older_child_response_cannot_replace_distinct_newer_child(tmp_
             _write_json(evidence / "preview_b_response.json", b)
             _write_json(evidence / "preview_b_request.json", second.value.request.post_data_json)
             _write_json(evidence / "map_render_ack.json", after_release)
-            _write_json(evidence / "trace.json", {
-                "schema_version": "completed-preview-response-race-v1", "assertions_passed": True,
-                "fault_injection": "delivery of first unchanged real 200 response held after backend completion",
-                "session_id": b["session"]["session_id"], "parent_plan_id": proposal["parent_plan_id"],
-                "a_child_plan_id": a["proposal"]["child_plan_id"], "a_geometry_hash": a_geometry,
-                "a_completed_at": held["completedAt"], "b_rendered_at": b_rendered_at, "a_released_at": held["releasedAt"],
-                "b_child_plan_id": proposal["child_plan_id"], "b_child_plan_content_hash": proposal["child_plan_content_hash"],
-                "b_evaluation_id": proposal["certificate_id"], "b_geometry_hash": expected_geometry,
-                "before_release": before_release, "after_release": after_release,
-                "before_surfaces": before_surfaces, "after_surfaces": after_surfaces,
-                "undo_statuses": [409, 200], "preview_response_statuses": [200, 200],
-                "older_successful_response_ignored": True, "console_errors": console_errors,
-                "unexpected_console_errors": unexpected_console, "request_failures": request_failures,
-                "blocking_request_failure_indexes": network_classification["blocking_failure_indexes"],
-                "http_records": [row["file"] for row in records],
-            })
+            _write_json(
+                evidence / "trace.json",
+                {
+                    "schema_version": "completed-preview-response-race-v1",
+                    "assertions_passed": True,
+                    "fault_injection": "delivery of first unchanged real 200 response held after backend completion",
+                    "session_id": b["session"]["session_id"],
+                    "parent_plan_id": proposal["parent_plan_id"],
+                    "a_child_plan_id": a["proposal"]["child_plan_id"],
+                    "a_geometry_hash": a_geometry,
+                    "a_completed_at": held["completedAt"],
+                    "b_rendered_at": b_rendered_at,
+                    "a_released_at": held["releasedAt"],
+                    "b_child_plan_id": proposal["child_plan_id"],
+                    "b_child_plan_content_hash": proposal["child_plan_content_hash"],
+                    "b_evaluation_id": proposal["certificate_id"],
+                    "b_geometry_hash": expected_geometry,
+                    "before_release": before_release,
+                    "after_release": after_release,
+                    "before_surfaces": before_surfaces,
+                    "after_surfaces": after_surfaces,
+                    "undo_statuses": [409, 200],
+                    "preview_response_statuses": [200, 200],
+                    "older_successful_response_ignored": True,
+                    "console_errors": console_errors,
+                    "unexpected_console_errors": unexpected_console,
+                    "request_failures": request_failures,
+                    "blocking_request_failure_indexes": network_classification["blocking_failure_indexes"],
+                    "http_records": [row["file"] for row in records],
+                },
+            )
             _write_json(evidence / "network_failures.json", request_failures)
             _write_json(evidence / "rendered_map_style.json", rendered_style)
-            _write_json(evidence / "network_classification.json", {
-                "map_configuration_http_file": map_configuration_http_file,
-                "rendered_map_style_file": "rendered_map_style.json",
-                **network_classification,
-            })
-            _write_json(evidence / "llm_io.json", {"provider_call_count": 0, "llm_input": None, "llm_output": None,
-                "reason": "Two real direct-edit optimizer previews; only HTTP response delivery timing is injected, with no chat or provider calls."})
+            _write_json(
+                evidence / "network_classification.json",
+                {
+                    "map_configuration_http_file": map_configuration_http_file,
+                    "rendered_map_style_file": "rendered_map_style.json",
+                    **network_classification,
+                },
+            )
+            _write_json(
+                evidence / "llm_io.json",
+                {
+                    "provider_call_count": 0,
+                    "llm_input": None,
+                    "llm_output": None,
+                    "reason": "Two real direct-edit optimizer previews; only HTTP response delivery timing is injected, with no chat or provider calls.",
+                },
+            )
         browser.close()

@@ -17,9 +17,7 @@ from itinerary_system.product_dashboard_renderer import (  # noqa: E402
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(
-        description="Hash dashboard_product/screenshots/*.png into its manifest."
-    )
+    parser = argparse.ArgumentParser(description="Hash dashboard_product/screenshots/*.png into its manifest.")
     parser.add_argument("run_dir", type=Path)
     return parser.parse_args()
 

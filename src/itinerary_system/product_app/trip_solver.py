@@ -12,7 +12,20 @@ from scipy.sparse import coo_matrix
 from .workspace import WorkspaceError
 
 
-def solve_trip(*, stops, hotels, matrix, required, start, end, days=7, max_drive=360, max_day=720, time_limit=12, max_stops_per_day=None):
+def solve_trip(
+    *,
+    stops,
+    hotels,
+    matrix,
+    required,
+    start,
+    end,
+    days=7,
+    max_drive=360,
+    max_day=720,
+    time_limit=12,
+    max_stops_per_day=None,
+):
     """Minimize road minutes plus a declared 15-minute penalty per new stop.
 
     Every day has a path from one selected overnight base to the next, at
@@ -56,7 +69,9 @@ def solve_trip(*, stops, hotels, matrix, required, start, end, days=7, max_drive
         constraint({ends[day, h]: 1 for h in end_options}, 1, 1)
         end_times[day] = variable(binary=False)
         for point in names:
-            visits[day, point] = variable(cost=15.0 + float(stops[point].get("preference_penalty_minutes", 0)) if point not in required else 0.0)
+            visits[day, point] = variable(
+                cost=15.0 + float(stops[point].get("preference_penalty_minutes", 0)) if point not in required else 0.0
+            )
             arrivals[day, point] = variable(binary=False)
             constraint({arrivals[day, point]: 1, visits[day, point]: -max_day}, high=0)
         candidates = (

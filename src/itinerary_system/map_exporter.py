@@ -1952,6 +1952,7 @@ def _write_evaluation_page(root: Path, assets: Path, metrics: dict[str, Any], wr
     _write_text_asset(metrics_js, _global_assignment("DASHBOARD_EVALUATION_METRICS", metrics), written)
     _write_text_asset(root / "evaluation.html", evaluation_page_html(), written)
 
+
 def _dashboard_page_html(mode: str) -> str:
     default_mode = "customer" if mode == "customer" else "research"
     mode_label = "Customer trip planner" if default_mode == "customer" else "Research/Test dashboard"

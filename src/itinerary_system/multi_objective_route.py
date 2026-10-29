@@ -94,8 +94,10 @@ def _route_sequence_ids(
     end_depot_id: str,
 ) -> tuple[str, ...]:
     poi_ids = _poi_entity_ids(pois)
-    return (route_anchor_key(start_depot_id),) + tuple(poi_ids[idx] for idx in selected) + (
-        route_anchor_key(end_depot_id),
+    return (
+        (route_anchor_key(start_depot_id),)
+        + tuple(poi_ids[idx] for idx in selected)
+        + (route_anchor_key(end_depot_id),)
     )
 
 

@@ -225,9 +225,7 @@ def test_actual_time_window_api_payloads_pass_js_and_forgeries_fail(tmp_path: Pa
                 "evidence_refs": [],
             },
         )
-        stale_snapshot = client.get(
-            f"/api/sessions/{stale_session['session_id']}", headers=stale_headers
-        ).json()
+        stale_snapshot = client.get(f"/api/sessions/{stale_session['session_id']}", headers=stale_headers).json()
         assert stale.status_code == 409
         assert stale.json() == {"detail": "stale_session_revision"}
         assert stale_snapshot["session"]["revision"] == 1
@@ -291,6 +289,6 @@ def test_actual_time_window_api_payloads_pass_js_and_forgeries_fail(tmp_path: Pa
 def test_assets_are_build_bound_for_evaluated_time_window_contract() -> None:
     markup = INDEX.read_text(encoding="utf-8")
 
-    assert '/static/css/app.css?v=__PRODUCT_BUILD_ID__' in markup
-    assert '/static/js/app.js?v=__PRODUCT_BUILD_ID__' in markup
+    assert "/static/css/app.css?v=__PRODUCT_BUILD_ID__" in markup
+    assert "/static/js/app.js?v=__PRODUCT_BUILD_ID__" in markup
     assert '<meta name="product-build-id" content="__PRODUCT_BUILD_ID__">' in markup

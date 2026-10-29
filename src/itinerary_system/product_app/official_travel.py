@@ -54,7 +54,9 @@ class _NoRedirect(urllib.request.HTTPRedirectHandler):
         raise WorkspaceError("official_source_redirect_blocked", 409)
 
 
-def read_official_sources(*, big_sur: bool, hearst: bool, channel_islands: bool = False, redwood: bool = False, yosemite: bool = False) -> list[dict]:
+def read_official_sources(
+    *, big_sur: bool, hearst: bool, channel_islands: bool = False, redwood: bool = False, yosemite: bool = False
+) -> list[dict]:
     names = (["big_sur_park", "highway_1"] if big_sur else []) + (["hearst_castle"] if hearst else [])
     if channel_islands:
         names += list(CHANNEL_URLS)
@@ -89,21 +91,35 @@ def read_official_sources(*, big_sur: bool, hearst: bool, channel_islands: bool 
                 re.I,
             )
         ]
-        expected = ({name:[r"Yosemite|Sentinel Dome"]} if name in YOSEMITE_URLS else {
-            "redwood_lodging": [r"Staying Near Redwood National and State Parks"],
-            "redwood_walk": [r"Walk the Lady Bird Johnson Grove"],
-            "redwood_conditions": [r"Redwood National and State Parks"],
-            "channel_islands_nps": [r"Island Packers", r"Ventura Harbor"],
-            "channel_islands_operator": [r"Santa Cruz Island", r"Scorpion Anchorage"],
-            "big_sur_park": [r"Pfeiffer Big Sur"],
-            "highway_1": [r"SR 1", r"STATE ROUTE 1"],
-            "hearst_castle": [r"Hearst Castle"],
-        })[name]
-        if (name not in YOSEMITE_URLS and len(selected) < 2) or not any(re.search(term, " ".join(lines), re.I) for term in expected):
+        expected = (
+            {name: [r"Yosemite|Sentinel Dome"]}
+            if name in YOSEMITE_URLS
+            else {
+                "redwood_lodging": [r"Staying Near Redwood National and State Parks"],
+                "redwood_walk": [r"Walk the Lady Bird Johnson Grove"],
+                "redwood_conditions": [r"Redwood National and State Parks"],
+                "channel_islands_nps": [r"Island Packers", r"Ventura Harbor"],
+                "channel_islands_operator": [r"Santa Cruz Island", r"Scorpion Anchorage"],
+                "big_sur_park": [r"Pfeiffer Big Sur"],
+                "highway_1": [r"SR 1", r"STATE ROUTE 1"],
+                "hearst_castle": [r"Hearst Castle"],
+            }
+        )[name]
+        if (name not in YOSEMITE_URLS and len(selected) < 2) or not any(
+            re.search(term, " ".join(lines), re.I) for term in expected
+        ):
             raise WorkspaceError("official_source_content_unrecognized", 409)
         plain = " ".join(lines)
         if name in YOSEMITE_URLS:
-            evidence_text = " ".join(line for line in lines if re.search(r"Glacier Point Road|firefighter|Mariposa|shuttle|trail|Wawona|Meadow|Sentinel|open|clos",line,re.I))
+            evidence_text = " ".join(
+                line
+                for line in lines
+                if re.search(
+                    r"Glacier Point Road|firefighter|Mariposa|shuttle|trail|Wawona|Meadow|Sentinel|open|clos",
+                    line,
+                    re.I,
+                )
+            )
         elif name == "redwood_lodging":
             if "Arcata Chamber of Commerce" not in plain:
                 raise WorkspaceError("official_source_content_unrecognized", 409)
@@ -113,7 +129,9 @@ def read_official_sources(*, big_sur: bool, hearst: bool, channel_islands: bool 
                 raise WorkspaceError("official_source_content_unrecognized", 409)
             evidence_text = plain[plain.rindex("Walk the Lady Bird Johnson Grove") :]
         elif name == "redwood_conditions":
-            if not all(term in plain for term in ("Bald Hills Road", "Trails", "park trails not listed below are open")):
+            if not all(
+                term in plain for term in ("Bald Hills Road", "Trails", "park trails not listed below are open")
+            ):
                 raise WorkspaceError("official_source_content_unrecognized", 409)
             evidence_text = plain[plain.index("Roads & Day Use Areas") :]
         elif name == "channel_islands_nps":
@@ -123,7 +141,9 @@ def read_official_sources(*, big_sur: bool, hearst: bool, channel_islands: bool 
         elif name == "channel_islands_operator":
             if not all(term in plain for term in ("From Ventura Harbor", "Scorpion Anchorage", "45 minutes")):
                 raise WorkspaceError("official_source_content_unrecognized", 409)
-            evidence_text = " ".join(line for line in lines if re.search(r"Ventura|Scorpion|Travel time|45 minutes", line, re.I))
+            evidence_text = " ".join(
+                line for line in lines if re.search(r"Ventura|Scorpion|Travel time|45 minutes", line, re.I)
+            )
         elif name == "highway_1":
             central = re.search(r"\[IN THE CENTRAL CALIFORNIA AREA\](.*?)(?:\[IN THE NORTHERN|$)", plain, re.I)
             if central is None:
@@ -153,13 +173,21 @@ def read_official_sources(*, big_sur: bool, hearst: bool, channel_islands: bool 
             )
         if name == "redwood_conditions":
             road = re.search(r"Bald Hills Road\s+(Open(?:/\s*Hazard Conditions)?|Closed)\b", plain, re.I)
-            trail_closed = re.search(r"Lady Bird Johnson(?: Grove)?(?: Trail)?\s+(?:Closed|Partially Open)", plain, re.I)
-            park_access = "closed" if trail_closed or road and road.group(1).lower() == "closed" else (
-                "open_with_hazards" if road and "hazard" in road.group(1).lower() else "open" if road else "unknown"
+            trail_closed = re.search(
+                r"Lady Bird Johnson(?: Grove)?(?: Trail)?\s+(?:Closed|Partially Open)", plain, re.I
+            )
+            park_access = (
+                "closed"
+                if trail_closed or road and road.group(1).lower() == "closed"
+                else (
+                    "open_with_hazards" if road and "hazard" in road.group(1).lower() else "open" if road else "unknown"
+                )
             )
         if name == "yosemite_conditions":
-            section = re.search(r"Glacier Point Road(.*?)Mariposa Grove Road",plain,re.I)
-            park_access = "open_with_hazards" if section and re.search(r"\bOpen\s*$",section.group(1)) else "closed_or_unknown"
+            section = re.search(r"Glacier Point Road(.*?)Mariposa Grove Road", plain, re.I)
+            park_access = (
+                "open_with_hazards" if section and re.search(r"\bOpen\s*$", section.group(1)) else "closed_or_unknown"
+            )
         result.append(
             {
                 "source_id": name,

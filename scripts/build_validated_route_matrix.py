@@ -44,7 +44,6 @@ def _parse_sequence(value: str) -> tuple[str, ...]:
     return tuple(part.strip() for part in str(value).split(",") if part.strip())
 
 
-
 def _bundle_lineage(args: argparse.Namespace) -> tuple[str, str]:
     if not args.route_evidence_manifest:
         if args.require_publication_ready:
@@ -61,6 +60,7 @@ def _bundle_lineage(args: argparse.Namespace) -> tuple[str, str]:
     if args.require_publication_ready and manifest.get("publication_ready") is not True:
         raise ValueError("strict matrix build requires a publication-ready route-evidence manifest")
     return bundle_id, expected_sha256
+
 
 def main() -> int:
     args = parse_args()

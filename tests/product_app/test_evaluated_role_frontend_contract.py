@@ -76,8 +76,8 @@ def test_role_editor_separates_trip_role_from_place_identity_and_categories() ->
     assert "does not change the PlaceEntity identity or categories" in source
     assert "semantic fit and recommendation remain Unavailable" in source
     assert "structural role remains draft only" in source
-    assert 'properties?.itinerary_role ?? null' in source
-    assert 'optionsHtml(vocab.stop_roles, properties?.role)' not in source
+    assert "properties?.itinerary_role ?? null" in source
+    assert "optionsHtml(vocab.stop_roles, properties?.role)" not in source
     assert ".typed-operation-form > button { min-height: 44px;" in css
 
 
@@ -119,9 +119,7 @@ def test_actual_role_api_payload_passes_js_and_forgeries_fail(tmp_path: Path) ->
         assert acceptance.json() == {"detail": "acceptance_proposal_invalid"}
 
         structural_created = client.post("/api/sessions", json={}).json()
-        structural_headers = {
-            "X-Session-Token": structural_created["mutation_token"]
-        }
+        structural_headers = {"X-Session-Token": structural_created["mutation_token"]}
         structural_session = _append_role(
             client,
             structural_created["session"],
@@ -140,15 +138,11 @@ def test_actual_role_api_payload_passes_js_and_forgeries_fail(tmp_path: Path) ->
         )
         assert structural_impact.status_code == 200
         assert structural_preview.status_code == 409
-        assert structural_preview.json() == {
-            "detail": "stop_role_evaluation_not_supported"
-        }
+        assert structural_preview.json() == {"detail": "stop_role_evaluation_not_supported"}
 
         mixed_created = client.post("/api/sessions", json={}).json()
         mixed_headers = {"X-Session-Token": mixed_created["mutation_token"]}
-        mixed_session = _append_role(
-            client, mixed_created["session"], mixed_headers, role="meal"
-        )
+        mixed_session = _append_role(client, mixed_created["session"], mixed_headers, role="meal")
         duration = client.post(
             f"/api/sessions/{mixed_session['session_id']}/draft/operations",
             headers=mixed_headers,
@@ -179,9 +173,7 @@ def test_actual_role_api_payload_passes_js_and_forgeries_fail(tmp_path: Path) ->
 
         stale_created = client.post("/api/sessions", json={}).json()
         stale_headers = {"X-Session-Token": stale_created["mutation_token"]}
-        stale_session = _append_role(
-            client, stale_created["session"], stale_headers, role="activity"
-        )
+        stale_session = _append_role(client, stale_created["session"], stale_headers, role="activity")
         stale = client.post(
             f"/api/sessions/{stale_session['session_id']}/draft/operations",
             headers=stale_headers,
@@ -208,9 +200,7 @@ def test_actual_role_api_payload_passes_js_and_forgeries_fail(tmp_path: Path) ->
                     "map_edit_capabilities": workspace["map_edit_capabilities"],
                     "timeline": workspace["timeline"],
                     "geography": workspace["geography"],
-                    "role_constraint_evidence": workspace[
-                        "role_constraint_evidence"
-                    ],
+                    "role_constraint_evidence": workspace["role_constraint_evidence"],
                 },
                 "eligible": {
                     "before_session": before,
@@ -254,21 +244,38 @@ def test_assets_are_build_bound_for_evaluated_role_contract() -> None:
 def test_real_replacement_duration_time_window_role_acceptance_survives_restart(tmp_path, monkeypatch):
     monkeypatch.setenv("PRODUCT_COPILOT_ADAPTER", "deterministic")
     monkeypatch.setenv("OPENAI_API_KEY", "")
-    monkeypatch.setattr(ProductRuntime, "_probe_map", lambda self: ComponentHealthV1("map", "ready", False, "maplibre_ready"))
+    monkeypatch.setattr(
+        ProductRuntime, "_probe_map", lambda self: ComponentHealthV1("map", "ready", False, "maplibre_ready")
+    )
     state_root = tmp_path / "s"
     exchanges, snapshots, plan_ids = [], {}, []
     authentication = {}
 
     def client():
-        return TestClient(create_product_app(repository_root=ROOT, registry_path=REGISTRY,
-            state_root=state_root, additional_allowed_authorities=("testserver",)))
+        return TestClient(
+            create_product_app(
+                repository_root=ROOT,
+                registry_path=REGISTRY,
+                state_root=state_root,
+                additional_allowed_authorities=("testserver",),
+            )
+        )
 
     def request(api, method, path, body=None):
         response = api.request(method, path, json=body, headers=authentication)
         output = response.json()
-        exchanges.append({"method":method,"path":path,"input":body,"status":response.status_code,
-            "output":{key:value for key,value in output.items() if key != "mutation_token"}})
-        (tmp_path / "exact_role_chain_io.json").write_text(json.dumps(exchanges, indent=2, sort_keys=True), encoding="utf-8")
+        exchanges.append(
+            {
+                "method": method,
+                "path": path,
+                "input": body,
+                "status": response.status_code,
+                "output": {key: value for key, value in output.items() if key != "mutation_token"},
+            }
+        )
+        (tmp_path / "exact_role_chain_io.json").write_text(
+            json.dumps(exchanges, indent=2, sort_keys=True), encoding="utf-8"
+        )
         assert response.status_code == 200, response.text
         return output
 
@@ -279,10 +286,24 @@ def test_real_replacement_duration_time_window_role_acceptance_survives_restart(
     path = f"/api/sessions/{session['session_id']}"
     original = session["accepted_plan_id"]
     operations = [
-        {"type":"replace_nearby","target":"bixby_creek_bridge_viewpoint","parameters":{"candidate_id":"pfeiffer_big_sur_state_park"}},
-        {"type":"set_stop_duration","target":"griffith_observatory","parameters":{"duration":{"mode":"exact","preferred_minutes":60,"minimum_minutes":60,"maximum_minutes":60}}},
-        {"type":"set_stop_time_window","target":TARGET,"parameters":{"earliest_arrival":"10:00","latest_departure":None}},
-        {"type":"set_stop_role","target":TARGET,"parameters":{"role":"meal"}},
+        {
+            "type": "replace_nearby",
+            "target": "bixby_creek_bridge_viewpoint",
+            "parameters": {"candidate_id": "pfeiffer_big_sur_state_park"},
+        },
+        {
+            "type": "set_stop_duration",
+            "target": "griffith_observatory",
+            "parameters": {
+                "duration": {"mode": "exact", "preferred_minutes": 60, "minimum_minutes": 60, "maximum_minutes": 60}
+            },
+        },
+        {
+            "type": "set_stop_time_window",
+            "target": TARGET,
+            "parameters": {"earliest_arrival": "10:00", "latest_departure": None},
+        },
+        {"type": "set_stop_role", "target": TARGET, "parameters": {"role": "meal"}},
     ]
     parent_id = original
     for index, operation in enumerate(operations):
@@ -290,19 +311,28 @@ def test_real_replacement_duration_time_window_role_acceptance_survives_restart(
             restored = request(api, "GET", path)
             session = restored["session"]
             assert session["accepted_plan_id"] == parent_id
-            staged = request(api, "POST", path + "/draft/operations",
-                {"expected_revision":session["revision"],"source":"typed_stop_editor",**operation})
-            preview = request(api, "POST", path + "/preview", {"expected_revision":staged["session"]["revision"]})
+            staged = request(
+                api,
+                "POST",
+                path + "/draft/operations",
+                {"expected_revision": session["revision"], "source": "typed_stop_editor", **operation},
+            )
+            preview = request(api, "POST", path + "/preview", {"expected_revision": staged["session"]["revision"]})
             proposal = preview["proposal"]
             assert proposal["state"] == "eligible" and proposal["acceptance_eligible"] is True
             assert proposal["parent_plan_id"] == parent_id
-            certificate = (proposal.get("runtime_execution", {}).get("evaluation_certificate")
+            certificate = (
+                proposal.get("runtime_execution", {}).get("evaluation_certificate")
                 or proposal.get("certificate_schedule_evidence", {}).get("certificate_record")
-                or proposal.get("certificate_role_evidence", {}).get("certificate_record"))
+                or proposal.get("certificate_role_evidence", {}).get("certificate_record")
+            )
             assert certificate["plan_id"] == proposal["child_plan_id"]
             assert certificate["plan_content_hash"] == proposal["child_plan_content_hash"]
             assert certificate["content_hash"] == proposal["certificate_content_hash"]
-            assert stable_content_hash({key:value for key,value in certificate.items() if key != "content_hash"}) == certificate["content_hash"]
+            assert (
+                stable_content_hash({key: value for key, value in certificate.items() if key != "content_hash"})
+                == certificate["content_hash"]
+            )
             if operation["type"] == "set_stop_role":
                 service = api.app.state.product_service
                 active = service.workspace.get(session["session_id"])
@@ -314,8 +344,16 @@ def test_real_replacement_duration_time_window_role_acceptance_survives_restart(
                 forged["warnings"][0]["evidence_refs"] = ("forged_stop",)
                 with pytest.raises(WorkspaceError, match="draft_role_proposal_invalid"):
                     _replay_role_certificate_with_persisted_timestamp(forged, proposal)
-            accepted = request(api, "POST", path + "/accept", {"expected_revision":preview["session"]["revision"],
-                "confirmation":"accept_evaluated_repair","idempotency_key":f"role-chain-accept-{index:04d}"})
+            accepted = request(
+                api,
+                "POST",
+                path + "/accept",
+                {
+                    "expected_revision": preview["session"]["revision"],
+                    "confirmation": "accept_evaluated_repair",
+                    "idempotency_key": f"role-chain-accept-{index:04d}",
+                },
+            )
             decision = accepted["result"]["decision"]
             assert decision["selected_plan_id"] == proposal["child_plan_id"]
             assert decision["certificate_content_hash"] == certificate["content_hash"]
@@ -333,10 +371,19 @@ def test_real_replacement_duration_time_window_role_acceptance_survives_restart(
             assert restored["session"]["accepted_plan_id"] == parent_id
             plan = next(row for row in restored["workspace"]["geography"]["plans"] if row["plan_id"] == parent_id)
             assert plan["content_hash"] == proposal["child_plan_content_hash"]
-            assert {row["properties"]["stop_id"] for row in plan["stops"]["features"]} == {row["stop_id"] for row in snapshot["plan"]["selected_stops"]}
-            assert {"golden_gate_bridge","pfeiffer_big_sur_state_park",TARGET} <= {row["properties"]["stop_id"] for row in plan["stops"]["features"]}
+            assert {row["properties"]["stop_id"] for row in plan["stops"]["features"]} == {
+                row["stop_id"] for row in snapshot["plan"]["selected_stops"]
+            }
+            assert {"golden_gate_bridge", "pfeiffer_big_sur_state_park", TARGET} <= {
+                row["properties"]["stop_id"] for row in plan["stops"]["features"]
+            }
             if operation["type"] == "set_stop_role":
-                target = next(row["properties"] for row in plan["stops"]["features"] if row["properties"]["stop_id"] == TARGET)
+                target = next(
+                    row["properties"] for row in plan["stops"]["features"] if row["properties"]["stop_id"] == TARGET
+                )
                 assert target["itinerary_role"] == "meal"
-                assert [row["selected_plan_id"] for row in api.app.state.product_service.acceptance.history(session["trip_id"])] == plan_ids
+                assert [
+                    row["selected_plan_id"]
+                    for row in api.app.state.product_service.acceptance.history(session["trip_id"])
+                ] == plan_ids
     assert len(set([original, *plan_ids])) == 5

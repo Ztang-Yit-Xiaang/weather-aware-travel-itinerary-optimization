@@ -61,22 +61,37 @@ ALLOWED_ROLES = frozenset(
 )
 
 _TRIP_ID = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$")
-_ROUTE_GEOMETRY_VALIDATOR = SchemaValidator(core_schema.chain_schema([
-    core_schema.is_instance_schema((list, tuple)),
-    core_schema.list_schema(core_schema.chain_schema([
-        core_schema.is_instance_schema((list, tuple)),
-        core_schema.tuple_schema([
-            core_schema.chain_schema([
-                core_schema.is_instance_schema((int, float)),
-                core_schema.float_schema(strict=True, allow_inf_nan=False, ge=-90, le=90),
-            ]),
-            core_schema.chain_schema([
-                core_schema.is_instance_schema((int, float)),
-                core_schema.float_schema(strict=True, allow_inf_nan=False, ge=-180, le=180),
-            ]),
-        ]),
-    ]), min_length=2),
-]))
+_ROUTE_GEOMETRY_VALIDATOR = SchemaValidator(
+    core_schema.chain_schema(
+        [
+            core_schema.is_instance_schema((list, tuple)),
+            core_schema.list_schema(
+                core_schema.chain_schema(
+                    [
+                        core_schema.is_instance_schema((list, tuple)),
+                        core_schema.tuple_schema(
+                            [
+                                core_schema.chain_schema(
+                                    [
+                                        core_schema.is_instance_schema((int, float)),
+                                        core_schema.float_schema(strict=True, allow_inf_nan=False, ge=-90, le=90),
+                                    ]
+                                ),
+                                core_schema.chain_schema(
+                                    [
+                                        core_schema.is_instance_schema((int, float)),
+                                        core_schema.float_schema(strict=True, allow_inf_nan=False, ge=-180, le=180),
+                                    ]
+                                ),
+                            ]
+                        ),
+                    ]
+                ),
+                min_length=2,
+            ),
+        ]
+    )
+)
 _QUERY_HASH = re.compile(r"^[0-9a-f]{16}$")
 _MATRIX_ID = re.compile(r"^route_matrix_[0-9a-f]{16}$")
 _ROUTE_BUNDLE_ID = re.compile(r"^route_bundle_[0-9a-f]{16}$")
@@ -190,22 +205,30 @@ def discover_poi_candidates(
     required_pairs = None
     if _complete_universe:
         catalog = _catalog(repository_root, trip_id)
-        catalog_matches = tuple(sorted(
-            (place for place in catalog.places if place.has_road_validated_access
-             and (role is None or role in place.place_categories)),
-            key=lambda place: (place.name.casefold(), place.place_id),
-        ))
+        catalog_matches = tuple(
+            sorted(
+                (
+                    place
+                    for place in catalog.places
+                    if place.has_road_validated_access and (role is None or role in place.place_categories)
+                ),
+                key=lambda place: (place.name.casefold(), place.place_id),
+            )
+        )
         selected_plan = _accepted_geography_plan(geography, accepted_plan_id)
         day_pairs = {
             (feature["properties"].get("origin_id"), feature["properties"].get("destination_id"))
             for feature in (selected_plan.get("validated_legs") or {}).get("features") or ()
-            if isinstance(feature, Mapping) and isinstance(feature.get("properties"), Mapping)
+            if isinstance(feature, Mapping)
+            and isinstance(feature.get("properties"), Mapping)
             and feature["properties"].get("day") == day
         }
         # Every baseline leg and either insertion direction for this day's slots
         # still receives the exact geometry/provenance checks below.
         required_pairs = day_pairs | {
-            pair for origin, destination in day_pairs for place in catalog_matches
+            pair
+            for origin, destination in day_pairs
+            for place in catalog_matches
             for pair in ((origin, place.place_id), (place.place_id, destination))
         }
     matrix = _route_matrix(route_matrix_record, required_pairs=required_pairs, allow_runtime_routes=_complete_universe)
@@ -225,7 +248,9 @@ def discover_poi_candidates(
     records_by_id: dict[str, dict[str, Any]] = {}
     if not _complete_universe:
         catalog_matches = catalog.search(
-            categories=(role,) if role else (), require_road_access=True, limit=50,
+            categories=(role,) if role else (),
+            require_road_access=True,
+            limit=50,
         )
     for place in catalog_matches:
         if place.place_id in {
@@ -235,9 +260,7 @@ def discover_poi_candidates(
         }:
             continue
         access = _selected_access_point(place)
-        if access is None or not _candidate_cells_are_exact(
-            matrix, context, place.place_id, access
-        ):
+        if access is None or not _candidate_cells_are_exact(matrix, context, place.place_id, access):
             continue
         candidate_id = place.place_id
         registered = _registered_replacement(
@@ -259,9 +282,7 @@ def discover_poi_candidates(
                 context.focus_coordinates,
             ),
             "visit_minutes": (
-                float(place.recommended_visit_minutes)
-                if place.recommended_visit_minutes is not None
-                else None
+                float(place.recommended_visit_minutes) if place.recommended_visit_minutes is not None else None
             ),
             "parking_minutes": None,
             "walking_minutes": None,
@@ -323,14 +344,20 @@ def discover_poi_candidates(
             "road_validated_only": True,
             "fallback_allowed": False,
         },
-        "candidates": ([records_by_id[key] for key in sorted(records_by_id)] if _complete_universe
-                       else [records_by_id[row.candidate_id] for row in selected]),
+        "candidates": (
+            [records_by_id[key] for key in sorted(records_by_id)]
+            if _complete_universe
+            else [records_by_id[row.candidate_id] for row in selected]
+        ),
     }
     if _complete_universe:
         result["candidate_universe"] = {
-            "count": len(records_by_id), "catalog_match_count": len(catalog_matches), "truncated": False,
-            "sha256": hashlib.sha256(json.dumps(result["candidates"], sort_keys=True,
-                                               separators=(",", ":")).encode()).hexdigest(),
+            "count": len(records_by_id),
+            "catalog_match_count": len(catalog_matches),
+            "truncated": False,
+            "sha256": hashlib.sha256(
+                json.dumps(result["candidates"], sort_keys=True, separators=(",", ":")).encode()
+            ).hexdigest(),
         }
     return result
 
@@ -350,7 +377,9 @@ def _catalog(repository_root: Path, trip_id: str) -> ProductPOICatalogV1:
 
 
 def _route_matrix(
-    record: Mapping[str, Any], *, required_pairs: set[tuple[str, str]] | None = None,
+    record: Mapping[str, Any],
+    *,
+    required_pairs: set[tuple[str, str]] | None = None,
     allow_runtime_routes: bool = False,
 ) -> RouteMatrix:
     matrix_id = record.get("matrix_id")
@@ -430,23 +459,31 @@ def _route_matrix(
 
 
 def _raw_route_cell_is_exact(
-    raw: Mapping[str, Any], context_snapshot_id: str, *, allow_runtime_routes: bool = False,
+    raw: Mapping[str, Any],
+    context_snapshot_id: str,
+    *,
+    allow_runtime_routes: bool = False,
 ) -> bool:
     distance_m = raw.get("distance_m")
     duration_s = raw.get("duration_s")
     query_hash = raw.get("query_hash")
     geometry = raw.get("geometry")
     cached_route = (
-        isinstance(query_hash, str) and _QUERY_HASH.fullmatch(query_hash)
-        and raw.get("provider") == "cached_osrm" and raw.get("routing_status") == "osrm_live"
+        isinstance(query_hash, str)
+        and _QUERY_HASH.fullmatch(query_hash)
+        and raw.get("provider") == "cached_osrm"
+        and raw.get("routing_status") == "osrm_live"
         and raw.get("geometry_source") == "cached_osrm_route_geometry"
         and raw.get("distance_source") == "cached_osrm_route_distance"
         and raw.get("duration_source") == "cached_osrm_route_duration"
     )
     runtime_route = (
-        allow_runtime_routes and isinstance(query_hash, str) and _SHA256.fullmatch(query_hash)
+        allow_runtime_routes
+        and isinstance(query_hash, str)
+        and _SHA256.fullmatch(query_hash)
         and raw.get("provider") == "runtime_osrm"
-        and (raw.get("routing_status"), raw.get("geometry_source")) in {
+        and (raw.get("routing_status"), raw.get("geometry_source"))
+        in {
             ("osrm_route_validated", "runtime_osrm_geojson"),
             ("osrm_waypoint_detour_validated", "runtime_osrm_geojson_via_highway_101"),
         }
@@ -480,9 +517,7 @@ def _valid_route_geometry(value: Any) -> bool:
     return _ROUTE_GEOMETRY_VALIDATOR.isinstance_python(value)
 
 
-def _accepted_geography_plan(
-    geography: Mapping[str, Any], accepted_plan_id: str
-) -> Mapping[str, Any]:
+def _accepted_geography_plan(geography: Mapping[str, Any], accepted_plan_id: str) -> Mapping[str, Any]:
     matches = [
         plan
         for plan in geography.get("plans") or ()
@@ -546,14 +581,12 @@ def _route_context(
     incoming = [
         row
         for row in legs
-        if row["properties"].get("destination_id") == replacement_target_id
-        and row["properties"].get("day") == day
+        if row["properties"].get("destination_id") == replacement_target_id and row["properties"].get("day") == day
     ]
     outgoing = [
         row
         for row in legs
-        if row["properties"].get("origin_id") == replacement_target_id
-        and row["properties"].get("day") == day
+        if row["properties"].get("origin_id") == replacement_target_id and row["properties"].get("day") == day
     ]
     if len(incoming) != 1 or len(outgoing) != 1:
         raise POICandidateDiscoveryError("replacement_target_route_context_unavailable")
@@ -687,9 +720,7 @@ def _registered_replacement(
         child = getattr(bundle, "child_plan", None)
         diff = getattr(bundle, "diff", None)
         certificate = getattr(bundle, "certificate", None)
-        if not isinstance(child, Mapping) or not isinstance(diff, Mapping) or not isinstance(
-            certificate, Mapping
-        ):
+        if not isinstance(child, Mapping) or not isinstance(diff, Mapping) or not isinstance(certificate, Mapping):
             continue
         added = diff.get("added_stops") or ()
         deleted = diff.get("deleted_stops") or ()
@@ -710,8 +741,7 @@ def _registered_replacement(
             or certificate.get("eligible") is not True
             or certificate.get("comparison_eligibility") != "eligible"
             or certificate.get("hard_feasibility_status") != "PASSED"
-            or certificate.get("evaluation_status")
-            not in {"PASSED", "PASSED_WITH_WARNINGS"}
+            or certificate.get("evaluation_status") not in {"PASSED", "PASSED_WITH_WARNINGS"}
         ):
             continue
         refs = tuple(
@@ -768,9 +798,7 @@ def _candidate_record(
         ("candidate_successor", place.place_id, context.successor_id),
     ]
     if context.kind == "insertion":
-        route_pairs.append(
-            ("predecessor_successor", context.predecessor_id, context.successor_id)
-        )
+        route_pairs.append(("predecessor_successor", context.predecessor_id, context.successor_id))
     else:
         route_pairs.extend(
             (
@@ -845,9 +873,7 @@ def _candidate_record(
             }
             for label, origin, destination in route_pairs
         ],
-        "registered_replacement": (
-            dict(registered.public_mapping) if registered is not None else None
-        ),
+        "registered_replacement": (dict(registered.public_mapping) if registered is not None else None),
     }
 
 
@@ -859,9 +885,7 @@ def _line_coordinates(feature: Mapping[str, Any]) -> tuple[tuple[float, float], 
     return tuple(
         (float(point[0]), float(point[1]))
         for point in coordinates
-        if isinstance(point, list)
-        and len(point) == 2
-        and all(isinstance(value, (int, float)) for value in point)
+        if isinstance(point, list) and len(point) == 2 and all(isinstance(value, (int, float)) for value in point)
     )
 
 
@@ -884,10 +908,7 @@ def _haversine_m(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
     phi2 = math.radians(lat2)
     delta_phi = math.radians(lat2 - lat1)
     delta_lambda = math.radians(lon2 - lon1)
-    a = (
-        math.sin(delta_phi / 2) ** 2
-        + math.cos(phi1) * math.cos(phi2) * math.sin(delta_lambda / 2) ** 2
-    )
+    a = math.sin(delta_phi / 2) ** 2 + math.cos(phi1) * math.cos(phi2) * math.sin(delta_lambda / 2) ** 2
     return radius_m * 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
 
 

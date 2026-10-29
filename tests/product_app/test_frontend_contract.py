@@ -32,8 +32,8 @@ def test_frontend_exposes_degraded_runtime_and_text_route_fallback() -> None:
     assert "The textual route remains available." in source
     assert 'class="textual-map-alternative"' in source
     assert "Text route description" in source
-    assert "state.mapConfig?.status !== \"ready\"" in source
-    assert "#layers-button\").disabled = !mapReady" in source
+    assert 'state.mapConfig?.status !== "ready"' in source
+    assert '#layers-button").disabled = !mapReady' in source
 
 
 def test_frontend_provider_boundary_disables_copilot_without_silent_fallback() -> None:
@@ -43,7 +43,10 @@ def test_frontend_provider_boundary_disables_copilot_without_silent_fallback() -
     assert 'interaction().provider === "openai"' in source
     assert '"OpenAI Copilot" : "Deterministic demo"' in source
     assert "return interaction().enabled === true" in source
-    assert "control.disabled = requestActive || previewActionActive || !available() || Boolean(pendingConversationReset)" in source
+    assert (
+        "control.disabled = requestActive || previewActionActive || !available() || Boolean(pendingConversationReset)"
+        in source
+    )
     assert "visible trip context, your message, and a bounded recent conversation window are sent to OpenAI" in source
     assert "requests stay on this computer" in source
     assert "copilot.update()" in app_source

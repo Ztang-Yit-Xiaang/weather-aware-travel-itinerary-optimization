@@ -35,10 +35,15 @@ class Runtime:
 
     def send(self, message, message_id=None):
         context = self.service.copilot_context(self.session).as_dict()
-        result = asyncio.run(self.service.interpret_copilot_message(
-            session_id=self.session.session_id, mutation_token=self.token, expected_revision=self.session.revision,
-            client_message_id=message_id or "client_message_" + uuid4().hex, message=message,
-        ))["turn"]
+        result = asyncio.run(
+            self.service.interpret_copilot_message(
+                session_id=self.session.session_id,
+                mutation_token=self.token,
+                expected_revision=self.session.revision,
+                client_message_id=message_id or "client_message_" + uuid4().hex,
+                message=message,
+            )
+        )["turn"]
         self.transcript.append({"input": message, "context": context, "output": result})
         return result
 
@@ -48,15 +53,23 @@ class FakeClient:
         self.responses = self
         self.calls = []
         self.output = interpretation or {
-            "schema_version": "copilot-interpretation-v1", "state": "clarification_required",
+            "schema_version": "copilot-interpretation-v1",
+            "state": "clarification_required",
             "assistant_message": "Untrusted provider wording.",
-            "intents": [{"type": "request_clarification", "clarification_question": "Which registered stop should I review?"}],
+            "intents": [
+                {"type": "request_clarification", "clarification_question": "Which registered stop should I review?"}
+            ],
         }
 
     async def parse(self, **kwargs):
         self.calls.append(kwargs)
         schema = kwargs["text_format"]
-        output = {**self.output, "schema_version": "copilot-interpretation-v2" if schema.__name__ == "OpenAIInterpretationSchemaV2" else "copilot-interpretation-v1"}
+        output = {
+            **self.output,
+            "schema_version": "copilot-interpretation-v2"
+            if schema.__name__ == "OpenAIInterpretationSchemaV2"
+            else "copilot-interpretation-v1",
+        }
         return SimpleNamespace(output=[], output_parsed=schema(**output))
 
 
@@ -65,10 +78,19 @@ def evidence(name, runtime, **extra):
     if directory:
         destination = Path(directory)
         destination.mkdir(parents=True, exist_ok=True)
-        destination.joinpath(name + ".json").write_text(json.dumps({
-            "provider_calls": 0, "mode": "deterministic_or_fake_transport", "turns": runtime.transcript,
-            "final_context": runtime.service.copilot_context(runtime.session).as_dict(), **extra,
-        }, indent=2), encoding="utf-8")
+        destination.joinpath(name + ".json").write_text(
+            json.dumps(
+                {
+                    "provider_calls": 0,
+                    "mode": "deterministic_or_fake_transport",
+                    "turns": runtime.transcript,
+                    "final_context": runtime.service.copilot_context(runtime.session).as_dict(),
+                    **extra,
+                },
+                indent=2,
+            ),
+            encoding="utf-8",
+        )
 
 
 @pytest.fixture
@@ -90,10 +112,13 @@ def test_context_v2_contains_current_capabilities_and_empty_plan_bound_memory(ru
     assert context["conversation_memory"]["pending_clarification"] is None
 
 
-@pytest.mark.parametrize("message", [
-    "I prefer nature and less driving.",
-    "I prefer less driving and museums.",
-])
+@pytest.mark.parametrize(
+    "message",
+    [
+        "I prefer nature and less driving.",
+        "I prefer less driving and museums.",
+    ],
+)
 def test_mixed_driving_preferences_require_a_complete_enforceable_request(runtime, message):
     response = runtime.send(message)
     assert response["interpretation"]["state"] == "clarification_required"
@@ -101,7 +126,9 @@ def test_mixed_driving_preferences_require_a_complete_enforceable_request(runtim
     assert "maximum daily driving time" in copy and "complete request" in copy
     assert runtime.session.draft == [] and runtime.session.proposal is None
     memory = runtime.service.copilot_context(runtime.session).conversation_memory
-    assert [row["preference"] for row in memory["proposed_preferences"]] == (["reduce_driving"] if "driving" in message else [])
+    assert [row["preference"] for row in memory["proposed_preferences"]] == (
+        ["reduce_driving"] if "driving" in message else []
+    )
 
 
 @pytest.mark.parametrize("provider", ["deterministic", "openai"])
@@ -113,8 +140,13 @@ def test_whole_plan_preservation_is_not_a_stop_edit_or_a_provider_call(runtime, 
     if provider == "openai":
         runtime.service.copilot = OpenAICopilotAdapter(model="fake-model", api_key="unused", client=client)
     turn = runtime.send(message)
-    evidence("whole_plan_" + provider + "_" + str(len(message)), runtime,
-             provider_calls=client.calls, before_session=before, after_session=runtime.session.public_dict())
+    evidence(
+        "whole_plan_" + provider + "_" + str(len(message)),
+        runtime,
+        provider_calls=client.calls,
+        before_session=before,
+        after_session=runtime.session.public_dict(),
+    )
     assert turn["interpretation"]["state"] == "proposal_ready"
     assert [row["type"] for row in turn["interpretation"]["intents"]] == ["keep_original"]
     assert runtime.session.public_dict() == before
@@ -123,11 +155,14 @@ def test_whole_plan_preservation_is_not_a_stop_edit_or_a_provider_call(runtime, 
 
 
 @pytest.mark.parametrize("provider", ["deterministic", "openai"])
-@pytest.mark.parametrize("message", [
-    "Do not keep the original plan.",
-    "Keep the original plan and replace Bixby Creek Bridge with Pfeiffer Big Sur State Park.",
-    "Keep the original plan; email it to me.",
-])
+@pytest.mark.parametrize(
+    "message",
+    [
+        "Do not keep the original plan.",
+        "Keep the original plan and replace Bixby Creek Bridge with Pfeiffer Big Sur State Park.",
+        "Keep the original plan; email it to me.",
+    ],
+)
 def test_whole_plan_shortcut_does_not_discard_negation_or_other_clauses(runtime, provider, message):
     client = FakeClient()
     if provider == "openai":
@@ -173,9 +208,13 @@ def test_explicit_preference_survives_beyond_six_turns_as_proposed_only(runtime)
     for _ in range(7):
         send("Review the safer repair.")
     memory = service.copilot_context(session).conversation_memory
-    assert memory["proposed_preferences"] == ({
-        "preference": "reduce_driving", "source_turn_id": first["turn_id"], "disposition": "proposed_only",
-    },)
+    assert memory["proposed_preferences"] == (
+        {
+            "preference": "reduce_driving",
+            "source_turn_id": first["turn_id"],
+            "disposition": "proposed_only",
+        },
+    )
     assert session.draft == []
     response = send("What preferences do you remember?")
     assert "reduce driving" in response["assistant_message"]
@@ -204,9 +243,13 @@ def test_preference_correction_replaces_proposed_memory_not_constraints(runtime)
     assert "not supported" not in corrected["assistant_message"]
     assert "preserve experience" in corrected["assistant_message"]
     memory = runtime.service.copilot_context(runtime.session).conversation_memory
-    assert memory["proposed_preferences"] == ({
-        "preference": "preserve_experience", "source_turn_id": corrected["turn_id"], "disposition": "proposed_only",
-    },)
+    assert memory["proposed_preferences"] == (
+        {
+            "preference": "preserve_experience",
+            "source_turn_id": corrected["turn_id"],
+            "disposition": "proposed_only",
+        },
+    )
     assert runtime.session.draft == []
 
 
@@ -223,7 +266,9 @@ def test_same_for_other_stop_requests_the_missing_target(runtime):
 
 def test_pending_clarification_survives_service_restart(runtime, tmp_path):
     runtime.send("Replace Bixby Creek Bridge.")
-    runtime.service = ProductService(runtime.service.registry, tmp_path / "state", copilot=DeterministicCopilotAdapter())
+    runtime.service = ProductService(
+        runtime.service.registry, tmp_path / "state", copilot=DeterministicCopilotAdapter()
+    )
     runtime.session = runtime.service.workspace.get(runtime.session.session_id)
     response = runtime.send("Pfeiffer Big Sur State Park.")
     assert response["interpretation"]["intents"][0]["target_stop_id"] == "bixby_creek_bridge_viewpoint"
@@ -267,16 +312,30 @@ def test_fake_provider_receives_v2_memory_and_exact_capability_context(runtime):
     assert context["capabilities"]["operations"]["add_candidate"]["preview_executable"] is False
     assert response["interpretation"]["state"] == "clarification_required"
     from openai.lib._pydantic import to_strict_json_schema
-    evidence("fake_provider_v2", runtime, fake_request={**request, "text_format": {
-        "python_type": request["text_format"].__name__, "strict_json_schema": to_strict_json_schema(request["text_format"]),
-    }}, fake_provider_output=client.output)
+
+    evidence(
+        "fake_provider_v2",
+        runtime,
+        fake_request={
+            **request,
+            "text_format": {
+                "python_type": request["text_format"].__name__,
+                "strict_json_schema": to_strict_json_schema(request["text_format"]),
+            },
+        },
+        fake_provider_output=client.output,
+    )
 
 
 def test_fake_provider_cannot_override_disabled_capability(runtime):
-    client = FakeClient({
-        "schema_version": "copilot-interpretation-v1", "state": "proposal_ready", "assistant_message": "Do this edit.",
-        "intents": [{"type": "move_day", "target_stop_id": "golden_gate_bridge", "destination_day": 3}],
-    })
+    client = FakeClient(
+        {
+            "schema_version": "copilot-interpretation-v1",
+            "state": "proposal_ready",
+            "assistant_message": "Do this edit.",
+            "intents": [{"type": "move_day", "target_stop_id": "golden_gate_bridge", "destination_day": 3}],
+        }
+    )
     runtime.service.copilot = OpenAICopilotAdapter(model="fake-model", api_key="unused", client=client)
     response = runtime.send("Help me decide.")
     assert len(client.calls) == 1
@@ -286,6 +345,7 @@ def test_fake_provider_cannot_override_disabled_capability(runtime):
 
 def test_local_journal_file_lock_retry_never_repeats_interpretation(runtime, monkeypatch):
     from itinerary_system.product_app import persistence
+
     original_replace = persistence.os.replace
     writes = []
     calls = []
@@ -312,7 +372,10 @@ def test_local_journal_file_lock_retry_never_repeats_interpretation(runtime, mon
     assert len(writes) == 3 and calls == ["Review the safer repair."]
 
 
-@pytest.mark.parametrize("fault", ["plan_hash", "extra_key", "capability_bool", "duplicate_day", "accepted_memory", "unknown_id", "oversized_memory"])
+@pytest.mark.parametrize(
+    "fault",
+    ["plan_hash", "extra_key", "capability_bool", "duplicate_day", "accepted_memory", "unknown_id", "oversized_memory"],
+)
 def test_v2_context_extensions_fail_closed(runtime, fault):
     context = runtime.service.copilot_context(runtime.session)
     memory = deepcopy(context.conversation_memory)
@@ -326,14 +389,18 @@ def test_v2_context_extensions_fail_closed(runtime, fault):
     elif fault == "duplicate_day":
         caps["candidate_day_readiness"] += (caps["candidate_day_readiness"][0],)
     elif fault == "accepted_memory":
-        memory["proposed_preferences"] = ({"preference": "reduce_driving", "source_turn_id": "copilot_turn_" + "0" * 32, "disposition": "accepted"},)
+        memory["proposed_preferences"] = (
+            {"preference": "reduce_driving", "source_turn_id": "copilot_turn_" + "0" * 32, "disposition": "accepted"},
+        )
     elif fault == "unknown_id":
         memory["resolved_ids"]["stop_ids"] = ("unknown_stop",)
     else:
         caps["operations"]["add_candidate"]["blocking_code"] = "x" * 14001
     with pytest.raises(CopilotContractError):
-        validate_copilot_interpretation(context=replace(context, capabilities=caps, conversation_memory=memory),
-                                        interpretation=CopilotInterpretationV1(state="failed", assistant_message="Context check."))
+        validate_copilot_interpretation(
+            context=replace(context, capabilities=caps, conversation_memory=memory),
+            interpretation=CopilotInterpretationV1(state="failed", assistant_message="Context check."),
+        )
 
 
 def test_pending_question_and_preview_disposition_cannot_be_forged(runtime):
@@ -342,15 +409,19 @@ def test_pending_question_and_preview_disposition_cannot_be_forged(runtime):
     memory = deepcopy(context.conversation_memory)
     memory["pending_clarification"]["question"] = "Which destination day should I use?"
     with pytest.raises(CopilotContractError):
-        validate_copilot_interpretation(context=replace(context, conversation_memory=memory),
-                                        interpretation=CopilotInterpretationV1(state="failed", assistant_message="Context check."))
+        validate_copilot_interpretation(
+            context=replace(context, conversation_memory=memory),
+            interpretation=CopilotInterpretationV1(state="failed", assistant_message="Context check."),
+        )
     runtime.send("Pfeiffer Big Sur State Park.")
     context = runtime.service.copilot_context(runtime.session)
     memory = deepcopy(context.conversation_memory)
     memory["last_proposal"]["disposition"] = "previewed"
     with pytest.raises(CopilotContractError):
-        validate_copilot_interpretation(context=replace(context, conversation_memory=memory),
-                                        interpretation=CopilotInterpretationV1(state="failed", assistant_message="Context check."))
+        validate_copilot_interpretation(
+            context=replace(context, conversation_memory=memory),
+            interpretation=CopilotInterpretationV1(state="failed", assistant_message="Context check."),
+        )
 
 
 def test_staging_preview_and_acceptance_have_distinct_memory_dispositions(runtime):
@@ -360,15 +431,29 @@ def test_staging_preview_and_acceptance_have_distinct_memory_dispositions(runtim
     runtime.send("Pfeiffer Big Sur State Park.")
     before = service.copilot_context(session)
     assert before.conversation_memory["last_proposal"]["disposition"] == "suggested"
-    service.workspace.add_operation(session, {"expected_revision": session.revision, "type": "replace_nearby",
-        "target": "bixby_creek_bridge_viewpoint", "parameters": {"candidate_id": "pfeiffer_big_sur_state_park"}, "source": "copilot"},
-        valid_stop_ids=service.valid_stops(session.run_id), day_count=7)
+    service.workspace.add_operation(
+        session,
+        {
+            "expected_revision": session.revision,
+            "type": "replace_nearby",
+            "target": "bixby_creek_bridge_viewpoint",
+            "parameters": {"candidate_id": "pfeiffer_big_sur_state_park"},
+            "source": "copilot",
+        },
+        valid_stop_ids=service.valid_stops(session.run_id),
+        day_count=7,
+    )
     assert service.copilot_context(session).conversation_memory["last_proposal"]["disposition"] == "staged"
     proposal = service.preview(session.session_id, session.revision)
     assert proposal["state"] == "eligible"
     assert service.copilot_context(session).conversation_memory["last_proposal"]["disposition"] == "previewed"
-    service.accept_evaluated(session, expected_revision=session.revision, confirmation="accept_evaluated_repair",
-                            idempotency_key="r14-memory-transition", mutation_token=runtime.token)
+    service.accept_evaluated(
+        session,
+        expected_revision=session.revision,
+        confirmation="accept_evaluated_repair",
+        idempotency_key="r14-memory-transition",
+        mutation_token=runtime.token,
+    )
     current = service.copilot_context(session)
     assert current.accepted_plan_id != before.accepted_plan_id
     assert current.conversation_memory["last_proposal"] is None
@@ -380,6 +465,8 @@ def test_staging_preview_and_acceptance_have_distinct_memory_dispositions(runtim
     service.copilot = OpenAICopilotAdapter(model="fake-model", api_key="unused", client=client)
     runtime.send("Can you explain what you can help me with?")
     assert len(client.calls) == 1
-    history = json.loads(client.calls[0]["input"].split("<recent_conversation>\n")[1].split("\n</recent_conversation>")[0])
+    history = json.loads(
+        client.calls[0]["input"].split("<recent_conversation>\n")[1].split("\n</recent_conversation>")[0]
+    )
     assert history == []
     evidence("accepted_plan_transition", runtime, preview=proposal)

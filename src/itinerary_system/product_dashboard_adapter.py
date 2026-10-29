@@ -57,9 +57,7 @@ def load_product_dashboard_source(run_dir: Path) -> ProductDashboardSourceBundle
     metrics_group = _load_json_group(resolved.get("metrics", ()))
     planner_runs = _load_jsonl_group(resolved.get("planner_runs", ()))
     benchmark_rows = _load_jsonl_group(resolved.get("benchmark_metrics", ()))
-    benchmark_planner_runs = _load_jsonl_group(
-        resolved.get("benchmark_planner_runs", ())
-    )
+    benchmark_planner_runs = _load_jsonl_group(resolved.get("benchmark_planner_runs", ()))
 
     issues: list[str] = []
     if len(requests) != 1:
@@ -69,9 +67,7 @@ def load_product_dashboard_source(run_dir: Path) -> ProductDashboardSourceBundle
     if parent is None:
         issues.append("missing_parent_plan")
     child_ids = tuple(
-        str(plan_id)
-        for plan_id in (manifest.get("pipeline_run") or {}).get("output_plan_ids", ())
-        if str(plan_id)
+        str(plan_id) for plan_id in (manifest.get("pipeline_run") or {}).get("output_plan_ids", ()) if str(plan_id)
     )
     child = next((plan for plan in plans if str(plan.get("plan_id")) in child_ids), None)
     if child is None:
@@ -156,9 +152,7 @@ def load_product_dashboard_source(run_dir: Path) -> ProductDashboardSourceBundle
     )
 
 
-def _resolve_declared_paths(
-    run_dir: Path, source_paths: dict[str, tuple[str, ...]]
-) -> dict[str, tuple[Path, ...]]:
+def _resolve_declared_paths(run_dir: Path, source_paths: dict[str, tuple[str, ...]]) -> dict[str, tuple[Path, ...]]:
     issues: list[str] = []
     resolved: dict[str, tuple[Path, ...]] = {}
     for category, paths in source_paths.items():
@@ -192,13 +186,9 @@ def _load_jsonl_group(paths: tuple[Path, ...]) -> list[dict[str, Any]]:
             try:
                 record = json.loads(line)
             except json.JSONDecodeError as exc:
-                raise ProductDashboardValidationError(
-                    [f"malformed_jsonl:{path.name}:{line_number}:{exc.msg}"]
-                ) from exc
+                raise ProductDashboardValidationError([f"malformed_jsonl:{path.name}:{line_number}:{exc.msg}"]) from exc
             if not isinstance(record, dict):
-                raise ProductDashboardValidationError(
-                    [f"jsonl_record_not_object:{path.name}:{line_number}"]
-                )
+                raise ProductDashboardValidationError([f"jsonl_record_not_object:{path.name}:{line_number}"])
             records.append(record)
     return records
 
@@ -283,16 +273,10 @@ def _derive_truth_states(
         states.append("failed_method")
     if any(str(row.get("status")) == "failed" for row in benchmark_rows):
         states.append("failed_method")
-    if any(
-        _is_exact_incomplete(row)
-        for row in [*benchmark_rows, *benchmark_planner_runs]
-    ):
+    if any(_is_exact_incomplete(row) for row in [*benchmark_rows, *benchmark_planner_runs]):
         states.append("exact_search_incomplete")
     if any(
-        (
-            str(row.get("status")).lower() == "failed"
-            or str(row.get("execution_status")).upper() == "FAILED"
-        )
+        (str(row.get("status")).lower() == "failed" or str(row.get("execution_status")).upper() == "FAILED")
         and "infeasible" in f"{row.get('error_class', '')} {row.get('error_summary', '')}".lower()
         and not _is_exact_incomplete(row)
         for row in [*benchmark_rows, *benchmark_planner_runs]
@@ -303,15 +287,7 @@ def _derive_truth_states(
 
 def _is_exact_incomplete(row: dict[str, Any]) -> bool:
     text = f"{row.get('error_class', '')} {row.get('error_summary', '')}".lower()
-    method = str(
-        row.get("method_id")
-        or row.get("method_executed")
-        or row.get("method_requested")
-        or ""
-    )
+    method = str(row.get("method_id") or row.get("method_executed") or row.get("method_requested") or "")
     return method in {"context_blind_solver", "full_reoptimization"} and (
-        "candidate_limit" in text
-        or "limit_exceeded" in text
-        or "incomplete" in text
-        or "cap" in text
+        "candidate_limit" in text or "limit_exceeded" in text or "incomplete" in text or "cap" in text
     )

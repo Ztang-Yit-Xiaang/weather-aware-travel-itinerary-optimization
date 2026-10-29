@@ -157,9 +157,7 @@ class _FailingAdapter:
 
     async def interpret(self, **kwargs: Any) -> CopilotInterpretationV1:
         del kwargs
-        raise _ProviderFailure(
-            "RAW_PROVIDER_DETAIL_SENTINEL C:\\private\\provider-payload.json"
-        )
+        raise _ProviderFailure("RAW_PROVIDER_DETAIL_SENTINEL C:\\private\\provider-payload.json")
 
 
 class _RevisionChangingAdapter:
@@ -190,9 +188,7 @@ class _RevisionChangingAdapter:
         )
 
 
-def test_deterministic_adapter_never_constructs_openai_or_uses_network(
-    api, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_deterministic_adapter_never_constructs_openai_or_uses_network(api, monkeypatch: pytest.MonkeyPatch) -> None:
     client, _, _ = api
     session, headers = _session(client)
 
@@ -210,7 +206,9 @@ def test_deterministic_adapter_never_constructs_openai_or_uses_network(
 
 
 @pytest.mark.parametrize("legacy_schema", [False, True], ids=["current_schema_accepted", "legacy_schema_rejected"])
-def test_openai_outbound_payload_uses_only_public_context_and_bounded_history(api, tmp_path: Path, legacy_schema: bool) -> None:
+def test_openai_outbound_payload_uses_only_public_context_and_bounded_history(
+    api, tmp_path: Path, legacy_schema: bool
+) -> None:
     client, service, state_root = api
     session, headers = _session(client)
     for index in range(7):
@@ -225,14 +223,21 @@ def test_openai_outbound_payload_uses_only_public_context_and_bounded_history(ap
     )
     response = _send(client, session, headers, "Review the registered repair")
 
-    (tmp_path / "privacy_exact_io.json").write_text(json.dumps({
-        "scope": "test_fake_sdk_only_no_actual_openai_calls",
-        "actual_provider_calls": 0,
-        "fake_sdk_calls": fake_client.responses.calls,
-        "fake_sdk_outputs": fake_client.responses.outputs,
-        "api_output_status": response.status_code,
-        "api_output_body": response.json(),
-    }, default=str, indent=2), encoding="utf-8")
+    (tmp_path / "privacy_exact_io.json").write_text(
+        json.dumps(
+            {
+                "scope": "test_fake_sdk_only_no_actual_openai_calls",
+                "actual_provider_calls": 0,
+                "fake_sdk_calls": fake_client.responses.calls,
+                "fake_sdk_outputs": fake_client.responses.outputs,
+                "api_output_status": response.status_code,
+                "api_output_body": response.json(),
+            },
+            default=str,
+            indent=2,
+        ),
+        encoding="utf-8",
+    )
     assert response.status_code == (502 if legacy_schema else 200), response.text
     assert len(fake_client.responses.calls) == 1
     outbound = fake_client.responses.calls[0]
@@ -327,9 +332,7 @@ def test_failed_provider_turn_persists_only_stable_safe_failure(api) -> None:
     assert turn["state"] == "failed"
     assert turn["error_code"] == "openai_timeout"
     assert turn["interpretation"] is None
-    assert turn["assistant_message"] == (
-        "OpenAI Copilot did not respond before the local timeout."
-    )
+    assert turn["assistant_message"] == ("OpenAI Copilot did not respond before the local timeout.")
     assert "RAW_PROVIDER_DETAIL_SENTINEL" not in json.dumps(turn)
     assert "provider-payload.json" not in json.dumps(turn)
 
@@ -360,9 +363,7 @@ def test_stale_post_provider_revision_preserves_completed_turn_without_activatio
 def test_w5_decisions_remain_fail_closed_and_do_not_change_workspace(api) -> None:
     client, _, _ = api
     session, headers = _session(client)
-    before = client.get(f"/api/sessions/{session['session_id']}", headers=headers).json()[
-        "session"
-    ]
+    before = client.get(f"/api/sessions/{session['session_id']}", headers=headers).json()["session"]
 
     for action in ("accept", "keep-original"):
         response = client.post(
@@ -378,9 +379,7 @@ def test_w5_decisions_remain_fail_closed_and_do_not_change_workspace(api) -> Non
         assert response.json() == {"detail": "acceptance_confirmation_required"}
         assert response.headers["cache-control"] == "no-store"
 
-    after = client.get(f"/api/sessions/{session['session_id']}", headers=headers).json()[
-        "session"
-    ]
+    after = client.get(f"/api/sessions/{session['session_id']}", headers=headers).json()["session"]
     for field in ("revision", "accepted_plan_id", "draft", "proposal", "permission_decisions"):
         assert after[field] == before[field]
 

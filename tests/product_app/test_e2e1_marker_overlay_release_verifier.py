@@ -1,4 +1,5 @@
 """Unregistered native marker-release counterexamples; never browser evidence."""
+
 from __future__ import annotations
 
 import sys
@@ -13,26 +14,58 @@ import verify_e2e1_vertical_slice as core  # noqa: E402
 
 def fixture():
     start, end = {"x": 20, "y": 40}, {"x": 170, "y": 70}
-    events = [{"phase": phase, "type": kind, "trusted": True, "target_is_original_marker": True,
-        "hit_is_context": kind == "mouseup" and phase == "capture", "event_id": number + 1,
-        "event_time_stamp": 100.5 + number, "hit_panel_id": 1 if phase == "capture" else None,
-        "captured_panel_id": 1, "current_panel_id": 1 if phase == "capture" else 2,
-        "captured_panel_connected": phase == "capture", "current_context_title": "Unconfirmed relocation",
-        **(end if kind == "mouseup" else start)}
+    events = [
+        {
+            "phase": phase,
+            "type": kind,
+            "trusted": True,
+            "target_is_original_marker": True,
+            "hit_is_context": kind == "mouseup" and phase == "capture",
+            "event_id": number + 1,
+            "event_time_stamp": 100.5 + number,
+            "hit_panel_id": 1 if phase == "capture" else None,
+            "captured_panel_id": 1,
+            "current_panel_id": 1 if phase == "capture" else 2,
+            "captured_panel_connected": phase == "capture",
+            "current_context_title": "Unconfirmed relocation",
+            **(end if kind == "mouseup" else start),
+        }
         for number, kind in enumerate(("gotpointercapture", "lostpointercapture", "mouseup"))
-        for phase in ("capture", "bubble")]
-    return {"real_marker_overlay_release": True}, {"action": "real_marker_pointer_drag", "from_pixels": start, "to_pixels": end,
-        "real_pointer_aiming": [{"ready": True, "from": start, "to": end}], "native_capture_release_events": events,
-        "release_hit_before_mouseup": {**end, "hit_is_context": True, "hit_panel_id": 1, "current_panel_id": 1}}
+        for phase in ("capture", "bubble")
+    ]
+    return {"real_marker_overlay_release": True}, {
+        "action": "real_marker_pointer_drag",
+        "from_pixels": start,
+        "to_pixels": end,
+        "real_pointer_aiming": [{"ready": True, "from": start, "to": end}],
+        "native_capture_release_events": events,
+        "release_hit_before_mouseup": {**end, "hit_is_context": True, "hit_panel_id": 1, "current_panel_id": 1},
+    }
 
 
 def test_native_marker_release_bound_to_actual_aimed_panel_endpoint():
     assert verifier.verify(*fixture())["real_marker_overlay_release"] is True
 
 
-@pytest.mark.parametrize("fault", ["missing_claim", "missing_aim", "failed_aim", "wrong_aim", "foreign_origin",
-    "missing_capture", "missing_bubble", "synthetic", "foreign_marker", "uncovered_release", "wrong_release", "nan_release",
-    "reversed_capture", "duplicate_release"])
+@pytest.mark.parametrize(
+    "fault",
+    [
+        "missing_claim",
+        "missing_aim",
+        "failed_aim",
+        "wrong_aim",
+        "foreign_origin",
+        "missing_capture",
+        "missing_bubble",
+        "synthetic",
+        "foreign_marker",
+        "uncovered_release",
+        "wrong_release",
+        "nan_release",
+        "reversed_capture",
+        "duplicate_release",
+    ],
+)
 def test_forged_marker_release_or_unbound_aiming_is_rejected(fault):
     assertions, drag = fixture()
     events = drag["native_capture_release_events"]
@@ -81,10 +114,25 @@ def test_missing_marker_evidence_has_stable_failure():
         verifier.verify({}, {})
 
 
-@pytest.mark.parametrize("fault", ["physical_hit_missing", "physical_panel_changed", "physical_point_changed",
-    "event_id_changed", "event_timestamp_changed", "nan_timestamp", "boolean_event_id", "capture_foreign_panel",
-    "capture_disconnected", "bubble_old_panel_connected", "bubble_foreign_old_panel", "bubble_same_panel",
-    "bubble_wrong_title", "bubble_before_capture"])
+@pytest.mark.parametrize(
+    "fault",
+    [
+        "physical_hit_missing",
+        "physical_panel_changed",
+        "physical_point_changed",
+        "event_id_changed",
+        "event_timestamp_changed",
+        "nan_timestamp",
+        "boolean_event_id",
+        "capture_foreign_panel",
+        "capture_disconnected",
+        "bubble_old_panel_connected",
+        "bubble_foreign_old_panel",
+        "bubble_same_panel",
+        "bubble_wrong_title",
+        "bubble_before_capture",
+    ],
+)
 def test_native_release_and_synchronous_panel_remount_cannot_be_forged(fault):
     assertions, drag = fixture()
     before = drag["release_hit_before_mouseup"]

@@ -1,4 +1,5 @@
 """Four-size real UI journeys; no API/optimizer responses mocked, no chat sent."""
+
 from __future__ import annotations
 
 import json
@@ -72,9 +73,14 @@ METRIC_SCROLL_STATE = r"""() => {
 
 def metric_footer_reachability(page, root, initial):
     """Native wheel reachability, with explicit setup/restoration and no screenshot."""
-    record = {"schema_version":"workspace-metric-scroll-v1","before":page.evaluate(METRIC_SCROLL_STATE),
-        "setup":"locator_scroll_into_view_if_needed","restoration":"native_reverse_wheel_then_Control+Home",
-        "map_before":initial,"commands":[]}
+    record = {
+        "schema_version": "workspace-metric-scroll-v1",
+        "before": page.evaluate(METRIC_SCROLL_STATE),
+        "setup": "locator_scroll_into_view_if_needed",
+        "restoration": "native_reverse_wheel_then_Control+Home",
+        "map_before": initial,
+        "commands": [],
+    }
     footer = page.locator("#metric-strip")
     page.evaluate("""() => {
       window.__metricScrollEvents=[];
@@ -86,17 +92,18 @@ def metric_footer_reachability(page, root, initial):
         type:'keydown',at:new Date().toISOString(),trusted:event.isTrusted,key:event.key,ctrl_key:event.ctrlKey});});
     }""")
     try:
-        assert record["before"]["page_scroll"] == record["before"]["workspace_scroll"] == {"top":0,"left":0}
+        assert record["before"]["page_scroll"] == record["before"]["workspace_scroll"] == {"top": 0, "left": 0}
         footer.scroll_into_view_if_needed()
         footer.hover()
         record["onscreen"] = page.evaluate(METRIC_SCROLL_STATE)
         view = record["onscreen"]
         delta_x = view["scroll_width"] if view["scroll_width"] > view["client_width"] else 0
         delta_y = view["scroll_height"] if view["scroll_height"] > view["client_height"] else 0
-        record["overflow_axes"] = {"x":delta_x > 0,"y":delta_y > 0}
+        record["overflow_axes"] = {"x": delta_x > 0, "y": delta_y > 0}
         if delta_x or delta_y:
-            record["commands"].append({"action":"wheel_to_end","delta_x":delta_x,"delta_y":delta_y,
-                "at":datetime.now(UTC).isoformat()})
+            record["commands"].append(
+                {"action": "wheel_to_end", "delta_x": delta_x, "delta_y": delta_y, "at": datetime.now(UTC).isoformat()}
+            )
             page.mouse.wheel(delta_x, delta_y)
         page.wait_for_function("""() => {const e=document.querySelector('#metric-strip');
           return Math.abs(e.scrollLeft-(e.scrollWidth-e.clientWidth))<=1 && Math.abs(e.scrollTop-(e.scrollHeight-e.clientHeight))<=1;}""")
@@ -106,14 +113,26 @@ def metric_footer_reachability(page, root, initial):
         view = page.evaluate(METRIC_SCROLL_STATE)
         if view["scroll_left"] or view["scroll_top"]:
             footer.hover()
-            record["commands"].append({"action":"wheel_restore","delta_x":-view["scroll_width"] if view["scroll_left"] else 0,
-                "delta_y":-view["scroll_height"] if view["scroll_top"] else 0,"at":datetime.now(UTC).isoformat()})
+            record["commands"].append(
+                {
+                    "action": "wheel_restore",
+                    "delta_x": -view["scroll_width"] if view["scroll_left"] else 0,
+                    "delta_y": -view["scroll_height"] if view["scroll_top"] else 0,
+                    "at": datetime.now(UTC).isoformat(),
+                }
+            )
             command = record["commands"][-1]
             page.mouse.wheel(command["delta_x"], command["delta_y"])
-        page.wait_for_function("""() => {const e=document.querySelector('#metric-strip');return e.scrollLeft===0&&e.scrollTop===0;}""")
-        record["commands"].append({"action":"keyboard_home","key":"Control+Home","at":datetime.now(UTC).isoformat()})
+        page.wait_for_function(
+            """() => {const e=document.querySelector('#metric-strip');return e.scrollLeft===0&&e.scrollTop===0;}"""
+        )
+        record["commands"].append(
+            {"action": "keyboard_home", "key": "Control+Home", "at": datetime.now(UTC).isoformat()}
+        )
         page.keyboard.press("Control+Home")
-        page.wait_for_function("() => document.scrollingElement.scrollTop===0 && document.scrollingElement.scrollLeft===0")
+        page.wait_for_function(
+            "() => document.scrollingElement.scrollTop===0 && document.scrollingElement.scrollLeft===0"
+        )
         record["restored"] = page.evaluate(METRIC_SCROLL_STATE)
         record["events"] = page.evaluate("window.__metricScrollEvents")
         _write_json(root / "metric_footer_scroll.json", record)
@@ -121,10 +140,10 @@ def metric_footer_reachability(page, root, initial):
     record["completed_at"] = datetime.now(UTC).isoformat()
     _write_json(root / "metric_footer_scroll.json", record)
     assert record["map_after"] == initial
-    for key in ("scope","metrics","scroll_top","scroll_left","page_scroll","workspace_scroll"):
+    for key in ("scope", "metrics", "scroll_top", "scroll_left", "page_scroll", "workspace_scroll"):
         assert record["restored"][key] == record["before"][key], key
     detail = record["detail_visibility"]["elements"][0]
-    assert detail["visible_ratio"] >= .98 and all(point["unoccluded"] for point in detail["points"])
+    assert detail["visible_ratio"] >= 0.98 and all(point["unoccluded"] for point in detail["points"])
 
 
 @pytest.mark.skipif(not BASE_URL, reason="Requires isolated real application server")
@@ -139,23 +158,42 @@ def test_workspace_navigation_focus_and_map_identity(tmp_path: Path, width: int,
     http: list[dict] = []
     checkpoints: list[dict] = []
     with sync_playwright() as runtime:
-        browser = runtime.chromium.launch(headless=True, **({"executable_path":str(CHROME)} if CHROME.is_file() else {}))
-        context = browser.new_context(viewport={"width":width,"height":height}, is_mobile=mobile, has_touch=mobile)
+        browser = runtime.chromium.launch(
+            headless=True, **({"executable_path": str(CHROME)} if CHROME.is_file() else {})
+        )
+        context = browser.new_context(viewport={"width": width, "height": height}, is_mobile=mobile, has_touch=mobile)
         context.add_init_script(OBSERVE_REAL_MAPS)
         page = context.new_page()
         page.on("pageerror", lambda error: console.append(str(error)))
         page.on("console", lambda message: console.append(message.text) if message.type == "error" else None)
         page.on("console", lambda message: warnings.append(message.text) if message.type == "warning" else None)
-        page.on("requestfailed", lambda request: failures.append({"url":request.url,"failure":request.failure,
-            "classification":"browser_cancelled" if request.failure == "net::ERR_ABORTED" else "network_failure"}))
+        page.on(
+            "requestfailed",
+            lambda request: failures.append(
+                {
+                    "url": request.url,
+                    "failure": request.failure,
+                    "classification": "browser_cancelled"
+                    if request.failure == "net::ERR_ABORTED"
+                    else "network_failure",
+                }
+            ),
+        )
 
         def response_record(response):
             if urlsplit(response.url).path.startswith("/api/"):
                 row = _http_record(response)
                 row["observed_at"] = datetime.now(UTC).isoformat()
-                filename = f"http_{len(http)+1:03d}.json"
+                filename = f"http_{len(http) + 1:03d}.json"
                 _write_json(root / filename, row)
-                http.append({"file":filename,"method":row["method"],"url":row["url"],"status":row["response_status_code"]})
+                http.append(
+                    {
+                        "file": filename,
+                        "method": row["method"],
+                        "url": row["url"],
+                        "status": row["response_status_code"],
+                    }
+                )
 
         page.on("response", response_record)
 
@@ -191,8 +229,11 @@ def test_workspace_navigation_focus_and_map_identity(tmp_path: Path, width: int,
             assert value["document_width"] <= value["viewport_width"] + 1
             ready = json.loads((root / f"{label}.readiness.json").read_text(encoding="utf-8"))
             if not mobile and label.startswith("copilot_"):
-                position = page.evaluate("""() => {
-                  const map = """ + CURRENT_MAP + """;
+                position = page.evaluate(
+                    """() => {
+                  const map = """
+                    + CURRENT_MAP
+                    + """;
                   const container = document.querySelector('#geographic-map');
                   const stopId = document.querySelector('[data-geo-stop][aria-pressed=true]')?.dataset.geoStop;
                   const feature = map.getStyle().sources['v2-stops'].data.features.find(item =>
@@ -209,14 +250,15 @@ def test_workspace_navigation_focus_and_map_identity(tmp_path: Path, width: int,
                     visibility_probes:probes,
                     rendered_stop_ids:map.queryRenderedFeatures(point,{layers:['v2-stops-selected-day']})
                       .map(item=>item.properties.stop_id), observed_at:new Date().toISOString()};
-                }""")
+                }"""
+                )
                 _write_json(root / f"{label}.selected_marker.json", position)
                 assert position["feature_found"], position
                 assert 12 <= position["x"] <= position["width"] - 12, position
                 assert 12 <= position["y"] <= position["height"] - 12, position
                 assert position["stop_id"] in position["rendered_stop_ids"], position
                 assert all(probe["unoccluded"] for probe in position["visibility_probes"]), position
-            checkpoints.append({"label":label, **value, "readiness":ready})
+            checkpoints.append({"label": label, **value, "readiness": ready})
             if label in {"initial_trip", "text_route_day5", "after_module_switching"} or (
                 not mobile and label.startswith("copilot_")
             ):
@@ -226,24 +268,35 @@ def test_workspace_navigation_focus_and_map_identity(tmp_path: Path, width: int,
                     if label != "copilot_closed":
                         selectors += ["#copilot-submit", "#close-copilot"]
                 if label == "text_route_day5":
-                    selectors += [".textual-map-alternative > summary", ".text-route-summary > h3:first-child",
-                        ".text-route-summary dd:first-of-type"]
+                    selectors += [
+                        ".textual-map-alternative > summary",
+                        ".text-route-summary > h3:first-child",
+                        ".text-route-summary dd:first-of-type",
+                    ]
                 visible = page.evaluate(VISIBILITY, selectors)
                 _write_json(root / f"{label}.visibility.json", visible)
                 # Record the long general description separately; it may need an intentional internal scroll.
                 if label == "text_route_day5":
-                    _write_json(root / "text_route_description.visibility.json",
-                        page.evaluate(VISIBILITY, [".textual-map-alternative > p"]))
-                assert all(row.get("present") and row["visible_ratio"] >= .98
-                    and all(point["unoccluded"] for point in row["points"]) for row in visible["elements"]), visible
+                    _write_json(
+                        root / "text_route_description.visibility.json",
+                        page.evaluate(VISIBILITY, [".textual-map-alternative > p"]),
+                    )
+                assert all(
+                    row.get("present")
+                    and row["visible_ratio"] >= 0.98
+                    and all(point["unoccluded"] for point in row["points"])
+                    for row in visible["elements"]
+                ), visible
             if not mobile and value["dock"]["open"]:
                 assert value["dock"]["workspace_right"] <= value["dock"]["left"] + 1, value["dock"]
                 assert value["dock"]["repair_panel_display"] == "none", value["dock"]
-                expected_width = int(label.removeprefix("copilot_width_")) if label.startswith("copilot_width_") else 440
+                expected_width = (
+                    int(label.removeprefix("copilot_width_")) if label.startswith("copilot_width_") else 440
+                )
                 assert abs(value["dock"]["width"] - expected_width) <= 1, value["dock"]
             return ready
 
-        with _preserve_browser_evidence(context, page, root, {"console_errors":console,"request_failures":failures}):
+        with _preserve_browser_evidence(context, page, root, {"console_errors": console, "request_failures": failures}):
             try:
                 page.goto(f"{BASE_URL}/app/itinerary", wait_until="domcontentloaded")
                 initial = _map_ack(page)
@@ -255,11 +308,17 @@ def test_workspace_navigation_focus_and_map_identity(tmp_path: Path, width: int,
                 assert page.locator(".map-mode-switch").count() == 0
                 expect(page.locator(".flow")).to_be_hidden()
                 if mobile:
-                    rectangles = page.locator('.draft-bar strong, #inline-undo, #inline-preview').evaluate_all(
-                        "elements => elements.map(e => {const r=e.getBoundingClientRect(); return {x:r.x,y:r.y,right:r.right,bottom:r.bottom};})")
+                    rectangles = page.locator(".draft-bar strong, #inline-undo, #inline-preview").evaluate_all(
+                        "elements => elements.map(e => {const r=e.getBoundingClientRect(); return {x:r.x,y:r.y,right:r.right,bottom:r.bottom};})"
+                    )
                     for index, left in enumerate(rectangles):
-                        for right in rectangles[index+1:]:
-                            assert left["right"] <= right["x"] or right["right"] <= left["x"] or left["bottom"] <= right["y"] or right["bottom"] <= left["y"]
+                        for right in rectangles[index + 1 :]:
+                            assert (
+                                left["right"] <= right["x"]
+                                or right["right"] <= left["x"]
+                                or left["bottom"] <= right["y"]
+                                or right["bottom"] <= left["y"]
+                            )
                     expect(page.locator(".map-context-card.guidance")).to_be_hidden()
                 for reload_index in range(3):
                     page.reload(wait_until="domcontentloaded")
@@ -268,25 +327,43 @@ def test_workspace_navigation_focus_and_map_identity(tmp_path: Path, width: int,
 
                 activate(page.locator(".textual-map-alternative > summary"))
                 expect(page.locator(".text-route-summary")).to_be_visible()
-                _write_json(root / "text_route_before_selection.visibility.json",
-                    page.evaluate(VISIBILITY, [".textual-map-alternative > summary", ".text-route-summary > h3:first-child"]))
-                with page.expect_response(lambda response: response.url.endswith('/draft/impact-preview')
-                        and response.request.method == 'POST') as impact:
-                    with page.expect_response(lambda response: response.url.endswith('/selection')
-                            and response.request.method == 'POST'
-                            and response.request.post_data_json.get('selected_stop_id') == 'bixby_creek_bridge_viewpoint') as selected:
+                _write_json(
+                    root / "text_route_before_selection.visibility.json",
+                    page.evaluate(
+                        VISIBILITY, [".textual-map-alternative > summary", ".text-route-summary > h3:first-child"]
+                    ),
+                )
+                with page.expect_response(
+                    lambda response: (
+                        response.url.endswith("/draft/impact-preview") and response.request.method == "POST"
+                    )
+                ) as impact:
+                    with page.expect_response(
+                        lambda response: (
+                            response.url.endswith("/selection")
+                            and response.request.method == "POST"
+                            and response.request.post_data_json.get("selected_stop_id")
+                            == "bixby_creek_bridge_viewpoint"
+                        )
+                    ) as selected:
                         activate(page.locator('[data-geo-stop="bixby_creek_bridge_viewpoint"]'))
                 _write_json(root / "text_route_selection_http.json", _http_record(selected.value))
                 _write_json(root / "text_route_impact_http.json", _http_record(impact.value))
                 assert selected.value.status == impact.value.status == 200
                 selection = selected.value.json()["session"]
-                assert selection["selected_stop_id"] == "bixby_creek_bridge_viewpoint" and selection["selected_day"] == 5
+                assert (
+                    selection["selected_stop_id"] == "bixby_creek_bridge_viewpoint" and selection["selected_day"] == 5
+                )
                 assert impact.value.json()["session_revision"] == selection["revision"]
-                expect(page.locator('[data-geo-stop="bixby_creek_bridge_viewpoint"]')).to_have_attribute("aria-pressed", "true")
+                expect(page.locator('[data-geo-stop="bixby_creek_bridge_viewpoint"]')).to_have_attribute(
+                    "aria-pressed", "true"
+                )
                 _map_ack(page)
                 expect(page.locator(".textual-map-alternative")).to_have_attribute("open", "")
                 expect(page.locator(".text-route-summary")).to_contain_text("Bixby Creek Bridge")
-                expect(page.locator(".text-route-summary")).to_have_attribute("data-plan-id", initial["rendered_map_plan_id"])
+                expect(page.locator(".text-route-summary")).to_have_attribute(
+                    "data-plan-id", initial["rendered_map_plan_id"]
+                )
                 capture("text_route_day5")
                 activate(page.locator(".textual-map-alternative > summary"))
                 activate(page.locator("#map-edit-button"))
@@ -303,10 +380,18 @@ def test_workspace_navigation_focus_and_map_identity(tmp_path: Path, width: int,
                 option = next(row for row in compare_ready["visible_maps"] if row["pane"] == "option")
                 assert option["plan_id"] != initial["rendered_map_plan_id"]
                 activate(page.locator("#compare-evidence"))
-                expect(page.locator("[data-evidence-plan-id]")).to_have_attribute("data-evidence-plan-id", option["plan_id"])
+                expect(page.locator("[data-evidence-plan-id]")).to_have_attribute(
+                    "data-evidence-plan-id", option["plan_id"]
+                )
                 # Evidence has no map: save a DOM/state trace, not a false map-ready screenshot.
-                _write_json(root / "evidence_scope.json", {"plan_id":option["plan_id"],
-                    "content_hash":option["plan_content_hash"],"visible_text":page.locator("#workspace-content").inner_text()})
+                _write_json(
+                    root / "evidence_scope.json",
+                    {
+                        "plan_id": option["plan_id"],
+                        "content_hash": option["plan_content_hash"],
+                        "visible_text": page.locator("#workspace-content").inner_text(),
+                    },
+                )
                 navigate("itinerary")
                 capture("after_module_switching")
 
@@ -319,29 +404,46 @@ def test_workspace_navigation_focus_and_map_identity(tmp_path: Path, width: int,
                     page.locator("#copilot-submit").focus()
                     page.keyboard.press("Tab")
                     assert page.evaluate("document.querySelector('#copilot-dock').contains(document.activeElement)")
-                    page.set_viewport_size({"width":390,"height":480})
+                    page.set_viewport_size({"width": 390, "height": 480})
                     page.locator("#copilot-input").focus()
                     expect(page.locator("#copilot-input")).to_be_in_viewport()
                     expect(page.locator("#copilot-submit")).to_be_in_viewport()
                     capture("reduced_keyboard_viewport")
-                    page.set_viewport_size({"width":width,"height":height})
+                    page.set_viewport_size({"width": width, "height": height})
                 capture("copilot_open")
                 if not mobile:
                     resizer = page.locator("#dock-resizer")
                     resizer.focus()
                     resize_commands = []
-                    for target_width, key, count in ((560, "ArrowLeft", 6), (320, "ArrowRight", 12), (440, "ArrowLeft", 6)):
+                    for target_width, key, count in (
+                        (560, "ArrowLeft", 6),
+                        (320, "ArrowRight", 12),
+                        (440, "ArrowLeft", 6),
+                    ):
                         for _ in range(count):
                             resizer.press(key)
                         expect(resizer).to_have_attribute("aria-valuenow", str(target_width))
-                        resize_commands.append({"action":"keyboard_resize", "key":key, "count":count,
-                                                "target_width":target_width, "at":datetime.now(UTC).isoformat()})
+                        resize_commands.append(
+                            {
+                                "action": "keyboard_resize",
+                                "key": key,
+                                "count": count,
+                                "target_width": target_width,
+                                "at": datetime.now(UTC).isoformat(),
+                            }
+                        )
                         capture(f"copilot_width_{target_width}")
                     if width == 1440:
                         for resized_width in (1024, 1440):
-                            page.set_viewport_size({"width":resized_width,"height":height})
-                            resize_commands.append({"action":"window_resize", "width":resized_width,
-                                                    "height":height, "at":datetime.now(UTC).isoformat()})
+                            page.set_viewport_size({"width": resized_width, "height": height})
+                            resize_commands.append(
+                                {
+                                    "action": "window_resize",
+                                    "width": resized_width,
+                                    "height": height,
+                                    "at": datetime.now(UTC).isoformat(),
+                                }
+                            )
                             capture(f"copilot_resized_{resized_width}")
                     _write_json(root / "dock_resize_commands.json", resize_commands)
                     expect(page.locator("#copilot-input")).to_have_value("Unsaved UI test text; do not send.")
@@ -352,19 +454,35 @@ def test_workspace_navigation_focus_and_map_identity(tmp_path: Path, width: int,
 
                 if width == 1440:
                     for resized_width in (1024, 1440):
-                        page.set_viewport_size({"width":resized_width,"height":height})
+                        page.set_viewport_size({"width": resized_width, "height": height})
                         capture(f"resized_{resized_width}")
                 assert console == []
                 assert not [row for row in failures if row["classification"] == "network_failure"]
                 assert not [row for row in http if row["status"] >= 400]
                 assert not [row for row in http if row["method"] == "POST" and "/copilot/messages" in row["url"]]
-                _write_json(root / "trace.json", {"schema_version":"workspace-stability-browser-v1",
-                    "viewport":{"width":width,"height":height},"touch_enabled":mobile,
-                    "keyboard_viewport_simulation":mobile,"os_virtual_keyboard_tested":False,
-                    "initial":initial,"checkpoints":checkpoints,"assertions_passed":True,
-                    "completed_at":datetime.now(UTC).isoformat()})
-                _write_json(root / "llm_io.json", {"provider_call_count":0,"llm_input":None,"llm_output":None,
-                    "reason":"Chatbox focus and unsent draft only; no chat submitted. Guard receipt measures provider isolation."})
+                _write_json(
+                    root / "trace.json",
+                    {
+                        "schema_version": "workspace-stability-browser-v1",
+                        "viewport": {"width": width, "height": height},
+                        "touch_enabled": mobile,
+                        "keyboard_viewport_simulation": mobile,
+                        "os_virtual_keyboard_tested": False,
+                        "initial": initial,
+                        "checkpoints": checkpoints,
+                        "assertions_passed": True,
+                        "completed_at": datetime.now(UTC).isoformat(),
+                    },
+                )
+                _write_json(
+                    root / "llm_io.json",
+                    {
+                        "provider_call_count": 0,
+                        "llm_input": None,
+                        "llm_output": None,
+                        "reason": "Chatbox focus and unsent draft only; no chat submitted. Guard receipt measures provider isolation.",
+                    },
+                )
             finally:
                 _write_json(root / "browser_http_index.json", http)
                 _write_json(root / "console_errors.json", console)

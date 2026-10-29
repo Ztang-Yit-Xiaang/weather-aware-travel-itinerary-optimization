@@ -13,12 +13,7 @@ from itinerary_system.product_app.poi_catalog import ProductPOICatalogV1
 ROOT = Path(__file__).resolve().parents[2]
 REGISTRY = ROOT / "configs" / "product_app_registry.json"
 RUN = ROOT / "runs" / "california-coast-coherent-demo-v1"
-CATALOG = (
-    ROOT
-    / "configs"
-    / "product_poi_catalogs"
-    / "california_coast_approved_seven_day"
-)
+CATALOG = ROOT / "configs" / "product_poi_catalogs" / "california_coast_approved_seven_day"
 EXPECTED_CANDIDATES = {
     "pfeiffer_big_sur_state_park",
     "point_lobos_state_natural_reserve",
@@ -48,9 +43,7 @@ def test_coherent_route_matrix_and_candidate_catalog_regenerate_exactly() -> Non
     manifest = _json(RUN / "manifest.json")
     matrix = _json(RUN / manifest["route_evidence"]["relative_path"])
     referenced_entities = {
-        entity_id
-        for cell in matrix["cells"]
-        for entity_id in (cell["origin_id"], cell["destination_id"])
+        entity_id for cell in matrix["cells"] for entity_id in (cell["origin_id"], cell["destination_id"])
     }
     assert set(matrix["entity_ids"]) == referenced_entities
     assert all(len(cell["query_hash"]) == 16 for cell in matrix["cells"])
@@ -59,11 +52,7 @@ def test_coherent_route_matrix_and_candidate_catalog_regenerate_exactly() -> Non
     assert catalog.catalog_id == "california_coast_approved_seven_day_candidates_v1"
     assert {place.place_id for place in catalog.places} == EXPECTED_CANDIDATES
     assert all(place.recommended_visit_minutes == 45 for place in catalog.places)
-    assert all(
-        access.source_ref == matrix["matrix_id"]
-        for place in catalog.places
-        for access in place.access_points
-    )
+    assert all(access.source_ref == matrix["matrix_id"] for place in catalog.places for access in place.access_points)
 
 
 def test_default_coherent_api_returns_exact_registered_day5_replacements(
@@ -86,10 +75,7 @@ def test_default_coherent_api_returns_exact_registered_day5_replacements(
             params={
                 "expected_revision": session["revision"],
                 "day": 5,
-                "route_leg_id": (
-                    "leg_comfort_inn_sequoia_kings_canyon_"
-                    "bixby_creek_bridge_viewpoint"
-                ),
+                "route_leg_id": ("leg_comfort_inn_sequoia_kings_canyon_bixby_creek_bridge_viewpoint"),
                 "replacement_target_id": "bixby_creek_bridge_viewpoint",
                 "max_detour_minutes": 60,
                 "limit": 10,
@@ -100,16 +86,12 @@ def test_default_coherent_api_returns_exact_registered_day5_replacements(
     payload = response.json()
     assert payload["context"]["kind"] == "replacement"
     assert payload["context"]["day"] == 5
-    assert payload["context"]["replacement_target_id"] == (
-        "bixby_creek_bridge_viewpoint"
-    )
+    assert payload["context"]["replacement_target_id"] == ("bixby_creek_bridge_viewpoint")
     assert payload["routing"] == {
         "matrix_id": "route_matrix_b33928f302ba9055",
         "context_snapshot_id": "context_coherent_california_demo_2026_08",
         "source_bundle_id": "route_bundle_e5b6cdc2ed2fff30",
-        "source_content_sha256": (
-            "e5b6cdc2ed2fff301c5416e29f4e6f0d9a3df4f7b3661311ce24e28cef108d99"
-        ),
+        "source_content_sha256": ("e5b6cdc2ed2fff301c5416e29f4e6f0d9a3df4f7b3661311ce24e28cef108d99"),
         "road_validated_only": True,
         "fallback_allowed": False,
     }
@@ -122,6 +104,4 @@ def test_default_coherent_api_returns_exact_registered_day5_replacements(
         "target_stop_id": "bixby_creek_bridge_viewpoint",
         "candidate_id": "pfeiffer_big_sur_state_park",
     }
-    assert candidates["point_lobos_state_natural_reserve"]["burden"][
-        "marginal_travel_minutes"
-    ] < 0
+    assert candidates["point_lobos_state_natural_reserve"]["burden"]["marginal_travel_minutes"] < 0

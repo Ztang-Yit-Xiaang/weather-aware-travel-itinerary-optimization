@@ -42,10 +42,8 @@ def render(output_dir: Path) -> str:
         "case, safety, smoke, or architecture evidence.",
         "",
         "- Scope: synthetic fixed-24 Copilot evaluation only.",
-        "- Exact LLM request and response bodies are reproduced byte-for-byte from "
-        "the transport witness.",
-        "- Authorization headers, cookies, API keys, and raw exception messages are "
-        "intentionally excluded.",
+        "- Exact LLM request and response bodies are reproduced byte-for-byte from the transport witness.",
+        "- Authorization headers, cookies, API keys, and raw exception messages are intentionally excluded.",
         "- The source JSON files remain authoritative for hashes and machine verification.",
         "",
         "## Exact file inputs",
@@ -55,8 +53,7 @@ def render(output_dir: Path) -> str:
     ]
     for row in file_manifest["input_files"]:
         sections.append(
-            f"| `{row['path']}` | {row['size_bytes']} | `{row['sha256']}` | "
-            f"`{row['exact_content_location']}` |"
+            f"| `{row['path']}` | {row['size_bytes']} | `{row['sha256']}` | `{row['exact_content_location']}` |"
         )
     sections.extend(
         [
@@ -69,8 +66,7 @@ def render(output_dir: Path) -> str:
     )
     for row in file_manifest["output_files"]:
         sections.append(
-            f"| `{row['path']}` | {row['size_bytes']} | `{row['sha256']}` | "
-            f"`{row['exact_content_location']}` |"
+            f"| `{row['path']}` | {row['size_bytes']} | `{row['sha256']}` | `{row['exact_content_location']}` |"
         )
     for effort in ("low", "medium"):
         document = read_json(output_dir / f"{effort}_exact_llm_io.json")
@@ -124,4 +120,3 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-

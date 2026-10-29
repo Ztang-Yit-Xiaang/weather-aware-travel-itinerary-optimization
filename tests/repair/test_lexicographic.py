@@ -201,7 +201,9 @@ class LexicographicSolverTests(unittest.TestCase):
 
         self.assertEqual(enumeration.status, "OPTIMAL")
         self.assertEqual(gurobi.status, "OPTIMAL")
-        self.assertEqual(enumeration.selected_solution.metadata["candidate_id"], gurobi.selected_solution.metadata["candidate_id"])
+        self.assertEqual(
+            enumeration.selected_solution.metadata["candidate_id"], gurobi.selected_solution.metadata["candidate_id"]
+        )
         self.assertEqual(enumeration.selected_components, gurobi.selected_components)
 
 

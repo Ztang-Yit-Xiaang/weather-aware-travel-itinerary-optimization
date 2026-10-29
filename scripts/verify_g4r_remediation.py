@@ -41,9 +41,7 @@ def map_state(page: Page, selector: str = "#geographic-map") -> dict[str, Any]:
 
 
 def wait_for_map(page: Page, selector: str = "#geographic-map") -> dict[str, Any]:
-    page.locator(f'{selector}[data-map-ready="true"]').wait_for(
-        state="visible", timeout=45_000
-    )
+    page.locator(f'{selector}[data-map-ready="true"]').wait_for(state="visible", timeout=45_000)
     state = map_state(page, selector)
     assert state["tile_coverage"] >= 0.95, state
     assert state["ready_at"], state
@@ -51,9 +49,7 @@ def wait_for_map(page: Page, selector: str = "#geographic-map") -> dict[str, Any
     return state
 
 
-def wait_for_map_after(
-    page: Page, previous_ready_at: str, selector: str = "#geographic-map"
-) -> dict[str, Any]:
+def wait_for_map_after(page: Page, previous_ready_at: str, selector: str = "#geographic-map") -> dict[str, Any]:
     page.wait_for_function(
         """([sel, previous]) => {
           const node = document.querySelector(sel);
@@ -93,9 +89,7 @@ def map_pixel_evidence(page: Page, name: str) -> dict[str, Any]:
         stat = ImageStat.Stat(rgb)
         extrema = rgb.getextrema()
         grayish = sum(
-            1
-            for red, green, blue in rgb.get_flattened_data()
-            if max(red, green, blue) - min(red, green, blue) <= 8
+            1 for red, green, blue in rgb.get_flattened_data() if max(red, green, blue) - min(red, green, blue) <= 8
         ) / max(1, rgb.width * rgb.height)
     return {
         "path": path.as_posix(),
@@ -149,15 +143,11 @@ def verify() -> dict[str, Any]:
 
         page.on(
             "console",
-            lambda message: report["console_errors"].append(message.text)
-            if message.type == "error"
-            else None,
+            lambda message: report["console_errors"].append(message.text) if message.type == "error" else None,
         )
         page.on(
             "requestfailed",
-            lambda request: report["network_failures"].append(
-                {"url": request.url, "failure": request.failure}
-            ),
+            lambda request: report["network_failures"].append({"url": request.url, "failure": request.failure}),
         )
 
         initial = open_app(page, 1440, 900)
@@ -283,15 +273,11 @@ def verify() -> dict[str, Any]:
             resize_states.append(
                 {
                     "map": resized,
-                    "screenshot": screenshot(
-                        page, f"resize_{width}x{height}", resized["ready_at"]
-                    ),
+                    "screenshot": screenshot(page, f"resize_{width}x{height}", resized["ready_at"]),
                 }
             )
             previous_ready_at = resized["ready_at"]
-        report["checks"].append(
-            {"name": "resize_1440_1024_1440", "states": resize_states}
-        )
+        report["checks"].append({"name": "resize_1440_1024_1440", "states": resize_states})
 
         for width, height in VIEWPORTS[1:]:
             state_map = open_app(page, width, height)
@@ -315,9 +301,7 @@ def verify() -> dict[str, Any]:
 
     report["ended_at"] = utc_now()
     report["verdict"] = "implementation_live_checks_passed_pending_independent_g4r_reaudit"
-    (OUT_DIR / "live_evidence.json").write_text(
-        json.dumps(report, indent=2), encoding="utf-8"
-    )
+    (OUT_DIR / "live_evidence.json").write_text(json.dumps(report, indent=2), encoding="utf-8")
     return report
 
 

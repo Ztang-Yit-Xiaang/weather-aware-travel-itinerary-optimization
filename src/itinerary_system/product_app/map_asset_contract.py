@@ -26,9 +26,7 @@ EXPECTED_STYLE_ATTRIBUTION = (
 )
 EXPECTED_SOURCE_BUILD = "20260804"
 EXPECTED_SOURCE_URL = f"https://build.protomaps.com/{EXPECTED_SOURCE_BUILD}.pmtiles"
-EXPECTED_UPSTREAM_BLAKE3 = (
-    "665c468f538ffaebd6fdf5b1185982b105056577a32f2fdc15c87fddd4b24b95"
-)
+EXPECTED_UPSTREAM_BLAKE3 = "665c468f538ffaebd6fdf5b1185982b105056577a32f2fdc15c87fddd4b24b95"
 EXPECTED_UPSTREAM_PACKAGES = {
     "maplibre-gl": {
         "version": "5.24.0",
@@ -51,15 +49,11 @@ EXPECTED_UPSTREAM_PACKAGES = {
             "sha512-K1Yk6bWdULulYg+R2QRVXx4NzJZan5YQhpejEG0c1/sXruJrfPIPZuakpf3jwAgVmjIRVQwAv+yRafDeN0aaUQ=="
         ),
     },
-    "basemaps-assets": {
-        "git_commit": "028c18f713baecad011301ff7a69acc39bcc2ae7"
-    },
+    "basemaps-assets": {"git_commit": "028c18f713baecad011301ff7a69acc39bcc2ae7"},
     "pmtiles-cli": {
         "version": "1.30.0",
         "git_commit": "39722fde57646c59c23e67a8cf739a59fc657590",
-        "release_sha256": (
-            "8a983059b1e7a24f6930f677f5b7aa6d01e125eb2e15cb0f34bd11247e82df35"
-        ),
+        "release_sha256": ("8a983059b1e7a24f6930f677f5b7aa6d01e125eb2e15cb0f34bd11247e82df35"),
     },
 }
 REQUIRED_CORE_ASSETS = {
@@ -95,9 +89,7 @@ def required_fontstacks(style: Any) -> set[str] | None:
     required: set[str] = set()
 
     def collect(value: Any, *, direct: bool = False) -> bool:
-        if isinstance(value, list) and value and all(
-            isinstance(item, str) and item for item in value
-        ) and direct:
+        if isinstance(value, list) and value and all(isinstance(item, str) and item for item in value) and direct:
             required.add(",".join(value))
             return True
         if not isinstance(value, list) or not value:

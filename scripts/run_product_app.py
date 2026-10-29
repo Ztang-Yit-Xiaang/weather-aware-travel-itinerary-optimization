@@ -235,16 +235,12 @@ def _limited_component_codes(payload: dict) -> str:
 def _report_health(url: str, payload: dict) -> None:
     if payload["core_ready"]:
         if payload["status"] == "degraded":
-            print(
-                "Itinerary Repair Copilot is running in degraded mode: "
-                f"{_limited_component_codes(payload)}"
-            )
+            print(f"Itinerary Repair Copilot is running in degraded mode: {_limited_component_codes(payload)}")
         else:
             print(f"Itinerary Repair Copilot is ready at {url}/app")
         return
     print(
-        "Itinerary Repair Copilot requires recovery: "
-        f"{_limited_component_codes(payload)}",
+        f"Itinerary Repair Copilot requires recovery: {_limited_component_codes(payload)}",
         file=sys.stderr,
     )
     print(f"Recovery page: {url}/app", file=sys.stderr)

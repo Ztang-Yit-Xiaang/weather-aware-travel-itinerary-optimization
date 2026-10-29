@@ -86,4 +86,6 @@ results/repairs/
 /results/product_app/
 /results/regression/
 /results/response_aware_*/
-/results/route_deltas/
+/results/route_deltas/*
+# Immutable reference inputs required by the registered demo and tests.
+!/results/route_deltas/product_pfeiffer_point_lobos_20260908_v1/

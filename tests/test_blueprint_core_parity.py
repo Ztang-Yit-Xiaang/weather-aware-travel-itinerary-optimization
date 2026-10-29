@@ -65,9 +65,9 @@ def test_constants_and_sequence_helpers_match_legacy(legacy_blueprint):
         {},
     ]
     for trip in trips:
-        assert blueprint_core._trip_sequence_with_pass_through(trip) == legacy_blueprint._trip_sequence_with_pass_through(
+        assert blueprint_core._trip_sequence_with_pass_through(
             trip
-        )
+        ) == legacy_blueprint._trip_sequence_with_pass_through(trip)
 
     sequence = ["San Francisco", "Monterey", "Santa Barbara", "Los Angeles"]
     for origin, destination in [
@@ -75,9 +75,9 @@ def test_constants_and_sequence_helpers_match_legacy(legacy_blueprint):
         ("Los Angeles", "Monterey"),
         ("Unknown", "Los Angeles"),
     ]:
-        assert blueprint_core._sequence_between(
+        assert blueprint_core._sequence_between(sequence, origin, destination) == legacy_blueprint._sequence_between(
             sequence, origin, destination
-        ) == legacy_blueprint._sequence_between(sequence, origin, destination)
+        )
 
 
 def test_catalog_normalization_matches_with_missing_and_invalid_fields(legacy_blueprint):

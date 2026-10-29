@@ -114,7 +114,11 @@ def _catalog(compiler, parameters):
         )
     for row in SOCIAL_MUST_GO_PLACES:
         key = row["name"].lower().replace(" ", "_")
-        if key in stops or row["city"] not in {"Los Angeles", "Santa Barbara"} and not isinstance(parameters, IndividualizedTripParameters):
+        if (
+            key in stops
+            or row["city"] not in {"Los Angeles", "Santa Barbara"}
+            and not isinstance(parameters, IndividualizedTripParameters)
+        ):
             continue
         points[key] = row["latitude"], row["longitude"]
         names[key] = row["name"]
@@ -144,19 +148,26 @@ def _catalog(compiler, parameters):
     points[CHANNEL_ISLANDS] = (PORT[1], PORT[0])
     names[CHANNEL_ISLANDS] = "Channel Islands day trip · Ventura Harbor ferry"
     stops[CHANNEL_ISLANDS] = {
-        "poi_id": CHANNEL_ISLANDS, "attraction_name": names[CHANNEL_ISLANDS],
-        "city": "Ventura", "latitude": PORT[1], "longitude": PORT[0],
+        "poi_id": CHANNEL_ISLANDS,
+        "attraction_name": names[CHANNEL_ISLANDS],
+        "city": "Ventura",
+        "latitude": PORT[1],
+        "longitude": PORT[0],
         "visit_duration_minutes": EXCURSION["planning_minutes"],
         "source_list": "NPS and Island Packers; US Census terminal address; OSM Scorpion pier",
         "official_url": CHANNEL_URLS["channel_islands_nps"],
-        "excursion": deepcopy(EXCURSION), "access_note": NOTICE,
+        "excursion": deepcopy(EXCURSION),
+        "access_note": NOTICE,
     }
     # NPS REDW trailhead feature 30580, not the park's discovery/display centroid.
     points["redwood_national_park"] = (41.304183, -124.018552)
     names["redwood_national_park"] = "Redwood National Park · Lady Bird Johnson Grove"
     stops["redwood_national_park"] = {
-        "poi_id": "redwood_national_park", "attraction_name": names["redwood_national_park"],
-        "city": "Orick", "latitude": 41.304183, "longitude": -124.018552,
+        "poi_id": "redwood_national_park",
+        "attraction_name": names["redwood_national_park"],
+        "city": "Orick",
+        "latitude": 41.304183,
+        "longitude": -124.018552,
         "visit_duration_minutes": 90,
         "source_list": "NPS REDW trailhead feature 30580; Lady Bird Johnson Grove walking guide",
         "official_url": REDWOOD_URLS["redwood_walk"],
@@ -173,7 +184,11 @@ def _catalog(compiler, parameters):
     hotels = set(compiler.parent_plan["lodging_assignments"].values()) - excluded
     required = (original - excluded) | set(parameters.required_place_ids)
     if "redwood_national_park" in required:
-        catalog = json.loads((compiler.repository_root / "configs/product_poi_catalogs/california_statewide/catalog.json").read_text(encoding="utf-8"))
+        catalog = json.loads(
+            (compiler.repository_root / "configs/product_poi_catalogs/california_statewide/catalog.json").read_text(
+                encoding="utf-8"
+            )
+        )
         gateway = next(p for p in catalog["places"] if p["place_id"] == "ca_gateway_arcata")
         coordinate = gateway["display_coordinate"]
         points["arcata_overnight_area"] = (coordinate["latitude"], coordinate["longitude"])
@@ -202,16 +217,28 @@ def _catalog(compiler, parameters):
         rows = json.loads(payload)["places"]
         existing_names = {str(r.get("attraction_name", "")).casefold() for r in stops.values()}
         blocked_names = {names[p].casefold() for p in excluded if p in names}
-        pool = [r for r in rows if r["name"].casefold() not in existing_names | blocked_names
-                and r["place_id"] not in excluded and r["place_categories"]
-                and "national_park" not in r.get("category_source_text", "")
-                and 33.5 <= r["display_coordinate"]["latitude"] <= 38.5]
+        pool = [
+            r
+            for r in rows
+            if r["name"].casefold() not in existing_names | blocked_names
+            and r["place_id"] not in excluded
+            and r["place_categories"]
+            and "national_park" not in r.get("category_source_text", "")
+            and 33.5 <= r["display_coordinate"]["latitude"] <= 38.5
+        ]
         interest_set = set(parameters.interests)
+
         def rank(row):
             point = row["display_coordinate"]
-            distance = min((point["latitude"]-points[p][0])**2 + (point["longitude"]-points[p][1])**2 for p in original)
+            distance = min(
+                (point["latitude"] - points[p][0]) ** 2 + (point["longitude"] - points[p][1]) ** 2 for p in original
+            )
             return (-len(interest_set & set(row["place_categories"])), distance, row["place_id"])
-        router = RuntimeRoutingService(base_url=compiler.planning_routing_url or os.environ.get("PRODUCT_ROUTING_BASE_URL", "http://127.0.0.1:5000"))
+
+        router = RuntimeRoutingService(
+            base_url=compiler.planning_routing_url
+            or os.environ.get("PRODUCT_ROUTING_BASE_URL", "http://127.0.0.1:5000")
+        )
         target = max(len(required), parameters.total_days) + 3
         for row in sorted(pool, key=rank):
             if len(stops) >= target:
@@ -228,13 +255,22 @@ def _catalog(compiler, parameters):
             key = row["place_id"]
             points[key] = snap.snapped_point
             names[key] = row["name"]
-            stops[key] = {"poi_id": key, "attraction_name": row["name"],
-                "latitude": snap.snapped_point[0], "longitude": snap.snapped_point[1],
+            stops[key] = {
+                "poi_id": key,
+                "attraction_name": row["name"],
+                "latitude": snap.snapped_point[0],
+                "longitude": snap.snapped_point[1],
                 "visit_duration_minutes": row.get("recommended_visit_minutes") or 60,
-                "source_list": row["source_refs"], "place_categories": row["place_categories"],
+                "source_list": row["source_refs"],
+                "place_categories": row["place_categories"],
                 "description": row.get("description"),
                 "access_note": "Fresh road snap within 50 m; entrance, opening hours and tickets remain unverified.",
-                "road_access": {"snap_distance_m": snap.snap_distance_m, "raw_point": list(raw), "status": "road_snap_only"}}
+                "road_access": {
+                    "snap_distance_m": snap.snap_distance_m,
+                    "raw_point": list(raw),
+                    "status": "road_snap_only",
+                },
+            }
         for key, row in stops.items():
             categories = set(row.get("place_categories", []))
             label = names.get(key, key).lower()
@@ -249,12 +285,12 @@ def _catalog(compiler, parameters):
     start = CITY_ANCHORS.get(parameters.start_city, first)
     end = scenario["days"][-1]["end_anchor_id"]
     entities = set(stops) | hotels | {start, end}
-    if getattr(parameters,"additional_yosemite_days",0):
-        if max(s.get("day",0) for s in compiler.parent_plan["selected_stops"]) != 7:
-            raise WorkspaceError("yosemite_extension_requires_seven_day_parent",409)
+    if getattr(parameters, "additional_yosemite_days", 0):
+        if max(s.get("day", 0) for s in compiler.parent_plan["selected_stops"]) != 7:
+            raise WorkspaceError("yosemite_extension_requires_seven_day_parent", 409)
         for key, row in YOSEMITE_POIS.items():
             stops[key] = deepcopy(row)
-            points[key] = (row["latitude"],row["longitude"])
+            points[key] = (row["latitude"], row["longitude"])
             names[key] = row["attraction_name"]
         required |= set(YOSEMITE_POIS)
         entities |= set(YOSEMITE_POIS)
@@ -262,7 +298,11 @@ def _catalog(compiler, parameters):
         raise WorkspaceError("trip_planning_catalog_coordinate_missing", 409)
     # Route only usable candidates and original-plan endpoints needed for comparison.
     # Discovery-only and unused optional points do not belong in the OSRM table.
-    comparison = set(original_catalog["sequence"]) | set(compiler.parent_plan["sequence"]) | set(compiler.parent_plan["lodging_assignments"].values())
+    comparison = (
+        set(original_catalog["sequence"])
+        | set(compiler.parent_plan["sequence"])
+        | set(compiler.parent_plan["lodging_assignments"].values())
+    )
     routing_points = entities | comparison
     return stops, hotels, {p: points[p] for p in sorted(routing_points)}, required, excluded, start, end, names
 
@@ -326,17 +366,25 @@ def validate_planning_bundle(parent, bundle, *, check_age=True):
             raise WorkspaceError("trip_planning_request_requirements_mismatch", 409)
         if any(getattr(parameters, key) != getattr(requested, key) for key in requested.profile_updates):
             raise WorkspaceError("trip_planning_request_requirements_mismatch", 409)
-        if any(getattr(parameters, key) != getattr(requested, key) for key in
-               ("start_city", "required_place_ids", "avoid_regions", "verify_official", "profile_updates")) or not set(requested.excluded_place_ids) <= set(parameters.excluded_place_ids):
+        if any(
+            getattr(parameters, key) != getattr(requested, key)
+            for key in ("start_city", "required_place_ids", "avoid_regions", "verify_official", "profile_updates")
+        ) or not set(requested.excluded_place_ids) <= set(parameters.excluded_place_ids):
             raise WorkspaceError("trip_planning_request_requirements_mismatch", 409)
     else:
-        if (any(getattr(parameters, key) != getattr(requested, key) for key in
-                ("start_city", "required_place_ids", "avoid_regions", "verify_official"))
-                or not set(requested.excluded_place_ids) <= set(parameters.excluded_place_ids)
-                or requested.coastal and not parameters.coastal
-                or requested.max_daily_drive_minutes != 720 and parameters.max_daily_drive_minutes != requested.max_daily_drive_minutes
-                or isinstance(parameters, IndividualizedTripParameters)
-                and parameters.total_days != trip_day_count(requested, parent)):
+        if (
+            any(
+                getattr(parameters, key) != getattr(requested, key)
+                for key in ("start_city", "required_place_ids", "avoid_regions", "verify_official")
+            )
+            or not set(requested.excluded_place_ids) <= set(parameters.excluded_place_ids)
+            or requested.coastal
+            and not parameters.coastal
+            or requested.max_daily_drive_minutes != 720
+            and parameters.max_daily_drive_minutes != requested.max_daily_drive_minutes
+            or isinstance(parameters, IndividualizedTripParameters)
+            and parameters.total_days != trip_day_count(requested, parent)
+        ):
             raise WorkspaceError("trip_planning_request_requirements_mismatch", 409)
     sources = bundle["official_sources"]
     expected_sources = {"big_sur_park", "highway_1", "hearst_castle"}
@@ -344,7 +392,7 @@ def validate_planning_bundle(parent, bundle, *, check_age=True):
         expected_sources |= set(CHANNEL_URLS)
     if "redwood_national_park" in bundle["plan"]["sequence"]:
         expected_sources |= set(REDWOOD_URLS)
-    if getattr(parameters,"additional_yosemite_days",0):
+    if getattr(parameters, "additional_yosemite_days", 0):
         expected_sources |= set(YOSEMITE_URLS)
     if (
         len(sources) != len(expected_sources)
@@ -379,8 +427,10 @@ def validate_planning_bundle(parent, bundle, *, check_age=True):
         raise WorkspaceError("trip_planning_request_requirements_mismatch", 409)
     island_stops = [s for s in plan.selected_stops if (s.get("poi_id") or s.get("stop_id")) == CHANNEL_ISLANDS]
     if any(
-        s.get("excursion") != EXCURSION or s.get("visit_duration_minutes") != EXCURSION["planning_minutes"]
-        or (s.get("longitude"), s.get("latitude")) != PORT for s in island_stops
+        s.get("excursion") != EXCURSION
+        or s.get("visit_duration_minutes") != EXCURSION["planning_minutes"]
+        or (s.get("longitude"), s.get("latitude")) != PORT
+        for s in island_stops
     ) or any(s.get("excursion") for s in plan.selected_stops if s not in island_stops):
         raise WorkspaceError("trip_planning_island_excursion_mismatch", 409)
     redwood_stops = [s for s in plan.selected_stops if (s.get("poi_id") or s.get("stop_id")) == "redwood_national_park"]
@@ -388,12 +438,16 @@ def validate_planning_bundle(parent, bundle, *, check_age=True):
         len(redwood_stops) != 1
         or redwood_stops[0].get("visit_duration_minutes") != 90
         or (redwood_stops[0].get("latitude"), redwood_stops[0].get("longitude")) != (41.304183, -124.018552)
-        or next(row["park_access"] for row in sources if row["source_id"] == "redwood_conditions") not in {"open", "open_with_hazards"}
+        or next(row["park_access"] for row in sources if row["source_id"] == "redwood_conditions")
+        not in {"open", "open_with_hazards"}
     ):
         raise WorkspaceError("trip_planning_redwood_access_mismatch", 409)
-    validate_yosemite_extension(plan,bundle["days"],bool(getattr(parameters,"additional_yosemite_days",0)))
-    if getattr(parameters,"additional_yosemite_days",0) and next(r["park_access"] for r in sources if r["source_id"]=="yosemite_conditions")!="open_with_hazards":
-        raise WorkspaceError("trip_planning_official_access_unresolved",409)
+    validate_yosemite_extension(plan, bundle["days"], bool(getattr(parameters, "additional_yosemite_days", 0)))
+    if (
+        getattr(parameters, "additional_yosemite_days", 0)
+        and next(r["park_access"] for r in sources if r["source_id"] == "yosemite_conditions") != "open_with_hazards"
+    ):
+        raise WorkspaceError("trip_planning_official_access_unresolved", 409)
     matrix = _route_matrix(bundle["route_matrix"])
     if _hash(bundle["route_matrix"]["cells"]) != matrix.source_content_sha256:
         raise WorkspaceError("trip_planning_route_evidence_mismatch", 409)
@@ -411,7 +465,9 @@ def validate_planning_bundle(parent, bundle, *, check_age=True):
         include_schedule_metrics=True,
     )
     expected_days = trip_day_count(parameters, parent)
-    if [d["day"] for d in bundle["days"]] != list(range(1,expected_days+1)) or config.start_anchor_by_day[1] != bundle["start_anchor_id"]:
+    if [d["day"] for d in bundle["days"]] != list(range(1, expected_days + 1)) or config.start_anchor_by_day[
+        1
+    ] != bundle["start_anchor_id"]:
         raise WorkspaceError("trip_planning_route_requirements_mismatch", 409)
     if isinstance(parameters, IndividualizedTripParameters):
         limit = {"relaxed": 2, "balanced": 3, "active": 4}[parameters.pace]
@@ -458,7 +514,10 @@ def compile_trip_replan(compiler, operations, *, read_only=False, refresh_expire
         bundle = None
         if cache.is_file():
             bundle = json.loads(cache.read_text(encoding="utf-8"))
-            if bundle.get("parameters") != requested.model_dump() or bundle.get("request_id") != "trip_request_" + identity:
+            if (
+                bundle.get("parameters") != requested.model_dump()
+                or bundle.get("request_id") != "trip_request_" + identity
+            ):
                 raise WorkspaceError("trip_planning_request_identity_mismatch", 409)
             if refresh_expired:
                 try:
@@ -474,10 +533,22 @@ def compile_trip_replan(compiler, operations, *, read_only=False, refresh_expire
             if read_only:
                 raise WorkspaceError("interest_preview_unavailable", 409)
             stops, hotels, points, required, excluded, start, end, names = _catalog(compiler, parameters)
-            official = read_official_sources(big_sur=True, hearst=True, channel_islands=CHANNEL_ISLANDS in required, redwood="redwood_national_park" in required, yosemite=bool(getattr(parameters,"additional_yosemite_days",0)))
-            if getattr(parameters,"additional_yosemite_days",0) and next(r["park_access"] for r in official if r["source_id"]=="yosemite_conditions")!="open_with_hazards":
-                raise WorkspaceError("trip_planning_official_access_unresolved",409)
-            if "redwood_national_park" in required and next(row["park_access"] for row in official if row["source_id"] == "redwood_conditions") not in {"open", "open_with_hazards"}:
+            official = read_official_sources(
+                big_sur=True,
+                hearst=True,
+                channel_islands=CHANNEL_ISLANDS in required,
+                redwood="redwood_national_park" in required,
+                yosemite=bool(getattr(parameters, "additional_yosemite_days", 0)),
+            )
+            if (
+                getattr(parameters, "additional_yosemite_days", 0)
+                and next(r["park_access"] for r in official if r["source_id"] == "yosemite_conditions")
+                != "open_with_hazards"
+            ):
+                raise WorkspaceError("trip_planning_official_access_unresolved", 409)
+            if "redwood_national_park" in required and next(
+                row["park_access"] for row in official if row["source_id"] == "redwood_conditions"
+            ) not in {"open", "open_with_hazards"}:
                 raise WorkspaceError("trip_planning_official_access_unresolved", 409)
             user_avoid = sorted(
                 set(parameters.avoid_regions)
@@ -508,7 +579,7 @@ def compile_trip_replan(compiler, operations, *, read_only=False, refresh_expire
                 # Keep each router request within its 25-point bound while
                 # retaining a complete directed matrix for the longer trip.
                 ids = sorted(points)
-                groups = [ids[i:i+12] for i in range(0, len(ids), 12)]
+                groups = [ids[i : i + 12] for i in range(0, len(ids), 12)]
                 cells = {}
                 for i, group in enumerate(groups):
                     for other in groups[i:]:
@@ -525,19 +596,29 @@ def compile_trip_replan(compiler, operations, *, read_only=False, refresh_expire
             for _attempt in range(3):
                 matrix = replace(matrix, cells=cells)
                 solution = solve_trip(
-                    stops={k:v for k,v in stops.items() if not getattr(parameters,"additional_yosemite_days",0) or k not in YOSEMITE_POIS},
+                    stops={
+                        k: v
+                        for k, v in stops.items()
+                        if not getattr(parameters, "additional_yosemite_days", 0) or k not in YOSEMITE_POIS
+                    },
                     hotels=hotels,
                     matrix=matrix,
-                    required=required - set(YOSEMITE_POIS) if getattr(parameters,"additional_yosemite_days",0) else required,
+                    required=required - set(YOSEMITE_POIS)
+                    if getattr(parameters, "additional_yosemite_days", 0)
+                    else required,
                     start=start,
                     end=end,
-                    days=7 if getattr(parameters,"additional_yosemite_days",0) else trip_day_count(parameters, compiler.parent_plan),
-                    max_stops_per_day={"relaxed":2,"balanced":3,"active":4}[parameters.pace] if isinstance(parameters, IndividualizedTripParameters) else None,
+                    days=7
+                    if getattr(parameters, "additional_yosemite_days", 0)
+                    else trip_day_count(parameters, compiler.parent_plan),
+                    max_stops_per_day={"relaxed": 2, "balanced": 3, "active": 4}[parameters.pace]
+                    if isinstance(parameters, IndividualizedTripParameters)
+                    else None,
                     max_drive=parameters.max_daily_drive_minutes,
                     time_limit=8,
                 )
-                if getattr(parameters,"additional_yosemite_days",0):
-                    solution = extend_yosemite_solution(solution,matrix,parameters.max_daily_drive_minutes)
+                if getattr(parameters, "additional_yosemite_days", 0):
+                    solution = extend_yosemite_solution(solution, matrix, parameters.max_daily_drive_minutes)
                 changed = False
                 for day in solution["days"]:
                     ids = [day["start_anchor_id"], *day["stop_ids"], day["end_anchor_id"]]
@@ -552,7 +633,7 @@ def compile_trip_replan(compiler, operations, *, read_only=False, refresh_expire
                         changed |= abs(old - leg.duration_s) > 1e-5
                 if not changed:
                     break
-            if changed or getattr(parameters,"additional_yosemite_days",0):
+            if changed or getattr(parameters, "additional_yosemite_days", 0):
                 solution["status"] = "FEASIBLE"
                 solution["optimality_gap"] = None
                 solution["best_bound"] = None
@@ -561,7 +642,12 @@ def compile_trip_replan(compiler, operations, *, read_only=False, refresh_expire
                     for day in solution["days"]
                     for ids in [[day["start_anchor_id"], *day["stop_ids"], day["end_anchor_id"]]]
                     for u, v in zip(ids, ids[1:], strict=False)
-                ) + sum(15 + stops[p].get("preference_penalty_minutes", 0) for day in solution["days"] for p in day["stop_ids"] if p not in required)
+                ) + sum(
+                    15 + stops[p].get("preference_penalty_minutes", 0)
+                    for day in solution["days"]
+                    for p in day["stop_ids"]
+                    if p not in required
+                )
             solution["candidate_stop_ids"] = sorted(stops)
             matrix = replace(matrix, cells=cells)
             matrix_record = _matrix_record(matrix)
@@ -571,7 +657,9 @@ def compile_trip_replan(compiler, operations, *, read_only=False, refresh_expire
             days = solution["days"]
             total_days = len(days)
             selected = []
-            end_lodging = compiler.parent_plan["lodging_assignments"][str(max(int(d) for d in compiler.parent_plan["lodging_assignments"]))]
+            end_lodging = compiler.parent_plan["lodging_assignments"][
+                str(max(int(d) for d in compiler.parent_plan["lodging_assignments"]))
+            ]
             for day in days:
                 for index, stop_id in enumerate(day["stop_ids"], 1):
                     selected.append(
@@ -593,7 +681,9 @@ def compile_trip_replan(compiler, operations, *, read_only=False, refresh_expire
                 parent_plan_id=compiler.parent_plan_id,
                 day_assignments={s["poi_id"]: s["day"] for s in selected},
                 sequence=tuple(s["poi_id"] for s in selected),
-                lodging_assignments={str(d["day"]): d["end_anchor_id"] if d["day"] < total_days else end_lodging for d in days},
+                lodging_assignments={
+                    str(d["day"]): d["end_anchor_id"] if d["day"] < total_days else end_lodging for d in days
+                },
                 ordered_days=tuple({"day": d["day"], "stop_ids": d["stop_ids"]} for d in days),
                 route_ids_by_day={d["day"]: "trip_route_" + stable_content_hash(d) for d in days},
                 owned_constraints=_plan_artifact(compiler.parent_plan).owned_constraints,
@@ -642,16 +732,31 @@ def compile_trip_replan(compiler, operations, *, read_only=False, refresh_expire
                         "latitude": v[0],
                         "longitude": v[1],
                         "name": names.get(p, p),
-                        "source_ref": "california_statewide_gateway_coordinates_v1; city-center planning base, hotel not selected" if p == "arcata_overnight_area" else "trip_planning_catalog_v1",
+                        "source_ref": "california_statewide_gateway_coordinates_v1; city-center planning base, hotel not selected"
+                        if p == "arcata_overnight_area"
+                        else "trip_planning_catalog_v1",
                     }
                     for p, v in points.items()
                 ],
                 "notices": [
                     "Road times exclude live traffic. Hotel availability is not booked or verified.",
-                    *([f"Personalized profile: {parameters.total_days} days, {parameters.pace} pace, {parameters.max_daily_drive_minutes} driving minutes/day maximum; interests: {', '.join(parameters.interests) or 'existing trip'}. Each day has at least one distinct visit; free time is not filled with duplicate visits."] if isinstance(parameters, IndividualizedTripParameters) else []),
-                    *([YOSEMITE_NOTICE] if getattr(parameters,"additional_yosemite_days",0) else []),
+                    *(
+                        [
+                            f"Personalized profile: {parameters.total_days} days, {parameters.pace} pace, {parameters.max_daily_drive_minutes} driving minutes/day maximum; interests: {', '.join(parameters.interests) or 'existing trip'}. Each day has at least one distinct visit; free time is not filled with duplicate visits."
+                        ]
+                        if isinstance(parameters, IndividualizedTripParameters)
+                        else []
+                    ),
+                    *([YOSEMITE_NOTICE] if getattr(parameters, "additional_yosemite_days", 0) else []),
                     *([NOTICE] if CHANNEL_ISLANDS in plan.sequence else []),
-                    *([stops["redwood_national_park"]["access_note"], "Arcata overnight area is a city-center planning base, not a selected or booked hotel. Final accommodation may change travel time."] if "redwood_national_park" in plan.sequence else []),
+                    *(
+                        [
+                            stops["redwood_national_park"]["access_note"],
+                            "Arcata overnight area is a city-center planning base, not a selected or booked hotel. Final accommodation may change travel time.",
+                        ]
+                        if "redwood_national_park" in plan.sequence
+                        else []
+                    ),
                     "Pfeiffer Big Sur access is excluded when official notices conflict, report closure, or cannot establish park access.",
                     "Official bulletins apply at retrieval time; recheck for the actual travel dates.",
                     *(

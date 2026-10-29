@@ -101,9 +101,7 @@ class ProductDashboardManifest:
             "product_version": self.product_version,
             "run_id": self.run_id,
             "run_manifest_path": self.run_manifest_path,
-            "source_artifact_refs": {
-                key: list(paths) for key, paths in sorted(self.source_artifact_refs.items())
-            },
+            "source_artifact_refs": {key: list(paths) for key, paths in sorted(self.source_artifact_refs.items())},
             "source_content_hashes": dict(sorted(self.source_content_hashes.items())),
             "parent_plan_id": self.parent_plan_id,
             "parent_content_hash": self.parent_content_hash,

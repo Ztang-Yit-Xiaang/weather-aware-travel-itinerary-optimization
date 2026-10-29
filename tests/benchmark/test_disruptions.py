@@ -71,7 +71,9 @@ def test_generate_disruption_scenarios_has_six_deterministic_families_and_metada
     assert len({scenario.scenario_id for scenario in first}) == 6
     assert all(scenario.evidence_status == "synthetic" for scenario in first)
     assert all(scenario.request.confirmed_constraints["observation_status"] == "synthetic" for scenario in first)
-    assert all(scenario.request.confirmed_constraints["disruption_family"] == scenario.family.value for scenario in first)
+    assert all(
+        scenario.request.confirmed_constraints["disruption_family"] == scenario.family.value for scenario in first
+    )
     assert all(scenario.request.confirmed_constraints["parent_plan_id"] == "parent_benchmark" for scenario in first)
 
 
@@ -93,13 +95,13 @@ def test_generate_disruption_requests_returns_repair_requests_without_mutating_p
 def test_family_specific_constraints_are_repair_ready():
     scenarios = {scenario.family: scenario for scenario in DisruptionGenerator(seed=3).generate(parent_plan())}
 
-    assert scenarios[DisruptionFamily.WEATHER_DETERIORATION].request.confirmed_constraints["weather_risk_overrides"] == {
-        "poi_bridge": 0.95
-    }
+    assert scenarios[DisruptionFamily.WEATHER_DETERIORATION].request.confirmed_constraints[
+        "weather_risk_overrides"
+    ] == {"poi_bridge": 0.95}
     assert scenarios[DisruptionFamily.ROAD_CLOSURE].request.confirmed_constraints["closed_route_ids"] == ("route_2",)
-    assert scenarios[DisruptionFamily.HOTEL_UNAVAILABILITY].request.confirmed_constraints["unavailable_lodging_ids"] == (
-        "hotel_b",
-    )
+    assert scenarios[DisruptionFamily.HOTEL_UNAVAILABILITY].request.confirmed_constraints[
+        "unavailable_lodging_ids"
+    ] == ("hotel_b",)
     assert scenarios[DisruptionFamily.ATTRACTION_CLOSURE].request.confirmed_constraints["must_delete"] == ("poi_grove",)
     assert (
         scenarios[DisruptionFamily.REDUCED_DRIVING_TOLERANCE].request.tolerance_profile["max_daily_travel_minutes"]
@@ -130,7 +132,9 @@ def test_static_disruption_family_manifest_matches_generator_contract():
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
 
     assert manifest["schema_version"] == "benchmark-disruption-family-manifest-v1"
-    assert tuple(family["family"] for family in manifest["families"]) == tuple(family.value for family in DisruptionFamily)
+    assert tuple(family["family"] for family in manifest["families"]) == tuple(
+        family.value for family in DisruptionFamily
+    )
     assert all(family["default_evidence_status"] == "synthetic" for family in manifest["families"])
 
 

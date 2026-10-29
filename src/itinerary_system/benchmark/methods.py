@@ -156,9 +156,7 @@ def pipeline_run_to_benchmark_result(run: PipelineRun) -> dict[str, Any]:
     plan_records = _read_json_records(artifact_paths.get("plans", ()))
     pipeline_manifest = _mapping(manifest.get("pipeline_run"))
     output_plan_ids = {str(plan_id) for plan_id in pipeline_manifest.get("output_plan_ids", ())}
-    output_plans = tuple(
-        record for record in plan_records if str(record.get("plan_id") or "") in output_plan_ids
-    )
+    output_plans = tuple(record for record in plan_records if str(record.get("plan_id") or "") in output_plan_ids)
     return {
         "run_id": run.run_id,
         "status": run.status,

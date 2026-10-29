@@ -12,9 +12,12 @@ from .copilot_typed_edits import TYPED_CHAT_OPERATIONS, interpret_typed_edit, ty
 from .models import CopilotContextV2, CopilotIntentV1, CopilotIntentV2, CopilotInterpretationV1
 
 _REQUIRED = {
-    "keep_stop": ("target_stop_id",), "lock_stop": ("target_stop_id",),
-    "mark_flexible": ("target_stop_id",), "move_day": ("target_stop_id", "destination_day"),
-    "replace_nearby": ("target_stop_id", "candidate_id"), "add_candidate": ("candidate_id", "destination_day"),
+    "keep_stop": ("target_stop_id",),
+    "lock_stop": ("target_stop_id",),
+    "mark_flexible": ("target_stop_id",),
+    "move_day": ("target_stop_id", "destination_day"),
+    "replace_nearby": ("target_stop_id", "candidate_id"),
+    "add_candidate": ("candidate_id", "destination_day"),
 }
 _CAPABILITY_TYPES = frozenset((*_REQUIRED, "route_feedback", "replan_trip")) | TYPED_CHAT_OPERATIONS
 _PREFERENCE_PATTERNS = {
@@ -24,67 +27,116 @@ _PREFERENCE_PATTERNS = {
 }
 
 
-def project_capabilities(capabilities: dict[str, Any], *, registered_repair_current: bool,
-                         typed_capabilities: dict[str, Any] | None = None, stop_positions: tuple = ()) -> dict[str, Any]:
+def project_capabilities(
+    capabilities: dict[str, Any],
+    *,
+    registered_repair_current: bool,
+    typed_capabilities: dict[str, Any] | None = None,
+    stop_positions: tuple = (),
+) -> dict[str, Any]:
     combined = dict(capabilities.get("operations", {}))
     if typed_capabilities is not None:
-        combined.update({key: value for key, value in typed_capabilities.get("operations", {}).items() if key in TYPED_CHAT_OPERATIONS})
+        combined.update(
+            {
+                key: value
+                for key, value in typed_capabilities.get("operations", {}).items()
+                if key in TYPED_CHAT_OPERATIONS
+            }
+        )
     operations = {
         name: {
             "enabled": row.get("enabled") is True,
             "preview_executable": row.get("preview_executable") is True,
-            "blocking_code": row.get("blocking_code") or (
-                None if row.get("preview_executable") is True else row.get("status", "not_enabled")
-            ),
+            "blocking_code": row.get("blocking_code")
+            or (None if row.get("preview_executable") is True else row.get("status", "not_enabled")),
         }
-        for name, row in sorted(combined.items()) if name in _CAPABILITY_TYPES
+        for name, row in sorted(combined.items())
+        if name in _CAPABILITY_TYPES
     }
     return {
-        "schema_version": "copilot-capabilities-v2" if typed_capabilities is not None else "copilot-capabilities-v1", "operations": operations,
-        **({"stop_positions": stop_positions, "executable_combinations": tuple({
-            "operations": tuple(name for name in row["operations"] if name in operations
-                                and operations[name]["preview_executable"]),
-            "cardinality": row["cardinality"],
-        } for row in capabilities.get("executable_combinations", ()))} if typed_capabilities is not None else {}),
+        "schema_version": "copilot-capabilities-v2" if typed_capabilities is not None else "copilot-capabilities-v1",
+        "operations": operations,
+        **(
+            {
+                "stop_positions": stop_positions,
+                "executable_combinations": tuple(
+                    {
+                        "operations": tuple(
+                            name
+                            for name in row["operations"]
+                            if name in operations and operations[name]["preview_executable"]
+                        ),
+                        "cardinality": row["cardinality"],
+                    }
+                    for row in capabilities.get("executable_combinations", ())
+                ),
+            }
+            if typed_capabilities is not None
+            else {}
+        ),
         "registered_repair_current": registered_repair_current,
-        "candidate_replacements": tuple({
-            "candidate_id": row["candidate_id"], "replaces_stop_id": row["replaces_stop_id"],
-        } for row in capabilities.get("candidate_choices", ())),
-        "candidate_day_readiness": tuple({
-            "candidate_id": row["candidate_id"], "day": row["day"],
-            "preview_executable": row.get("preview_executable") is True,
-            "blocking_code": None if row.get("preview_executable") is True else row["status"],
-        } for row in capabilities.get("operations", {}).get("add_candidate", {}).get("candidate_day_readiness", ())),
+        "candidate_replacements": tuple(
+            {
+                "candidate_id": row["candidate_id"],
+                "replaces_stop_id": row["replaces_stop_id"],
+            }
+            for row in capabilities.get("candidate_choices", ())
+        ),
+        "candidate_day_readiness": tuple(
+            {
+                "candidate_id": row["candidate_id"],
+                "day": row["day"],
+                "preview_executable": row.get("preview_executable") is True,
+                "blocking_code": None if row.get("preview_executable") is True else row["status"],
+            }
+            for row in capabilities.get("operations", {}).get("add_candidate", {}).get("candidate_day_readiness", ())
+        ),
     }
 
 
 def empty_memory(plan_id: str, plan_hash: str) -> dict[str, Any]:
     return {
-        "schema_version": "copilot-memory-v1", "plan_id": plan_id, "plan_content_hash": plan_hash,
+        "schema_version": "copilot-memory-v1",
+        "plan_id": plan_id,
+        "plan_content_hash": plan_hash,
         "pending_clarification": None,
         "resolved_ids": {"stop_ids": (), "candidate_ids": (), "day_ids": (), "segment_ids": ()},
-        "proposed_preferences": (), "last_proposal": None,
+        "proposed_preferences": (),
+        "last_proposal": None,
     }
 
 
 def context_binding(context: CopilotContextV2) -> dict[str, Any]:
     return {
-        "plan_id": context.accepted_plan_id, "plan_content_hash": context.accepted_plan_content_hash,
-        **{name: getattr(context, name) for name in (
-            "selected_day", "selected_stop_id", "selected_candidate_id", "selected_segment_id", "selected_alternative_id",
-        )},
+        "plan_id": context.accepted_plan_id,
+        "plan_content_hash": context.accepted_plan_content_hash,
+        **{
+            name: getattr(context, name)
+            for name in (
+                "selected_day",
+                "selected_stop_id",
+                "selected_candidate_id",
+                "selected_segment_id",
+                "selected_alternative_id",
+            )
+        },
     }
 
 
 def bound_records(context: CopilotContextV2, records: tuple[dict[str, Any], ...]) -> tuple[dict[str, Any], ...]:
-    return tuple(row for row in records if (
-        isinstance(row.get("context_binding"), dict)
-        and row["context_binding"]["plan_id"] == context.accepted_plan_id
-        and row["context_binding"]["plan_content_hash"] == context.accepted_plan_content_hash
-        and row["context_revision"] <= context.session_revision
-        and row["outcome"] == "completed" and row["turn"] is not None
-        and row["turn"]["state"] == "completed"
-    ))
+    return tuple(
+        row
+        for row in records
+        if (
+            isinstance(row.get("context_binding"), dict)
+            and row["context_binding"]["plan_id"] == context.accepted_plan_id
+            and row["context_binding"]["plan_content_hash"] == context.accepted_plan_content_hash
+            and row["context_revision"] <= context.session_revision
+            and row["outcome"] == "completed"
+            and row["turn"] is not None
+            and row["turn"]["state"] == "completed"
+        )
+    )
 
 
 def _preferences(message: str) -> tuple[str, ...]:
@@ -101,15 +153,20 @@ def _request_spec(context: CopilotContextV2, message: str) -> dict[str, Any] | N
     if request_semantic_guard(context, message) is not None or typed_edit_kind(message) is not None:
         return None
     actions = {
-        "replace_nearby": r"\b(?:replace|swap|substitute)\b", "add_candidate": r"\badd\b",
-        "move_day": r"\bmove\b", "lock_stop": r"\block\b",
-        "mark_flexible": r"\bflexible\b", "keep_stop": r"\b(?:keep|retain)\b",
+        "replace_nearby": r"\b(?:replace|swap|substitute)\b",
+        "add_candidate": r"\badd\b",
+        "move_day": r"\bmove\b",
+        "lock_stop": r"\block\b",
+        "mark_flexible": r"\bflexible\b",
+        "keep_stop": r"\b(?:keep|retain)\b",
     }
     kinds = [name for name, pattern in actions.items() if re.search(pattern, message, re.IGNORECASE)]
     stop = matched_known_place(context, message, route_status="accepted_stop")
     candidate = matched_known_place(context, message, route_status="registered_route_candidate")
     day_match = re.search(r"\bday\s+(\d+)\b", message, re.IGNORECASE) or re.fullmatch(
-        r"\s*(?:actually,?\s*)?(\d+)[.!]?\s*", message, re.IGNORECASE,
+        r"\s*(?:actually,?\s*)?(\d+)[.!]?\s*",
+        message,
+        re.IGNORECASE,
     )
     pending = context.conversation_memory["pending_clarification"]
     if len(kinds) == 1:
@@ -118,10 +175,18 @@ def _request_spec(context: CopilotContextV2, message: str) -> dict[str, Any] | N
         spec = {key: pending[key] for key in ("intent_type", "target_stop_id", "candidate_id", "destination_day")}
     elif not kinds and re.search(r"\bsame\b.*\bother\s+stop\b", message, re.IGNORECASE):
         previous = (context.conversation_memory["last_proposal"] or {}).get("intents", ())
-        if len(previous) != 1 or previous[0]["type"] not in _REQUIRED or "target_stop_id" not in _REQUIRED[previous[0]["type"]]:
+        if (
+            len(previous) != 1
+            or previous[0]["type"] not in _REQUIRED
+            or "target_stop_id" not in _REQUIRED[previous[0]["type"]]
+        ):
             return None
-        spec = {"intent_type": previous[0]["type"], "target_stop_id": None,
-                "candidate_id": previous[0].get("candidate_id"), "destination_day": previous[0].get("destination_day")}
+        spec = {
+            "intent_type": previous[0]["type"],
+            "target_stop_id": None,
+            "candidate_id": previous[0].get("candidate_id"),
+            "destination_day": previous[0].get("destination_day"),
+        }
     else:
         return None
     if stop:
@@ -152,8 +217,14 @@ def _blocked(context: CopilotContextV2, spec: dict[str, Any]) -> str | None:
     if spec["destination_day"] is not None and spec["destination_day"] not in context.allowed_days:
         return "That destination day is not in the accepted itinerary."
     if spec["intent_type"] != "move_day" and spec["target_stop_id"] and spec["destination_day"] is not None:
-        accepted_day = next((row["day"] for row in context.capabilities.get("stop_positions", ())
-                             if row["stop_id"] == spec["target_stop_id"]), None)
+        accepted_day = next(
+            (
+                row["day"]
+                for row in context.capabilities.get("stop_positions", ())
+                if row["stop_id"] == spec["target_stop_id"]
+            ),
+            None,
+        )
         if accepted_day is not None and spec["destination_day"] != accepted_day:
             return f"This stop is accepted on Day {accepted_day}. Moving stops between days is not enabled."
     choices = context.capabilities["candidate_replacements"]
@@ -166,7 +237,8 @@ def _blocked(context: CopilotContextV2, spec: dict[str, Any]) -> str | None:
     if kind == "add_candidate" and spec["candidate_id"] is not None:
         readiness = context.capabilities["candidate_day_readiness"]
         if readiness and not any(
-            row["candidate_id"] == spec["candidate_id"] and row["preview_executable"] is True
+            row["candidate_id"] == spec["candidate_id"]
+            and row["preview_executable"] is True
             and (spec["destination_day"] is None or row["day"] == spec["destination_day"])
             for row in readiness
         ):
@@ -178,9 +250,15 @@ def _question(context: CopilotContextV2, spec: dict[str, Any]) -> str:
     slot = spec["missing_slots"][0]
     if slot == "target_stop_id":
         return "Which accepted stop should I use for this edit?"
-    name = next((str(row["name"]) for row in context.known_places if row["place_id"] == spec["target_stop_id"]), "that stop")
+    name = next(
+        (str(row["name"]) for row in context.known_places if row["place_id"] == spec["target_stop_id"]), "that stop"
+    )
     if slot == "candidate_id":
-        return f"Which registered candidate should replace {name}?" if spec["intent_type"] == "replace_nearby" else "Which registered candidate should I add?"
+        return (
+            f"Which registered candidate should replace {name}?"
+            if spec["intent_type"] == "replace_nearby"
+            else "Which registered candidate should I add?"
+        )
     return f"Which destination day should I use for {name}?"
 
 
@@ -203,8 +281,15 @@ def interpret_context_request(context: Any, message: str) -> CopilotInterpretati
             unsupported = re.sub(r"\binstead\s*[.!?]?\s*$", "", unsupported, flags=re.I)
         unsupported = re.sub(r"\b(?:and|is)\b", "", unsupported, flags=re.I).strip(" ,.!?")
         question = "What itinerary change should I review with that proposed preference?"
-        summary = ("I noted your proposed preference: " + ", ".join(name.replace("_", " ") for name in preferences)
-                   + ". It is not an accepted itinerary constraint. ") if preferences else ""
+        summary = (
+            (
+                "I noted your proposed preference: "
+                + ", ".join(name.replace("_", " ") for name in preferences)
+                + ". It is not an accepted itinerary constraint. "
+            )
+            if preferences
+            else ""
+        )
         if unsupported:
             summary += f"The preference '{unsupported}' is not supported by the current preference controls. "
         return CopilotInterpretationV1(
@@ -216,29 +301,37 @@ def interpret_context_request(context: Any, message: str) -> CopilotInterpretati
     if spec is None:
         if re.search(r"\b(?:what|which)\b.*\bpreferences?\b", message, re.IGNORECASE):
             preferences = context.conversation_memory["proposed_preferences"]
-            summary = ", ".join(row["preference"].replace("_", " ") for row in preferences) or "none for this accepted plan"
+            summary = (
+                ", ".join(row["preference"].replace("_", " ") for row in preferences) or "none for this accepted plan"
+            )
             question = "What itinerary change should I review?"
             return CopilotInterpretationV1(
-                state="clarification_required", assistant_message=f"Your proposed preferences are: {summary}. "
+                state="clarification_required",
+                assistant_message=f"Your proposed preferences are: {summary}. "
                 "They are not accepted itinerary constraints. " + question,
                 intents=(CopilotIntentV1(type="request_clarification", clarification_question=question),),
             )
         return None
     blocked = _blocked(context, spec)
     if blocked:
-        return CopilotInterpretationV1(state="unsupported", assistant_message=blocked + " Nothing was staged or changed.",
-                                       intents=(CopilotIntentV1(type="unsupported_request"),))
+        return CopilotInterpretationV1(
+            state="unsupported",
+            assistant_message=blocked + " Nothing was staged or changed.",
+            intents=(CopilotIntentV1(type="unsupported_request"),),
+        )
     if spec["missing_slots"]:
         question = _question(context, spec)
         return CopilotInterpretationV1(
-            state="clarification_required", assistant_message=question + " Nothing was staged or changed.",
+            state="clarification_required",
+            assistant_message=question + " Nothing was staged or changed.",
             intents=(CopilotIntentV1(type="request_clarification", clarification_question=question),),
         )
     intent = CopilotIntentV1(type=spec["intent_type"], **{key: spec[key] for key in _REQUIRED[spec["intent_type"]]})
     from .copilot import DeterministicCopilotAdapter
 
     return CopilotInterpretationV1(
-        state="proposal_ready", assistant_message="I prepared this typed suggestion for review. Nothing was staged or changed.",
+        state="proposal_ready",
+        assistant_message="I prepared this typed suggestion for review. Nothing was staged or changed.",
         intents=(intent,),
         highlights=DeterministicCopilotAdapter._operation_highlights(context, intent),
     )
@@ -278,10 +371,22 @@ def guard_contextual_output(context: Any, interpretation: CopilotInterpretationV
                     "move_day": {"day": intent.destination_day},
                     "route_feedback": {"preference": intent.preference},
                 }.get(intent.type, {})
-                target = (intent.candidate_id if intent.type == "add_candidate" else
-                          "selected_route" if intent.type == "route_feedback" else intent.target_stop_id)
-                operations.append(DraftOperationV1(operation_id=f"copilot_clause_{index}",
-                    type=intent.type, target=target, parameters=parameters, source="copilot"))
+                target = (
+                    intent.candidate_id
+                    if intent.type == "add_candidate"
+                    else "selected_route"
+                    if intent.type == "route_feedback"
+                    else intent.target_stop_id
+                )
+                operations.append(
+                    DraftOperationV1(
+                        operation_id=f"copilot_clause_{index}",
+                        type=intent.type,
+                        target=target,
+                        parameters=parameters,
+                        source="copilot",
+                    )
+                )
             try:
                 WorkspaceStore._validate_draft_conflicts(tuple(operations))
             except WorkspaceError as error:
@@ -291,12 +396,15 @@ def guard_contextual_output(context: Any, interpretation: CopilotInterpretationV
                     "draft_conflicts_with_replacement": "A stop cannot be preserved or edited and replaced in the same request. Which change should I keep?",
                     "draft_conflicting_candidates": "These destination candidates cannot be evaluated together. Which candidate should I use?",
                 }.get(error.code, "These edits conflict with each other. Which change should I handle first?")
-                return CopilotInterpretationV1(state="clarification_required",
+                return CopilotInterpretationV1(
+                    state="clarification_required",
                     assistant_message=question + " No part was staged or changed.",
-                    intents=(CopilotIntentV1(type="request_clarification", clarification_question=question),))
+                    intents=(CopilotIntentV1(type="request_clarification", clarification_question=question),),
+                )
         return interpretation
     return CopilotInterpretationV1(
-        state="unsupported", assistant_message=" ".join(dict.fromkeys(reasons)) + " No part was staged or changed.",
+        state="unsupported",
+        assistant_message=" ".join(dict.fromkeys(reasons)) + " No part was staged or changed.",
         intents=(CopilotIntentV1(type="unsupported_request"),),
     )
 
@@ -306,15 +414,23 @@ def derive_memory(context: CopilotContextV2, records: tuple[dict[str, Any], ...]
     for row in bound_records(context, records):
         turn = row["turn"]
         binding = row["context_binding"]
-        local = replace(context, conversation_memory=memory, **{
-            name: binding[name] for name in binding if name.startswith("selected_")
-        })
+        local = replace(
+            context,
+            conversation_memory=memory,
+            **{name: binding[name] for name in binding if name.startswith("selected_")},
+        )
         preferences = _preferences(turn["user_message"])
         if preferences:
-            prior = [] if re.search(r"\b(?:actually|instead|rather)\b", turn["user_message"], re.IGNORECASE) else list(memory["proposed_preferences"])
+            prior = (
+                []
+                if re.search(r"\b(?:actually|instead|rather)\b", turn["user_message"], re.IGNORECASE)
+                else list(memory["proposed_preferences"])
+            )
             for preference in preferences:
                 prior = [item for item in prior if item["preference"] != preference]
-                prior.append({"preference": preference, "source_turn_id": turn["turn_id"], "disposition": "proposed_only"})
+                prior.append(
+                    {"preference": preference, "source_turn_id": turn["turn_id"], "disposition": "proposed_only"}
+                )
             memory["proposed_preferences"] = tuple(prior)
         interpretation = turn["interpretation"] or {}
         state = interpretation.get("state")
@@ -322,11 +438,16 @@ def derive_memory(context: CopilotContextV2, records: tuple[dict[str, Any], ...]
         if typed_edit_kind(turn["user_message"]) is not None:
             memory["pending_clarification"] = None
         if state == "clarification_required" and spec and spec["missing_slots"] and _blocked(local, spec) is None:
-            memory["pending_clarification"] = {"source_turn_id": turn["turn_id"], **spec, "question": _question(local, spec)}
+            memory["pending_clarification"] = {
+                "source_turn_id": turn["turn_id"],
+                **spec,
+                "question": _question(local, spec),
+            }
             memory["resolved_ids"] = {
                 "stop_ids": (spec["target_stop_id"],) if spec["target_stop_id"] else (),
                 "candidate_ids": (spec["candidate_id"],) if spec["candidate_id"] else (),
-                "day_ids": (spec["destination_day"],) if spec["destination_day"] else (), "segment_ids": (),
+                "day_ids": (spec["destination_day"],) if spec["destination_day"] else (),
+                "segment_ids": (),
             }
         elif state in {"proposal_ready", "unsupported", "refused"}:
             memory["pending_clarification"] = None
@@ -334,19 +455,37 @@ def derive_memory(context: CopilotContextV2, records: tuple[dict[str, Any], ...]
                 memory["resolved_ids"] = {"stop_ids": (), "candidate_ids": (), "day_ids": (), "segment_ids": ()}
         if state == "proposal_ready":
             intents = tuple(deepcopy(interpretation["intents"]))
-            memory["last_proposal"] = {"source_turn_id": turn["turn_id"], "disposition": "suggested", "intents": intents}
+            memory["last_proposal"] = {
+                "source_turn_id": turn["turn_id"],
+                "disposition": "suggested",
+                "intents": intents,
+            }
             memory["resolved_ids"] = {
-                "stop_ids": tuple(dict.fromkeys(item["target_stop_id"] for item in intents if item.get("target_stop_id"))),
-                "candidate_ids": tuple(dict.fromkeys(item["candidate_id"] for item in intents if item.get("candidate_id"))),
-                "day_ids": tuple(dict.fromkeys(item["destination_day"] for item in intents if item.get("destination_day"))),
+                "stop_ids": tuple(
+                    dict.fromkeys(item["target_stop_id"] for item in intents if item.get("target_stop_id"))
+                ),
+                "candidate_ids": tuple(
+                    dict.fromkeys(item["candidate_id"] for item in intents if item.get("candidate_id"))
+                ),
+                "day_ids": tuple(
+                    dict.fromkeys(item["destination_day"] for item in intents if item.get("destination_day"))
+                ),
                 "segment_ids": tuple(interpretation.get("highlights", {}).get("segment_ids", ())),
             }
     proposal = memory["last_proposal"]
-    if proposal and proposal["intents"] and all(_intent_is_staged(intent, context.draft_operations) for intent in proposal["intents"]):
+    if (
+        proposal
+        and proposal["intents"]
+        and all(_intent_is_staged(intent, context.draft_operations) for intent in proposal["intents"])
+    ):
         proposal["disposition"] = "staged"
         evaluated = context.evaluated_proposal or {}
-        if (evaluated.get("state") == "eligible" and evaluated.get("session_revision") == context.session_revision
-                and evaluated.get("child_plan_id") and evaluated.get("child_plan_content_hash")):
+        if (
+            evaluated.get("state") == "eligible"
+            and evaluated.get("session_revision") == context.session_revision
+            and evaluated.get("child_plan_id")
+            and evaluated.get("child_plan_content_hash")
+        ):
             proposal["disposition"] = "previewed"
     return memory
 
@@ -384,14 +523,28 @@ def validate_context_extensions(context: CopilotContextV2) -> None:
     def turn_id(value: Any) -> bool:
         return type(value) is str and re.fullmatch(r"copilot_turn_[a-f0-9]{32}", value) is not None
 
-    require(type(context.accepted_plan_content_hash) is str and re.fullmatch(r"[a-f0-9]{16,64}", context.accepted_plan_content_hash) is not None)
+    require(
+        type(context.accepted_plan_content_hash) is str
+        and re.fullmatch(r"[a-f0-9]{16,64}", context.accepted_plan_content_hash) is not None
+    )
     caps = context.capabilities
     require(type(caps) is dict)
     typed_caps = caps.get("schema_version") == "copilot-capabilities-v2"
-    require(set(caps) == {
-        "schema_version", "operations", "registered_repair_current", "candidate_replacements", "candidate_day_readiness",
-    } | ({"stop_positions", "executable_combinations"} if typed_caps else set()))
-    require(caps["schema_version"] in {"copilot-capabilities-v1", "copilot-capabilities-v2"} and type(caps["registered_repair_current"]) is bool)
+    require(
+        set(caps)
+        == {
+            "schema_version",
+            "operations",
+            "registered_repair_current",
+            "candidate_replacements",
+            "candidate_day_readiness",
+        }
+        | ({"stop_positions", "executable_combinations"} if typed_caps else set())
+    )
+    require(
+        caps["schema_version"] in {"copilot-capabilities-v1", "copilot-capabilities-v2"}
+        and type(caps["registered_repair_current"]) is bool
+    )
     if typed_caps:
         combinations = caps["executable_combinations"]
         require(type(combinations) is tuple and len(combinations) <= 16)
@@ -407,7 +560,9 @@ def validate_context_extensions(context: CopilotContextV2) -> None:
         per_day = {}
         for row in positions:
             require(type(row) is dict and set(row) == {"stop_id", "day", "sequence_index"})
-            require(type(row["day"]) is int and row["day"] in context.allowed_days and type(row["sequence_index"]) is int)
+            require(
+                type(row["day"]) is int and row["day"] in context.allowed_days and type(row["sequence_index"]) is int
+            )
             require(row["sequence_index"] == per_day.get(row["day"], 0))
             per_day[row["day"]] = row["sequence_index"] + 1
     require(type(caps["operations"]) is dict and set(caps["operations"]) <= _CAPABILITY_TYPES)
@@ -420,7 +575,9 @@ def validate_context_extensions(context: CopilotContextV2) -> None:
     seen = set()
     for row in caps["candidate_replacements"]:
         require(type(row) is dict and set(row) == {"candidate_id", "replaces_stop_id"})
-        require(row["candidate_id"] in context.allowed_candidate_ids and row["replaces_stop_id"] in context.allowed_stop_ids)
+        require(
+            row["candidate_id"] in context.allowed_candidate_ids and row["replaces_stop_id"] in context.allowed_stop_ids
+        )
         identity = (row["candidate_id"], row["replaces_stop_id"])
         require(identity not in seen)
         seen.add(identity)
@@ -428,20 +585,43 @@ def validate_context_extensions(context: CopilotContextV2) -> None:
     seen = set()
     for row in caps["candidate_day_readiness"]:
         require(type(row) is dict and set(row) == {"candidate_id", "day", "preview_executable", "blocking_code"})
-        require(row["candidate_id"] in context.allowed_candidate_ids and type(row["day"]) is int and row["day"] in context.allowed_days)
-        require(type(row["preview_executable"]) is bool and (row["blocking_code"] is None or text(row["blocking_code"], 128)))
+        require(
+            row["candidate_id"] in context.allowed_candidate_ids
+            and type(row["day"]) is int
+            and row["day"] in context.allowed_days
+        )
+        require(
+            type(row["preview_executable"]) is bool
+            and (row["blocking_code"] is None or text(row["blocking_code"], 128))
+        )
         identity = (row["candidate_id"], row["day"])
         require(identity not in seen)
         seen.add(identity)
     memory = context.conversation_memory
-    require(type(memory) is dict and set(memory) == {
-        "schema_version", "plan_id", "plan_content_hash", "pending_clarification",
-        "resolved_ids", "proposed_preferences", "last_proposal",
-    })
-    require(memory["schema_version"] == "copilot-memory-v1" and memory["plan_id"] == context.accepted_plan_id
-            and memory["plan_content_hash"] == context.accepted_plan_content_hash)
-    universes = {"stop_ids": context.allowed_stop_ids, "candidate_ids": context.allowed_candidate_ids,
-                 "day_ids": context.allowed_days, "segment_ids": context.allowed_segment_ids}
+    require(
+        type(memory) is dict
+        and set(memory)
+        == {
+            "schema_version",
+            "plan_id",
+            "plan_content_hash",
+            "pending_clarification",
+            "resolved_ids",
+            "proposed_preferences",
+            "last_proposal",
+        }
+    )
+    require(
+        memory["schema_version"] == "copilot-memory-v1"
+        and memory["plan_id"] == context.accepted_plan_id
+        and memory["plan_content_hash"] == context.accepted_plan_content_hash
+    )
+    universes = {
+        "stop_ids": context.allowed_stop_ids,
+        "candidate_ids": context.allowed_candidate_ids,
+        "day_ids": context.allowed_days,
+        "segment_ids": context.allowed_segment_ids,
+    }
     require(type(memory["resolved_ids"]) is dict and set(memory["resolved_ids"]) == set(universes))
     for name, universe in universes.items():
         values = memory["resolved_ids"][name]
@@ -449,14 +629,35 @@ def validate_context_extensions(context: CopilotContextV2) -> None:
         require(all(type(value) is (int if name == "day_ids" else str) and value in universe for value in values))
     pending = memory["pending_clarification"]
     if pending is not None:
-        require(type(pending) is dict and set(pending) == {
-            "source_turn_id", "intent_type", "target_stop_id", "candidate_id", "destination_day", "missing_slots", "question",
-        })
-        require(turn_id(pending["source_turn_id"]) and pending["intent_type"] in _REQUIRED and text(pending["question"], 512))
-        for field, universe in (("target_stop_id", context.allowed_stop_ids), ("candidate_id", context.allowed_candidate_ids), ("destination_day", context.allowed_days)):
+        require(
+            type(pending) is dict
+            and set(pending)
+            == {
+                "source_turn_id",
+                "intent_type",
+                "target_stop_id",
+                "candidate_id",
+                "destination_day",
+                "missing_slots",
+                "question",
+            }
+        )
+        require(
+            turn_id(pending["source_turn_id"])
+            and pending["intent_type"] in _REQUIRED
+            and text(pending["question"], 512)
+        )
+        for field, universe in (
+            ("target_stop_id", context.allowed_stop_ids),
+            ("candidate_id", context.allowed_candidate_ids),
+            ("destination_day", context.allowed_days),
+        ):
             value = pending[field]
             require(value is None or type(value) is (int if field == "destination_day" else str) and value in universe)
-        require(pending["missing_slots"] == tuple(field for field in _REQUIRED[pending["intent_type"]] if pending[field] is None))
+        require(
+            pending["missing_slots"]
+            == tuple(field for field in _REQUIRED[pending["intent_type"]] if pending[field] is None)
+        )
         require(bool(pending["missing_slots"]) and _blocked(context, pending) is None)
         require(pending["question"] == _question(context, pending))
     preferences = memory["proposed_preferences"]
@@ -479,6 +680,10 @@ def validate_context_extensions(context: CopilotContextV2) -> None:
             require(all(_intent_is_staged(row, context.draft_operations) for row in proposal["intents"]))
         if proposal["disposition"] == "previewed":
             evaluated = context.evaluated_proposal or {}
-            require(evaluated.get("state") == "eligible" and evaluated.get("session_revision") == context.session_revision
-                    and bool(evaluated.get("child_plan_id")) and bool(evaluated.get("child_plan_content_hash")))
+            require(
+                evaluated.get("state") == "eligible"
+                and evaluated.get("session_revision") == context.session_revision
+                and bool(evaluated.get("child_plan_id"))
+                and bool(evaluated.get("child_plan_content_hash"))
+            )
     require(len(json.dumps(caps, allow_nan=False)) <= 14000 and len(json.dumps(memory, allow_nan=False)) <= 8000)

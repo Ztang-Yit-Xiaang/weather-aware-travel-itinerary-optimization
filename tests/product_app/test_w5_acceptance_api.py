@@ -75,9 +75,7 @@ def test_accept_survives_restart_and_idempotent_retry(tmp_path: Path) -> None:
         decision_id = result["result"]["decision"]["decision_id"]
 
     with _client(state_root) as restarted:
-        restored = restarted.get(
-            f"/api/sessions/{session['session_id']}", headers=headers
-        )
+        restored = restarted.get(f"/api/sessions/{session['session_id']}", headers=headers)
         assert restored.status_code == 200, restored.text
         restored_session = restored.json()["session"]
         assert restored_session["accepted_plan_id"] == proposal["child_plan_id"]
@@ -122,7 +120,10 @@ def test_accept_survives_restart_and_idempotent_retry(tmp_path: Path) -> None:
         assert fresh.status_code == 200
         fresh_payload = fresh.json()
         assert fresh_payload["session"]["accepted_plan_id"] == proposal["child_plan_id"]
-        assert fresh_payload["workspace"]["accepted_plan_pointer"]["decision_id"] == rollback_payload["result"]["decision"]["decision_id"]
+        assert (
+            fresh_payload["workspace"]["accepted_plan_pointer"]["decision_id"]
+            == rollback_payload["result"]["decision"]["decision_id"]
+        )
         continued_edit = restarted.post(
             f"/api/sessions/{fresh_payload['session']['session_id']}/draft/operations",
             headers={"X-Session-Token": fresh_payload["mutation_token"]},
@@ -130,8 +131,9 @@ def test_accept_survives_restart_and_idempotent_retry(tmp_path: Path) -> None:
                 "expected_revision": 0,
                 "type": "set_stop_duration",
                 "target": "pfeiffer_big_sur_state_park",
-                "parameters": {"duration": {"mode": "exact", "preferred_minutes": 60,
-                    "minimum_minutes": 60, "maximum_minutes": 60}},
+                "parameters": {
+                    "duration": {"mode": "exact", "preferred_minutes": 60, "minimum_minutes": 60, "maximum_minutes": 60}
+                },
                 "source": "typed_stop_editor",
             },
         )

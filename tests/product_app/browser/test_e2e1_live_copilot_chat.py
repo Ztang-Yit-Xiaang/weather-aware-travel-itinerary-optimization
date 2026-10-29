@@ -25,8 +25,7 @@ CHROME = Path(r"C:\Program Files\Google\Chrome\Application\chrome.exe")
 TARGET_STOP_ID = "bixby_creek_bridge_viewpoint"
 CANDIDATE_ID = "pfeiffer_big_sur_state_park"
 COMBINED_PROMPT = (
-    "Replace Bixby Creek Bridge with Pfeiffer Big Sur State Park; "
-    "set Griffith Observatory duration to 90 minutes."
+    "Replace Bixby Creek Bridge with Pfeiffer Big Sur State Park; set Griffith Observatory duration to 90 minutes."
 )
 
 
@@ -48,8 +47,9 @@ def _runtime_receipt(page, directory: Path) -> dict:
     node_id = os.environ["PYTEST_CURRENT_TEST"].removesuffix(" (call)")
     filename = f"runtime_environment_{_hash_text(node_id)[:16]}.json"
     path = directory / filename
-    browser = browser_identity(page.context.browser,
-        launch_choice="installed_chrome" if CHROME.is_file() else "playwright_chromium")
+    browser = browser_identity(
+        page.context.browser, launch_choice="installed_chrome" if CHROME.is_file() else "playwright_chromium"
+    )
     if path.is_file():
         record = json.loads(path.read_text(encoding="utf-8"))
         validate_runtime_environment(record, run_id=run_id, root=repository)
@@ -58,18 +58,37 @@ def _runtime_receipt(page, directory: Path) -> dict:
         registered = json.loads((repository / "configs/product_route_delta.json").read_text(encoding="utf-8"))
         descriptor = (repository / registered["descriptor_path"]).resolve()
         assert descriptor.is_relative_to((repository / "results/route_deltas").resolve())
-        candidates = subprocess.run(["docker", "ps", "--filter", "publish=5000", "--filter", "status=running", "--format", "{{.ID}}"],
-            capture_output=True, text=True, check=True, timeout=10).stdout.splitlines()
-        assert len(candidates) == 1 and re.fullmatch(r"[0-9a-f]{12,64}", candidates[0]), "Expected one observed loopback OSRM container"
-        scripts = page.locator('script[src*="maplibre-gl.js"]').evaluate_all("elements => elements.map(element => element.src)")
+        candidates = subprocess.run(
+            ["docker", "ps", "--filter", "publish=5000", "--filter", "status=running", "--format", "{{.ID}}"],
+            capture_output=True,
+            text=True,
+            check=True,
+            timeout=10,
+        ).stdout.splitlines()
+        assert len(candidates) == 1 and re.fullmatch(r"[0-9a-f]{12,64}", candidates[0]), (
+            "Expected one observed loopback OSRM container"
+        )
+        scripts = page.locator('script[src*="maplibre-gl.js"]').evaluate_all(
+            "elements => elements.map(element => element.src)"
+        )
         assert len(scripts) == 1, "Expected the actual page's one MapLibre script"
         map_url = urlsplit(scripts[0])
-        record = capture_runtime_environment(root=repository, run_id=run_id, actual_browser=browser,
-            osrm_container_id=candidates[0], osrm_provenance_path=descriptor.parent / "source-provenance.json",
-            app_origin=os.environ["PRODUCT_E2E_BASE_URL"], map_origin=f"{map_url.scheme}://{map_url.netloc}")
+        record = capture_runtime_environment(
+            root=repository,
+            run_id=run_id,
+            actual_browser=browser,
+            osrm_container_id=candidates[0],
+            osrm_provenance_path=descriptor.parent / "source-provenance.json",
+            app_origin=os.environ["PRODUCT_E2E_BASE_URL"],
+            map_origin=f"{map_url.scheme}://{map_url.netloc}",
+        )
         _write_json(path, record)
-    return {"artifact":filename, "sha256":hashlib.sha256(path.read_bytes()).hexdigest(),
-            "test_nodeid":node_id, "browser":browser}
+    return {
+        "artifact": filename,
+        "sha256": hashlib.sha256(path.read_bytes()).hexdigest(),
+        "test_nodeid": node_id,
+        "browser": browser,
+    }
 
 
 def _capture_ready(page, path: Path) -> None:
@@ -150,7 +169,8 @@ def _capture_ready(page, path: Path) -> None:
 
 
 def _map_ack(page) -> dict[str, object]:
-    handle = page.wait_for_function("""() => {
+    handle = page.wait_for_function(
+        """() => {
       const stage = document.querySelector('.map-stage');
       const map = document.querySelector('#geographic-map');
       if (!stage || !map || map.dataset.mapReady !== 'true'
@@ -173,7 +193,9 @@ def _map_ack(page) -> dict[str, object]:
       } catch (_) {
         return false;
       }
-    }""", timeout=30_000)
+    }""",
+        timeout=30_000,
+    )
     return handle.json_value()
 
 
@@ -184,7 +206,15 @@ def _credential_safe_body(raw: str) -> tuple[str, list[str]]:
     except (json.JSONDecodeError, TypeError):
         return raw, []
     removed: list[str] = []
-    sensitive = {"mutation_token", "session_token", "token_verifier", "x-session-token", "authorization", "api_key", "openai_api_key"}
+    sensitive = {
+        "mutation_token",
+        "session_token",
+        "token_verifier",
+        "x-session-token",
+        "authorization",
+        "api_key",
+        "openai_api_key",
+    }
 
     def redact(item, path: str) -> None:
         if isinstance(item, dict):
@@ -236,11 +266,7 @@ def _sse_events(raw: str) -> list[dict[str, object]]:
     for frame in raw.replace("\r\n", "\n").split("\n\n"):
         if not frame.strip():
             continue
-        data_lines = [
-            line.removeprefix("data:").lstrip()
-            for line in frame.splitlines()
-            if line.startswith("data:")
-        ]
+        data_lines = [line.removeprefix("data:").lstrip() for line in frame.splitlines() if line.startswith("data:")]
         event = json.loads("\n".join(data_lines))
         events.append(event)
     return events
@@ -272,15 +298,18 @@ def _preserve_browser_evidence(context, page, evidence_dir, errors):
             })""")
         except Exception as state_error:
             runtime_state = {"read_failure": type(state_error).__name__}
-        _write_json(evidence_dir / "browser_failure.json", {
-            "schema_version": "e2e1-browser-failure-v1",
-            "assertions_passed": False,
-            "error_type": type(error).__name__,
-            "message": str(error),
-            "observed_at": datetime.now(UTC).isoformat(),
-            "runtime_state": runtime_state,
-            **errors,
-        })
+        _write_json(
+            evidence_dir / "browser_failure.json",
+            {
+                "schema_version": "e2e1-browser-failure-v1",
+                "assertions_passed": False,
+                "error_type": type(error).__name__,
+                "message": str(error),
+                "observed_at": datetime.now(UTC).isoformat(),
+                "runtime_state": runtime_state,
+                **errors,
+            },
+        )
         raise
     finally:
         video = page.video
@@ -292,7 +321,8 @@ def _preserve_browser_evidence(context, page, evidence_dir, errors):
 
 def _independent_geometry_hash(page, geography):
     # Work from the actual response, independently of the renderer's helper.
-    return page.evaluate("""async geography => {
+    return page.evaluate(
+        """async geography => {
       const legs = structuredClone(geography.validated_legs);
       for (const feature of legs.features) delete feature.properties.role;
       const encode = value => Array.isArray(value)
@@ -302,7 +332,9 @@ def _independent_geometry_hash(page, geography):
           : JSON.stringify(value);
       const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(encode(legs)));
       return [...new Uint8Array(digest)].map(byte => byte.toString(16).padStart(2, '0')).join('');
-    }""", geography)
+    }""",
+        geography,
+    )
 
 
 @pytest.mark.skipif(
@@ -324,10 +356,18 @@ def test_live_website_copilot_stages_and_renders_exact_evaluated_child() -> None
             return
         raw = request.post_data or ""
         body, redactions = _credential_safe_body(raw)
-        row = {"sequence": len(mutation_ledger) + 1, "method": request.method, "url": request.url,
-               "observed_at": datetime.now(UTC).isoformat(), "request_body_utf8": body,
-               "request_body_sha256": _hash_text(body), "request_original_body_sha256": _hash_text(raw),
-               "credential_redactions": redactions, "response_status_code": None, "response_observed_at": None}
+        row = {
+            "sequence": len(mutation_ledger) + 1,
+            "method": request.method,
+            "url": request.url,
+            "observed_at": datetime.now(UTC).isoformat(),
+            "request_body_utf8": body,
+            "request_body_sha256": _hash_text(body),
+            "request_original_body_sha256": _hash_text(raw),
+            "credential_redactions": redactions,
+            "response_status_code": None,
+            "response_observed_at": None,
+        }
         mutation_ledger.append(row)
         mutation_requests[request] = row
         _write_json(evidence_dir / "product_mutation_ledger.json", mutation_ledger)
@@ -358,17 +398,30 @@ def test_live_website_copilot_stages_and_renders_exact_evaluated_child() -> None
         page = context.new_page()
         page.on("console", lambda message: console_errors.append(message.text) if message.type == "error" else None)
         page.on("pageerror", lambda error: console_errors.append(str(error)))
-        page.on("requestfailed", lambda request: request_failures.append(f"{request.method} {request.url}: {request.failure}"))
-        page.on("response", lambda response: http_errors.append(f"{response.status} {response.url}") if response.status >= 400 else None)
+        page.on(
+            "requestfailed",
+            lambda request: request_failures.append(f"{request.method} {request.url}: {request.failure}"),
+        )
+        page.on(
+            "response",
+            lambda response: (
+                http_errors.append(f"{response.status} {response.url}") if response.status >= 400 else None
+            ),
+        )
         page.on("dialog", lambda dialog: dialog.accept())
         page.on("request", observe_mutation)
         page.on("response", observe_mutation_response)
 
-        with _preserve_browser_evidence(context, page, evidence_dir, {
-            "console_errors": console_errors,
-            "request_failures": request_failures,
-            "http_errors": http_errors,
-        }):
+        with _preserve_browser_evidence(
+            context,
+            page,
+            evidence_dir,
+            {
+                "console_errors": console_errors,
+                "request_failures": request_failures,
+                "http_errors": http_errors,
+            },
+        ):
             page.goto(f"{BASE_URL}/app/itinerary", wait_until="domcontentloaded")
             expect(page.locator("#app-shell")).to_be_visible(timeout=15_000)
             stage = page.locator(".map-stage")
@@ -377,8 +430,7 @@ def test_live_website_copilot_stages_and_renders_exact_evaluated_child() -> None
             day_five = page.locator('.day-card[data-day="5"]')
             expect(day_five).to_contain_text("Bixby Creek Bridge")
             with page.expect_response(
-                lambda response: response.url.endswith("/selection")
-                and response.request.method == "POST",
+                lambda response: response.url.endswith("/selection") and response.request.method == "POST",
                 timeout=15_000,
             ) as selection_info:
                 day_five.click()
@@ -389,7 +441,7 @@ def test_live_website_copilot_stages_and_renders_exact_evaluated_child() -> None
             assert initial_session["accepted_plan_id"] == initial["active_plan_id"]
             expect(page.locator("#map-context-title")).to_contain_text("Bixby Creek Bridge", timeout=15_000)
             _capture_ready(page, evidence_dir / "screenshot_before_submission.png")
-    
+
             page.locator("#open-copilot").click()
             expect(page.locator("#copilot-dock")).to_be_visible()
             context_chips = page.locator("#context-chips").all_text_contents()
@@ -441,7 +493,9 @@ def test_live_website_copilot_stages_and_renders_exact_evaluated_child() -> None
             try:
                 page.wait_for_function("() => window.__e2eCopilotStreamComplete === true", timeout=90_000)
             finally:
-                capture = page.evaluate("() => ({raw:window.__e2eCopilotStreamRaw, complete:window.__e2eCopilotStreamComplete})")
+                capture = page.evaluate(
+                    "() => ({raw:window.__e2eCopilotStreamRaw, complete:window.__e2eCopilotStreamComplete})"
+                )
                 copilot_stream_raw = capture["raw"] if isinstance(capture["raw"], str) else ""
                 copilot_http = _http_record(response, response_body=copilot_stream_raw)
                 if capture["complete"] is not True:
@@ -460,9 +514,7 @@ def test_live_website_copilot_stages_and_renders_exact_evaluated_child() -> None
             copilot_request = json.loads(copilot_http["request_body_utf8"])
             copilot_payload = copilot_events[-1]["payload"]
             session_id = copilot_payload["session"]["session_id"]
-            assert response.url.endswith(
-                f"/api/sessions/{session_id}/copilot/messages"
-            )
+            assert response.url.endswith(f"/api/sessions/{session_id}/copilot/messages")
             turn = copilot_payload["turn"]
             interpretation = turn["interpretation"]
             _write_json(evidence_dir / "copilot_turn.json", turn)
@@ -485,28 +537,41 @@ def test_live_website_copilot_stages_and_renders_exact_evaluated_child() -> None
             assert intent == expected_intent
             if combined:
                 assert interpretation["intents"][1] == {
-                    "type": "set_stop_duration", "target_stop_id": "griffith_observatory",
-                    "destination_day": None, "candidate_id": None, "preference": None,
+                    "type": "set_stop_duration",
+                    "target_stop_id": "griffith_observatory",
+                    "destination_day": None,
+                    "candidate_id": None,
+                    "preference": None,
                     "clarification_question": None,
-                    "parameters": {"duration": {"mode":"exact", "preferred_minutes":90, "minimum_minutes":90, "maximum_minutes":90}},
+                    "parameters": {
+                        "duration": {
+                            "mode": "exact",
+                            "preferred_minutes": 90,
+                            "minimum_minutes": 90,
+                            "maximum_minutes": 90,
+                        }
+                    },
                 }
             expect(page.locator("#copilot-lifecycle")).to_have_attribute("data-state", "proposal_ready")
             actions = page.locator(".copilot-proposal-actions").last
             add_label = "Add all to draft" if combined else "Add to draft"
             expect(actions.get_by_role("button", name=add_label, exact=True)).to_be_enabled()
-            _write_json(evidence_dir / "browser_context.json", {
-                "approved_prompt": APPROVED_PROMPT,
-                "session_id": session_id,
-                "context_chips": context_chips,
-                "selected_day": 5,
-                "selected_stop_id": TARGET_STOP_ID,
-            })
+            _write_json(
+                evidence_dir / "browser_context.json",
+                {
+                    "approved_prompt": APPROVED_PROMPT,
+                    "session_id": session_id,
+                    "context_chips": context_chips,
+                    "selected_day": 5,
+                    "selected_stop_id": TARGET_STOP_ID,
+                },
+            )
             _write_json(evidence_dir / "product_copilot_http_io.json", copilot_http)
             _write_json(evidence_dir / "copilot_stream_events.json", copilot_events)
             _write_json(evidence_dir / "copilot_turn.json", turn)
             _write_json(evidence_dir / "typed_interpretation.json", interpretation)
             _capture_ready(page, evidence_dir / "screenshot_proposal_ready.png")
-    
+
             with page.expect_response(
                 lambda item: item.url.endswith("/draft/operations") and item.request.method == "POST"
             ) as draft_info:
@@ -517,9 +582,7 @@ def test_live_website_copilot_stages_and_renders_exact_evaluated_child() -> None
             assert draft_response.status == 200, draft_http["response_body_utf8"]
             draft_request = json.loads(draft_http["request_body_utf8"])
             draft_payload = json.loads(draft_http["response_body_utf8"])
-            assert draft_response.url.endswith(
-                f"/api/sessions/{session_id}/draft/operations"
-            )
+            assert draft_response.url.endswith(f"/api/sessions/{session_id}/draft/operations")
             assert draft_payload["session"]["session_id"] == session_id
             operations = draft_payload["operations"] if combined else [draft_payload["operation"]]
             operation = operations[0]
@@ -542,9 +605,11 @@ def test_live_website_copilot_stages_and_renders_exact_evaluated_child() -> None
             _write_json(evidence_dir / "product_draft_http_io.json", draft_http)
             _write_json(evidence_dir / "draft_operation.json", operation)
             _capture_ready(page, evidence_dir / "screenshot_draft_staged.png")
-    
+
             actions = page.locator(".copilot-proposal-actions").last
-            preview_button = actions.get_by_role("button", name="Preview combined repair" if combined else "Preview this repair", exact=True)
+            preview_button = actions.get_by_role(
+                "button", name="Preview combined repair" if combined else "Preview this repair", exact=True
+            )
             expect(preview_button).to_be_enabled(timeout=15_000)
             preview_started_at = datetime.now(UTC).isoformat()
             with page.expect_response(
@@ -565,11 +630,20 @@ def test_live_website_copilot_stages_and_renders_exact_evaluated_child() -> None
             proposal = preview_payload["session"]["proposal"]
             runtime_execution = proposal.get("runtime_execution")
             _write_json(evidence_dir / "runtime_execution.json", runtime_execution)
-            assert proposal["execution_mode"] == ("atomic_combined_independent_evaluation" if combined else "deterministic_repair_pipeline")
-            assert runtime_execution["schema_version"] == ("atomic-combined-repair-execution-v1" if combined else "runtime-repair-execution-v1")
+            assert proposal["execution_mode"] == (
+                "atomic_combined_independent_evaluation" if combined else "deterministic_repair_pipeline"
+            )
+            assert runtime_execution["schema_version"] == (
+                "atomic-combined-repair-execution-v1" if combined else "runtime-repair-execution-v1"
+            )
             assert runtime_execution["evaluation_executed"] is True
             assert runtime_execution["evaluator"] == "PlanEvaluator.evaluate_final_plan"
-            assert preview_started_at <= runtime_execution["started_at"] <= runtime_execution["completed_at"] <= preview_received_at
+            assert (
+                preview_started_at
+                <= runtime_execution["started_at"]
+                <= runtime_execution["completed_at"]
+                <= preview_received_at
+            )
             assert runtime_execution["request_id"] == proposal["compiled_request"]["source_request_id"]
             assert runtime_execution["child_plan_id"] == proposal["child_plan_id"]
             assert runtime_execution["evaluation_id"] == proposal["certificate_id"]
@@ -578,17 +652,31 @@ def test_live_website_copilot_stages_and_renders_exact_evaluated_child() -> None
             assert TARGET_STOP_ID in constraints["must_delete"]
             assert CANDIDATE_ID in constraints["must_include"]
             assert proposal["state"] == "eligible"
-            canonical_operations = [{key: value for key, value in row.items() if key != "created_at"} for row in operations]
+            canonical_operations = [
+                {key: value for key, value in row.items() if key != "created_at"} for row in operations
+            ]
             assert proposal["compiled_request"]["operations"] == canonical_operations
             if combined:
-                griffith = next(stop for stop in runtime_execution["child_plan"]["selected_stops"] if stop["stop_id"] == "griffith_observatory")
+                griffith = next(
+                    stop
+                    for stop in runtime_execution["child_plan"]["selected_stops"]
+                    if stop["stop_id"] == "griffith_observatory"
+                )
                 assert griffith["visit_duration_minutes"] == 90
                 assert griffith["duration_constraint"] == operations[1]["parameters"]["duration"]
                 controls = page.evaluate("window.__e2eCombinedClicks")
-                assert controls == [{"text":"Add all to draft", "isTrusted":True}, {"text":"Preview combined repair", "isTrusted":True}]
-                _write_json(evidence_dir / "combined_staging_observation.json", {
-                    "initial_map": initial, "staged_map": staged, "control_clicks": controls,
-                })
+                assert controls == [
+                    {"text": "Add all to draft", "isTrusted": True},
+                    {"text": "Preview combined repair", "isTrusted": True},
+                ]
+                _write_json(
+                    evidence_dir / "combined_staging_observation.json",
+                    {
+                        "initial_map": initial,
+                        "staged_map": staged,
+                        "control_clicks": controls,
+                    },
+                )
             expect(stage).to_have_attribute("data-preview-state", "PREVIEW_RENDERED", timeout=30_000)
             rendered = _map_ack(page)
             assert rendered["rendered_map_plan_id"] == rendered["active_plan_id"] == proposal["child_plan_id"]
@@ -621,39 +709,45 @@ def test_live_website_copilot_stages_and_renders_exact_evaluated_child() -> None
             _write_json(evidence_dir / "preview_response.json", preview_payload)
             plan_diff = runtime_execution["plan_diff"]
             _write_json(evidence_dir / "plan_diff.json", plan_diff)
-            _write_json(evidence_dir / "evaluation_summary.json", {
-                "plan_id": proposal["child_plan_id"],
-                "plan_content_hash": proposal["child_plan_content_hash"],
-                "diff_id": proposal["diff_id"],
-                "certificate_id": proposal["certificate_id"],
-                "evaluation_status": proposal["evaluation_status"],
-                "state": proposal["state"],
-                "route_validation": proposal["route_validation"],
-            })
+            _write_json(
+                evidence_dir / "evaluation_summary.json",
+                {
+                    "plan_id": proposal["child_plan_id"],
+                    "plan_content_hash": proposal["child_plan_content_hash"],
+                    "diff_id": proposal["diff_id"],
+                    "certificate_id": proposal["certificate_id"],
+                    "evaluation_status": proposal["evaluation_status"],
+                    "state": proposal["state"],
+                    "route_validation": proposal["route_validation"],
+                },
+            )
             _write_json(evidence_dir / "map_render_ack.json", rendered)
-            _write_json(evidence_dir / "runtime_browser_binding.json", {
-                "preview_started_at": preview_started_at,
-                "preview_received_at": preview_received_at,
-                "independent_geometry_hash": expected_geometry_hash,
-            })
-    
+            _write_json(
+                evidence_dir / "runtime_browser_binding.json",
+                {
+                    "preview_started_at": preview_started_at,
+                    "preview_received_at": preview_received_at,
+                    "independent_geometry_hash": expected_geometry_hash,
+                },
+            )
+
             page.locator("#close-copilot").click()
             expect(page.locator("#map-context-title")).to_contain_text("Pfeiffer Big Sur State Park")
             page.locator("#open-copilot").click()
             expect(page.locator("#copilot-dock")).to_be_visible()
             checkpoints = {"after_copilot_restore": _map_ack(page)}
             page.locator("#close-copilot").click()
-    
+
             page.locator('.nav-item[data-route="/app/compare"]').click()
             compare_card = page.locator(f'[data-option-card="{proposal["child_plan_id"]}"]')
             expect(compare_card).to_be_visible(timeout=30_000)
             expect(compare_card).to_contain_text("Evaluated draft repair")
-            option_canvas = page.locator(
-                '[data-compare-map-pane="option"] [data-compare-map-canvas]'
-            )
+            option_canvas = page.locator('[data-compare-map-pane="option"] [data-compare-map-canvas]')
             expect(option_canvas).to_have_attribute("data-map-ready", "true", timeout=30_000)
             expect(option_canvas).to_have_attribute("data-rendered-map-plan-id", proposal["child_plan_id"])
-            expect(option_canvas).to_have_attribute("data-rendered-plan-content-hash", proposal["child_plan_content_hash"])
+            expect(option_canvas).to_have_attribute(
+                "data-rendered-plan-content-hash", proposal["child_plan_content_hash"]
+            )
             expect(option_canvas).to_have_attribute("data-rendered-geometry-hash", expected_geometry_hash)
             compare_ack = option_canvas.evaluate("""element => ({
               rendered_map_plan_id: element.dataset.renderedMapPlanId,
@@ -674,12 +768,13 @@ def test_live_website_copilot_stages_and_renders_exact_evaluated_child() -> None
             page.locator('.nav-item[data-route="/app/itinerary"]').click()
             expect(stage).to_have_attribute("data-rendered-map-plan-id", proposal["child_plan_id"], timeout=30_000)
             _capture_ready(page, evidence_dir / "screenshot_preview_rendered.png")
-    
+
             checkpoints["after_module_switching"] = _map_ack(page)
             expect(page.locator("#map-context-title")).to_contain_text("Pfeiffer Big Sur State Park")
             with page.expect_response(
-                lambda response: response.url == f"{BASE_URL}/api/sessions/{session_id}"
-                and response.request.method == "GET",
+                lambda response: (
+                    response.url == f"{BASE_URL}/api/sessions/{session_id}" and response.request.method == "GET"
+                ),
                 timeout=30_000,
             ) as reload_info:
                 page.reload(wait_until="domcontentloaded")
@@ -691,7 +786,10 @@ def test_live_website_copilot_stages_and_renders_exact_evaluated_child() -> None
             expect(stage).to_have_attribute("data-preview-state", "PREVIEW_RENDERED", timeout=30_000)
             expect(page.locator("#map-context-title")).to_contain_text("Pfeiffer Big Sur State Park")
             checkpoints["after_reload"] = _map_ack(page)
-            assert _independent_geometry_hash(page, restored_payload["session"]["proposal"]["geography_plan"]) == expected_geometry_hash
+            assert (
+                _independent_geometry_hash(page, restored_payload["session"]["proposal"]["geography_plan"])
+                == expected_geometry_hash
+            )
             _capture_ready(page, evidence_dir / "screenshot_after_reload.png")
             if os.environ.get("PRODUCT_E2E_VIEWPORT_CHECKS") == "1":
                 for width, height in ((1280, 800), (1024, 768), (390, 844), (1440, 900)):
@@ -702,17 +800,18 @@ def test_live_website_copilot_stages_and_renders_exact_evaluated_child() -> None
                     _capture_ready(page, evidence_dir / f"screenshot_preview_{width}x{height}.png")
                     checkpoints[f"{width}x{height}"] = _map_ack(page)
             consistency_failures = {
-                name: acknowledgement
-                for name, acknowledgement in checkpoints.items()
-                if acknowledgement != rendered
+                name: acknowledgement for name, acknowledgement in checkpoints.items() if acknowledgement != rendered
             }
-            _write_json(evidence_dir / "navigation_and_viewport_assertions.json", {
-                "expected": rendered,
-                "independent_geometry_hash": expected_geometry_hash,
-                "checkpoints": checkpoints,
-                "failures": consistency_failures,
-                "assertions_passed": not consistency_failures,
-            })
+            _write_json(
+                evidence_dir / "navigation_and_viewport_assertions.json",
+                {
+                    "expected": rendered,
+                    "independent_geometry_hash": expected_geometry_hash,
+                    "checkpoints": checkpoints,
+                    "failures": consistency_failures,
+                    "assertions_passed": not consistency_failures,
+                },
+            )
             accepted_checkpoints = {
                 "before_chat": initial_session["accepted_plan_id"],
                 "after_chat": copilot_payload["session"]["accepted_plan_id"],
@@ -720,18 +819,30 @@ def test_live_website_copilot_stages_and_renders_exact_evaluated_child() -> None
                 "after_preview": preview_payload["session"]["accepted_plan_id"],
                 "after_reload": restored_payload["session"]["accepted_plan_id"],
             }
-            acceptance_mutations = [row for row in mutation_ledger if re.fullmatch(
-                r"/api/sessions/[^/]+/(accept|keep-original|acceptance-decisions/[^/]+/rollback)", urlsplit(row["url"]).path)]
-            acceptance = {"schema_version":"e2e1-live-acceptance-observation-v1", "session_id":session_id,
-                          "initial_plan_id":initial["active_plan_id"], "initial_content_hash":initial["active_plan_content_hash"],
-                          "preview_parent_id":proposal["parent_plan_id"], "preview_parent_content_hash":proposal["parent_plan_content_hash"],
-                          "accepted_plan_checkpoints":accepted_checkpoints, "acceptance_mutations":acceptance_mutations,
-                          "accept_or_keep_invoked":bool(acceptance_mutations)}
+            acceptance_mutations = [
+                row
+                for row in mutation_ledger
+                if re.fullmatch(
+                    r"/api/sessions/[^/]+/(accept|keep-original|acceptance-decisions/[^/]+/rollback)",
+                    urlsplit(row["url"]).path,
+                )
+            ]
+            acceptance = {
+                "schema_version": "e2e1-live-acceptance-observation-v1",
+                "session_id": session_id,
+                "initial_plan_id": initial["active_plan_id"],
+                "initial_content_hash": initial["active_plan_content_hash"],
+                "preview_parent_id": proposal["parent_plan_id"],
+                "preview_parent_content_hash": proposal["parent_plan_content_hash"],
+                "accepted_plan_checkpoints": accepted_checkpoints,
+                "acceptance_mutations": acceptance_mutations,
+                "accept_or_keep_invoked": bool(acceptance_mutations),
+            }
             _write_json(evidence_dir / "acceptance_observation.json", acceptance)
             assert not acceptance_mutations
             assert set(accepted_checkpoints.values()) == {initial["active_plan_id"]} == {proposal["parent_plan_id"]}
             assert proposal["parent_plan_content_hash"] == initial["active_plan_content_hash"]
-    
+
             assertions = {
                 "schema_version": "e2e1-live-copilot-browser-assertions-v1",
                 "session_id": session_id,

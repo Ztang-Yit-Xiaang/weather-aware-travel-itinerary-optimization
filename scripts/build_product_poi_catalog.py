@@ -18,9 +18,7 @@ from typing import Any
 REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
 OUTPUT_RELATIVE = Path("configs/product_poi_catalogs/california_coast_demo")
 PACKAGE_RELATIVE = Path("runs/california-coast-product-demo-v2/manifest.json")
-MATRIX_RELATIVE = Path(
-    "runs/e3ux-weather-repair-demo-v6/routing/route_matrix_68ab535465b06808.json"
-)
+MATRIX_RELATIVE = Path("runs/e3ux-weather-repair-demo-v6/routing/route_matrix_68ab535465b06808.json")
 
 CATALOG_SCHEMA = "product-poi-catalog-v1"
 MANIFEST_SCHEMA = "product-poi-catalog-manifest-v1"
@@ -28,16 +26,10 @@ CATALOG_FILENAME = "catalog.json"
 MANIFEST_FILENAME = "manifest.json"
 CATALOG_ID = "california_coast_demo_candidates_v1"
 
-PINNED_PACKAGE_SHA256 = (
-    "925eea6e5722a782d48f657efa931e18536e502a7803a839a983747ed79b5e40"
-)
-PINNED_MATRIX_FILE_SHA256 = (
-    "6f3b5b8eda1a9f73e28b6404ef15126086dbd7861c683790af6f6e87b41b4677"
-)
+PINNED_PACKAGE_SHA256 = "925eea6e5722a782d48f657efa931e18536e502a7803a839a983747ed79b5e40"
+PINNED_MATRIX_FILE_SHA256 = "6f3b5b8eda1a9f73e28b6404ef15126086dbd7861c683790af6f6e87b41b4677"
 PINNED_MATRIX_ID = "route_matrix_68ab535465b06808"
-PINNED_MATRIX_CONTENT_SHA256 = (
-    "3d2ded2d2a862aa6bcf026429b0a0376386928cfa3af109758301d1647584f71"
-)
+PINNED_MATRIX_CONTENT_SHA256 = "3d2ded2d2a862aa6bcf026429b0a0376386928cfa3af109758301d1647584f71"
 
 DAY_7_ORIGIN = "hotel_milo_santa_barbara"
 DAY_7_DESTINATION = "san_francisco_international_airport"
@@ -45,18 +37,9 @@ DAY_7_DESTINATION = "san_francisco_international_airport"
 PLACE_SPECS = (
     {
         "place_id": "bixby_creek_bridge_viewpoint",
-        "request_file": (
-            "alternatives/w2_weather_recommended_v2/requests/"
-            "w2_weather_recommended_v2.json"
-        ),
-        "plan_file": (
-            "alternatives/w2_weather_recommended_v2/plans/"
-            "plan_f5ee52459659dcb5.json"
-        ),
-        "certificate_file": (
-            "alternatives/w2_weather_recommended_v2/evaluations/"
-            "cert_686ef65d376b2867.json"
-        ),
+        "request_file": ("alternatives/w2_weather_recommended_v2/requests/w2_weather_recommended_v2.json"),
+        "plan_file": ("alternatives/w2_weather_recommended_v2/plans/plan_f5ee52459659dcb5.json"),
+        "certificate_file": ("alternatives/w2_weather_recommended_v2/evaluations/cert_686ef65d376b2867.json"),
         "plan_id": "plan_f5ee52459659dcb5",
         "certificate_id": "cert_686ef65d376b2867",
         "request_source_id": "bixby_candidate_request_w2",
@@ -65,18 +48,9 @@ PLACE_SPECS = (
     },
     {
         "place_id": "santa_barbara_museum_of_natural_history_sea_center",
-        "request_file": (
-            "alternatives/w2_weather_low_driving_v2/requests/"
-            "w2_weather_low_driving_v2.json"
-        ),
-        "plan_file": (
-            "alternatives/w2_weather_low_driving_v2/plans/"
-            "plan_8aa919c8323dbac0.json"
-        ),
-        "certificate_file": (
-            "alternatives/w2_weather_low_driving_v2/evaluations/"
-            "cert_5a6deef4c159d346.json"
-        ),
+        "request_file": ("alternatives/w2_weather_low_driving_v2/requests/w2_weather_low_driving_v2.json"),
+        "plan_file": ("alternatives/w2_weather_low_driving_v2/plans/plan_8aa919c8323dbac0.json"),
+        "certificate_file": ("alternatives/w2_weather_low_driving_v2/evaluations/cert_5a6deef4c159d346.json"),
         "plan_id": "plan_8aa919c8323dbac0",
         "certificate_id": "cert_5a6deef4c159d346",
         "request_source_id": "sea_center_candidate_request_w2",
@@ -104,9 +78,7 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
-def build_catalog_documents(
-    *, repository_root: Path = REPOSITORY_ROOT
-) -> tuple[bytes, bytes]:
+def build_catalog_documents(*, repository_root: Path = REPOSITORY_ROOT) -> tuple[bytes, bytes]:
     """Return canonical catalog and manifest bytes from pinned sources."""
 
     repository_root = repository_root.resolve(strict=True)
@@ -142,9 +114,7 @@ def build_catalog_documents(
     for spec in PLACE_SPECS:
         request = _read_pinned_package_artifact(package_root, artifacts, spec["request_file"])
         plan = _read_pinned_package_artifact(package_root, artifacts, spec["plan_file"])
-        certificate = _read_pinned_package_artifact(
-            package_root, artifacts, spec["certificate_file"]
-        )
+        certificate = _read_pinned_package_artifact(package_root, artifacts, spec["certificate_file"])
         alternative = alternatives.get(spec["plan_id"])
         if not isinstance(alternative, dict):
             raise CatalogBuildError("registered_alternative_missing")
@@ -157,9 +127,7 @@ def build_catalog_documents(
             matrix=matrix,
         )
         places.append(place)
-        evaluated_at_values.append(
-            _required_text(certificate.get("evaluated_at"), "certificate_time_invalid")
-        )
+        evaluated_at_values.append(_required_text(certificate.get("evaluated_at"), "certificate_time_invalid"))
         sources.extend(
             (
                 _artifact_source(spec["request_source_id"]),
@@ -184,9 +152,7 @@ def build_catalog_documents(
     return catalog_bytes, _stable_json_bytes(manifest)
 
 
-def write_catalog(
-    output_dir: Path | None = None, *, repository_root: Path = REPOSITORY_ROOT
-) -> Path:
+def write_catalog(output_dir: Path | None = None, *, repository_root: Path = REPOSITORY_ROOT) -> Path:
     """Atomically write the fixture within the configured catalog boundary."""
 
     repository_root = repository_root.resolve(strict=True)
@@ -237,9 +203,9 @@ def _build_place(
         raise CatalogBuildError("registered_child_place_missing")
     if plan.get("plan_id") != spec["plan_id"] or plan.get("parent_plan_id") is None:
         raise CatalogBuildError("registered_child_identity_invalid")
-    if candidate.get("latitude") != selected[0].get("latitude") or candidate.get(
+    if candidate.get("latitude") != selected[0].get("latitude") or candidate.get("longitude") != selected[0].get(
         "longitude"
-    ) != selected[0].get("longitude"):
+    ):
         raise CatalogBuildError("candidate_plan_coordinate_mismatch")
 
     if (
@@ -280,9 +246,7 @@ def _build_place(
 
     display_coordinate = {
         "latitude": _required_number(candidate.get("latitude"), "candidate_latitude_invalid"),
-        "longitude": _required_number(
-            candidate.get("longitude"), "candidate_longitude_invalid"
-        ),
+        "longitude": _required_number(candidate.get("longitude"), "candidate_longitude_invalid"),
     }
     if display_coordinate == access_coordinate:
         raise CatalogBuildError("display_access_coordinate_not_separated")
@@ -380,9 +344,7 @@ def _artifact_source(source_id: str) -> dict[str, Any]:
     }
 
 
-def _read_pinned_package_artifact(
-    package_root: Path, artifacts: dict[str, Any], relative_name: str
-) -> dict[str, Any]:
+def _read_pinned_package_artifact(package_root: Path, artifacts: dict[str, Any], relative_name: str) -> dict[str, Any]:
     expected = artifacts.get(relative_name)
     if not isinstance(expected, str) or len(expected) != 64:
         raise CatalogBuildError("package_artifact_hash_missing")
@@ -466,9 +428,7 @@ def _required_number(value: Any, code: str) -> float:
 
 
 def _stable_json_bytes(value: dict[str, Any]) -> bytes:
-    return (json.dumps(value, indent=2, sort_keys=True, ensure_ascii=False) + "\n").encode(
-        "utf-8"
-    )
+    return (json.dumps(value, indent=2, sort_keys=True, ensure_ascii=False) + "\n").encode("utf-8")
 
 
 def main() -> int:

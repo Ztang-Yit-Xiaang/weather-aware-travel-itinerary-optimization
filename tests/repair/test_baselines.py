@@ -44,9 +44,7 @@ def request() -> RepairRequest:
             "weather_risk_overrides": {"outdoor": 0.95},
             "weather_feasible": {"outdoor": False},
         },
-        candidate_pois=(
-            {"stop_id": "indoor", "name": "Indoor", "day": 1, "lodging_id": "hotel", "utility": 6},
-        ),
+        candidate_pois=({"stop_id": "indoor", "name": "Indoor", "day": 1, "lodging_id": "hotel", "utility": 6},),
     )
 
 
@@ -69,7 +67,9 @@ def matrix() -> RouteMatrix:
         for destination in ids
         if origin != destination
     }
-    return RouteMatrix(matrix_id="matrix_heuristic", context_snapshot_id="context_heuristic", entity_ids=ids, cells=cells)
+    return RouteMatrix(
+        matrix_id="matrix_heuristic", context_snapshot_id="context_heuristic", entity_ids=ids, cells=cells
+    )
 
 
 def config() -> DayRouteSolverConfig:

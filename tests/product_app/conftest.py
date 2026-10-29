@@ -43,7 +43,5 @@ def deterministic_product_routing_health(monkeypatch: pytest.MonkeyPatch) -> Non
     monkeypatch.setattr(
         ProductRuntime,
         "_probe_routing",
-        lambda self: ComponentHealthV1(
-            "routing", "ready", False, "runtime_osrm_ready"
-        ),
+        lambda self: ComponentHealthV1("routing", "ready", False, "runtime_osrm_ready"),
     )

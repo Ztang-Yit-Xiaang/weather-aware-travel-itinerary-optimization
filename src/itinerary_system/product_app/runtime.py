@@ -38,15 +38,17 @@ MAP_TIMEOUT_SECONDS = 3.0
 MAP_ASSET_MAX_BYTES = 4 * 1024 * 1024
 LOGGER = logging.getLogger(__name__)
 
-BUILD_FINGERPRINT_SUFFIXES = frozenset({
-    ".css",
-    ".html",
-    ".js",
-    ".json",
-    ".py",
-    ".svg",
-    ".webmanifest",
-})
+BUILD_FINGERPRINT_SUFFIXES = frozenset(
+    {
+        ".css",
+        ".html",
+        ".js",
+        ".json",
+        ".py",
+        ".svg",
+        ".webmanifest",
+    }
+)
 
 
 def product_build_id(repository_root: Path) -> str:
@@ -55,10 +57,13 @@ def product_build_id(repository_root: Path) -> str:
     digest = hashlib.sha256()
     product_root = repository_root / "src" / "itinerary_system" / "product_app"
     route_registration = repository_root / "configs" / "product_route_delta.json"
-    candidates = [repository_root / "scripts" / "run_product_app.py",
-        repository_root / "configs" / "product_app_registry.json", route_registration,
+    candidates = [
+        repository_root / "scripts" / "run_product_app.py",
+        repository_root / "configs" / "product_app_registry.json",
+        route_registration,
         repository_root / "src" / "itinerary_system" / "interest_model.py",
-        repository_root / "src" / "itinerary_system" / "interest_surface.py"]
+        repository_root / "src" / "itinerary_system" / "interest_surface.py",
+    ]
     try:
         registration = json.loads(route_registration.read_text(encoding="utf-8"))
         descriptor = registration.get("descriptor_path") if isinstance(registration, dict) else None
@@ -72,15 +77,15 @@ def product_build_id(repository_root: Path) -> str:
     candidates.extend(
         path
         for path in product_root.rglob("*")
-        if path.is_file()
-        and "__pycache__" not in path.parts
-        and path.suffix.lower() in BUILD_FINGERPRINT_SUFFIXES
+        if path.is_file() and "__pycache__" not in path.parts and path.suffix.lower() in BUILD_FINGERPRINT_SUFFIXES
     )
     # Previews also execute imported plan, routing, evaluator and solver modules.
     # Bind their Python source so a live edit cannot mix backend generations.
     candidates.extend(
-        path for path in (repository_root / "src" / "itinerary_system").rglob("*.py")
-        if path.is_file() and "__pycache__" not in path.parts
+        path
+        for path in (repository_root / "src" / "itinerary_system").rglob("*.py")
+        if path.is_file()
+        and "__pycache__" not in path.parts
         and not path.is_relative_to(product_root)
         and path not in candidates
     )
@@ -178,9 +183,7 @@ class ProductRuntime:
             state_readiness = self.state_layout.initialize()
             legacy = state_readiness.legacy or self.state_layout.detect_legacy()
             if service_state_error is not None:
-                self._components["state_store"] = _component(
-                    "state_store", "failed", True, service_state_error
-                )
+                self._components["state_store"] = _component("state_store", "failed", True, service_state_error)
             elif state_readiness.ready:
                 has_legacy = bool(legacy.workspace_pointer_count or legacy.decision_file_count)
                 self._components["state_store"] = _component(
@@ -190,9 +193,7 @@ class ProductRuntime:
                     "state_store_ready_legacy_preserved" if has_legacy else state_readiness.code,
                 )
             else:
-                self._components["state_store"] = _component(
-                    "state_store", "failed", True, state_readiness.code
-                )
+                self._components["state_store"] = _component("state_store", "failed", True, state_readiness.code)
             self._components["openai"] = self._openai_health()
             self._components["map"] = self._probe_map()
             try:
@@ -201,9 +202,7 @@ class ProductRuntime:
                     timeout_seconds=1.0,
                 )
             except RuntimeRoutingError as exc:
-                self._components["routing"] = _component(
-                    "routing", "degraded", False, exc.code
-                )
+                self._components["routing"] = _component("routing", "degraded", False, exc.code)
             else:
                 self._components["routing"] = self._probe_routing()
             self._map_checked_monotonic = time.monotonic()
@@ -278,10 +277,7 @@ class ProductRuntime:
         if not self.config.openai_api_key:
             return _component("openai", "degraded", False, "openai_not_configured")
         if self.service is not None:
-            if (
-                self.service.copilot is not None
-                and self.service.copilot.provider_name == "openai"
-            ):
+            if self.service.copilot is not None and self.service.copilot.provider_name == "openai":
                 return _component("openai", "ready", False, "openai_configured")
             return _component(
                 "openai",
@@ -379,9 +375,7 @@ class ProductRuntime:
             provenance_url = contract["provenance_url"]
             if provenance_url is not None:
                 provenance_bytes, _, provenance_status = self._fetch_checked(provenance_url)
-                if provenance_status != 200 or not self._valid_provenance(
-                    provenance_bytes, pmtiles_url
-                ):
+                if provenance_status != 200 or not self._valid_provenance(provenance_bytes, pmtiles_url):
                     return _component("map", "degraded", False, "map_provenance_invalid")
             range_body, headers, range_status = self._fetch_checked(pmtiles_url, range_request=True)
             content_range = headers.get("Content-Range", "")
@@ -405,9 +399,14 @@ class ProductRuntime:
         except (OSError, urllib.error.URLError, TimeoutError) as exc:
             reason = getattr(exc, "reason", exc)
             # Never log exception text, URLs, headers or environment credentials.
-            LOGGER.warning("map_probe_transport_failure type=%s reason_type=%s errno=%s winerror=%s http_status=%s",
-                type(exc).__name__, type(reason).__name__, getattr(reason, "errno", None),
-                getattr(reason, "winerror", None), getattr(exc, "code", None))
+            LOGGER.warning(
+                "map_probe_transport_failure type=%s reason_type=%s errno=%s winerror=%s http_status=%s",
+                type(exc).__name__,
+                type(reason).__name__,
+                getattr(reason, "errno", None),
+                getattr(reason, "winerror", None),
+                getattr(exc, "code", None),
+            )
             if isinstance(exc, TimeoutError) or isinstance(getattr(exc, "reason", None), TimeoutError):
                 return _component("map", "degraded", False, "map_probe_timeout")
             code = "maplibre_unavailable" if provider == "maplibre_pmtiles" else "atlas_unavailable"
@@ -416,7 +415,11 @@ class ProductRuntime:
         return _component("map", "ready", False, code)
 
     def _fetch(self, path_or_url: str, *, range_request: bool = False) -> tuple[bytes, Any, int]:
-        url = path_or_url if path_or_url.startswith("http://") else urljoin(f"{self.config.map_base_url}/", path_or_url.lstrip("/"))
+        url = (
+            path_or_url
+            if path_or_url.startswith("http://")
+            else urljoin(f"{self.config.map_base_url}/", path_or_url.lstrip("/"))
+        )
         if not self._is_map_url(url):
             raise ValueError("map_url_not_loopback")
         headers = {"Origin": self.config.application_origin}
@@ -431,9 +434,7 @@ class ProductRuntime:
                 raise ValueError("map_asset_size_limit_exceeded")
             return body, response.headers, response.status
 
-    def _fetch_checked(
-        self, path_or_url: str, *, range_request: bool = False
-    ) -> tuple[bytes, Any, int]:
+    def _fetch_checked(self, path_or_url: str, *, range_request: bool = False) -> tuple[bytes, Any, int]:
         body, headers, status = self._fetch(path_or_url, range_request=range_request)
         if headers.get("Access-Control-Allow-Origin") != self.config.application_origin:
             raise ValueError("map_cors_origin_invalid")
@@ -463,10 +464,7 @@ class ProductRuntime:
                 resources.append(source["url"])
             if isinstance(source.get("data"), str):
                 resources.append(source["data"])
-            if (
-                self.config.map_provider == "maplibre_pmtiles"
-                and ".pmtiles" in str(source.get("url", "")).lower()
-            ):
+            if self.config.map_provider == "maplibre_pmtiles" and ".pmtiles" in str(source.get("url", "")).lower():
                 attribution = source.get("attribution")
                 if attribution != EXPECTED_STYLE_ATTRIBUTION:
                     raise ValueError("map_attribution_invalid")
@@ -476,8 +474,10 @@ class ProductRuntime:
             resources.extend(tiles)
         for value in resources:
             candidate = value.removeprefix("pmtiles://")
-            candidate_url = candidate if candidate.startswith("http://") else urljoin(
-                f"{self.config.map_base_url}/", candidate.lstrip("/")
+            candidate_url = (
+                candidate
+                if candidate.startswith("http://")
+                else urljoin(f"{self.config.map_base_url}/", candidate.lstrip("/"))
             )
             if not self._is_map_url(candidate_url):
                 raise ValueError("map_style_url_not_loopback")
@@ -508,9 +508,7 @@ class ProductRuntime:
         except (UnicodeDecodeError, json.JSONDecodeError):
             return False
         artifact_path = urlparse(pmtiles_url).path
-        return self._is_map_url(pmtiles_url) and valid_provenance(
-            value, expected_artifact_url=artifact_path
-        )
+        return self._is_map_url(pmtiles_url) and valid_provenance(value, expected_artifact_url=artifact_path)
 
     def _is_map_url(self, url: str) -> bool:
         parsed = urlparse(url)

@@ -249,8 +249,11 @@ class WorkspaceStore:
             raise WorkspaceError("stale_session_revision", 409)
 
     def select(
-        self, session: ProductSession, payload: dict[str, Any],
-        *, role_proposal: dict[str, Any] | None = None,
+        self,
+        session: ProductSession,
+        payload: dict[str, Any],
+        *,
+        role_proposal: dict[str, Any] | None = None,
     ) -> ProductSession:
         expected = payload.get("expected_revision")
 
@@ -265,8 +268,13 @@ class WorkspaceStore:
             current.selected_candidate_id = self._optional_text(payload.get("selected_candidate_id"))
             current.selected_alternative_id = self._optional_text(payload.get("selected_alternative_id"))
 
-        self._mutate(session, expected, mutate, mutation_action="selection",
-                     mutation_request=payload if "mutation_id" in payload else None)
+        self._mutate(
+            session,
+            expected,
+            mutate,
+            mutation_action="selection",
+            mutation_request=payload if "mutation_id" in payload else None,
+        )
         return session
 
     def add_operation(
@@ -300,11 +308,16 @@ class WorkspaceStore:
                 raise WorkspaceError("unsupported_draft_operation", 422)
             if operation_type in self.CONFIRMED_MAP_OPERATIONS:
                 raise WorkspaceError("map_operation_confirmation_required", 409)
-            operations.append(DraftOperationV1(
-                operation_id=f"operation_{uuid4().hex}", type=operation_type,
-                target=str(item.get("target") or ""), parameters=item.get("parameters"),
-                source=str(item.get("source") or "map"), evidence_refs=self._evidence_refs(item.get("evidence_refs")),
-            ))
+            operations.append(
+                DraftOperationV1(
+                    operation_id=f"operation_{uuid4().hex}",
+                    type=operation_type,
+                    target=str(item.get("target") or ""),
+                    parameters=item.get("parameters"),
+                    source=str(item.get("source") or "map"),
+                    evidence_refs=self._evidence_refs(item.get("evidence_refs")),
+                )
+            )
 
         def mutate(current: ProductSession) -> dict[str, Any]:
             if len(current.draft) + len(operations) > self.MAX_DRAFT_OPERATIONS:
@@ -325,19 +338,31 @@ class WorkspaceStore:
                 role_constraints_by_stop=role_constraints_by_stop or {},
             )
             combined = (*current.draft, *operations)
-            if combined and all(row.type == DraftOperationTypeV2.SET_STOP_ORDER.value for row in combined) and all(
-                (parent_order_by_day or {})[row.parameters["day"]].index(row.target) == row.parameters["sequence_index"]
-                for row in combined
+            if (
+                combined
+                and all(row.type == DraftOperationTypeV2.SET_STOP_ORDER.value for row in combined)
+                and all(
+                    (parent_order_by_day or {})[row.parameters["day"]].index(row.target)
+                    == row.parameters["sequence_index"]
+                    for row in combined
+                )
             ):
                 raise WorkspaceError("draft_no_effect", 409)
             current.draft.extend(operations)
             self._invalidate_proposal(current)
-            return ({"operations": [item.as_dict() for item in operations]}
-                    if mutation_request and "operations" in mutation_request
-                    else {"operation": operations[0].as_dict()})
+            return (
+                {"operations": [item.as_dict() for item in operations]}
+                if mutation_request and "operations" in mutation_request
+                else {"operation": operations[0].as_dict()}
+            )
 
-        receipt = self._mutate(session, payload.get("expected_revision"), mutate,
-                               mutation_action="operations", mutation_request=mutation_request)
+        receipt = self._mutate(
+            session,
+            payload.get("expected_revision"),
+            mutate,
+            mutation_action="operations",
+            mutation_request=mutation_request,
+        )
         if receipt:
             result = receipt["result"]
             return self._snapshots._decode_operation(result.get("operation") or result["operations"][0])
@@ -457,8 +482,7 @@ class WorkspaceStore:
                     continue
                 previous = resolved.get(operation.target)
                 if previous is None or any(
-                    parameters[field] != previous[field]
-                    for field in ("name", "role", "duration", "day", "insertion")
+                    parameters[field] != previous[field] for field in ("name", "role", "duration", "day", "insertion")
                 ):
                     raise WorkspaceError("invalid_confirmed_map_operation", 422)
                 resolved[operation.target] = parameters
@@ -562,7 +586,10 @@ class WorkspaceStore:
         query_refs: list[str] = []
         for leg in legs:
             query_refs.append(cls._validate_confirmed_route_leg(leg))
-        if legs[0]["origin_id"] != insertion["predecessor_id"] or legs[1]["destination_id"] != insertion["successor_id"]:
+        if (
+            legs[0]["origin_id"] != insertion["predecessor_id"]
+            or legs[1]["destination_id"] != insertion["successor_id"]
+        ):
             raise WorkspaceError("invalid_confirmed_map_operation", 422)
         if legs[0]["destination_id"] != target or legs[1]["origin_id"] != target:
             raise WorkspaceError("invalid_confirmed_map_operation", 422)
@@ -592,30 +619,17 @@ class WorkspaceStore:
             return isinstance(item, int) and not isinstance(item, bool) and 15 <= item <= 480
 
         valid = (
-            mode == "exact"
-            and valid_minutes(preferred)
-            and preferred == minimum == maximum
-        ) or (
-            mode == "preferred"
-            and valid_minutes(preferred)
-            and minimum is None
-            and maximum is None
-        ) or (
-            mode == "minimum"
-            and preferred is None
-            and valid_minutes(minimum)
-            and maximum is None
-        ) or (
-            mode == "maximum"
-            and preferred is None
-            and minimum is None
-            and valid_minutes(maximum)
-        ) or (
-            mode == "range"
-            and preferred is None
-            and valid_minutes(minimum)
-            and valid_minutes(maximum)
-            and minimum <= maximum
+            (mode == "exact" and valid_minutes(preferred) and preferred == minimum == maximum)
+            or (mode == "preferred" and valid_minutes(preferred) and minimum is None and maximum is None)
+            or (mode == "minimum" and preferred is None and valid_minutes(minimum) and maximum is None)
+            or (mode == "maximum" and preferred is None and minimum is None and valid_minutes(maximum))
+            or (
+                mode == "range"
+                and preferred is None
+                and valid_minutes(minimum)
+                and valid_minutes(maximum)
+                and minimum <= maximum
+            )
         )
         if not valid:
             raise WorkspaceError("invalid_confirmed_map_operation", 422)
@@ -693,9 +707,7 @@ class WorkspaceStore:
                 not isinstance(point, list)
                 or len(point) != 2
                 or not all(
-                    isinstance(item, (int, float))
-                    and not isinstance(item, bool)
-                    and math.isfinite(item)
+                    isinstance(item, (int, float)) and not isinstance(item, bool) and math.isfinite(item)
                     for item in point
                 )
                 or not -180 <= point[0] <= 180
@@ -730,10 +742,7 @@ class WorkspaceStore:
     @staticmethod
     def _valid_nonnegative_number(value: Any) -> bool:
         return bool(
-            isinstance(value, (int, float))
-            and not isinstance(value, bool)
-            and math.isfinite(value)
-            and value >= 0
+            isinstance(value, (int, float)) and not isinstance(value, bool) and math.isfinite(value) and value >= 0
         )
 
     @classmethod
@@ -758,6 +767,7 @@ class WorkspaceStore:
     ) -> None:
         if operation_type == "replan_trip":
             from .trip_planning import validate_trip_parameters
+
             if target != "trip":
                 raise WorkspaceError("invalid_draft_target", 422)
             try:
@@ -774,7 +784,12 @@ class WorkspaceStore:
             return
         if operation_type == "move_day":
             day = parameters.get("day")
-            if set(parameters) != {"day"} or isinstance(day, bool) or not isinstance(day, int) or not 1 <= day <= day_count:
+            if (
+                set(parameters) != {"day"}
+                or isinstance(day, bool)
+                or not isinstance(day, int)
+                or not 1 <= day <= day_count
+            ):
                 raise WorkspaceError("invalid_destination_day", 422)
             return
         if operation_type == "route_feedback":
@@ -784,12 +799,15 @@ class WorkspaceStore:
                 target != "selected_route"
                 or set(parameters) - {"preference", "weight"}
                 or preference not in cls.ROUTE_FEEDBACK_PREFERENCES
-                or (weight is not None and (
-                    isinstance(weight, bool)
-                    or not isinstance(weight, (int, float))
-                    or not math.isfinite(weight)
-                    or not 0 <= float(weight) <= 1
-                ))
+                or (
+                    weight is not None
+                    and (
+                        isinstance(weight, bool)
+                        or not isinstance(weight, (int, float))
+                        or not math.isfinite(weight)
+                        or not 0 <= float(weight) <= 1
+                    )
+                )
             ):
                 raise WorkspaceError("invalid_route_feedback", 422)
             return
@@ -797,10 +815,7 @@ class WorkspaceStore:
             candidate = parameters.get("candidate_id")
             if set(parameters) != {"candidate_id"} or candidate not in candidate_ids:
                 raise WorkspaceError("invalid_draft_candidate", 422)
-            if (
-                candidate_replacements is not None
-                and candidate_replacements.get(str(candidate)) != target
-            ):
+            if candidate_replacements is not None and candidate_replacements.get(str(candidate)) != target:
                 raise WorkspaceError("draft_candidate_target_mismatch", 422)
             return
         if operation_type == "add_candidate":
@@ -864,15 +879,12 @@ class WorkspaceStore:
     ) -> None:
         if operation_type == DraftOperationTypeV2.SET_STOP_ROLE.value:
             role = parameters.get("role")
-            if set(parameters) != {"role"} or role not in {
-                item.value for item in StopRoleV1
-            }:
+            if set(parameters) != {"role"} or role not in {item.value for item in StopRoleV1}:
                 raise WorkspaceError("invalid_stop_role", 422)
             parent_role = parent_role_by_stop.get(target) or {}
             if (
                 parent_role.get("itinerary_role") == role
-                and parent_role.get("itinerary_role_source")
-                == "user_declared_itinerary_role"
+                and parent_role.get("itinerary_role_source") == "user_declared_itinerary_role"
             ):
                 raise WorkspaceError("draft_no_effect", 409)
             for constraint in role_constraints_by_stop.get(target, ()):
@@ -903,11 +915,7 @@ class WorkspaceStore:
                         "draft_parent_role_constraint_invalid",
                         409,
                     )
-                if (
-                    value != role
-                    and permission_semantics
-                    == "explicit_permission_required_for_mismatch"
-                ):
+                if value != role and permission_semantics == "explicit_permission_required_for_mismatch":
                     raise WorkspaceError("role_edit_permission_required", 409)
             return
         if operation_type == DraftOperationTypeV2.SET_STOP_DAY.value:
@@ -943,8 +951,7 @@ class WorkspaceStore:
             if (
                 duration.get("mode") == DurationModeV1.EXACT.value
                 and parent_duration.get("duration_constraint") == duration
-                and parent_duration.get("visit_duration_minutes")
-                == duration.get("preferred_minutes")
+                and parent_duration.get("visit_duration_minutes") == duration.get("preferred_minutes")
             ):
                 raise WorkspaceError("draft_no_effect", 409)
             return
@@ -1008,30 +1015,32 @@ class WorkspaceStore:
             return isinstance(item, int) and not isinstance(item, bool) and 15 <= item <= 480
 
         valid = (
-            mode == DurationModeV1.EXACT.value
-            and valid_minutes(preferred)
-            and preferred == minimum == maximum
-        ) or (
-            mode == DurationModeV1.PREFERRED.value
-            and valid_minutes(preferred)
-            and minimum is None
-            and maximum is None
-        ) or (
-            mode == DurationModeV1.MINIMUM.value
-            and preferred is None
-            and valid_minutes(minimum)
-            and maximum is None
-        ) or (
-            mode == DurationModeV1.MAXIMUM.value
-            and preferred is None
-            and minimum is None
-            and valid_minutes(maximum)
-        ) or (
-            mode == DurationModeV1.RANGE.value
-            and preferred is None
-            and valid_minutes(minimum)
-            and valid_minutes(maximum)
-            and minimum <= maximum
+            (mode == DurationModeV1.EXACT.value and valid_minutes(preferred) and preferred == minimum == maximum)
+            or (
+                mode == DurationModeV1.PREFERRED.value
+                and valid_minutes(preferred)
+                and minimum is None
+                and maximum is None
+            )
+            or (
+                mode == DurationModeV1.MINIMUM.value
+                and preferred is None
+                and valid_minutes(minimum)
+                and maximum is None
+            )
+            or (
+                mode == DurationModeV1.MAXIMUM.value
+                and preferred is None
+                and minimum is None
+                and valid_minutes(maximum)
+            )
+            or (
+                mode == DurationModeV1.RANGE.value
+                and preferred is None
+                and valid_minutes(minimum)
+                and valid_minutes(maximum)
+                and minimum <= maximum
+            )
         )
         if not valid:
             raise WorkspaceError("invalid_stop_duration", 422)
@@ -1092,11 +1101,7 @@ class WorkspaceStore:
                 raise WorkspaceError("invalid_attribute_constraint", 422)
             cls._validate_day({"day": value.get("day")}, day_count)
             sequence_index = value.get("sequence_index")
-            if (
-                isinstance(sequence_index, bool)
-                or not isinstance(sequence_index, int)
-                or not 0 <= sequence_index <= 63
-            ):
+            if isinstance(sequence_index, bool) or not isinstance(sequence_index, int) or not 0 <= sequence_index <= 63:
                 raise WorkspaceError("invalid_attribute_constraint", 422)
             return
         if attribute == AttributeConstraintNameV1.ROLE.value:
@@ -1182,9 +1187,7 @@ class WorkspaceStore:
                 signature = repr(sorted(operation.parameters.items()))
                 typed_values.setdefault((operation.target, attribute), set()).add(signature)
                 if operation.type == DraftOperationTypeV2.SET_STOP_ROLE.value:
-                    role_edit_counts[operation.target] = (
-                        role_edit_counts.get(operation.target, 0) + 1
-                    )
+                    role_edit_counts[operation.target] = role_edit_counts.get(operation.target, 0) + 1
                 if (
                     operation.type == DraftOperationTypeV2.SET_ATTRIBUTE_CONSTRAINT.value
                     and attribute == AttributeConstraintNameV1.DAY.value
@@ -1230,7 +1233,9 @@ class WorkspaceStore:
             if target in day_edits and {day for day, _ in orders} != day_edits[target]:
                 raise WorkspaceError("draft_conflicting_day_order", 409)
 
-    def undo(self, session: ProductSession, expected_revision: Any, *, mutation_id: str | None = None) -> DraftOperationV1:
+    def undo(
+        self, session: ProductSession, expected_revision: Any, *, mutation_id: str | None = None
+    ) -> DraftOperationV1:
         operation: DraftOperationV1 | None = None
 
         def mutate(current: ProductSession) -> dict[str, Any]:
@@ -1241,9 +1246,15 @@ class WorkspaceStore:
             self._invalidate_proposal(current)
             return {"undone": operation.as_dict()}
 
-        receipt = self._mutate(session, expected_revision, mutate, mutation_action="undo",
-                               mutation_request={"expected_revision": expected_revision, "mutation_id": mutation_id}
-                               if mutation_id is not None else None)
+        receipt = self._mutate(
+            session,
+            expected_revision,
+            mutate,
+            mutation_action="undo",
+            mutation_request={"expected_revision": expected_revision, "mutation_id": mutation_id}
+            if mutation_id is not None
+            else None,
+        )
         if receipt:
             return self._snapshots._decode_operation(receipt["result"]["undone"])
         assert operation is not None
@@ -1266,13 +1277,16 @@ class WorkspaceStore:
                 for feature in (geography.get("stops") or {}).get("features", [])
             }
             if current.selected_stop_id and current.selected_stop_id not in stops:
-                replacement = next((
-                    operation.parameters.get("candidate_id")
-                    for operation in current.draft
-                    if operation.type == "replace_nearby"
-                    and operation.target == current.selected_stop_id
-                    and operation.parameters.get("candidate_id") in stops
-                ), None)
+                replacement = next(
+                    (
+                        operation.parameters.get("candidate_id")
+                        for operation in current.draft
+                        if operation.type == "replace_nearby"
+                        and operation.target == current.selected_stop_id
+                        and operation.parameters.get("candidate_id") in stops
+                    ),
+                    None,
+                )
                 current.selected_stop_id = replacement
             if current.selected_stop_id in stops:
                 current.selected_day = stops[current.selected_stop_id].get("day", current.selected_day)
@@ -1323,8 +1337,7 @@ class WorkspaceStore:
         else:
             session.selected_stop_id = None
         segments = {
-            feature["properties"]["route_leg_id"]
-            for feature in geography.get("validated_legs", {}).get("features", [])
+            feature["properties"]["route_leg_id"] for feature in geography.get("validated_legs", {}).get("features", [])
         }
         if session.selected_segment_id not in segments:
             session.selected_segment_id = None
@@ -1340,6 +1353,7 @@ class WorkspaceStore:
         }
         if decision["decision"] not in {"granted", "denied"}:
             raise WorkspaceError("invalid_permission_decision")
+
         def mutate(current: ProductSession) -> None:
             if len(current.permission_decisions) >= self.MAX_PERMISSION_DECISIONS:
                 raise WorkspaceError("permission_decision_limit_reached", 409)
@@ -1409,6 +1423,7 @@ class WorkspaceStore:
         session.selected_alternative_id = None
         session.revision += 1
         return True
+
     @staticmethod
     def _optional_int(value: Any) -> int | None:
         return value if isinstance(value, int) else None
@@ -1424,9 +1439,7 @@ class WorkspaceStore:
             last_accessed = datetime.fromisoformat(session.last_accessed_at)
         except ValueError:
             return True
-        return datetime.now(UTC) - last_accessed > (
-            WorkspaceStore.SESSION_TTL if lifetime is None else lifetime
-        )
+        return datetime.now(UTC) - last_accessed > (WorkspaceStore.SESSION_TTL if lifetime is None else lifetime)
 
     def _purge_expired_locked(self) -> None:
         # The caller holds the shared layout lock. Another store may have
@@ -1492,18 +1505,29 @@ class WorkspaceStore:
     def _mutation_identity(cls, action: str, payload: dict[str, Any]) -> tuple[str, str]:
         identity = cls.validate_mutation_id(payload.get("mutation_id"))
         revision = payload.get("expected_revision")
-        if (action not in {"selection", "operations", "undo"} or isinstance(revision, bool)
-            or not isinstance(revision, int) or revision < 0):
+        if (
+            action not in {"selection", "operations", "undo"}
+            or isinstance(revision, bool)
+            or not isinstance(revision, int)
+            or revision < 0
+        ):
             raise WorkspaceError("invalid_mutation_request", 422)
         try:
-            encoded = json.dumps({"action": action, "payload": payload}, sort_keys=True,
-                                 separators=(",", ":"), ensure_ascii=False, allow_nan=False).encode("utf-8")
+            encoded = json.dumps(
+                {"action": action, "payload": payload},
+                sort_keys=True,
+                separators=(",", ":"),
+                ensure_ascii=False,
+                allow_nan=False,
+            ).encode("utf-8")
         except (TypeError, ValueError):
             raise WorkspaceError("invalid_mutation_request", 422) from None
         return identity, hashlib.sha256(encoded).hexdigest()
 
     @classmethod
-    def _find_mutation_receipt(cls, current: ProductSession, action: str, payload: dict[str, Any]) -> dict[str, Any] | None:
+    def _find_mutation_receipt(
+        cls, current: ProductSession, action: str, payload: dict[str, Any]
+    ) -> dict[str, Any] | None:
         identity, digest = cls._mutation_identity(action, payload)
         receipt = next((row for row in current.mutation_receipts if row["mutation_id"] == identity), None)
         if receipt and (receipt["action"] != action or receipt["request_sha256"] != digest):
@@ -1531,8 +1555,12 @@ class WorkspaceStore:
                 raise self._snapshot_workspace_error(exc) from None
 
     def resolve_pending_mutation(
-        self, session: ProductSession, action: str, payload: dict[str, Any],
-        *, role_proposal: dict[str, Any] | None = None,
+        self,
+        session: ProductSession,
+        action: str,
+        payload: dict[str, Any],
+        *,
+        role_proposal: dict[str, Any] | None = None,
     ) -> dict[str, Any] | None:
         """Fence an unseen original revision, or return its already committed receipt."""
         if not isinstance(action, str) or action not in {"selection", "operations", "undo"}:
@@ -1571,7 +1599,9 @@ class WorkspaceStore:
         session: ProductSession,
         expected_revision: Any,
         mutation: Any,
-        *, mutation_action: str | None = None, mutation_request: dict[str, Any] | None = None,
+        *,
+        mutation_action: str | None = None,
+        mutation_request: dict[str, Any] | None = None,
     ) -> dict[str, Any] | None:
         with self._lock:
             try:
@@ -1598,9 +1628,14 @@ class WorkspaceStore:
                     current.last_accessed_at = utc_now()
                     if mutation_request is not None:
                         identity, digest = self._mutation_identity(mutation_action, mutation_request)
-                        receipt = {"mutation_id": identity, "action": mutation_action, "request_sha256": digest,
-                                   "expected_revision": expected_revision, "committed_revision": current.revision,
-                                   "result": deepcopy(result or {})}
+                        receipt = {
+                            "mutation_id": identity,
+                            "action": mutation_action,
+                            "request_sha256": digest,
+                            "expected_revision": expected_revision,
+                            "committed_revision": current.revision,
+                            "result": deepcopy(result or {}),
+                        }
                         current.mutation_receipts.append(receipt)
                     self._snapshots.save(current)
                     self._sync_session(session, current)

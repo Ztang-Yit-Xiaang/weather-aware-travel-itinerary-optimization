@@ -60,20 +60,22 @@ def main() -> None:
             raise ValueError("exploration_park_coordinate_invalid")
         stem, suffix = attributes["PARK_NAME"].rsplit(" ", 1)
         name = stem + " " + suffixes[suffix]
-        points.append({
-            "place_id": "csp_entry_" + attributes["GISID"].lower(),
-            "name": name,
-            "display_coordinate": {"longitude": longitude, "latitude": latitude},
-            "place_categories": ["culture", "outdoor"] if suffix == "SHP" else ["nature", "outdoor"],
-            "source_refs": [attributes["PARK_WEB_PG"], park_service],
-            "description": "California State Parks mapped park entry. Current opening status and itinerary access have not been checked.",
-            "location_kind": "park_entry",
-            "source_name": attributes["PARK_NAME"],
-            "source_attribution": "California State Parks",
-            "recommended_visit_minutes": None,
-            "weather_suitability": None,
-            "static_utility": None,
-        })
+        points.append(
+            {
+                "place_id": "csp_entry_" + attributes["GISID"].lower(),
+                "name": name,
+                "display_coordinate": {"longitude": longitude, "latitude": latitude},
+                "place_categories": ["culture", "outdoor"] if suffix == "SHP" else ["nature", "outdoor"],
+                "source_refs": [attributes["PARK_WEB_PG"], park_service],
+                "description": "California State Parks mapped park entry. Current opening status and itinerary access have not been checked.",
+                "location_kind": "park_entry",
+                "source_name": attributes["PARK_NAME"],
+                "source_attribution": "California State Parks",
+                "recommended_visit_minutes": None,
+                "weather_suitability": None,
+                "static_utility": None,
+            }
+        )
     if len({p["place_id"] for p in points}) != len(points):
         raise ValueError("exploration_duplicate_identity")
     output.mkdir(parents=True, exist_ok=True)

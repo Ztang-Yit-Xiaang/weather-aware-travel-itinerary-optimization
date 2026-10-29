@@ -106,10 +106,6 @@ def validate_identifier(value: Any, *, optional: bool = False) -> str | None:
     if not isinstance(value, str):
         raise HTTPException(status_code=422, detail="request_validation_failed")
     text = value.strip()
-    if (
-        not text
-        or len(text) > 128
-        or re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9_.:-]*", text) is None
-    ):
+    if not text or len(text) > 128 or re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9_.:-]*", text) is None:
         raise HTTPException(status_code=422, detail="request_validation_failed")
     return text

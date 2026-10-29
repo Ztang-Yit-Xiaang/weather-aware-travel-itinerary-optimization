@@ -65,8 +65,7 @@ def test_demo_exposes_all_route_path_occurrences_and_validated_legs() -> None:
         assert len(plan["validated_legs"]["features"]) == 16
         assert plan["gaps"]["features"] == []
         assert all(
-            feature["geometry"]["type"] == "LineString"
-            and feature["properties"]["road_validated"] is True
+            feature["geometry"]["type"] == "LineString" and feature["properties"]["road_validated"] is True
             for feature in plan["validated_legs"]["features"]
         )
         assert all(
@@ -95,16 +94,11 @@ def test_malformed_itinerary_role_provenance_fails_geography_closed() -> None:
 
 def test_route_path_preserves_repeated_airport_and_hotel_anchors() -> None:
     _, geography = _demo_geography()
-    nodes = [
-        feature["properties"]
-        for feature in geography["plans"][0]["route_path"]["features"]
-    ]
+    nodes = [feature["properties"] for feature in geography["plans"][0]["route_path"]["features"]]
 
     assert nodes[0]["node_id"] == "los_angeles_international_airport"
     assert nodes[-1]["node_id"] == "san_francisco_international_airport"
-    hotel_occurrences = [
-        node for node in nodes if node["node_id"] == "hotel_milo_santa_barbara"
-    ]
+    hotel_occurrences = [node for node in nodes if node["node_id"] == "hotel_milo_santa_barbara"]
     assert len(hotel_occurrences) == 3
     assert all(node["route_anchor"] is True for node in hotel_occurrences)
     assert sum(node["selected_stop"] is True for node in nodes) == 9
@@ -142,10 +136,7 @@ def test_missing_matrix_cell_keeps_valid_legs_and_adds_null_geometry_gaps() -> N
         assert gap["geometry"] is None
         assert gap["properties"]["failure_code"] == "route_leg_missing"
         assert gap["properties"]["validation_status"] == "unvalidated_gap"
-        assert all(
-            feature["geometry"]["type"] == "LineString"
-            for feature in plan["validated_legs"]["features"]
-        )
+        assert all(feature["geometry"]["type"] == "LineString" for feature in plan["validated_legs"]["features"])
 
 
 def test_route_path_accounts_for_selected_stops_in_their_exact_sequence() -> None:

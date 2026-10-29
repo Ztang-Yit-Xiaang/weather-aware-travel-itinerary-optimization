@@ -52,16 +52,17 @@ class InteractionTransitionV1:
     schema_version: str = "interaction-transition-v1"
 
 
-_TRANSITIONS: dict[
-    tuple[InteractionStateV1, InteractionActionV1], InteractionStateV1
-] = {
+_TRANSITIONS: dict[tuple[InteractionStateV1, InteractionActionV1], InteractionStateV1] = {
     (InteractionStateV1.IDLE, InteractionActionV1.SELECT): InteractionStateV1.SELECTED,
     (InteractionStateV1.SELECTED, InteractionActionV1.BEGIN_EDIT): InteractionStateV1.EDITING,
     (InteractionStateV1.EDITING, InteractionActionV1.SHOW_GHOST): InteractionStateV1.GHOST_PREVIEW,
     (InteractionStateV1.EDITING, InteractionActionV1.SHOW_EXPLORATORY): InteractionStateV1.EXPLORATORY_PREVIEW,
     (InteractionStateV1.GHOST_PREVIEW, InteractionActionV1.REQUEST_SNAP): InteractionStateV1.SNAP_PREVIEW,
     (InteractionStateV1.EXPLORATORY_PREVIEW, InteractionActionV1.REQUEST_SNAP): InteractionStateV1.SNAP_PREVIEW,
-    (InteractionStateV1.SNAP_PREVIEW, InteractionActionV1.REQUIRE_CONFIRMATION): InteractionStateV1.PENDING_CONFIRMATION,
+    (
+        InteractionStateV1.SNAP_PREVIEW,
+        InteractionActionV1.REQUIRE_CONFIRMATION,
+    ): InteractionStateV1.PENDING_CONFIRMATION,
     (InteractionStateV1.SNAP_PREVIEW, InteractionActionV1.APPEND_DRAFT): InteractionStateV1.DRAFT_APPENDED,
     (InteractionStateV1.PENDING_CONFIRMATION, InteractionActionV1.APPEND_DRAFT): InteractionStateV1.DRAFT_APPENDED,
     (InteractionStateV1.DRAFT_APPENDED, InteractionActionV1.COMPLETE_ROUTE_PREVIEW): InteractionStateV1.ROUTE_CHECKED,
@@ -120,23 +121,21 @@ def transition_interaction(
             next_state = _TRANSITIONS[(state, action)]
         except KeyError as exc:
             raise InteractionTransitionError("invalid_interaction_transition") from exc
-        if action is InteractionActionV1.ACCEPT and not (
-            evaluation_eligible and certificate_fresh
-        ):
+        if action is InteractionActionV1.ACCEPT and not (evaluation_eligible and certificate_fresh):
             raise InteractionTransitionError("acceptance_evidence_required")
         code = f"interaction_{next_state.value}"
 
     tier = _feedback_tier(next_state)
-    certificate_visible = next_state in {
-        InteractionStateV1.EVALUATED,
-        InteractionStateV1.ACCEPTED,
-        InteractionStateV1.REJECTED,
-    } and certificate_fresh
-    acceptance_allowed = (
-        next_state is InteractionStateV1.EVALUATED
-        and evaluation_eligible
+    certificate_visible = (
+        next_state
+        in {
+            InteractionStateV1.EVALUATED,
+            InteractionStateV1.ACCEPTED,
+            InteractionStateV1.REJECTED,
+        }
         and certificate_fresh
     )
+    acceptance_allowed = next_state is InteractionStateV1.EVALUATED and evaluation_eligible and certificate_fresh
     return InteractionTransitionV1(
         previous_state=state,
         action=action,

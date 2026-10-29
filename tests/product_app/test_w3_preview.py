@@ -150,7 +150,11 @@ def test_semantically_identical_drafts_are_idempotent_across_session_metadata() 
         ([operation("mark_flexible", "golden_gate_bridge")], "eligible", None),
         ([operation("move_day", "griffith_observatory", {"day": 4})], "not_evaluated", "no_feasible_local_candidate"),
         ([operation("route_feedback", "selected_route", {"preference": "reduce_driving"})], "eligible", None),
-        ([operation("replace_nearby", "golden_gate_bridge", {"candidate_id": "bixby_creek_bridge_viewpoint"})], "eligible", None),
+        (
+            [operation("replace_nearby", "golden_gate_bridge", {"candidate_id": "bixby_creek_bridge_viewpoint"})],
+            "eligible",
+            None,
+        ),
         ([operation("add_candidate", "bixby_creek_bridge_viewpoint", {"day": 7})], "eligible", None),
     ],
 )
@@ -173,10 +177,19 @@ def test_all_canonical_operations_run_the_real_pipeline_and_report_truthful_stat
 @pytest.mark.parametrize(
     ("draft", "code"),
     [
-        ([operation("replace_nearby", "golden_gate_bridge", {"candidate_id": "unknown"})], "draft_candidate_not_registered"),
-        ([operation("replace_nearby", "griffith_observatory", {"candidate_id": "bixby_creek_bridge_viewpoint"})], "draft_candidate_target_mismatch"),
+        (
+            [operation("replace_nearby", "golden_gate_bridge", {"candidate_id": "unknown"})],
+            "draft_candidate_not_registered",
+        ),
+        (
+            [operation("replace_nearby", "griffith_observatory", {"candidate_id": "bixby_creek_bridge_viewpoint"})],
+            "draft_candidate_target_mismatch",
+        ),
         ([operation("keep_stop", "not_a_parent_stop")], "draft_target_not_in_parent"),
-        ([operation("route_feedback", "selected_route", {"preference": "invent_a_route"})], "draft_route_feedback_invalid"),
+        (
+            [operation("route_feedback", "selected_route", {"preference": "invent_a_route"})],
+            "draft_route_feedback_invalid",
+        ),
         ([operation("replace_nearby", "golden_gate_bridge", {})], "draft_operation_parameters_invalid"),
     ],
 )
@@ -269,16 +282,22 @@ def test_product_replacement_evaluates_route_context_without_using_registered_ce
     )
 
     compiled = compiler.compile(
-        [operation(
-            "replace_nearby", "bixby_creek_bridge_viewpoint",
-            {"candidate_id": "pfeiffer_big_sur_state_park"},
-        )],
+        [
+            operation(
+                "replace_nearby",
+                "bixby_creek_bridge_viewpoint",
+                {"candidate_id": "pfeiffer_big_sur_state_park"},
+            )
+        ],
         accepted_plan_id="plan_359968d255ff9288",
     )
 
     assert compiled.state == "eligible"
     assert compiled.child_plan["plan_id"] != child_plan_id
-    assert compiled.certificate["route_validation"]["context_snapshot_id"] == recommended.route_matrix["context_snapshot_id"]
+    assert (
+        compiled.certificate["route_validation"]["context_snapshot_id"]
+        == recommended.route_matrix["context_snapshot_id"]
+    )
     assert compiled.runtime_execution["evaluation_executed"] is True
 
 

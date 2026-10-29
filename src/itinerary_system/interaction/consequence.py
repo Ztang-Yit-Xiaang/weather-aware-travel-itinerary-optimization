@@ -45,9 +45,7 @@ def build_consequence_vector(
     metrics = _metric_deltas(parent, hypothetical)
     evidence_refs = tuple(
         dict.fromkeys(
-            str(item).strip()
-            for item in (*probe_result.evidence_refs, _diff_evidence(diff))
-            if str(item).strip()
+            str(item).strip() for item in (*probe_result.evidence_refs, _diff_evidence(diff)) if str(item).strip()
         )
     )
     seed = {

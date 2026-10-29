@@ -47,8 +47,8 @@ def test_stop_editor_exposes_only_exact_server_typed_operations() -> None:
     ):
         assert f'data-typed-operation="{operation}"' in source
     assert "role, timing, duration" not in source.lower()
-    assert 'protectedValues: commitmentCapability.protected_strengths' in source
-    assert 'protectedValues: attributeCapability.protected_strengths' in source
+    assert "protectedValues: commitmentCapability.protected_strengths" in source
+    assert "protectedValues: attributeCapability.protected_strengths" in source
     assert "Each save appends exactly one server-validated operation" in source
     assert "Draft, not accepted" in source
 
@@ -63,7 +63,7 @@ def test_route_editor_is_human_named_typed_and_never_freehand() -> None:
     assert "No simulated scenic, toll, highway, or mode change is applied" in source
     assert "Change route preference" in source
     assert 'id="inspect-route-edit"' in source
-    inspector_binding = source[source.index('$("#inspect-route-edit")'):]
+    inspector_binding = source[source.index('$("#inspect-route-edit")') :]
     inspector_binding = inspector_binding[: inspector_binding.index('$("#exploratory-meaning")')]
     assert "addDraft" not in inspector_binding
     assert "openMapEdit" in inspector_binding

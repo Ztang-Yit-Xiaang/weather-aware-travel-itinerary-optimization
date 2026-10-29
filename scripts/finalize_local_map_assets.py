@@ -64,9 +64,7 @@ def asset_license(relative: str) -> str:
         return "ODbL-1.0"
     if relative.endswith("PROTOMAPS_DATA.txt"):
         return "Protomaps-Data-Notices"
-    if relative.endswith(
-        ("BSD-3-Clause.txt", "PMTILES-BSD-3-Clause.txt", "PROTOMAPS_BASEMAPS_LICENSE.md")
-    ):
+    if relative.endswith(("BSD-3-Clause.txt", "PMTILES-BSD-3-Clause.txt", "PROTOMAPS_BASEMAPS_LICENSE.md")):
         return "BSD-3-Clause"
     raise FinalizeError(f"unmapped_asset_license:{relative}")
 
@@ -80,9 +78,7 @@ def collect_assets(root: Path) -> list[dict[str, str]]:
             if not path.is_file():
                 continue
             relative = path.relative_to(root).as_posix()
-            assets.append(
-                {"path": relative, "sha256": sha256(path), "license": asset_license(relative)}
-            )
+            assets.append({"path": relative, "sha256": sha256(path), "license": asset_license(relative)})
     return assets
 
 
@@ -92,9 +88,7 @@ def finalize(asset_root: Path, pmtiles_cli: Path) -> dict[str, Any]:
     if not archive.is_file() or root not in archive.parents:
         raise FinalizeError("archive_missing")
     version = run([str(pmtiles_cli), "version"]).decode("utf-8", errors="replace").strip()
-    if re.fullmatch(
-        rf"pmtiles 1\.30\.0, commit {PMTILES_CLI_COMMIT}, built at \S+", version
-    ) is None:
+    if re.fullmatch(rf"pmtiles 1\.30\.0, commit {PMTILES_CLI_COMMIT}, built at \S+", version) is None:
         raise FinalizeError("pmtiles_cli_version_mismatch")
     evidence = {
         "header_json": run([str(pmtiles_cli), "show", str(archive), "--header-json"]),
@@ -129,15 +123,9 @@ def finalize(asset_root: Path, pmtiles_cli: Path) -> dict[str, Any]:
             f"pmtiles extract {EXPECTED_SOURCE_URL} {ARCHIVE_RELATIVE.as_posix()} "
             "--bbox=-123.0,33.5,-117.5,38.5 --maxzoom=15"
         ),
-        "header_json_sha256": pmtiles_evidence_sha256(
-            "header_json", evidence["header_json"]
-        ),
-        "metadata_json_sha256": pmtiles_evidence_sha256(
-            "metadata_json", evidence["metadata_json"]
-        ),
-        "verify_output_sha256": pmtiles_evidence_sha256(
-            "verify_output", evidence["verify_output"]
-        ),
+        "header_json_sha256": pmtiles_evidence_sha256("header_json", evidence["header_json"]),
+        "metadata_json_sha256": pmtiles_evidence_sha256("metadata_json", evidence["metadata_json"]),
+        "verify_output_sha256": pmtiles_evidence_sha256("verify_output", evidence["verify_output"]),
         "tool_versions": EXPECTED_TOOL_VERSIONS,
         "license_notices": EXPECTED_LICENSE_NOTICES,
         "glyph_ranges": glyph_ranges,

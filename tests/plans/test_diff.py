@@ -279,19 +279,21 @@ class PlanDiffTests(unittest.TestCase):
     def test_combined_attribute_diff_serializes_all_families_and_costs(self):
         parent = parent_plan()
         stops = [dict(stop) for stop in parent.selected_stops]
-        stops[0].update({
-            "visit_duration_minutes": 60,
-            "time_window_constraint": {
-                "schema_version": "stop-time-window-constraint-v1",
-                "earliest_arrival": "10:00", "latest_departure": None,
-                "early_arrival_policy": "wait_until_earliest_arrival",
-                "latest_departure_semantics": "departure_after_visit",
-            },
-            "itinerary_role": "scenic_stop",
-            "itinerary_role_source": "user_declared_itinerary_role",
-        })
-        child = replace(parent, plan_id="combined_child", parent_plan_id=parent.plan_id,
-                        selected_stops=tuple(stops))
+        stops[0].update(
+            {
+                "visit_duration_minutes": 60,
+                "time_window_constraint": {
+                    "schema_version": "stop-time-window-constraint-v1",
+                    "earliest_arrival": "10:00",
+                    "latest_departure": None,
+                    "early_arrival_policy": "wait_until_earliest_arrival",
+                    "latest_departure_semantics": "departure_after_visit",
+                },
+                "itinerary_role": "scenic_stop",
+                "itinerary_role_source": "user_declared_itinerary_role",
+            }
+        )
+        child = replace(parent, plan_id="combined_child", parent_plan_id=parent.plan_id, selected_stops=tuple(stops))
         diff = compute_plan_diff(parent, child, default_visit_minutes=45)
         record = diff.to_record()
         self.assertEqual(record["schema_version"], "plan-diff-v6")

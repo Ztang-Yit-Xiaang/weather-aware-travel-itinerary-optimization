@@ -207,136 +207,247 @@ def _controls(context):
     route, custom, moved = (_case(kind, context) for kind in KINDS)
     parent = route[5]
     rows, events, requests, records = [], [], [], []
+
     def state(draft=(), **ui):
-        return {"map": deepcopy(parent), "draft": deepcopy(list(draft)), "ui": {
-            "meaning":None,"form":False,"duration":None,"duration_fields":[],"title":"",
-            "selected_waypoints":[],"selected_markers":[],"toast":"",**ui}}
-    def add(binding,before,after,*,value=None,operation=None,http=None):
+        return {
+            "map": deepcopy(parent),
+            "draft": deepcopy(list(draft)),
+            "ui": {
+                "meaning": None,
+                "form": False,
+                "duration": None,
+                "duration_fields": [],
+                "title": "",
+                "selected_waypoints": [],
+                "selected_markers": [],
+                "toast": "",
+                **ui,
+            },
+        }
+
+    def add(binding, before, after, *, value=None, operation=None, http=None):
         selector = verifier.CONTROL_SELECTORS[binding]
-        event = {"type":"change" if binding in {"exploratory_meaning","waypoint_duration"} else "submit"
-            if binding=="confirm_waypoint" else "click", "trusted":True,"selector":selector,
-            "id":selector[1:] if selector.startswith("#") else "", "value":value,
-            "waypoint_id":operation["target"] if operation and selector.startswith("[data-") else None,
-            "label":operation["parameters"]["name"] if operation else "Unit native label", "at":1770000000000+len(rows)}
+        event = {
+            "type": "change"
+            if binding in {"exploratory_meaning", "waypoint_duration"}
+            else "submit"
+            if binding == "confirm_waypoint"
+            else "click",
+            "trusted": True,
+            "selector": selector,
+            "id": selector[1:] if selector.startswith("#") else "",
+            "value": value,
+            "waypoint_id": operation["target"] if operation and selector.startswith("[data-") else None,
+            "label": operation["parameters"]["name"] if operation else "Unit native label",
+            "at": 1770000000000 + len(rows),
+        }
         start = len(requests)
         if http:
-            requests.append({"method":http["method"],"url":http["url"]})
+            requests.append({"method": http["method"], "url": http["url"]})
             records.append(deepcopy(http))
-        rows.append({"binding_id":binding,"context":context,"selector":selector,"event_index":len(events),"event":deepcopy(event),
-            "before":before,"after":after,"request_start":start,"request_end":len(requests),"requests":deepcopy(requests[start:]),
-            "http":http,"operation":deepcopy(operation),"assertions_passed":True,"evaluated_repair":False})
+        rows.append(
+            {
+                "binding_id": binding,
+                "context": context,
+                "selector": selector,
+                "event_index": len(events),
+                "event": deepcopy(event),
+                "before": before,
+                "after": after,
+                "request_start": start,
+                "request_end": len(requests),
+                "requests": deepcopy(requests[start:]),
+                "http": http,
+                "operation": deepcopy(operation),
+                "assertions_passed": True,
+                "evaluated_repair": False,
+            }
+        )
         events.append(event)
-    def http(suffix,request,response):
-        return {"method":"POST","url":BASE+"/api/sessions/session"+suffix,"response_status_code":200,
-            "request_body_utf8":json.dumps(request),"response_body_utf8":json.dumps(response)}
-    def confirm(case,before):
+
+    def http(suffix, request, response):
+        return {
+            "method": "POST",
+            "url": BASE + "/api/sessions/session" + suffix,
+            "response_status_code": 200,
+            "request_body_utf8": json.dumps(request),
+            "response_body_utf8": json.dumps(response),
+        }
+
+    def confirm(case, before):
         operation = case[2]["operation"]
         result = deepcopy(case[2])
-        result["session"]["draft"] = [*before,operation]
-        add("confirm_waypoint",state(before,form=True),state(result["session"]["draft"]),operation=operation,
-            http=http("/map/snap-previews/"+case[4]["snap_preview_id"]+"/confirm",case[1],result))
-    for case,meaning in ((route,"route_waypoint"),(custom,"possible_stop")):
-        add("exploratory_meaning",state(meaning="explore_only"),state(meaning=meaning,snap="No road-access check has run."),value=meaning)
-        add("check_road_access",state(meaning=meaning),state(meaning=meaning,form=True,snap="Road-check result: route_checked."),
-            http=http("/map/snap-preview",case[3],case[4]))
+        result["session"]["draft"] = [*before, operation]
+        add(
+            "confirm_waypoint",
+            state(before, form=True),
+            state(result["session"]["draft"]),
+            operation=operation,
+            http=http("/map/snap-previews/" + case[4]["snap_preview_id"] + "/confirm", case[1], result),
+        )
+
+    for case, meaning in ((route, "route_waypoint"), (custom, "possible_stop")):
+        add(
+            "exploratory_meaning",
+            state(meaning="explore_only"),
+            state(meaning=meaning, snap="No road-access check has run."),
+            value=meaning,
+        )
+        add(
+            "check_road_access",
+            state(meaning=meaning),
+            state(meaning=meaning, form=True, snap="Road-check result: route_checked."),
+            http=http("/map/snap-preview", case[3], case[4]),
+        )
         if case is custom:
             previous = "exact"
-            for mode in ("range","exact"):
+            for mode in ("range", "exact"):
                 fields = []
-                for field in ("preferred","minimum","maximum"):
-                    enabled = field=="preferred" if mode=="exact" else field!="preferred"
-                    fields.append({"id":"waypoint-duration-"+field,"disabled":not enabled,"visible":enabled,"required":enabled})
-                add("waypoint_duration",state(duration=previous),state(duration=mode,duration_fields=fields),value=mode)
-                previous=mode
-        confirm(case,[])
+                for field in ("preferred", "minimum", "maximum"):
+                    enabled = field == "preferred" if mode == "exact" else field != "preferred"
+                    fields.append(
+                        {
+                            "id": "waypoint-duration-" + field,
+                            "disabled": not enabled,
+                            "visible": enabled,
+                            "required": enabled,
+                        }
+                    )
+                add(
+                    "waypoint_duration",
+                    state(duration=previous),
+                    state(duration=mode, duration_fields=fields),
+                    value=mode,
+                )
+                previous = mode
+        confirm(case, [])
     operation = custom[2]["operation"]
-    selected = {"selected_waypoints":[operation["target"]],"selected_markers":[operation["parameters"]["name"]+". Custom draft stop."],
-        "title":operation["parameters"]["name"],"toast":"Drag the selected custom waypoint marker to propose a new raw location."}
-    for binding in ("select_draft_waypoint","relocate_draft_waypoint","select_draft_marker","relocate_custom"):
-        add(binding,state([operation],**(selected if binding=="relocate_custom" else {})),state([operation],**selected),operation=operation)
-    confirm(moved,[operation])
-    result = {"undone":operation,"session":{"accepted_plan_id":parent["active_plan_id"],"draft":[],"proposal":None}}
-    add("remove_custom",state([operation],**selected),state(),operation=operation,http=http("/draft/undo",{"expected_revision":10},result))
-    return rows,events,requests,records,context,parent
+    selected = {
+        "selected_waypoints": [operation["target"]],
+        "selected_markers": [operation["parameters"]["name"] + ". Custom draft stop."],
+        "title": operation["parameters"]["name"],
+        "toast": "Drag the selected custom waypoint marker to propose a new raw location.",
+    }
+    for binding in ("select_draft_waypoint", "relocate_draft_waypoint", "select_draft_marker", "relocate_custom"):
+        add(
+            binding,
+            state([operation], **(selected if binding == "relocate_custom" else {})),
+            state([operation], **selected),
+            operation=operation,
+        )
+    confirm(moved, [operation])
+    result = {
+        "undone": operation,
+        "session": {"accepted_plan_id": parent["active_plan_id"], "draft": [], "proposal": None},
+    }
+    add(
+        "remove_custom",
+        state([operation], **selected),
+        state(),
+        operation=operation,
+        http=http("/draft/undo", {"expected_revision": 10}, result),
+    )
+    return rows, events, requests, records, context, parent
 
 
-@pytest.mark.parametrize("context",verifier.CONTEXTS)
-def test_all_nine_waypoint_aliases_have_exact_native_control_results(context,tmp_path):
+@pytest.mark.parametrize("context", verifier.CONTEXTS)
+def test_all_nine_waypoint_aliases_have_exact_native_control_results(context, tmp_path):
     arguments = _controls(context)
     output = verifier.control_proofs(*arguments)
-    assert output["context"]==context and output["accepted_plan_id"]==arguments[-1]["active_plan_id"]
-    _write_io(tmp_path,arguments,output)
+    assert output["context"] == context and output["accepted_plan_id"] == arguments[-1]["active_plan_id"]
+    _write_io(tmp_path, arguments, output)
 
 
-@pytest.mark.parametrize("context",verifier.CONTEXTS)
-def test_waypoint_projection_credits_only_the_nine_proven_bindings_in_the_recorded_context(context,tmp_path):
+@pytest.mark.parametrize("context", verifier.CONTEXTS)
+def test_waypoint_projection_credits_only_the_nine_proven_bindings_in_the_recorded_context(context, tmp_path):
     import e2e1_runtime_gate_coverage as gates
     from test_e2e1_runtime_gate_coverage import bundle
 
-    rows,events,requests,records,_,parent = _controls(context)
-    prefix = "waypoint_contexts/"+context+"/"
-    artifacts = {"waypoint_control_receipts.json":rows,"waypoint_control_input_log.json":events,
-        "browser_requests.json":requests,"browser_assertions.json":{"parent":parent},
-        "http_index.json":[{"file":f"http_{i}.json"} for i in range(len(records))]}
-    artifacts.update({f"http_{i}.json":record for i,record in enumerate(records)})
-    receipt = bundle(tmp_path,"waypoint-contexts",{prefix+name:value for name,value in artifacts.items()})
-    proofs,missing = gates.existing_control_proofs(gates.Receipts(tmp_path,[receipt]))
-    assert set(proofs)=={(binding,context) for binding in verifier.CONTROL_SELECTORS}
-    assert all(proofs[(binding,context)]["selector"]==selector for binding,selector in verifier.CONTROL_SELECTORS.items())
-    assert any(row["mode"]=="waypoint-contexts" and row["context"]!=context for row in missing)
+    rows, events, requests, records, _, parent = _controls(context)
+    prefix = "waypoint_contexts/" + context + "/"
+    artifacts = {
+        "waypoint_control_receipts.json": rows,
+        "waypoint_control_input_log.json": events,
+        "browser_requests.json": requests,
+        "browser_assertions.json": {"parent": parent},
+        "http_index.json": [{"file": f"http_{i}.json"} for i in range(len(records))],
+    }
+    artifacts.update({f"http_{i}.json": record for i, record in enumerate(records)})
+    receipt = bundle(tmp_path, "waypoint-contexts", {prefix + name: value for name, value in artifacts.items()})
+    proofs, missing = gates.existing_control_proofs(gates.Receipts(tmp_path, [receipt]))
+    assert set(proofs) == {(binding, context) for binding in verifier.CONTROL_SELECTORS}
+    assert all(
+        proofs[(binding, context)]["selector"] == selector for binding, selector in verifier.CONTROL_SELECTORS.items()
+    )
+    assert any(row["mode"] == "waypoint-contexts" and row["context"] != context for row in missing)
 
 
-@pytest.mark.parametrize("binding",verifier.CONTROL_SELECTORS)
-@pytest.mark.parametrize("fault",["untrusted","wrong_context","changed_map","unbound_input"])
-def test_waypoint_control_projection_rejects_unbound_or_false_native_action(binding,fault,tmp_path):
+@pytest.mark.parametrize("binding", verifier.CONTROL_SELECTORS)
+@pytest.mark.parametrize("fault", ["untrusted", "wrong_context", "changed_map", "unbound_input"])
+def test_waypoint_control_projection_rejects_unbound_or_false_native_action(binding, fault, tmp_path):
     args = _controls("accepted_child")
-    row = next(item for item in args[0] if item["binding_id"]==binding)
-    if fault=="untrusted":
-        row["event"]["trusted"]=args[1][row["event_index"]]["trusted"]=False
-    elif fault=="wrong_context":
-        row["context"]="original"
-    elif fault=="changed_map":
-        row["after"]["map"]["rendered_geometry_hash"]="stale"
+    row = next(item for item in args[0] if item["binding_id"] == binding)
+    if fault == "untrusted":
+        row["event"]["trusted"] = args[1][row["event_index"]]["trusted"] = False
+    elif fault == "wrong_context":
+        row["context"] = "original"
+    elif fault == "changed_map":
+        row["after"]["map"]["rendered_geometry_hash"] = "stale"
     else:
-        row["event_index"]=len(args[1])
+        row["event_index"] = len(args[1])
     with pytest.raises(core.E2E1VerificationError) as error:
         verifier.control_proofs(*args)
-    _write_io(tmp_path,args,{"rejected":str(error.value)})
+    _write_io(tmp_path, args, {"rejected": str(error.value)})
 
 
-@pytest.mark.parametrize("fault",["meaning_unchanged","duration_fields_unchanged","wrong_selected_id","wrong_marker_name",
-    "missing_relocation_hint","road_check_staged","confirm_parent_only","remove_kept_draft","extra_api_call","missing_binding"])
-def test_waypoint_control_visible_result_is_not_a_click_only_claim(fault,tmp_path):
+@pytest.mark.parametrize(
+    "fault",
+    [
+        "meaning_unchanged",
+        "duration_fields_unchanged",
+        "wrong_selected_id",
+        "wrong_marker_name",
+        "missing_relocation_hint",
+        "road_check_staged",
+        "confirm_parent_only",
+        "remove_kept_draft",
+        "extra_api_call",
+        "missing_binding",
+    ],
+)
+def test_waypoint_control_visible_result_is_not_a_click_only_claim(fault, tmp_path):
     args = _controls("original")
-    rows,events,requests,records,_,_ = args
+    rows, events, requests, records, _, _ = args
+
     def first(binding):
-        return next(row for row in rows if row["binding_id"]==binding)
-    if fault=="meaning_unchanged":
-        first("exploratory_meaning")["after"]["ui"]["meaning"]="explore_only"
-    elif fault=="duration_fields_unchanged":
-        first("waypoint_duration")["after"]["ui"]["duration_fields"][0]["disabled"]=False
-    elif fault=="wrong_selected_id":
-        first("select_draft_waypoint")["after"]["ui"]["selected_waypoints"]=["other"]
-    elif fault=="wrong_marker_name":
-        first("select_draft_marker")["after"]["ui"]["selected_markers"]=["other"]
-    elif fault=="missing_relocation_hint":
-        first("relocate_custom")["after"]["ui"]["toast"]=""
-    elif fault=="road_check_staged":
-        first("check_road_access")["after"]["draft"]=["unexpected"]
-    elif fault=="confirm_parent_only":
-        first("confirm_waypoint")["after"]["draft"]=[]
-    elif fault=="remove_kept_draft":
-        row=first("remove_custom")
-        row["after"]["draft"]=deepcopy(row["before"]["draft"])
-    elif fault=="extra_api_call":
-        row=first("select_draft_marker")
-        requests.append({"method":"POST","url":BASE+"/api/sessions/session/accept"})
-        row.update(request_start=len(requests)-1,request_end=len(requests),requests=deepcopy(requests[-1:]))
+        return next(row for row in rows if row["binding_id"] == binding)
+
+    if fault == "meaning_unchanged":
+        first("exploratory_meaning")["after"]["ui"]["meaning"] = "explore_only"
+    elif fault == "duration_fields_unchanged":
+        first("waypoint_duration")["after"]["ui"]["duration_fields"][0]["disabled"] = False
+    elif fault == "wrong_selected_id":
+        first("select_draft_waypoint")["after"]["ui"]["selected_waypoints"] = ["other"]
+    elif fault == "wrong_marker_name":
+        first("select_draft_marker")["after"]["ui"]["selected_markers"] = ["other"]
+    elif fault == "missing_relocation_hint":
+        first("relocate_custom")["after"]["ui"]["toast"] = ""
+    elif fault == "road_check_staged":
+        first("check_road_access")["after"]["draft"] = ["unexpected"]
+    elif fault == "confirm_parent_only":
+        first("confirm_waypoint")["after"]["draft"] = []
+    elif fault == "remove_kept_draft":
+        row = first("remove_custom")
+        row["after"]["draft"] = deepcopy(row["before"]["draft"])
+    elif fault == "extra_api_call":
+        row = first("select_draft_marker")
+        requests.append({"method": "POST", "url": BASE + "/api/sessions/session/accept"})
+        row.update(request_start=len(requests) - 1, request_end=len(requests), requests=deepcopy(requests[-1:]))
     else:
         rows.pop()
     with pytest.raises(core.E2E1VerificationError) as error:
         verifier.control_proofs(*args)
-    _write_io(tmp_path,args,{"rejected":str(error.value)})
+    _write_io(tmp_path, args, {"rejected": str(error.value)})
 
 
 @pytest.mark.parametrize("kind,context", [(kind, context) for context in verifier.CONTEXTS for kind in KINDS])

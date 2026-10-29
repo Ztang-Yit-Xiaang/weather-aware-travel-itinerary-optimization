@@ -12,9 +12,7 @@ from .models import ProductRunRecord
 
 REGISTRY_SCHEMA = "product-run-registry-v1"
 TOP_LEVEL_FIELDS = frozenset({"schema_version", "runs"})
-RUN_FIELDS = frozenset(
-    {"run_id", "trip_id", "label", "relative_path", "manifest_sha256", "capabilities", "default"}
-)
+RUN_FIELDS = frozenset({"run_id", "trip_id", "label", "relative_path", "manifest_sha256", "capabilities", "default"})
 ALLOWED_CAPABILITIES = frozenset(
     {
         "read_only_artifacts",

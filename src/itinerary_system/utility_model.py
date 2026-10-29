@@ -155,9 +155,13 @@ def build_source_masks(enriched_df: pd.DataFrame) -> pd.DataFrame:
     """Return explicit source availability masks and source coverage fields."""
 
     mask_df = pd.DataFrame(index=enriched_df.index)
-    poi_source = enriched_df.get("poi_id", enriched_df.get("id", enriched_df.get("name", pd.Series("", index=enriched_df.index))))
+    poi_source = enriched_df.get(
+        "poi_id", enriched_df.get("id", enriched_df.get("name", pd.Series("", index=enriched_df.index)))
+    )
     mask_df["poi_id"] = poi_source.fillna("").astype(str)
-    mask_df["has_osm"] = _source_contains(enriched_df, "osm|overpass|openstreetmap") | _nonempty_text(enriched_df, "osm_tags")
+    mask_df["has_osm"] = _source_contains(enriched_df, "osm|overpass|openstreetmap") | _nonempty_text(
+        enriched_df, "osm_tags"
+    )
     mask_df["has_yelp"] = (
         _source_contains(enriched_df, "yelp")
         | _has_numeric(enriched_df, "yelp_rating")

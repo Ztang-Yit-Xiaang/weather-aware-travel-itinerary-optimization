@@ -178,9 +178,7 @@ def test_refusal_is_typed_and_does_not_expose_provider_text() -> None:
         output=[{"content": [{"type": "refusal", "refusal": "raw private provider refusal"}]}],
     )
     client = _FakeClient(response)
-    result = _run(
-        OpenAICopilotAdapter(model="gpt-5.6-terra", api_key="unused", client=client)
-    )
+    result = _run(OpenAICopilotAdapter(model="gpt-5.6-terra", api_key="unused", client=client))
 
     assert result.state == "refused"
     assert result.intents == ()
@@ -227,9 +225,7 @@ def test_strict_schema_rejects_unknown_fields_and_coercion() -> None:
 
 def test_valid_schema_with_invented_entity_fails_local_contract() -> None:
     client = _FakeClient(
-        _parsed_response(
-            intents=[OpenAIIntentSchemaV1(type="keep_stop", target_stop_id="invented_stop")]
-        )
+        _parsed_response(intents=[OpenAIIntentSchemaV1(type="keep_stop", target_stop_id="invented_stop")])
     )
 
     with pytest.raises(CopilotContractError, match="copilot_interpretation_invalid"):
@@ -249,13 +245,10 @@ def test_valid_schema_with_invented_entity_fails_local_contract() -> None:
 def test_provider_prose_is_replaced_by_canonical_local_copy(provider_claim: str) -> None:
     client = _FakeClient(_parsed_response(assistant_message=provider_claim))
 
-    result = _run(
-        OpenAICopilotAdapter(model="gpt-5.6-terra", api_key="unused", client=client)
-    )
+    result = _run(OpenAICopilotAdapter(model="gpt-5.6-terra", api_key="unused", client=client))
 
     assert result.assistant_message == (
-        "I prepared a typed itinerary suggestion for your review. "
-        "Nothing was changed or executed automatically."
+        "I prepared a typed itinerary suggestion for your review. Nothing was changed or executed automatically."
     )
     assert provider_claim not in result.assistant_message
 
@@ -320,9 +313,7 @@ def test_staged_point_removal_returns_specific_undo_guidance_without_provider_ca
     client = _FakeClient(_parsed_response())
 
     result = asyncio.run(
-        OpenAICopilotAdapter(
-            model="gpt-5.4-mini", api_key="unused", client=client
-        ).interpret(
+        OpenAICopilotAdapter(model="gpt-5.4-mini", api_key="unused", client=client).interpret(
             context=context,
             history=(),
             message="remove the added point",
@@ -357,9 +348,7 @@ def test_human_bixby_inclusion_resolves_to_exact_accepted_stop_without_provider_
     client = _FakeClient(_parsed_response())
 
     result = asyncio.run(
-        OpenAICopilotAdapter(
-            model="gpt-5.4-mini", api_key="unused", client=client
-        ).interpret(
+        OpenAICopilotAdapter(model="gpt-5.4-mini", api_key="unused", client=client).interpret(
             context=context,
             history=(),
             message="I want to go to Bixby Creek Bridge",
@@ -412,14 +401,10 @@ def test_provider_clarification_prose_is_replaced_before_persistence_boundary() 
         )
     )
 
-    result = _run(
-        OpenAICopilotAdapter(model="gpt-5.6-terra", api_key="unused", client=client)
-    )
+    result = _run(OpenAICopilotAdapter(model="gpt-5.6-terra", api_key="unused", client=client))
 
     assert result.assistant_message.startswith("I need more itinerary detail")
-    assert result.intents[0].clarification_question == (
-        "Which itinerary day, stop, or trade-off should I review?"
-    )
+    assert result.intents[0].clarification_question == ("Which itinerary day, stop, or trade-off should I review?")
     assert provider_claim not in str(result.as_dict())
 
 
@@ -602,9 +587,7 @@ def test_runtime_history_bounds_accept_config_range_while_prompt_remains_capped(
 
     assert len(client.responses.calls) == 1
     prompt_input = client.responses.calls[0]["input"]
-    encoded_history = prompt_input.split("<recent_conversation>\n", 1)[1].split(
-        "\n</recent_conversation>", 1
-    )[0]
+    encoded_history = prompt_input.split("<recent_conversation>\n", 1)[1].split("\n</recent_conversation>", 1)[0]
     outbound_history = json.loads(encoded_history)
     assert len(outbound_history) == 12
     assert sum(len(item["content"]) for item in outbound_history) <= 12_000
@@ -629,6 +612,7 @@ def test_invalid_context_is_rejected_before_provider_call() -> None:
     with pytest.raises(CopilotContractError):
         asyncio.run(adapter.interpret(context=invalid_context, history=(), message="Move it"))
     assert client.responses.calls == []
+
 
 def test_known_statewide_place_gets_specific_local_clarification_without_action() -> None:
     context = replace(
@@ -656,9 +640,7 @@ def test_known_statewide_place_gets_specific_local_clarification_without_action(
         ],
         highlights=OpenAIHighlightsSchemaV1(),
     )
-    adapter = OpenAICopilotAdapter(
-        model="gpt-5.6-terra", api_key="unused", client=_FakeClient(response)
-    )
+    adapter = OpenAICopilotAdapter(model="gpt-5.6-terra", api_key="unused", client=_FakeClient(response))
 
     result = asyncio.run(
         adapter.interpret(

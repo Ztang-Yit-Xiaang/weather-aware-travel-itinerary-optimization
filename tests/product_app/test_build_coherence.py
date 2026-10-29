@@ -24,7 +24,7 @@ def test_build_fingerprint_binds_product_registry_route_registration_and_descrip
     descriptor.parent.mkdir(parents=True)
     descriptor.write_text('{"evidence_hash": "first"}', encoding="utf-8")
     registration = configs / "product_route_delta.json"
-    registration.write_text(json.dumps({"descriptor_path":"results/delta/descriptor.json"}), encoding="utf-8")
+    registration.write_text(json.dumps({"descriptor_path": "results/delta/descriptor.json"}), encoding="utf-8")
     first = runtime_module.product_build_id(tmp_path)
     registry.write_text('{"runs": ["changed"]}', encoding="utf-8")
     second = runtime_module.product_build_id(tmp_path)
@@ -32,7 +32,9 @@ def test_build_fingerprint_binds_product_registry_route_registration_and_descrip
     descriptor.write_text('{"evidence_hash": "second"}', encoding="utf-8")
     third = runtime_module.product_build_id(tmp_path)
     assert third != second
-    registration.write_text(json.dumps({"descriptor_path":"results/delta/descriptor.json", "version":2}), encoding="utf-8")
+    registration.write_text(
+        json.dumps({"descriptor_path": "results/delta/descriptor.json", "version": 2}), encoding="utf-8"
+    )
     assert runtime_module.product_build_id(tmp_path) != third
 
 
@@ -40,8 +42,11 @@ def test_build_fingerprint_binds_product_registry_route_registration_and_descrip
 def coherent_app(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
     monkeypatch.setenv("PRODUCT_COPILOT_ADAPTER", "deterministic")
     monkeypatch.setenv("OPENAI_API_KEY", "")
-    monkeypatch.setattr(runtime_module.ProductRuntime, "_probe_map", lambda self:
-        ComponentHealthV1("map", "ready", False, "maplibre_ready"))
+    monkeypatch.setattr(
+        runtime_module.ProductRuntime,
+        "_probe_map",
+        lambda self: ComponentHealthV1("map", "ready", False, "maplibre_ready"),
+    )
     # Mutate an isolated source tree, never the repository under a running test.
     source = tmp_path / "source" / "src" / "itinerary_system" / "product_app" / "api.py"
     source.parent.mkdir(parents=True)
@@ -50,8 +55,9 @@ def coherent_app(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
     monkeypatch.setattr(runtime_module, "product_build_id", lambda _: fingerprint(tmp_path / "source"))
 
     def new_app():
-        return create_product_app(repository_root=ROOT, state_root=tmp_path / "state",
-            additional_allowed_authorities=("testserver",))
+        return create_product_app(
+            repository_root=ROOT, state_root=tmp_path / "state", additional_allowed_authorities=("testserver",)
+        )
 
     app = new_app()
     with TestClient(app) as client:
@@ -86,11 +92,19 @@ def test_stale_or_missing_browser_build_never_enters_mutation_or_chat(coherent_a
         raise AssertionError("A stale browser entered the application service")
 
     monkeypatch.setattr(runtime, "require_service", no_service_dispatch)
-    paths = ["/api/sessions", "/api/sessions/session_demo/draft/operations",
-        "/api/sessions/session_demo/preview", "/api/sessions/session_demo/accept",
-        "/api/sessions/session_demo/copilot/messages"]
-    for headers in ({"Sec-Fetch-Mode": "cors"}, {"Sec-Fetch-Site": "same-origin"},
-            {HEADER: "old-build"}, {"Sec-Fetch-Mode": "cors", HEADER: ""}):
+    paths = [
+        "/api/sessions",
+        "/api/sessions/session_demo/draft/operations",
+        "/api/sessions/session_demo/preview",
+        "/api/sessions/session_demo/accept",
+        "/api/sessions/session_demo/copilot/messages",
+    ]
+    for headers in (
+        {"Sec-Fetch-Mode": "cors"},
+        {"Sec-Fetch-Site": "same-origin"},
+        {HEADER: "old-build"},
+        {"Sec-Fetch-Mode": "cors", HEADER: ""},
+    ):
         for path in paths:
             response = client.post(path, headers=headers, json={})
             assert response.status_code == 409, (path, response.text)
@@ -112,9 +126,12 @@ def test_current_build_preserves_origin_token_and_revision_boundaries(coherent_a
     payload = created.json()
     session = payload["session"]
     path = f"/api/sessions/{session['session_id']}/draft/undo"
-    assert client.post(path, headers=browser, json={"expected_revision":session["revision"]}).status_code == 403
-    stale = client.post(path, headers={**browser, "X-Session-Token":payload["mutation_token"]},
-        json={"expected_revision":session["revision"] + 1})
+    assert client.post(path, headers=browser, json={"expected_revision": session["revision"]}).status_code == 403
+    stale = client.post(
+        path,
+        headers={**browser, "X-Session-Token": payload["mutation_token"]},
+        json={"expected_revision": session["revision"] + 1},
+    )
     assert stale.status_code == 409
     assert stale.json()["detail"] == "stale_session_revision"
 
@@ -129,8 +146,8 @@ def test_source_drift_blocks_before_dispatch_and_restart_rebinds(coherent_app, m
     for path in ("/api/health", "/app/itinerary", "/static/js/app.js"):
         response = client.get(path)
         assert response.status_code == 503, (path, response.text)
-        assert response.json() == {"detail":"product_server_build_changed"}
-    blocked = client.post("/api/sessions", headers={HEADER:old_build}, json={})
+        assert response.json() == {"detail": "product_server_build_changed"}
+    blocked = client.post("/api/sessions", headers={HEADER: old_build}, json={})
     assert blocked.status_code == 503
     assert dispatched == []
     source.write_bytes(original)
@@ -139,8 +156,8 @@ def test_source_drift_blocks_before_dispatch_and_restart_rebinds(coherent_app, m
     with TestClient(new_app()) as restarted:
         new_build = restarted.get("/api/health").json()["build_id"]
         assert new_build != old_build
-        assert restarted.post("/api/sessions", headers={HEADER:old_build}, json={}).status_code == 409
-        assert restarted.post("/api/sessions", headers={HEADER:new_build}, json={}).status_code == 200
+        assert restarted.post("/api/sessions", headers={HEADER: old_build}, json={}).status_code == 409
+        assert restarted.post("/api/sessions", headers={HEADER: new_build}, json={}).status_code == 200
 
 
 def test_build_change_during_dispatch_does_not_hide_a_completed_mutation(coherent_app, monkeypatch):

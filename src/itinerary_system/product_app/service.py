@@ -90,6 +90,7 @@ class _StoredSnapPreview:
 
 class ProductService:
     MAX_STORED_SNAP_PREVIEWS = 128
+
     def __init__(
         self,
         registry: ProductRunRegistry,
@@ -149,7 +150,8 @@ class ProductService:
                     self._evidence_bundles[run_id],
                     repository_root=self.registry.repository_root,
                     route_matrix=configured_route_matrix(self.registry.repository_root, run_id, bundle.route_matrix),
-                    planning_state_root=self._planning_state_root, planning_routing_url=self._planning_routing_url,
+                    planning_state_root=self._planning_state_root,
+                    planning_routing_url=self._planning_routing_url,
                 )
             else:
                 bundle = load_product_dashboard_source(run_dir)
@@ -186,11 +188,15 @@ class ProductService:
 
         pointer = self._load_acceptance_pointer(trip_id)
         self.load(pointer["run_id"])
-        geography = next((
-            plan for plan in self._geographies[pointer["run_id"]]["plans"]
-            if plan["plan_id"] == pointer["accepted_plan_id"]
-            and plan["content_hash"] == pointer["accepted_plan_content_hash"]
-        ), None)
+        geography = next(
+            (
+                plan
+                for plan in self._geographies[pointer["run_id"]]["plans"]
+                if plan["plan_id"] == pointer["accepted_plan_id"]
+                and plan["content_hash"] == pointer["accepted_plan_content_hash"]
+            ),
+            None,
+        )
         if geography is None and pointer.get("decision_id"):
             geography = self.acceptance.load_snapshot(pointer["decision_id"]).get("geography_plan")
         if (
@@ -251,13 +257,15 @@ class ProductService:
         if compiler:
             for name, capability in view["typed_edit_capabilities"]["operations"].items():
                 if compiler._unsupported_product_operation(name):
-                    capability.update({
-                        "enabled": False,
-                        "feedback_tier": "draft_only",
-                        "preview_executable": False,
-                        "evaluated_repair": False,
-                        "blocking_code": "unsupported_optimizer_mapping",
-                    })
+                    capability.update(
+                        {
+                            "enabled": False,
+                            "feedback_tier": "draft_only",
+                            "preview_executable": False,
+                            "evaluated_repair": False,
+                            "blocking_code": "unsupported_optimizer_mapping",
+                        }
+                    )
         view["role_constraint_evidence"] = build_role_constraint_evidence(
             compiler.parent_plan if compiler is not None else self._bundles[run_id].parent_plan
         )
@@ -395,7 +403,10 @@ class ProductService:
         planning = snapshot.get("planning_bundle")
         if planning is not None:
             from .trip_replanner import validate_planning_bundle
-            ancestor_parent = self.acceptance.plan_repository.load(planning["parent_plan_id"]).to_record(include_content_hash=True)
+
+            ancestor_parent = self.acceptance.plan_repository.load(planning["parent_plan_id"]).to_record(
+                include_content_hash=True
+            )
             validation_key = (run_id, snapshot["content_hash"], ancestor_parent["content_hash"])
             # load_snapshot and the decision above verify the whole snapshot,
             # including planning bytes. Reuse only that exact immutable material;
@@ -409,8 +420,10 @@ class ProductService:
                     self._accepted_planning_validation = (validation_key, ancestor)
                 else:
                     ancestor = cached[1]
-            if (plan["context_snapshot_id"] != ancestor.context_snapshot_id
-                    or plan["catalog_snapshot_id"] != ancestor.catalog_snapshot_id):
+            if (
+                plan["context_snapshot_id"] != ancestor.context_snapshot_id
+                or plan["catalog_snapshot_id"] != ancestor.catalog_snapshot_id
+            ):
                 raise WorkspaceError("accepted_baseline_route_evidence_mismatch", 409)
             cursor = plan
             for _ in range(1000):
@@ -418,12 +431,16 @@ class ProductService:
                     break
                 if not cursor.get("parent_plan_id"):
                     raise WorkspaceError("accepted_baseline_evidence_mismatch", 409)
-                cursor = self.acceptance.plan_repository.load(cursor["parent_plan_id"]).to_record(include_content_hash=True)
+                cursor = self.acceptance.plan_repository.load(cursor["parent_plan_id"]).to_record(
+                    include_content_hash=True
+                )
             else:
                 raise WorkspaceError("accepted_baseline_evidence_mismatch", 409)
             route = certificate.get("route_validation") or {}
-            if not route.get("publication_ready") or any(route.get(key) != planning["route_matrix"].get(key) for key in (
-                    "matrix_id", "context_snapshot_id", "source_bundle_id", "source_content_sha256")):
+            if not route.get("publication_ready") or any(
+                route.get(key) != planning["route_matrix"].get(key)
+                for key in ("matrix_id", "context_snapshot_id", "source_bundle_id", "source_content_sha256")
+            ):
                 raise WorkspaceError("accepted_baseline_route_evidence_mismatch", 409)
             return pointer, plan, snapshot
         route = certificate.get("route_validation") or {}
@@ -433,9 +450,18 @@ class ProductService:
             matrices.append(compiler._base_bundle.route_matrix or {})
         if (
             route.get("publication_ready") is not True
-            or not any(all(route.get(key) == matrix.get(key) for key in (
-                "matrix_id", "context_snapshot_id", "source_bundle_id", "source_content_sha256",
-            )) for matrix in matrices)
+            or not any(
+                all(
+                    route.get(key) == matrix.get(key)
+                    for key in (
+                        "matrix_id",
+                        "context_snapshot_id",
+                        "source_bundle_id",
+                        "source_content_sha256",
+                    )
+                )
+                for matrix in matrices
+            )
             or plan["context_snapshot_id"] != bundle.parent_plan["context_snapshot_id"]
             or plan["catalog_snapshot_id"] != bundle.parent_plan["catalog_snapshot_id"]
         ):
@@ -453,7 +479,9 @@ class ProductService:
         with self._accepted_compiler_lock:
             if key not in self._accepted_compilers:
                 current = compiler.for_parent(parent, planning_bundle=(snapshot or {}).get("planning_bundle"))
-                self._accepted_compilers = {saved: value for saved, value in self._accepted_compilers.items() if saved[0] != run_id}
+                self._accepted_compilers = {
+                    saved: value for saved, value in self._accepted_compilers.items() if saved[0] != run_id
+                }
                 self._accepted_compilers[key] = current
             return self._accepted_compilers[key]
 
@@ -466,6 +494,7 @@ class ProductService:
         if compiler is not None and compiler.parent_plan_id != session.accepted_plan_id:
             raise WorkspaceError("acceptance_pointer_conflict", 409)
         return compiler
+
     def create_session(self, run_id: str) -> tuple[Any, str, dict[str, Any]]:
         bundle, view = self.load(run_id)
         record = self.registry.get(run_id)
@@ -536,11 +565,9 @@ class ProductService:
                 raise WorkspaceError("acceptance_proposal_invalid", 409)
             stored_payload = {key: value for key, value in stored.items() if key != "content_hash"}
             ignored = {"content_hash", "evaluated_at"}
-            if (
-                stable_content_hash(stored_payload) != stored.get("content_hash")
-                or {key: value for key, value in stored.items() if key not in ignored}
-                != {key: value for key, value in certificate.items() if key not in ignored}
-            ):
+            if stable_content_hash(stored_payload) != stored.get("content_hash") or {
+                key: value for key, value in stored.items() if key not in ignored
+            } != {key: value for key, value in certificate.items() if key not in ignored}:
                 raise WorkspaceError("acceptance_proposal_invalid", 409)
             # Accept exactly the certificate the user inspected, after a fresh
             # execution independently reproduces every semantic evaluation field.
@@ -575,10 +602,7 @@ class ProductService:
             certificate,
         )
         pointer = self.acceptance.load_pointer(session.trip_id)
-        if (
-            pointer["run_id"] != session.run_id
-            or pointer["accepted_plan_id"] != session.accepted_plan_id
-        ):
+        if pointer["run_id"] != session.run_id or pointer["accepted_plan_id"] != session.accepted_plan_id:
             raise WorkspaceError("acceptance_pointer_conflict", 409)
         proposal_identity = {
             key: proposal.get(key)
@@ -609,8 +633,14 @@ class ProductService:
                 "geography_plan": geography_plan,
                 "proposal_identity": proposal_identity,
                 "acceptance_revalidation_certificate": revalidation_certificate,
-                **({"planning_bundle": (compiled.runtime_execution or {}).get("planning_bundle") or compiler._planning_baseline_bundle}
-                   if (compiled.runtime_execution or {}).get("planning_bundle") or compiler._planning_baseline_bundle else {}),
+                **(
+                    {
+                        "planning_bundle": (compiled.runtime_execution or {}).get("planning_bundle")
+                        or compiler._planning_baseline_bundle
+                    }
+                    if (compiled.runtime_execution or {}).get("planning_bundle") or compiler._planning_baseline_bundle
+                    else {}
+                ),
             },
             proposal_identity=proposal_identity,
         )
@@ -737,6 +767,7 @@ class ProductService:
             accepted_plan_id=result.pointer["accepted_plan_id"],
         )
         return self._acceptance_response(result, session)
+
     def acceptance_history(self, session: ProductSession) -> dict[str, Any]:
         return {
             "schema_version": "acceptance-history-v1",
@@ -765,8 +796,7 @@ class ProductService:
             (
                 deepcopy(row)
                 for row in self._geographies[run_id].get("plans") or ()
-                if row.get("plan_id") == child.get("plan_id")
-                and row.get("content_hash") == child.get("content_hash")
+                if row.get("plan_id") == child.get("plan_id") and row.get("content_hash") == child.get("content_hash")
             ),
             None,
         )
@@ -823,15 +853,17 @@ class ProductService:
             for feature in plan[collection_name]["features"]:
                 feature["properties"]["role"] = "accepted"
         return plan
+
     def copilot_context(
-        self, session: ProductSession, *, view: dict[str, Any] | None = None,
+        self,
+        session: ProductSession,
+        *,
+        view: dict[str, Any] | None = None,
         dispatch_records: tuple[dict[str, Any], ...] | None = None,
     ) -> CopilotContextV2:
         view = self.workspace_view_for_session(session) if view is None else view
         pointer = view["accepted_plan_pointer"]
-        accepted = self.acceptance.plan_repository.load(session.accepted_plan_id).to_record(
-            include_content_hash=True
-        )
+        accepted = self.acceptance.plan_repository.load(session.accepted_plan_id).to_record(include_content_hash=True)
         if (
             pointer["accepted_plan_id"] != accepted["plan_id"]
             or pointer["accepted_plan_content_hash"] != accepted["content_hash"]
@@ -840,13 +872,17 @@ class ProductService:
         capabilities = view["draft_capabilities"]
         stop_ids = tuple(accepted["sequence"])
         days = tuple(row["day"] for row in accepted["ordered_days"])
-        segment_ids = tuple(sorted({
-            str(feature["properties"]["route_leg_id"])
-            for plan in view["geography"]["plans"]
-            if plan.get("plan_id") == accepted["plan_id"]
-            for feature in plan.get("validated_legs", {}).get("features", [])
-            if feature.get("properties", {}).get("route_leg_id")
-        }))
+        segment_ids = tuple(
+            sorted(
+                {
+                    str(feature["properties"]["route_leg_id"])
+                    for plan in view["geography"]["plans"]
+                    if plan.get("plan_id") == accepted["plan_id"]
+                    for feature in plan.get("validated_legs", {}).get("features", [])
+                    if feature.get("properties", {}).get("route_leg_id")
+                }
+            )
+        )
         candidate_ids = tuple(
             sorted(
                 str(row["candidate_id"])
@@ -855,11 +891,16 @@ class ProductService:
             )
         )
         proposal = self._decision_safe_proposal(session.proposal)
-        projected = project_capabilities(capabilities, typed_capabilities=view["typed_edit_capabilities"],
-            stop_positions=tuple({"stop_id": stop, "day": day["day"], "sequence_index": index}
-                                 for day in accepted["ordered_days"] for index, stop in enumerate(day["stop_ids"])), registered_repair_current=(
-            self._bundles[session.run_id].parent_plan["plan_id"] == accepted["plan_id"]
-        ))
+        projected = project_capabilities(
+            capabilities,
+            typed_capabilities=view["typed_edit_capabilities"],
+            stop_positions=tuple(
+                {"stop_id": stop, "day": day["day"], "sequence_index": index}
+                for day in accepted["ordered_days"]
+                for index, stop in enumerate(day["stop_ids"])
+            ),
+            registered_repair_current=(self._bundles[session.run_id].parent_plan["plan_id"] == accepted["plan_id"]),
+        )
         projected["candidate_replacements"] = tuple(
             row for row in projected["candidate_replacements"] if row["replaces_stop_id"] in stop_ids
         )
@@ -889,7 +930,8 @@ class ProductService:
             allowed_segment_ids=segment_ids,
             allowed_alternative_ids=tuple(sorted(self.valid_alternatives(session.run_id))),
             known_places=self._copilot_known_places(session.run_id, capabilities, accepted),
-            accepted_plan_content_hash=accepted["content_hash"], capabilities=projected,
+            accepted_plan_content_hash=accepted["content_hash"],
+            capabilities=projected,
             conversation_memory=empty_memory(accepted["plan_id"], accepted["content_hash"]),
         )
         if dispatch_records is None:
@@ -951,9 +993,7 @@ class ProductService:
                 add(record, 3)
         for evidence_bundle in self._evidence_bundles.get(run_id, {}).values():
             for stop in evidence_bundle.child_plan.get("selected_stops") or ():
-                record = _copilot_plan_place(
-                    stop, route_status="registered_route_candidate"
-                )
+                record = _copilot_plan_place(stop, route_status="registered_route_candidate")
                 if record is not None and record["place_id"] not in accepted_ids:
                     add(record, 2)
         for choice in capabilities.get("candidate_choices") or ():
@@ -973,12 +1013,7 @@ class ProductService:
                     },
                     2,
                 )
-        return tuple(
-            record
-            for _, record in sorted(
-                records.values(), key=lambda item: str(item[1]["place_id"])
-            )
-        )
+        return tuple(record for _, record in sorted(records.values(), key=lambda item: str(item[1]["place_id"])))
 
     def read_conversation(self, session: ProductSession) -> ConversationV1:
         return self._conversation_for(session)
@@ -1000,7 +1035,10 @@ class ProductService:
             if existing is not None:
                 return self._copilot_response(existing, conversation.revision, session)
             previous = self.conversations.dispatch_record(
-                conversation.conversation_id, session_id, client_message_id, message,
+                conversation.conversation_id,
+                session_id,
+                client_message_id,
+                message,
             )
             if previous is not None:
                 return self._recover_copilot_dispatch(previous, conversation, session)
@@ -1009,24 +1047,36 @@ class ProductService:
             records = self.conversations.dispatch_history(conversation.conversation_id, session_id)
             context = self.copilot_context(session, view=view, dispatch_records=records)
             history = tuple(self.conversations._validate_turn(row["turn"]) for row in bound_records(context, records))
-            draft_capabilities = {**view["draft_capabilities"], "operations": {
-                **view["draft_capabilities"]["operations"], **view["typed_edit_capabilities"]["operations"],
-            }}
-            registered_repair_current = (
-                self._bundles[session.run_id].parent_plan["plan_id"] == context.accepted_plan_id
-            )
+            draft_capabilities = {
+                **view["draft_capabilities"],
+                "operations": {
+                    **view["draft_capabilities"]["operations"],
+                    **view["typed_edit_capabilities"]["operations"],
+                },
+            }
+            registered_repair_current = self._bundles[session.run_id].parent_plan["plan_id"] == context.accepted_plan_id
             created_at = _utc_now()
             provider = self.copilot.provider_name if self.copilot is not None else "openai"
             model = getattr(self.copilot, "model", None)
-            context_sha256 = hashlib.sha256(json.dumps(
-                {"context": context.as_dict(), "history": [turn.as_dict() for turn in history]},
-                sort_keys=True, separators=(",", ":"), ensure_ascii=False,
-            ).encode("utf-8")).hexdigest()
+            context_sha256 = hashlib.sha256(
+                json.dumps(
+                    {"context": context.as_dict(), "history": [turn.as_dict() for turn in history]},
+                    sort_keys=True,
+                    separators=(",", ":"),
+                    ensure_ascii=False,
+                ).encode("utf-8")
+            ).hexdigest()
             reservation, created = self.conversations.reserve_dispatch(
-                conversation.conversation_id, session_id,
-                client_message_id=client_message_id, message=message,
-                context_sha256=context_sha256, context_revision=expected_revision,
-                provider=provider, model=model, prompt_sha256=prompt_sha256(), prompt_version=PROMPT_VERSION,
+                conversation.conversation_id,
+                session_id,
+                client_message_id=client_message_id,
+                message=message,
+                context_sha256=context_sha256,
+                context_revision=expected_revision,
+                provider=provider,
+                model=model,
+                prompt_sha256=prompt_sha256(),
+                prompt_version=PROMPT_VERSION,
                 context_binding=context_binding(context),
             )
             if not created:
@@ -1057,13 +1107,19 @@ class ProductService:
                     interpretation=interpretation,
                 )
                 interpretation = self._capability_checked_copilot(
-                    interpretation, draft_capabilities, registered_repair_current=registered_repair_current,
+                    interpretation,
+                    draft_capabilities,
+                    registered_repair_current=registered_repair_current,
                 )
             except asyncio.CancelledError:
                 try:
                     self.conversations.finish_dispatch(
-                        conversation.conversation_id, session_id, client_message_id,
-                        message, turn=None, outcome="unknown",
+                        conversation.conversation_id,
+                        session_id,
+                        client_message_id,
+                        message,
+                        turn=None,
+                        outcome="unknown",
                     )
                     reservation["outcome"] = "unknown"
                     self._recover_copilot_dispatch(reservation, conversation, session)
@@ -1102,8 +1158,12 @@ class ProductService:
                 created_at=created_at,
             )
             self.conversations.finish_dispatch(
-                conversation.conversation_id, session_id, client_message_id, message,
-                turn=turn, outcome="failed" if state == "failed" else "completed",
+                conversation.conversation_id,
+                session_id,
+                client_message_id,
+                message,
+                turn=turn,
+                outcome="failed" if state == "failed" else "completed",
             )
             saved = self.conversations.append_turn(
                 conversation.conversation_id,
@@ -1118,8 +1178,10 @@ class ProductService:
 
     @staticmethod
     def _capability_checked_copilot(
-        interpretation: CopilotInterpretationV1, capabilities: dict[str, Any],
-        *, registered_repair_current: bool = True,
+        interpretation: CopilotInterpretationV1,
+        capabilities: dict[str, Any],
+        *,
+        registered_repair_current: bool = True,
     ) -> CopilotInterpretationV1:
         """Do not publish any draftable subset of a non-executable proposal.
 
@@ -1129,15 +1191,20 @@ class ProductService:
         blocked: list[str] = []
         for intent in interpretation.intents:
             if intent.type == "review_registered_repair" and not registered_repair_current:
-                blocked.append("review repair: the registered repair belongs to the original plan, not the accepted child")
+                blocked.append(
+                    "review repair: the registered repair belongs to the original plan, not the accepted child"
+                )
                 continue
             if intent.type not in CANONICAL_OPERATIONS:
                 continue
             capability = capabilities.get("operations", {}).get(intent.type, {})
             ready = capability.get("enabled") is True and capability.get("preview_executable") is True
             if intent.type == "add_candidate" and "candidate_day_readiness" in capability:
-                matches = [row for row in capability["candidate_day_readiness"]
-                           if row.get("candidate_id") == intent.candidate_id and row.get("day") == intent.destination_day]
+                matches = [
+                    row
+                    for row in capability["candidate_day_readiness"]
+                    if row.get("candidate_id") == intent.candidate_id and row.get("day") == intent.destination_day
+                ]
                 ready = ready and len(matches) == 1 and matches[0].get("preview_executable") is True
             if ready:
                 continue
@@ -1160,7 +1227,10 @@ class ProductService:
         )
 
     def _recover_copilot_dispatch(
-        self, record: dict[str, Any], conversation: ConversationV1, session: ProductSession,
+        self,
+        record: dict[str, Any],
+        conversation: ConversationV1,
+        session: ProductSession,
     ) -> dict[str, Any]:
         if record["turn"] is None:
             if record["outcome"] == "pending":
@@ -1172,17 +1242,26 @@ class ProductService:
             turn = CopilotTurnV1(
                 turn_id=f"copilot_turn_{uuid4().hex}",
                 client_message_id=record["client_message_id"],
-                context_revision=record["context_revision"], provider=record["provider"],
-                model=record["model"], prompt_version=record["prompt_version"],
-                prompt_sha256=record["prompt_sha256"], state="failed",
+                context_revision=record["context_revision"],
+                provider=record["provider"],
+                model=record["model"],
+                prompt_version=record["prompt_version"],
+                prompt_sha256=record["prompt_sha256"],
+                state="failed",
                 user_message=record["user_message"],
                 assistant_message=self._safe_failure_message("copilot_outcome_unknown"),
-                interpretation=None, error_code="copilot_outcome_unknown",
-                created_at=record["created_at"], completed_at=_utc_now(),
+                interpretation=None,
+                error_code="copilot_outcome_unknown",
+                created_at=record["created_at"],
+                completed_at=_utc_now(),
             )
             self.conversations.finish_dispatch(
-                conversation.conversation_id, session.session_id, record["client_message_id"],
-                record["user_message"], turn=turn, outcome="unknown",
+                conversation.conversation_id,
+                session.session_id,
+                record["client_message_id"],
+                record["user_message"],
+                turn=turn,
+                outcome="unknown",
             )
         else:
             turn = self.conversations._validate_turn(record["turn"])
@@ -1282,10 +1361,19 @@ class ProductService:
             created_at=created_at,
         )
         self.conversations.finish_dispatch(
-            conversation_id, session_id, client_message_id, message, turn=turn,
-            outcome="unknown" if code in {
-                "openai_timeout", "openai_provider_unavailable", "copilot_provider_unavailable",
-            } else "failed",
+            conversation_id,
+            session_id,
+            client_message_id,
+            message,
+            turn=turn,
+            outcome="unknown"
+            if code
+            in {
+                "openai_timeout",
+                "openai_provider_unavailable",
+                "copilot_provider_unavailable",
+            }
+            else "failed",
         )
         self.conversations.append_turn(conversation_id, session_id, turn)
         current = self.workspace.authenticate(session_id, mutation_token)
@@ -1345,9 +1433,8 @@ class ProductService:
 
     def _registered_repair_advisory(self, run_id: str, accepted_plan_id: str) -> dict[str, Any] | None:
         bundle, view = self.load(run_id)
-        if (
-            bundle.parent_plan.get("plan_id") != accepted_plan_id
-            or not (bundle.child_plan and bundle.certificate and bundle.diff)
+        if bundle.parent_plan.get("plan_id") != accepted_plan_id or not (
+            bundle.child_plan and bundle.certificate and bundle.diff
         ):
             return None
         return {
@@ -1631,7 +1718,9 @@ class ProductService:
         )
 
     def select(
-        self, session: ProductSession, payload: dict[str, Any],
+        self,
+        session: ProductSession,
+        payload: dict[str, Any],
         mutation_token: str | None,
     ) -> None:
         """Keep a validated role preview bound to an atomic selection update."""
@@ -1643,13 +1732,17 @@ class ProductService:
             self.workspace.select(session, payload, role_proposal=role_proposal)
 
     def _role_proposal_after_revision(
-        self, session: ProductSession, mutation_token: str | None,
+        self,
+        session: ProductSession,
+        mutation_token: str | None,
     ) -> dict[str, Any] | None:
         proposal = session.proposal or {}
         if (proposal.get("role_impact") or {}).get("schema_version") != "evaluated-role-impact-v1":
-            if (proposal.get("state") == "eligible"
-                    and proposal.get("parent_plan_id") == session.accepted_plan_id
-                    and proposal.get("draft_content_hash") == _draft_content_hash(session.draft)):
+            if (
+                proposal.get("state") == "eligible"
+                and proposal.get("parent_plan_id") == session.accepted_plan_id
+                and proposal.get("draft_content_hash") == _draft_content_hash(session.draft)
+            ):
                 refreshed = deepcopy(proposal)
                 refreshed["expected_revision"] = session.revision
                 refreshed["session_revision"] = session.revision + 1
@@ -1663,7 +1756,10 @@ class ProductService:
         return role_proposal
 
     def resolve_pending_mutation(
-        self, session: ProductSession, action: str, payload: dict[str, Any],
+        self,
+        session: ProductSession,
+        action: str,
+        payload: dict[str, Any],
         mutation_token: str | None,
     ) -> dict[str, Any] | None:
         with self.workspace._lock:
@@ -1672,7 +1768,10 @@ class ProductService:
             if role_proposal is None:
                 self.validate_cached_role_proposal(session, mutation_token)
             return self.workspace.resolve_pending_mutation(
-                session, action, payload, role_proposal=role_proposal,
+                session,
+                action,
+                payload,
+                role_proposal=role_proposal,
             )
 
     def validate_cached_role_proposal(
@@ -1684,15 +1783,11 @@ class ProductService:
 
         proposal = session.proposal or {}
         role_draft = bool(session.draft) and all(
-            operation.type == DraftOperationTypeV2.SET_STOP_ROLE.value
-            for operation in session.draft
+            operation.type == DraftOperationTypeV2.SET_STOP_ROLE.value for operation in session.draft
         )
         if not proposal or not role_draft:
             return
-        if (
-            (proposal.get("role_impact") or {}).get("schema_version")
-            != "evaluated-role-impact-v1"
-        ):
+        if (proposal.get("role_impact") or {}).get("schema_version") != "evaluated-role-impact-v1":
             raise WorkspaceError("draft_role_proposal_invalid", 409)
         if role_draft:
             self.preview(
@@ -1715,7 +1810,8 @@ class ProductService:
         compiler = self.compiler_for_session(session)
         executable_legacy = (
             {name for name in CANONICAL_OPERATIONS if not compiler._unsupported_product_operation(name)}
-            if compiler is not None else set()
+            if compiler is not None
+            else set()
         )
         rows: list[dict[str, Any]] = []
         blocking_codes: list[str] = []
@@ -1734,7 +1830,8 @@ class ProductService:
             kind = operation.type
             addition_readiness = (
                 compiler.candidate_addition_readiness(operation.target, operation.parameters.get("day"))
-                if compiler and compiler._coherent_product and kind == "add_candidate" else None
+                if compiler and compiler._coherent_product and kind == "add_candidate"
+                else None
             )
             if addition_readiness and not addition_readiness["preview_executable"]:
                 tier = "draft_only"
@@ -1766,12 +1863,8 @@ class ProductService:
                 tier = "draft_only"
                 executable = False
                 code = {
-                    DraftOperationTypeV2.CHANGE_ROUTE_PREFERENCE.value: (
-                        "route_preference_not_supported"
-                    ),
-                    DraftOperationTypeV2.SET_STOP_TIME_WINDOW.value: (
-                        "departure_window_evaluation_not_supported"
-                    ),
+                    DraftOperationTypeV2.CHANGE_ROUTE_PREFERENCE.value: ("route_preference_not_supported"),
+                    DraftOperationTypeV2.SET_STOP_TIME_WINDOW.value: ("departure_window_evaluation_not_supported"),
                 }.get(kind, "full_evaluation_not_supported")
                 codes = [code]
             else:
@@ -1800,21 +1893,24 @@ class ProductService:
         direct_types = ATOMIC_DIRECT_EDIT_OPERATIONS
         present_direct_types = {row["type"] for row in rows} & direct_types
         mixed = bool(present_direct_types) and (
-            len(present_direct_types) != 1
-            or any(row["type"] not in present_direct_types for row in rows)
+            len(present_direct_types) != 1 or any(row["type"] not in present_direct_types for row in rows)
         )
         combinations = compiler.capabilities()["executable_combinations"] if compiler else ()
         combination_unsupported = mixed and not any(
             {row["type"] for row in rows}.issubset(set(combination["operations"]))
-            and len(rows) <= combination["cardinality"] for combination in combinations
+            and len(rows) <= combination["cardinality"]
+            for combination in combinations
         )
         duration_modes = {
             (operation.parameters.get("duration") or {}).get("mode")
-            for operation in session.draft if operation.type == DraftOperationTypeV2.SET_STOP_DURATION.value
+            for operation in session.draft
+            if operation.type == DraftOperationTypeV2.SET_STOP_DURATION.value
         }
-        combination_unsupported = combination_unsupported or (
-            "exact" in duration_modes and len(duration_modes) > 1
-        ) or (mixed and any(mode != "exact" for mode in duration_modes))
+        combination_unsupported = (
+            combination_unsupported
+            or ("exact" in duration_modes and len(duration_modes) > 1)
+            or (mixed and any(mode != "exact" for mode in duration_modes))
+        )
         if combination_unsupported:
             unique_blocking.append("draft_evaluated_operation_combination_unsupported")
         unique_blocking = list(dict.fromkeys(unique_blocking))
@@ -1832,17 +1928,13 @@ class ProductService:
                 "evaluated_executable_count": executable_count,
                 "draft_only_count": operation_count - executable_count,
                 "can_run_evaluated_preview": (
-                    bool(operation_count)
-                    and executable_count == operation_count
-                    and not unique_blocking
+                    bool(operation_count) and executable_count == operation_count and not unique_blocking
                 ),
                 "blocking_codes": unique_blocking,
             },
         }
 
-    def statewide_poi_search(
-        self, session: ProductSession, *, query: str, limit: int
-    ) -> dict[str, Any]:
+    def statewide_poi_search(self, session: ProductSession, *, query: str, limit: int) -> dict[str, Any]:
         """Search source-backed California places without claiming route feasibility."""
 
         if not isinstance(query, str) or len(query) > 120:
@@ -1931,7 +2023,9 @@ class ProductService:
         )
 
     def interest_plan_context(
-        self, session: ProductSession, plan_id: str | None = None,
+        self,
+        session: ProductSession,
+        plan_id: str | None = None,
     ) -> tuple[dict[str, Any], dict[str, Any], dict[str, Any], str]:
         """Resolve read-only exploration against the accepted plan or current evaluated child."""
         self.load(session.run_id)
@@ -1940,36 +2034,66 @@ class ProductService:
             raise WorkspaceError("acceptance_pointer_conflict", 409)
         compiler = self.compiler_for_session(session)
         if plan_id is None or plan_id == session.accepted_plan_id:
-            geography = snapshot.get("geography_plan") if snapshot else next(
-                (plan for plan in self._geographies[session.run_id]["plans"]
-                 if plan["plan_id"] == parent["plan_id"]), None,
+            geography = (
+                snapshot.get("geography_plan")
+                if snapshot
+                else next(
+                    (
+                        plan
+                        for plan in self._geographies[session.run_id]["plans"]
+                        if plan["plan_id"] == parent["plan_id"]
+                    ),
+                    None,
+                )
             )
-            if (not isinstance(geography, dict) or geography.get("content_hash") != parent["content_hash"]
-                    or geography.get("plan_id") != parent["plan_id"]):
+            if (
+                not isinstance(geography, dict)
+                or geography.get("content_hash") != parent["content_hash"]
+                or geography.get("plan_id") != parent["plan_id"]
+            ):
                 raise WorkspaceError("acceptance_snapshot_invalid", 409)
             return parent, geography, compiler._base_bundle.route_matrix or {}, "accepted"
         proposal = session.proposal or {}
-        if (proposal.get("state") != "eligible" or proposal.get("child_plan_id") != plan_id
-                or proposal.get("parent_plan_id") != parent["plan_id"]
-                or proposal.get("parent_plan_content_hash") != parent["content_hash"]
-                or proposal.get("draft_content_hash") != _draft_content_hash(session.draft)):
+        if (
+            proposal.get("state") != "eligible"
+            or proposal.get("child_plan_id") != plan_id
+            or proposal.get("parent_plan_id") != parent["plan_id"]
+            or proposal.get("parent_plan_content_hash") != parent["content_hash"]
+            or proposal.get("draft_content_hash") != _draft_content_hash(session.draft)
+        ):
             raise WorkspaceError("interest_preview_unavailable", 409)
         compiled = compiler.compile(session.draft, accepted_plan_id=session.accepted_plan_id, read_only=True)
         child, certificate = compiled.child_plan or {}, compiled.certificate or {}
-        if (compiled.state != "eligible" or certificate.get("comparison_eligibility") != "eligible"
-                or child.get("plan_id") != plan_id
-                or child.get("content_hash") != proposal.get("child_plan_content_hash")):
+        if (
+            compiled.state != "eligible"
+            or certificate.get("comparison_eligibility") != "eligible"
+            or child.get("plan_id") != plan_id
+            or child.get("content_hash") != proposal.get("child_plan_content_hash")
+        ):
             raise WorkspaceError("interest_preview_unavailable", 409)
         geography = self._accepted_geography_plan(
-            session.run_id, compiler, compiled, child, compiled.diff or {}, certificate,
+            session.run_id,
+            compiler,
+            compiled,
+            child,
+            compiled.diff or {},
+            certificate,
         )
         geography["role"], geography["label"] = "evaluated_preview", "Evaluated preview"
         return child, geography, compiled.source_bundle.route_matrix or {}, "evaluated_preview"
 
     def interest_regions(
-        self, session: ProductSession, *, expected_revision: int, day: int,
-        route_leg_id: str, replacement_target_id: str | None, role: str | None,
-        maximum_detour_minutes: float, nature_preference: float, plan_id: str | None = None,
+        self,
+        session: ProductSession,
+        *,
+        expected_revision: int,
+        day: int,
+        route_leg_id: str,
+        replacement_target_id: str | None,
+        role: str | None,
+        maximum_detour_minutes: float,
+        nature_preference: float,
+        plan_id: str | None = None,
     ) -> dict[str, Any]:
         self.workspace.expect_revision(session, expected_revision)
         accepted_pointer = self.acceptance.load_pointer(session.trip_id)
@@ -1979,21 +2103,31 @@ class ProductService:
             raise WorkspaceError("selected_day_invalid", 422)
         record = self.registry.get(session.run_id)
         response = discover_interest_regions(
-            repository_root=self.registry.repository_root, session_id=session.session_id,
-            session_revision=session.revision, trip_id=record.trip_id,
-            accepted_plan_id=parent_plan["plan_id"], day=day, route_leg_id=route_leg_id,
-            geography={"plans": [geography]}, route_matrix_record={"schema_version": "route-matrix-v1", **matrix},
-            parent_plan=parent_plan, registered_bundles=tuple(self._evidence_bundles[session.run_id].values()),
-            replacement_target_id=replacement_target_id, role=role,
-            maximum_detour_minutes=maximum_detour_minutes, nature_preference=nature_preference,
+            repository_root=self.registry.repository_root,
+            session_id=session.session_id,
+            session_revision=session.revision,
+            trip_id=record.trip_id,
+            accepted_plan_id=parent_plan["plan_id"],
+            day=day,
+            route_leg_id=route_leg_id,
+            geography={"plans": [geography]},
+            route_matrix_record={"schema_version": "route-matrix-v1", **matrix},
+            parent_plan=parent_plan,
+            registered_bundles=tuple(self._evidence_bundles[session.run_id].values()),
+            replacement_target_id=replacement_target_id,
+            role=role,
+            maximum_detour_minutes=maximum_detour_minutes,
+            nature_preference=nature_preference,
         )
-        response.update({
-            "exploration_plan_id": parent_plan["plan_id"],
-            "exploration_plan_content_hash": parent_plan["content_hash"],
-            "plan_scope": scope,
-            "accepted_plan_id": session.accepted_plan_id,
-            "accepted_plan_content_hash": accepted_pointer["accepted_plan_content_hash"],
-        })
+        response.update(
+            {
+                "exploration_plan_id": parent_plan["plan_id"],
+                "exploration_plan_content_hash": parent_plan["content_hash"],
+                "plan_scope": scope,
+                "accepted_plan_id": session.accepted_plan_id,
+                "accepted_plan_content_hash": accepted_pointer["accepted_plan_content_hash"],
+            }
+        )
         return response
 
     def resolve_validated_route_context(
@@ -2009,10 +2143,7 @@ class ProductService:
         """Resolve one exact accepted-plan leg into authoritative insertion endpoints."""
 
         view = self.workspace_view_for_session(session)
-        plans = [
-            plan for plan in view["geography"].get("plans", [])
-            if plan.get("plan_id") == session.accepted_plan_id
-        ]
+        plans = [plan for plan in view["geography"].get("plans", []) if plan.get("plan_id") == session.accepted_plan_id]
         if len(plans) != 1:
             raise WorkspaceError("accepted_route_context_unavailable", 409)
         matches = [
@@ -2185,9 +2316,7 @@ class ProductService:
                 },
                 "affected_route_legs": preview_payload["affected_route_legs"],
             }
-            evidence_refs = tuple(
-                f"route_query:{leg.query_hash}" for leg in entry.preview.affected_route_legs
-            )
+            evidence_refs = tuple(f"route_query:{leg.query_hash}" for leg in entry.preview.affected_route_legs)
             operation = self.workspace.append_confirmed_map_operation(
                 session,
                 expected_revision=expected_revision,
@@ -2246,23 +2375,20 @@ class ProductService:
             and existing.get("execution_mode") != "registered_independent_evaluation"
             and (
                 existing.get("execution_mode") != "deterministic_repair_pipeline"
-                or (existing.get("runtime_execution") or {}).get("schema_version")
-                == "runtime-repair-execution-v1"
+                or (existing.get("runtime_execution") or {}).get("schema_version") == "runtime-repair-execution-v1"
             )
             and existing.get("draft_content_hash") == draft_content_hash
             and isinstance(existing_revision, int)
             and existing_revision + 1 == session.revision
             and expected_revision in {existing_revision, session.revision}
         )
-        existing_is_role = (
-            (existing.get("role_impact") or {}).get("schema_version")
-            == "evaluated-role-impact-v1"
-        )
+        existing_is_role = (existing.get("role_impact") or {}).get("schema_version") == "evaluated-role-impact-v1"
         if existing_is_role:
             _verify_role_proposal_integrity(existing, mutation_token)
-        existing_should_be_role = bool(existing) and bool(session.draft) and all(
-            operation.type == DraftOperationTypeV2.SET_STOP_ROLE.value
-            for operation in session.draft
+        existing_should_be_role = (
+            bool(existing)
+            and bool(session.draft)
+            and all(operation.type == DraftOperationTypeV2.SET_STOP_ROLE.value for operation in session.draft)
         )
         if existing_should_be_role and not existing_is_role:
             raise WorkspaceError("draft_role_proposal_invalid", 409)
@@ -2274,6 +2400,7 @@ class ProductService:
             if not trip_replan:
                 return deepcopy(existing)
             from .trip_replanner import validate_planning_bundle
+
             parent = self.acceptance.plan_repository.load(session.accepted_plan_id).to_record(include_content_hash=True)
             bundle = (existing.get("runtime_execution") or {}).get("planning_bundle") or {}
             try:
@@ -2299,8 +2426,7 @@ class ProductService:
         certificate = deepcopy(compiled.certificate or {})
         if (
             compiled.schedule_impact is not None
-            and compiled.schedule_impact.get("schema_version")
-            == "evaluated-role-impact-v1"
+            and compiled.schedule_impact.get("schema_version") == "evaluated-role-impact-v1"
         ):
             certificate = json.loads(
                 json.dumps(
@@ -2375,8 +2501,7 @@ class ProductService:
                     geography_plan is None
                     or coverage.get("complete") is not True
                     or coverage.get("required_leg_count") != route_validation.get("required_leg_count")
-                    or coverage.get("road_validated_leg_count")
-                    != route_validation.get("road_validated_leg_count")
+                    or coverage.get("road_validated_leg_count") != route_validation.get("road_validated_leg_count")
                     or coverage.get("gap_count") != route_validation.get("missing_leg_count")
                 ):
                     raise WorkspaceError("draft_geography_evidence_mismatch", 409)
@@ -2401,12 +2526,8 @@ class ProductService:
                 else "deterministic_repair_pipeline"
             ),
             "execution_mode": compiled.execution_mode,
-            "expected_revision": (
-                existing_revision if revalidate_cached_role else expected_revision
-            ),
-            "session_revision": (
-                session.revision if revalidate_cached_role else session.revision + 1
-            ),
+            "expected_revision": (existing_revision if revalidate_cached_role else expected_revision),
+            "session_revision": (session.revision if revalidate_cached_role else session.revision + 1),
             "draft_content_hash": draft_content_hash,
             "draft_operation_ids": [row.get("operation_id") for row in compiled.operations],
             "message": (
@@ -2457,8 +2578,10 @@ class ProductService:
                 "evaluation_status": certificate.get("evaluation_status"),
                 "comparison_eligibility": certificate.get("comparison_eligibility"),
                 "route_validation": deepcopy(certificate.get("route_validation") or {}),
-                "requested_method": (compiled.planner_run or {}).get("method_requested") or certificate.get("requested_method"),
-                "executed_method": (compiled.planner_run or {}).get("method_executed") or certificate.get("executed_method"),
+                "requested_method": (compiled.planner_run or {}).get("method_requested")
+                or certificate.get("requested_method"),
+                "executed_method": (compiled.planner_run or {}).get("method_executed")
+                or certificate.get("executed_method"),
             },
             "geography_plan": geography_plan,
             "compiled_request": {
@@ -2475,19 +2598,14 @@ class ProductService:
         elif compiled.execution_mode == "typed_direct_edit_independent_evaluation" and compiled.schedule_impact is None:
             proposal["evaluation_certificate"] = json.loads(json.dumps(certificate, allow_nan=False))
             proposal["plan_diff"] = deepcopy(diff)
-        decision_eligible = (
-            eligible and certificate.get("comparison_eligibility") == "eligible"
-        )
+        decision_eligible = eligible and certificate.get("comparison_eligibility") == "eligible"
         proposal["decision_eligible"] = decision_eligible
         proposal["ranking_eligible"] = False
         proposal["acceptance_eligible"] = decision_eligible
-        proposal["acceptance_blocking_code"] = (
-            None if decision_eligible else "proposal_not_eligible"
-        )
+        proposal["acceptance_blocking_code"] = None if decision_eligible else "proposal_not_eligible"
         if (
             compiled.schedule_impact is not None
-            and compiled.schedule_impact.get("schema_version")
-            == "evaluated-role-impact-v1"
+            and compiled.schedule_impact.get("schema_version") == "evaluated-role-impact-v1"
         ):
             route_matrix, _, _ = compiler._runtime_inputs()
             _attach_role_proposal_evidence(
@@ -2510,8 +2628,7 @@ class ProductService:
             return proposal
         if (
             compiled.schedule_impact is not None
-            and compiled.schedule_impact.get("schema_version")
-            == "evaluated-time-window-schedule-impact-v1"
+            and compiled.schedule_impact.get("schema_version") == "evaluated-time-window-schedule-impact-v1"
         ):
             route_matrix, _, _ = compiler._runtime_inputs()
             _attach_time_window_proposal_evidence(
@@ -2559,8 +2676,7 @@ class ProductService:
                 or schedule_impact.get("route_matrix_id")
                 != (certificate.get("route_validation") or {}).get("matrix_id")
                 or parent_schedule.get("plan_id") != compiler.parent_plan_id
-                or parent_schedule.get("plan_content_hash")
-                != compiler.parent_plan.get("content_hash")
+                or parent_schedule.get("plan_content_hash") != compiler.parent_plan.get("content_hash")
                 or child_schedule.get("plan_id") != child.get("plan_id")
                 or child_schedule.get("plan_content_hash") != child.get("content_hash")
             ):
@@ -2571,25 +2687,15 @@ class ProductService:
             schedule_metrics = {
                 key: value
                 for key, value in certificate_metrics.items()
-                if key.startswith("day_")
-                or key.startswith("route_")
-                or key == "schedule_missing_opening_window_count"
+                if key.startswith("day_") or key.startswith("route_") or key == "schedule_missing_opening_window_count"
             }
             accounting_metrics = {
-                key: value
-                for key, value in schedule_metrics.items()
-                if key != "schedule_missing_opening_window_count"
+                key: value for key, value in schedule_metrics.items() if key != "schedule_missing_opening_window_count"
             }
-            certificate_warning_codes = [
-                row.get("code") for row in certificate.get("warnings") or ()
-            ]
-            certificate_failure_codes = [
-                row.get("code") for row in certificate.get("failures") or ()
-            ]
+            certificate_warning_codes = [row.get("code") for row in certificate.get("warnings") or ()]
+            certificate_failure_codes = [row.get("code") for row in certificate.get("failures") or ()]
             missing_window_ids = child_schedule.get("missing_opening_window_stop_ids") or []
-            warning_codes = (
-                ["opening_window_evidence_missing"] if missing_window_ids else []
-            )
+            warning_codes = ["opening_window_evidence_missing"] if missing_window_ids else []
             schedule_blocking_codes = list(child_schedule.get("blocking_codes") or ())
             failure_codes = certificate_failure_codes
             expected_schedule_outcome = (
@@ -2601,8 +2707,7 @@ class ProductService:
             )
             if (
                 accounting_metrics != child_schedule.get("metrics")
-                or schedule_metrics.get("schedule_missing_opening_window_count")
-                != float(len(missing_window_ids))
+                or schedule_metrics.get("schedule_missing_opening_window_count") != float(len(missing_window_ids))
                 or warning_codes != certificate_warning_codes
                 or any(code not in failure_codes for code in schedule_blocking_codes)
                 or (
@@ -2634,9 +2739,7 @@ class ProductService:
             proposal["decision_eligible"] = duration_eligible
             proposal["ranking_eligible"] = False
             proposal["acceptance_eligible"] = duration_eligible
-            proposal["acceptance_blocking_code"] = (
-                None if duration_eligible else "proposal_not_eligible"
-            )
+            proposal["acceptance_blocking_code"] = None if duration_eligible else "proposal_not_eligible"
             proposal["schedule_impact_identity"] = {
                 "content_hash": schedule_hash,
                 "evaluator_version": schedule_impact.get("evaluator_version"),
@@ -2724,8 +2827,7 @@ def _verify_role_proposal_integrity(
         or not mutation_token
         or not isinstance(integrity, dict)
         or set(integrity) != {"schema_version", "algorithm", "digest"}
-        or integrity.get("schema_version")
-        != "evaluated-role-proposal-integrity-v1"
+        or integrity.get("schema_version") != "evaluated-role-proposal-integrity-v1"
         or integrity.get("algorithm") != "hmac-sha256-session-token-v1"
         or not isinstance(integrity.get("digest"), str)
     ):
@@ -2754,7 +2856,9 @@ def _replay_direct_certificate_with_persisted_timestamp(
 ) -> dict[str, Any]:
     """Accept the inspected certificate only after exact independent replay."""
     evidence = proposal.get("certificate_schedule_evidence")
-    stored = evidence.get("certificate_record") if isinstance(evidence, dict) else proposal.get("evaluation_certificate")
+    stored = (
+        evidence.get("certificate_record") if isinstance(evidence, dict) else proposal.get("evaluation_certificate")
+    )
     if not isinstance(stored, dict) or not isinstance(stored.get("evaluated_at"), str) or not stored["evaluated_at"]:
         raise WorkspaceError("acceptance_proposal_invalid", 409)
     stored_hash = stored.get("content_hash")
@@ -2764,10 +2868,12 @@ def _replay_direct_certificate_with_persisted_timestamp(
         (proposal.get("certificate_identity") or {}).get("content_hash"),
     ]
     if isinstance(evidence, dict):
-        expected_hashes.extend((
-            evidence.get("certificate_content_hash"),
-            (proposal.get("schedule_impact_identity") or {}).get("certificate_content_hash"),
-        ))
+        expected_hashes.extend(
+            (
+                evidence.get("certificate_content_hash"),
+                (proposal.get("schedule_impact_identity") or {}).get("certificate_content_hash"),
+            )
+        )
         payload = {key: value for key, value in evidence.items() if key != "content_hash"}
         if stable_content_hash(payload) != evidence.get("content_hash"):
             raise WorkspaceError("acceptance_proposal_invalid", 409)
@@ -2780,7 +2886,9 @@ def _replay_direct_certificate_with_persisted_timestamp(
         raise WorkspaceError("acceptance_proposal_invalid", 409)
     replayed = json.loads(json.dumps(certificate, allow_nan=False))
     replayed["evaluated_at"] = stored["evaluated_at"]
-    replayed["content_hash"] = stable_content_hash({key: value for key, value in replayed.items() if key != "content_hash"})
+    replayed["content_hash"] = stable_content_hash(
+        {key: value for key, value in replayed.items() if key != "content_hash"}
+    )
     if replayed != stored:
         raise WorkspaceError("acceptance_proposal_invalid", 409)
     return replayed
@@ -2804,9 +2912,7 @@ def _replay_role_certificate_with_persisted_timestamp(
         existing_proposal.get("certificate_content_hash"),
         (existing_proposal.get("certificate_identity") or {}).get("content_hash"),
         evidence.get("certificate_content_hash"),
-        (existing_proposal.get("role_impact_identity") or {}).get(
-            "certificate_content_hash"
-        ),
+        (existing_proposal.get("role_impact_identity") or {}).get("certificate_content_hash"),
         stored_hash,
     }
     if (
@@ -2921,10 +3027,8 @@ def _attach_role_proposal_evidence(
             role_impact["parent_role_states"],
             role_impact["child_role_states"],
         )
-        or role_impact.get("target_stop_ids")
-        != sorted(change["stop_id"] for change in changes)
-        or role_impact.get("affected_days")
-        != sorted({change["day"] for change in changes})
+        or role_impact.get("target_stop_ids") != sorted(change["stop_id"] for change in changes)
+        or role_impact.get("affected_days") != sorted({change["day"] for change in changes})
         or not _role_only_selected_stop_change(parent_plan, child_plan, changes)
         or not _valid_time_window_schedule_accounting(
             parent_schedule,
@@ -2942,10 +3046,8 @@ def _attach_role_proposal_evidence(
         )
         or _accounting_evidence_without_identity(parent_schedule)
         != _accounting_evidence_without_identity(child_schedule)
-        or role_impact.get("route_matrix_id")
-        != (certificate.get("route_validation") or {}).get("matrix_id")
-        or len(route_leg_evidence)
-        != (certificate.get("route_validation") or {}).get("required_leg_count")
+        or role_impact.get("route_matrix_id") != (certificate.get("route_validation") or {}).get("matrix_id")
+        or len(route_leg_evidence) != (certificate.get("route_validation") or {}).get("required_leg_count")
         or role_impact.get("invariance")
         != {
             "sequence_unchanged": True,
@@ -2964,16 +3066,10 @@ def _attach_role_proposal_evidence(
     expected_warning_codes = _expected_role_constraint_warning_codes(
         child_plan,
         role_constraint_evidence,
-    ) + (
-        ["opening_window_evidence_missing"] if missing_window_ids else []
-    )
+    ) + (["opening_window_evidence_missing"] if missing_window_ids else [])
     schedule_blocking_codes = list(child_schedule["blocking_codes"])
-    certificate_warning_codes = [
-        row.get("code") for row in certificate.get("warnings") or ()
-    ]
-    certificate_failure_codes = [
-        row.get("code") for row in certificate.get("failures") or ()
-    ]
+    certificate_warning_codes = [row.get("code") for row in certificate.get("warnings") or ()]
+    certificate_failure_codes = [row.get("code") for row in certificate.get("failures") or ()]
     failure_codes = certificate_failure_codes
     expected_outcome = (
         ("FAILED", "ineligible")
@@ -2986,19 +3082,14 @@ def _attach_role_proposal_evidence(
     schedule_metrics = {
         key: value
         for key, value in certificate_metrics.items()
-        if key.startswith("day_")
-        or key.startswith("route_")
-        or key == "schedule_missing_opening_window_count"
+        if key.startswith("day_") or key.startswith("route_") or key == "schedule_missing_opening_window_count"
     }
     accounting_metrics = {
-        key: value
-        for key, value in schedule_metrics.items()
-        if key != "schedule_missing_opening_window_count"
+        key: value for key, value in schedule_metrics.items() if key != "schedule_missing_opening_window_count"
     }
     if (
         accounting_metrics != child_schedule["metrics"]
-        or schedule_metrics.get("schedule_missing_opening_window_count")
-        != float(len(missing_window_ids))
+        or schedule_metrics.get("schedule_missing_opening_window_count") != float(len(missing_window_ids))
         or certificate_warning_codes != expected_warning_codes
         or any(code not in failure_codes for code in schedule_blocking_codes)
         or (
@@ -3024,9 +3115,7 @@ def _attach_role_proposal_evidence(
         "failure_codes": failure_codes,
         "schedule_metrics": schedule_metrics,
         "semantic_scope": deepcopy(role_impact["semantic_scope"]),
-        "role_constraint_evidence_content_hash": role_constraint_evidence[
-            "content_hash"
-        ],
+        "role_constraint_evidence_content_hash": role_constraint_evidence["content_hash"],
         "certificate_record": deepcopy(certificate),
     }
     proposal["certificate_role_evidence"] = {
@@ -3037,9 +3126,7 @@ def _attach_role_proposal_evidence(
     proposal["decision_eligible"] = decision_eligible
     proposal["ranking_eligible"] = False
     proposal["acceptance_eligible"] = decision_eligible
-    proposal["acceptance_blocking_code"] = (
-        None if decision_eligible else "proposal_not_eligible"
-    )
+    proposal["acceptance_blocking_code"] = None if decision_eligible else "proposal_not_eligible"
     proposal["role_impact_identity"] = {
         "content_hash": impact_hash,
         "evaluator_version": role_impact.get("evaluator_version"),
@@ -3050,9 +3137,7 @@ def _attach_role_proposal_evidence(
         "child_plan_content_hash": child_schedule.get("plan_content_hash"),
         "certificate_id": certificate.get("certificate_id"),
         "certificate_content_hash": certificate.get("content_hash"),
-        "role_constraint_evidence_content_hash": role_constraint_evidence[
-            "content_hash"
-        ],
+        "role_constraint_evidence_content_hash": role_constraint_evidence["content_hash"],
     }
 
 
@@ -3106,8 +3191,7 @@ def _valid_role_change(
         and not isinstance(value.get("day"), bool)
         and (before is None or before in ALL_ROLE_VALUES)
         and after in EVALUATED_STOP_ROLES
-        and value.get("from_source")
-        == ("unavailable" if before is None else "user_declared_itinerary_role")
+        and value.get("from_source") == ("unavailable" if before is None else "user_declared_itinerary_role")
         and value.get("to_source") == "user_declared_itinerary_role"
         and expected_strength is not None
         and value.get("owner_strength") == expected_strength
@@ -3125,16 +3209,12 @@ def _copilot_name_aliases(name: str) -> tuple[str, ...]:
         " Viewpoint",
     )
     aliases = tuple(
-        name[: -len(suffix)]
-        for suffix in suffixes
-        if name.endswith(suffix) and len(name) > len(suffix) + 2
+        name[: -len(suffix)] for suffix in suffixes if name.endswith(suffix) and len(name) > len(suffix) + 2
     )
     return tuple(dict.fromkeys(aliases))
 
 
-def _copilot_plan_place(
-    stop: Any, *, route_status: str
-) -> dict[str, Any] | None:
+def _copilot_plan_place(stop: Any, *, route_status: str) -> dict[str, Any] | None:
     if not isinstance(stop, dict):
         return None
     place_id = stop.get("stop_id") or stop.get("poi_id")
@@ -3148,11 +3228,7 @@ def _copilot_plan_place(
     city = stop.get("city")
     region_id = None
     if isinstance(city, str) and city:
-        region_id = "_".join(
-            "".join(
-                character.lower() if character.isalnum() else " " for character in city
-            ).split()
-        )
+        region_id = "_".join("".join(character.lower() if character.isalnum() else " " for character in city).split())
     return {
         "place_id": place_id,
         "name": name,
@@ -3247,14 +3323,10 @@ def _role_changes_match_states(
     return all(
         change["stop_id"] in parent_by_stop
         and change["stop_id"] in child_by_stop
-        and parent_by_stop[change["stop_id"]]["itinerary_role"]
-        == change["from_role"]
-        and parent_by_stop[change["stop_id"]]["itinerary_role_source"]
-        == change["from_source"]
-        and child_by_stop[change["stop_id"]]["itinerary_role"]
-        == change["to_role"]
-        and child_by_stop[change["stop_id"]]["itinerary_role_source"]
-        == change["to_source"]
+        and parent_by_stop[change["stop_id"]]["itinerary_role"] == change["from_role"]
+        and parent_by_stop[change["stop_id"]]["itinerary_role_source"] == change["from_source"]
+        and child_by_stop[change["stop_id"]]["itinerary_role"] == change["to_role"]
+        and child_by_stop[change["stop_id"]]["itinerary_role_source"] == change["to_source"]
         and parent_by_stop[change["stop_id"]]["day"] == change["day"]
         and child_by_stop[change["stop_id"]]["day"] == change["day"]
         for change in changes
@@ -3293,17 +3365,12 @@ def _role_only_selected_stop_change(
         and parent_plan.get("ordered_days") == child_plan.get("ordered_days")
         and parent_plan.get("route_ids_by_day") == child_plan.get("route_ids_by_day")
         and parent_plan.get("day_assignments") == child_plan.get("day_assignments")
-        and parent_plan.get("lodging_assignments")
-        == child_plan.get("lodging_assignments")
+        and parent_plan.get("lodging_assignments") == child_plan.get("lodging_assignments")
     )
 
 
 def _accounting_evidence_without_identity(value: dict[str, Any]) -> dict[str, Any]:
-    return {
-        key: item
-        for key, item in value.items()
-        if key not in {"plan_id", "plan_content_hash", "content_hash"}
-    }
+    return {key: item for key, item in value.items() if key not in {"plan_id", "plan_content_hash", "content_hash"}}
 
 
 def _expected_role_constraint_warning_codes(
@@ -3311,9 +3378,7 @@ def _expected_role_constraint_warning_codes(
     role_constraint_evidence: dict[str, Any],
 ) -> list[str]:
     roles = {
-        str(stop.get("stop_id") or stop.get("poi_id") or ""): stop.get(
-            "itinerary_role"
-        )
+        str(stop.get("stop_id") or stop.get("poi_id") or ""): stop.get("itinerary_role")
         for stop in plan.get("selected_stops") or ()
         if isinstance(stop, dict)
     }
@@ -3322,9 +3387,8 @@ def _expected_role_constraint_warning_codes(
         if not isinstance(row, dict):
             continue
         target = str(row.get("target_stop_id") or "")
-        if (
-            row.get("permission_semantics") == "weighted_mismatch_allowed"
-            and roles.get(target) != row.get("required_role")
+        if row.get("permission_semantics") == "weighted_mismatch_allowed" and roles.get(target) != row.get(
+            "required_role"
         ):
             warnings.append("owned_role_constraint_unsatisfied")
     return warnings
@@ -3383,10 +3447,7 @@ def _attach_time_window_proposal_evidence(
         or "duration_changes" in diff
         or diff.get("time_shifts")
         or diff.get("road_changes")
-        or any(
-            not _valid_time_window_change(change, cost_policy)
-            for change in changes
-        )
+        or any(not _valid_time_window_change(change, cost_policy) for change in changes)
         or not _valid_time_window_schedule_accounting(
             parent_schedule,
             default_visit_minutes=float(default_visit_minutes),
@@ -3401,20 +3462,14 @@ def _attach_time_window_proposal_evidence(
             route_leg_evidence=route_leg_evidence,
             plan=child_plan,
         )
-        or schedule_impact.get("route_matrix_id")
-        != (certificate.get("route_validation") or {}).get("matrix_id")
-        or len(route_leg_evidence)
-        != (certificate.get("route_validation") or {}).get("required_leg_count")
+        or schedule_impact.get("route_matrix_id") != (certificate.get("route_validation") or {}).get("matrix_id")
+        or len(route_leg_evidence) != (certificate.get("route_validation") or {}).get("required_leg_count")
         or parent_schedule.get("plan_id") != parent_plan.get("plan_id")
-        or parent_schedule.get("plan_content_hash")
-        != parent_plan.get("content_hash")
+        or parent_schedule.get("plan_content_hash") != parent_plan.get("content_hash")
         or child_schedule.get("plan_id") != child_plan.get("plan_id")
-        or child_schedule.get("plan_content_hash")
-        != child_plan.get("content_hash")
-        or schedule_impact.get("target_stop_ids")
-        != sorted(change["stop_id"] for change in changes)
-        or schedule_impact.get("affected_days")
-        != sorted({change["day"] for change in changes})
+        or child_schedule.get("plan_content_hash") != child_plan.get("content_hash")
+        or schedule_impact.get("target_stop_ids") != sorted(change["stop_id"] for change in changes)
+        or schedule_impact.get("affected_days") != sorted({change["day"] for change in changes})
         or not _time_window_changes_match_traces(
             changes,
             parent_schedule["stop_traces"],
@@ -3427,26 +3482,16 @@ def _attach_time_window_proposal_evidence(
     schedule_metrics = {
         key: value
         for key, value in certificate_metrics.items()
-        if key.startswith("day_")
-        or key.startswith("route_")
-        or key == "schedule_missing_opening_window_count"
+        if key.startswith("day_") or key.startswith("route_") or key == "schedule_missing_opening_window_count"
     }
     accounting_metrics = {
-        key: value
-        for key, value in schedule_metrics.items()
-        if key != "schedule_missing_opening_window_count"
+        key: value for key, value in schedule_metrics.items() if key != "schedule_missing_opening_window_count"
     }
     missing_window_ids = child_schedule["missing_opening_window_stop_ids"]
-    warning_codes = (
-        ["opening_window_evidence_missing"] if missing_window_ids else []
-    )
+    warning_codes = ["opening_window_evidence_missing"] if missing_window_ids else []
     schedule_blocking_codes = list(child_schedule["blocking_codes"])
-    certificate_warning_codes = [
-        row.get("code") for row in certificate.get("warnings") or ()
-    ]
-    certificate_failure_codes = [
-        row.get("code") for row in certificate.get("failures") or ()
-    ]
+    certificate_warning_codes = [row.get("code") for row in certificate.get("warnings") or ()]
+    certificate_failure_codes = [row.get("code") for row in certificate.get("failures") or ()]
     failure_codes = certificate_failure_codes
     expected_schedule_outcome = (
         ("FAILED", "ineligible")
@@ -3457,8 +3502,7 @@ def _attach_time_window_proposal_evidence(
     )
     if (
         accounting_metrics != child_schedule["metrics"]
-        or schedule_metrics.get("schedule_missing_opening_window_count")
-        != float(len(missing_window_ids))
+        or schedule_metrics.get("schedule_missing_opening_window_count") != float(len(missing_window_ids))
         or warning_codes != certificate_warning_codes
         or any(code not in failure_codes for code in schedule_blocking_codes)
         or (
@@ -3493,9 +3537,7 @@ def _attach_time_window_proposal_evidence(
     proposal["decision_eligible"] = decision_eligible
     proposal["ranking_eligible"] = False
     proposal["acceptance_eligible"] = decision_eligible
-    proposal["acceptance_blocking_code"] = (
-        None if decision_eligible else "proposal_not_eligible"
-    )
+    proposal["acceptance_blocking_code"] = None if decision_eligible else "proposal_not_eligible"
     proposal["schedule_impact_identity"] = {
         "content_hash": schedule_hash,
         "evaluator_version": schedule_impact.get("evaluator_version"),
@@ -3542,11 +3584,7 @@ def _valid_time_window_route_evidence(
         "road_validated",
         "fallback_used",
     }
-    if (
-        not isinstance(value, list)
-        or not value
-        or len(value) != len(expected_route_legs)
-    ):
+    if not isinstance(value, list) or not value or len(value) != len(expected_route_legs):
         return False
     pairs: set[tuple[int, str, str]] = set()
     for row, expected in zip(value, expected_route_legs, strict=True):
@@ -3609,11 +3647,9 @@ def _valid_time_window_change(value: Any, cost_policy: dict[str, Any]) -> bool:
     if (
         (before is not None and not _canonical_time_window_record(before))
         or not _canonical_time_window_record(after)
-        or value.get("from_earliest_arrival")
-        != (before or {}).get("earliest_arrival")
+        or value.get("from_earliest_arrival") != (before or {}).get("earliest_arrival")
         or value.get("to_earliest_arrival") != after.get("earliest_arrival")
-        or value.get("from_latest_departure")
-        != (before or {}).get("latest_departure")
+        or value.get("from_latest_departure") != (before or {}).get("latest_departure")
         or value.get("to_latest_departure") != after.get("latest_departure")
     ):
         return False
@@ -3648,11 +3684,7 @@ def _canonical_time_window_record(value: Any) -> bool:
         and (earliest is not None or latest is not None)
         and _valid_clock(earliest)
         and _valid_clock(latest)
-        and (
-            earliest is None
-            or latest is None
-            or _clock_minutes(earliest) <= _clock_minutes(latest)
-        )
+        and (earliest is None or latest is None or _clock_minutes(earliest) <= _clock_minutes(latest))
     )
 
 
@@ -3685,8 +3717,7 @@ def _valid_time_window_schedule_accounting(
     content_hash = payload.pop("content_hash")
     traces = value.get("stop_traces")
     valid_shape = bool(
-        value.get("schema_version")
-        == "evaluated-time-window-schedule-accounting-v1"
+        value.get("schema_version") == "evaluated-time-window-schedule-accounting-v1"
         and isinstance(value.get("evaluator_version"), str)
         and value["evaluator_version"]
         and isinstance(value.get("plan_id"), str)
@@ -3715,10 +3746,7 @@ def _valid_time_window_schedule_accounting(
         and isinstance(value.get("blocking_codes"), list)
         and all(isinstance(code, str) and code for code in value["blocking_codes"])
         and isinstance(value.get("missing_opening_window_stop_ids"), list)
-        and all(
-            isinstance(stop_id, str) and stop_id
-            for stop_id in value["missing_opening_window_stop_ids"]
-        )
+        and all(isinstance(stop_id, str) and stop_id for stop_id in value["missing_opening_window_stop_ids"])
         and isinstance(value.get("metrics"), dict)
         and all(_valid_finite_number(metric) for metric in value["metrics"].values())
         and isinstance(traces, list)
@@ -3740,8 +3768,7 @@ def _valid_time_window_schedule_accounting(
     missing_window_ids = [
         trace["stop_id"]
         for trace in traces
-        if trace["opening_start_minute"] is None
-        and trace["opening_end_minute"] is None
+        if trace["opening_start_minute"] is None and trace["opening_end_minute"] is None
     ]
     expected_blocking_codes: list[str] = []
     traces_by_day: dict[int, list[dict[str, Any]]] = {}
@@ -3753,13 +3780,7 @@ def _valid_time_window_schedule_accounting(
         if value["metrics"].get(f"day_{day}_overrun_minutes", 0.0) > 0:
             expected_blocking_codes.append("day_time_exceeded")
     expected_blocking_codes = list(dict.fromkeys(expected_blocking_codes))
-    expected_status = (
-        "failed"
-        if expected_blocking_codes
-        else "incomplete_evidence"
-        if missing_window_ids
-        else "passed"
-    )
+    expected_status = "failed" if expected_blocking_codes else "incomplete_evidence" if missing_window_ids else "passed"
     metrics = value["metrics"]
     route_required = metrics.get("route_required_leg_count")
     return bool(
@@ -3880,11 +3901,7 @@ def _valid_time_window_trace(
         return False
     opening_ready = arrival + (float(opening_wait) if opening_wait is not None else 0.0)
     earliest = (constraint or {}).get("earliest_arrival")
-    expected_required_wait = (
-        None
-        if earliest is None
-        else max(0.0, float(_clock_minutes(earliest)) - opening_ready)
-    )
+    expected_required_wait = None if earliest is None else max(0.0, float(_clock_minutes(earliest)) - opening_ready)
     if value.get("required_window_wait_minutes") != expected_required_wait:
         return False
     expected_service_start = opening_ready + (
@@ -3908,17 +3925,9 @@ def _valid_time_window_trace(
     if value.get("departure_minute") != departure:
         return False
     latest = (constraint or {}).get("latest_departure")
-    expected_overrun = (
-        None
-        if latest is None
-        else max(0.0, departure - float(_clock_minutes(latest)))
-    )
+    expected_overrun = None if latest is None else max(0.0, departure - float(_clock_minutes(latest)))
     expected_latest_status = (
-        "not_set"
-        if latest is None
-        else "violated"
-        if expected_overrun and expected_overrun > 0
-        else "satisfied"
+        "not_set" if latest is None else "violated" if expected_overrun and expected_overrun > 0 else "satisfied"
     )
     expected_failures: list[str] = []
     if opening_end is not None and expected_service_start > float(opening_end):
@@ -3942,11 +3951,9 @@ def _time_window_changes_match_traces(
     return all(
         change["stop_id"] in parent_by_stop
         and change["stop_id"] in child_by_stop
-        and parent_by_stop[change["stop_id"]]["time_window_constraint"]
-        == change["from_constraint"]
+        and parent_by_stop[change["stop_id"]]["time_window_constraint"] == change["from_constraint"]
         and parent_by_stop[change["stop_id"]]["day"] == change["day"]
-        and child_by_stop[change["stop_id"]]["time_window_constraint"]
-        == change["to_constraint"]
+        and child_by_stop[change["stop_id"]]["time_window_constraint"] == change["to_constraint"]
         and child_by_stop[change["stop_id"]]["day"] == change["day"]
         for change in changes
     )
@@ -3974,11 +3981,7 @@ def _time_window_traces_match_plan(
             return False
         day = row.get("day")
         stop_ids = row.get("stop_ids")
-        if (
-            not isinstance(day, int)
-            or isinstance(day, bool)
-            or not isinstance(stop_ids, list)
-        ):
+        if not isinstance(day, int) or isinstance(day, bool) or not isinstance(stop_ids, list):
             return False
         for stop_id in stop_ids:
             ordered_day[str(stop_id)] = day
@@ -3993,14 +3996,9 @@ def _time_window_traces_match_plan(
             return False
         grouped.setdefault(day, []).append(stop_id)
     expected_order = [
-        (stop_id, day, index)
-        for day, stop_ids in sorted(grouped.items())
-        for index, stop_id in enumerate(stop_ids)
+        (stop_id, day, index) for day, stop_ids in sorted(grouped.items()) for index, stop_id in enumerate(stop_ids)
     ]
-    actual_order = [
-        (trace["stop_id"], trace["day"], trace["sequence_index"])
-        for trace in traces
-    ]
+    actual_order = [(trace["stop_id"], trace["day"], trace["sequence_index"]) for trace in traces]
     if actual_order != expected_order or set(selected) != {row[0] for row in expected_order}:
         return False
     incoming_by_stop: dict[tuple[int, str], dict[str, Any]] = {}
@@ -4027,9 +4025,7 @@ def _time_window_traces_match_plan(
         prior_departure_by_day[trace["day"]] = float(trace["departure_minute"])
         if trace["time_window_constraint"] != stop.get("time_window_constraint"):
             return False
-        expected_opening_start, expected_opening_end, expected_opening_source = (
-            _plan_opening_window(stop)
-        )
+        expected_opening_start, expected_opening_end, expected_opening_source = _plan_opening_window(stop)
         if (
             trace["opening_start_minute"] != expected_opening_start
             or trace["opening_end_minute"] != expected_opening_end
@@ -4119,8 +4115,7 @@ def _plan_clock_minute(value: Any) -> float | None:
 
 def _valid_clock(value: Any) -> bool:
     return value is None or (
-        isinstance(value, str)
-        and re.fullmatch(r"(?:[01][0-9]|2[0-3]):[0-5][0-9]", value) is not None
+        isinstance(value, str) and re.fullmatch(r"(?:[01][0-9]|2[0-3]):[0-5][0-9]", value) is not None
     )
 
 
@@ -4130,11 +4125,7 @@ def _clock_minutes(value: str) -> int:
 
 
 def _valid_finite_number(value: Any) -> bool:
-    return (
-        isinstance(value, (int, float))
-        and not isinstance(value, bool)
-        and math.isfinite(value)
-    )
+    return isinstance(value, (int, float)) and not isinstance(value, bool) and math.isfinite(value)
 
 
 def _valid_nonnegative_finite(value: Any) -> bool:
@@ -4208,10 +4199,7 @@ def _valid_duration_change(
             or accounting_source != from_source
         ):
             return False
-        if (
-            from_constraint is not None
-            and from_constraint["preferred_minutes"] != from_minutes
-        ):
+        if from_constraint is not None and from_constraint["preferred_minutes"] != from_minutes:
             return False
     expected_delta = to_minutes - float(accounting_from)
     strength_weights = cost_policy["constraint_strength_weights"]
@@ -4219,9 +4207,7 @@ def _valid_duration_change(
     if owner_strength not in strength_weights:
         return False
     expected_cost = (
-        cost_policy["base_change_cost"]
-        * strength_weights[owner_strength]
-        * max(1.0, abs(expected_delta) / 60.0)
+        cost_policy["base_change_cost"] * strength_weights[owner_strength] * max(1.0, abs(expected_delta) / 60.0)
     )
     return (
         value.get("delta_minutes") == expected_delta

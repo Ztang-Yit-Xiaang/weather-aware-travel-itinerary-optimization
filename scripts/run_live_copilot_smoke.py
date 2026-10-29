@@ -119,7 +119,11 @@ def build_smoke_evidence(
 
 
 def _request_json(
-    *, base_url: str, method: str, path: str, payload: dict[str, Any] | None = None,
+    *,
+    base_url: str,
+    method: str,
+    path: str,
+    payload: dict[str, Any] | None = None,
     token: str | None = None,
 ) -> dict[str, Any]:
     data = None if payload is None else json.dumps(payload, separators=(",", ":")).encode()
@@ -154,9 +158,9 @@ def run_smoke(base_url: str) -> dict[str, Any]:
     session_id = session.get("session_id")
     if not isinstance(session_id, str):
         raise RuntimeError("smoke_session_id_invalid")
-    before = _request_json(
-        base_url=base_url, method="GET", path=f"/api/sessions/{session_id}", token=token
-    ).get("session")
+    before = _request_json(base_url=base_url, method="GET", path=f"/api/sessions/{session_id}", token=token).get(
+        "session"
+    )
     if not isinstance(before, dict):
         raise RuntimeError("smoke_before_state_invalid")
     client_message_id = f"client_message_{uuid4().hex}"
@@ -171,9 +175,9 @@ def run_smoke(base_url: str) -> dict[str, Any]:
             "message": _SMOKE_MESSAGE,
         },
     )
-    after = _request_json(
-        base_url=base_url, method="GET", path=f"/api/sessions/{session_id}", token=token
-    ).get("session")
+    after = _request_json(base_url=base_url, method="GET", path=f"/api/sessions/{session_id}", token=token).get(
+        "session"
+    )
     turn = response.get("turn")
     if not isinstance(after, dict) or not isinstance(turn, dict):
         raise RuntimeError("smoke_result_invalid")
@@ -200,10 +204,14 @@ def main() -> int:
     args = parse_args()
     evidence = run_smoke(args.base_url.rstrip("/"))
     write_summary(args.output, evidence)
-    print(json.dumps({
-        "protected_state_unchanged": evidence["protected_state_unchanged"],
-        "status": "written",
-    }))
+    print(
+        json.dumps(
+            {
+                "protected_state_unchanged": evidence["protected_state_unchanged"],
+                "status": "written",
+            }
+        )
+    )
     return 0 if evidence["protected_state_unchanged"] else 2
 
 

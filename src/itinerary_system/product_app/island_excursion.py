@@ -53,23 +53,34 @@ def island_geography(plan):
         if stop.get("excursion") != EXCURSION:
             raise ValueError("island_excursion_invalid")
         shared = {
-            "plan_id": plan["plan_id"], "content_hash": plan["content_hash"],
-            "day": stop["day"], "source_stop_id": CHANNEL_ISLANDS,
-            "travel_mode": "passenger_ferry", "road_validated": False,
-            "geometry_source": "schematic_port_to_island", "round_trip": True,
-            "schedule_verified": False, "reservation_verified": False,
+            "plan_id": plan["plan_id"],
+            "content_hash": plan["content_hash"],
+            "day": stop["day"],
+            "source_stop_id": CHANNEL_ISLANDS,
+            "travel_mode": "passenger_ferry",
+            "road_validated": False,
+            "geometry_source": "schematic_port_to_island",
+            "round_trip": True,
+            "schedule_verified": False,
+            "reservation_verified": False,
             "name": EXCURSION["destination_name"],
         }
-        routes.append({
-            "type": "Feature", "id": plan["plan_id"] + ":marine:ventura_scorpion",
-            "geometry": {"type": "LineString", "coordinates": [list(PORT), list(SCORPION)]},
-            "properties": {**shared, "label": "Ferry round trip · schematic / timetable unverified"},
-        })
-        destinations.append({
-            "type": "Feature", "id": plan["plan_id"] + ":island:scorpion",
-            "geometry": {"type": "Point", "coordinates": list(SCORPION)},
-            "properties": deepcopy(shared),
-        })
+        routes.append(
+            {
+                "type": "Feature",
+                "id": plan["plan_id"] + ":marine:ventura_scorpion",
+                "geometry": {"type": "LineString", "coordinates": [list(PORT), list(SCORPION)]},
+                "properties": {**shared, "label": "Ferry round trip · schematic / timetable unverified"},
+            }
+        )
+        destinations.append(
+            {
+                "type": "Feature",
+                "id": plan["plan_id"] + ":island:scorpion",
+                "geometry": {"type": "Point", "coordinates": list(SCORPION)},
+                "properties": deepcopy(shared),
+            }
+        )
     return {
         "marine_routes": {"type": "FeatureCollection", "features": routes},
         "offshore_stops": {"type": "FeatureCollection", "features": destinations},

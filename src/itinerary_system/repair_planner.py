@@ -199,10 +199,7 @@ def _route_to_plan_artifact(
             day_assignments[stop_id] = day
             ordered_by_day.setdefault(day, []).append(stop_id)
             lodging_id = str(
-                stop_record.get("lodging_id")
-                or stop_record.get("hotel_id")
-                or stop_record.get("overnight_city")
-                or ""
+                stop_record.get("lodging_id") or stop_record.get("hotel_id") or stop_record.get("overnight_city") or ""
             ).strip()
             if lodging_id:
                 lodging_assignments[str(day)] = lodging_id
@@ -816,7 +813,9 @@ def _retarget_plan_diff(plan_diff: dict[str, Any] | None, *, child_plan_id: str)
         return None
     retargeted = dict(plan_diff)
     retargeted["child_plan_id"] = child_plan_id
-    retargeted["diff_id"] = f"diff_{stable_content_hash({key: value for key, value in retargeted.items() if key != 'diff_id'})}"
+    retargeted["diff_id"] = (
+        f"diff_{stable_content_hash({key: value for key, value in retargeted.items() if key != 'diff_id'})}"
+    )
     return retargeted
 
 

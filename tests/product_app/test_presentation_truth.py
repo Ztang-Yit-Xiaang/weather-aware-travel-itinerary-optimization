@@ -23,13 +23,26 @@ def test_accepted_reload_exposes_exact_persisted_evaluation_and_diff(tmp_path):
     registry = ProductRunRegistry(ROOT, ROOT / "configs/product_app_registry.json")
     service = ProductService(registry, tmp_path / "state")
     session, token, _ = service.create_session(RUN_ID)
-    service.workspace.add_operation(session, {
-        "expected_revision": 0, "type": "replace_nearby", "target": "bixby_creek_bridge_viewpoint",
-        "parameters": {"candidate_id": "pfeiffer_big_sur_state_park"}, "source": "map",
-    }, valid_stop_ids=service.valid_stops(RUN_ID), day_count=7)
+    service.workspace.add_operation(
+        session,
+        {
+            "expected_revision": 0,
+            "type": "replace_nearby",
+            "target": "bixby_creek_bridge_viewpoint",
+            "parameters": {"candidate_id": "pfeiffer_big_sur_state_park"},
+            "source": "map",
+        },
+        valid_stop_ids=service.valid_stops(RUN_ID),
+        day_count=7,
+    )
     proposal = service.preview(session.session_id, 1)
-    service.accept_evaluated(session, expected_revision=2, confirmation="accept_evaluated_repair",
-                             idempotency_key="presentation-truth-test", mutation_token=token)
+    service.accept_evaluated(
+        session,
+        expected_revision=2,
+        confirmation="accept_evaluated_repair",
+        idempotency_key="presentation-truth-test",
+        mutation_token=token,
+    )
     restored = ProductService(registry, tmp_path / "state")
     accepted_session = restored.workspace.get(session.session_id)
     view = restored.workspace_view_for_session(accepted_session)
@@ -42,5 +55,7 @@ def test_accepted_reload_exposes_exact_persisted_evaluation_and_diff(tmp_path):
     assert record["certificate"]["plan_content_hash"] == record["plan_content_hash"]
     assert record["diff"]["diff_id"] == proposal["diff_id"]
     actual = tmp_path / "accepted_evidence_context.json"
-    actual.write_text(json.dumps({"workspace":view,"session":accepted_session.public_dict()}), encoding="utf-8")
-    subprocess.run(["node", str(Path(__file__).with_name("accepted_evidence_context.test.mjs")), str(actual)], check=True, cwd=ROOT)
+    actual.write_text(json.dumps({"workspace": view, "session": accepted_session.public_dict()}), encoding="utf-8")
+    subprocess.run(
+        ["node", str(Path(__file__).with_name("accepted_evidence_context.test.mjs")), str(actual)], check=True, cwd=ROOT
+    )

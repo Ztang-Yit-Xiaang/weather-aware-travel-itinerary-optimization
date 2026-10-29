@@ -73,9 +73,10 @@ def _copy_renderer_inputs(output_dir: Path) -> None:
 
 def test_renderer_geometry_helpers_preserve_empty_duplicate_and_nonfinite_contracts():
     assert primitives._dedupe_route_points([]) == []
-    assert primitives._dedupe_route_points(
-        [[1, 2], [1, 2], [1.00000001, 2.00000001], [3, 4]]
-    ) == [[1.0, 2.0], [3.0, 4.0]]
+    assert primitives._dedupe_route_points([[1, 2], [1, 2], [1.00000001, 2.00000001], [3, 4]]) == [
+        [1.0, 2.0],
+        [3.0, 4.0],
+    ]
     assert primitives._route_bounds([]) == []
     assert primitives._route_midpoint([]) is None
     assert primitives._route_arrow_samples([]) == []
@@ -269,6 +270,7 @@ def test_map_renderer_calls_package_renderer_without_legacy_import(monkeypatch, 
     assert returned_plan is day_plan
     assert returned_path == output_path
     assert fake_map.saved == output_path
+
 
 def test_package_renderer_matches_pre_migration_render_signature(tmp_path):
     output_dir = tmp_path / "outputs"

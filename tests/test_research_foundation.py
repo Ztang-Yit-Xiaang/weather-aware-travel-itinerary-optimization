@@ -275,7 +275,7 @@ def write_phase0_osrm_cache_files(output_dir: Path) -> None:
                                     "coordinates": [[left[1], left[0]], [right[1], right[0]]],
                                 },
                             }
-                        ]
+                        ],
                     },
                 },
                 indent=2,
@@ -844,7 +844,7 @@ class ResearchFoundationTests(unittest.TestCase):
                             ]
                         },
                     }
-                ]
+                ],
             }
 
         with temporary_directory() as output_dir:

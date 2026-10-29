@@ -62,8 +62,7 @@ def _send_copilot(page, message: str) -> tuple[dict, dict]:
     stream_index = page.evaluate("window.__waypointRecoveryStreams.length")
     page.locator("#copilot-input").fill(message)
     with page.expect_response(
-        lambda response: response.url.endswith("/copilot/messages")
-        and response.request.method == "POST",
+        lambda response: response.url.endswith("/copilot/messages") and response.request.method == "POST",
         timeout=30_000,
     ) as response_info:
         page.locator("#copilot-form button[type='submit']").click()
@@ -133,24 +132,18 @@ def test_latest_map_waypoint_can_be_removed_and_short_stop_name_is_canonicalized
         })();""")
         page.on(
             "console",
-            lambda message: console_errors.append(message.text)
-            if message.type == "error"
-            else None,
+            lambda message: console_errors.append(message.text) if message.type == "error" else None,
         )
         page.on("requestfailed", lambda request: request_failures.append(request.url))
         page.goto(f"{BASE_URL}/app/itinerary", wait_until="domcontentloaded")
         expect(page.locator("#app-shell")).to_be_visible(timeout=15_000)
-        expect(page.locator("#geographic-map")).to_have_attribute(
-            "data-map-ready", "true", timeout=30_000
-        )
+        expect(page.locator("#geographic-map")).to_have_attribute("data-map-ready", "true", timeout=30_000)
 
         session_response = _session_fetch(page, "/api/sessions/{session_id}")
         assert session_response["status"] == 200
         session = session_response["body"]["session"]
         accepted_plan_id = session["accepted_plan_id"]
-        before_map_plan_id = page.locator(".map-stage").get_attribute(
-            "data-rendered-map-plan-id"
-        )
+        before_map_plan_id = page.locator(".map-stage").get_attribute("data-rendered-map-plan-id")
         assert before_map_plan_id == accepted_plan_id
 
         snap_request = {
@@ -196,9 +189,7 @@ def test_latest_map_waypoint_can_be_removed_and_short_stop_name_is_canonicalized
 
         page.reload(wait_until="domcontentloaded")
         expect(page.locator("#app-shell")).to_be_visible(timeout=15_000)
-        expect(page.locator("#geographic-map")).to_have_attribute(
-            "data-map-ready", "true", timeout=30_000
-        )
+        expect(page.locator("#geographic-map")).to_have_attribute("data-map-ready", "true", timeout=30_000)
         page.locator(".textual-map-alternative summary").click()
         waypoint = page.locator(f'[data-draft-waypoint="{waypoint_id}"]')
         expect(waypoint).to_be_visible(timeout=30_000)
@@ -212,14 +203,10 @@ def test_latest_map_waypoint_can_be_removed_and_short_stop_name_is_canonicalized
         removal_request, removal_response = _send_copilot(page, removal_message)
         removal_interpretation = removal_response["turn"]["interpretation"]
         assert removal_interpretation["state"] == "unsupported"
-        assert [intent["type"] for intent in removal_interpretation["intents"]] == [
-            "unsupported_request"
-        ]
+        assert [intent["type"] for intent in removal_interpretation["intents"]] == ["unsupported_request"]
         assert len(removal_response["session"]["draft"]) == 1
         expect(page.locator(".message-assistant").last).to_contain_text("staged draft")
-        expect(page.locator(".message-assistant").last).to_contain_text(
-            "Remove this draft waypoint"
-        )
+        expect(page.locator(".message-assistant").last).to_contain_text("Remove this draft waypoint")
         page.locator("#close-copilot").click()
 
         if page.locator(".textual-map-alternative").get_attribute("open") is None:
@@ -230,8 +217,7 @@ def test_latest_map_waypoint_can_be_removed_and_short_stop_name_is_canonicalized
         expect(remove_button).to_be_enabled()
         page.once("dialog", lambda dialog: dialog.accept())
         with page.expect_response(
-            lambda response: response.url.endswith("/draft/undo")
-            and response.request.method == "POST"
+            lambda response: response.url.endswith("/draft/undo") and response.request.method == "POST"
         ) as undo_info:
             remove_button.click()
         undo_response = undo_info.value
@@ -254,19 +240,11 @@ def test_latest_map_waypoint_can_be_removed_and_short_stop_name_is_canonicalized
         bixby_intent = bixby_interpretation["intents"][0]
         assert bixby_intent["type"] == "keep_stop"
         assert bixby_intent["target_stop_id"] == "bixby_creek_bridge_viewpoint"
-        assert bixby_interpretation["highlights"]["stop_ids"] == [
-            "bixby_creek_bridge_viewpoint"
-        ]
-        expect(page.locator(".message-assistant").last).to_contain_text(
-            "already in the accepted itinerary"
-        )
-        expect(page.locator(".copilot-proposal-actions").last).to_contain_text(
-            "Add to draft"
-        )
+        assert bixby_interpretation["highlights"]["stop_ids"] == ["bixby_creek_bridge_viewpoint"]
+        expect(page.locator(".message-assistant").last).to_contain_text("already in the accepted itinerary")
+        expect(page.locator(".copilot-proposal-actions").last).to_contain_text("Add to draft")
         assert bixby_response["session"]["draft"] == []
-        expect(page.locator("#geographic-map")).to_have_attribute(
-            "data-map-ready", "true", timeout=30_000
-        )
+        expect(page.locator("#geographic-map")).to_have_attribute("data-map-ready", "true", timeout=30_000)
         expect(page.locator(".map-stage")).to_have_attribute(
             "data-rendered-map-plan-id", accepted_plan_id, timeout=30_000
         )
@@ -291,8 +269,7 @@ def test_latest_map_waypoint_can_be_removed_and_short_stop_name_is_canonicalized
                 "llm_input": None,
                 "llm_output": None,
                 "reason": (
-                    "Both prompts are handled by deterministic server guards before "
-                    "the OpenAI provider boundary."
+                    "Both prompts are handled by deterministic server guards before the OpenAI provider boundary."
                 ),
                 "verification_tests": [
                     "test_draft_point_removal_guidance_runs_before_provider_call",
@@ -304,9 +281,7 @@ def test_latest_map_waypoint_can_be_removed_and_short_stop_name_is_canonicalized
             evidence_dir / "browser_assertions.json",
             {
                 "accepted_plan_id": accepted_plan_id,
-                "rendered_map_plan_id": page.locator(".map-stage").get_attribute(
-                    "data-rendered-map-plan-id"
-                ),
+                "rendered_map_plan_id": page.locator(".map-stage").get_attribute("data-rendered-map-plan-id"),
                 "removed_waypoint_id": waypoint_id,
                 "draft_count_after_undo": 0,
                 "bixby_intent": bixby_intent,

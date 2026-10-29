@@ -1,4 +1,5 @@
 """Synthetic projection checks only; never substitutes for browser verification."""
+
 from __future__ import annotations
 
 import json
@@ -23,20 +24,38 @@ def fixture(root, mode):
     if mode == "candidate-day-matrix":
         test = "test_browser_candidate_day_readiness_in_original_and_accepted_child"
         base = root / "suites/candidate-day-matrix/candidate_day_matrix"
-        rows = [{"context": "accepted_child", "accepted_plan_id": "parent", "accepted_plan_content_hash": "hash",
-            "assertions_passed": True, "comparison_eligibility": "not_evaluated", "readiness": {"preview_executable": ready},
-            "candidate_id": "candidate", "day": day,
-            "scope": "real_staging_and_impact_only" if ready else "disabled_pair_not_interacted"}
-            for ready, day in ((True, 5), (False, 6))]
+        rows = [
+            {
+                "context": "accepted_child",
+                "accepted_plan_id": "parent",
+                "accepted_plan_content_hash": "hash",
+                "assertions_passed": True,
+                "comparison_eligibility": "not_evaluated",
+                "readiness": {"preview_executable": ready},
+                "candidate_id": "candidate",
+                "day": day,
+                "scope": "real_staging_and_impact_only" if ready else "disabled_pair_not_interacted",
+            }
+            for ready, day in ((True, 5), (False, 6))
+        ]
         write(base / "candidate_day_cases.json", rows)
         assertions = {"assertions_passed": True, "pair_scope": "readiness_and_staging_not_eligibility"}
     elif mode == "waypoint-contexts":
         test = "test_route_checked_waypoint_contexts_preserve_accepted_plan[accepted_child]"
         base = root / "suites/waypoint-contexts/waypoint_contexts/accepted_child"
         mapping.update(operation="add_route_waypoint")
-        rows = [{"context": "accepted_child", "parent": parent, "assertions_passed": True,
-            "operation": "add_route_waypoint", "variant": "default", "feedback_tier": "route_checked",
-            "evaluated_repair": False, "scope": "route_checked_draft_only"}]
+        rows = [
+            {
+                "context": "accepted_child",
+                "parent": parent,
+                "assertions_passed": True,
+                "operation": "add_route_waypoint",
+                "variant": "default",
+                "feedback_tier": "route_checked",
+                "evaluated_repair": False,
+                "scope": "route_checked_draft_only",
+            }
+        ]
         write(base / "operation_assertions.json", rows)
         assertions = {"assertions_passed": True, "operations": rows}
     else:
@@ -44,11 +63,30 @@ def fixture(root, mode):
         base = root / "suites/chat-closure/chat_closure/accepted_child"
         mapping.update(operation="keep_stop")
         operations = [{"type": "keep_stop", "target": "stop", "parameters": {}, "source": "copilot"}]
-        rows = [{"case": "keep_only_accepted", "context": "accepted_child", "assertions_passed": True,
-            "parent": parent, "comparison_eligibility": "eligible", "operations": operations,
-            "interaction_surface": "copilot_chat", "scope": "evaluated_preview_only"}]
-        write(base / "keep_only_accepted/preview_response.json", {"session": {"draft": operations}, "proposal": {
-            "state": "eligible", "parent_plan_id": "parent", "parent_plan_content_hash": "hash", "child_plan_id": "child"}})
+        rows = [
+            {
+                "case": "keep_only_accepted",
+                "context": "accepted_child",
+                "assertions_passed": True,
+                "parent": parent,
+                "comparison_eligibility": "eligible",
+                "operations": operations,
+                "interaction_surface": "copilot_chat",
+                "scope": "evaluated_preview_only",
+            }
+        ]
+        write(
+            base / "keep_only_accepted/preview_response.json",
+            {
+                "session": {"draft": operations},
+                "proposal": {
+                    "state": "eligible",
+                    "parent_plan_id": "parent",
+                    "parent_plan_content_hash": "hash",
+                    "child_plan_id": "child",
+                },
+            },
+        )
         write(base / "journey_assertions.json", rows)
         assertions = {"assertions_passed": True, "journeys": rows}
     write(base / "browser_assertions.json", assertions)
@@ -72,7 +110,9 @@ def test_new_modes_keep_their_exact_observed_scope(tmp_path, mode):
 
 
 @pytest.mark.parametrize("mode", ["candidate-day-matrix", "waypoint-contexts", "chat-closure"])
-@pytest.mark.parametrize("fault", ["failed_suite", "unregistered_node", "wrong_hash", "wrong_context", "false_assertions"])
+@pytest.mark.parametrize(
+    "fault", ["failed_suite", "unregistered_node", "wrong_hash", "wrong_context", "false_assertions"]
+)
 def test_unbound_or_incomplete_new_mode_evidence_never_receives_credit(tmp_path, mode, fault):
     snapshots, suites, registry, base, assertions = fixture(tmp_path, mode)
     if fault == "failed_suite":

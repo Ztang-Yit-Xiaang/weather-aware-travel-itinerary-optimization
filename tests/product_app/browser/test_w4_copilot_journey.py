@@ -38,9 +38,7 @@ def _wait_for_health(base_url: str, process: subprocess.Popen[str]) -> None:
     deadline = time.monotonic() + 15
     while time.monotonic() < deadline:
         if process.poll() is not None:
-            raise AssertionError(
-                f"product launcher exited before readiness with code {process.returncode}"
-            )
+            raise AssertionError(f"product launcher exited before readiness with code {process.returncode}")
         try:
             with urllib.request.urlopen(f"{base_url}/api/health", timeout=1) as response:
                 if response.status == 200:
@@ -109,6 +107,7 @@ def _open_app(browser: Browser, product_server: str, *, width: int, height: int 
     context = browser.new_context(viewport={"width": width, "height": height})
     page = context.new_page()
     errors: list[str] = []
+
     def capture_console(message) -> None:
         if message.type != "error":
             return
@@ -172,9 +171,7 @@ def test_deterministic_copilot_persists_context_and_supports_deletion(
         expect(page.locator("#context-chips")).to_contain_text("Yosemite National Park")
         expect(page.locator("#copilot-input")).to_be_focused()
 
-        page.locator("#copilot-input").fill(
-            "Replace Bixby Creek Bridge Viewpoint with Pfeiffer Big Sur State Park"
-        )
+        page.locator("#copilot-input").fill("Replace Bixby Creek Bridge Viewpoint with Pfeiffer Big Sur State Park")
         page.locator("#copilot-form button[type='submit']").click()
         expect(page.locator("#copilot-lifecycle")).to_contain_text("Proposal ready", timeout=15_000)
         expect(page.locator(".message-user")).to_have_count(1)
@@ -214,8 +211,9 @@ def test_deterministic_copilot_persists_context_and_supports_deletion(
           };
         }""")
         page.locator("#copilot-input").fill("Keep the original plan")
-        with page.expect_response(lambda response: response.url.endswith("/copilot/messages")
-                and response.request.method == "POST") as kept:
+        with page.expect_response(
+            lambda response: response.url.endswith("/copilot/messages") and response.request.method == "POST"
+        ) as kept:
             page.locator("#copilot-form button[type='submit']").click()
         expect(page.locator("#copilot-lifecycle")).to_contain_text("Proposal ready", timeout=15_000)
         from test_e2e1_live_copilot_chat import _http_record, _sse_events
@@ -254,9 +252,7 @@ def test_known_california_place_is_named_without_auto_action(
         page.locator("#copilot-input").fill("what if I want to visit red wood")
         page.locator("#copilot-form button[type='submit']").click()
 
-        expect(page.locator("#copilot-lifecycle")).to_contain_text(
-            "Clarification required", timeout=15_000
-        )
+        expect(page.locator("#copilot-lifecycle")).to_contain_text("Clarification required", timeout=15_000)
         assistant = page.locator(".message-assistant").last
         expect(assistant).to_contain_text("Redwood National and State Parks")
         expect(assistant).to_contain_text("road access and route are not validated")
@@ -302,38 +298,26 @@ def test_user_can_stop_waiting_and_retry_same_message_identity(
 
         pending = page.locator('.message-user[data-delivery-state="sending"]')
         expect(pending).to_have_count(1)
-        expect(page.locator("#copilot-submit")).to_have_attribute(
-            "aria-label", "Stop waiting for Copilot"
-        )
+        expect(page.locator("#copilot-submit")).to_have_attribute("aria-label", "Stop waiting for Copilot")
         page.locator("#copilot-submit").click()
         expect(page.locator("#copilot-lifecycle")).to_contain_text("Stopped")
-        expect(
-            page.locator('.message-user[data-delivery-state="cancelled"]')
-        ).to_have_count(1)
+        expect(page.locator('.message-user[data-delivery-state="cancelled"]')).to_have_count(1)
         retry = page.get_by_role("button", name="Retry", exact=True)
         expect(retry).to_be_visible()
-        first_id = page.evaluate(
-            "() => window.__hciCapturedBodies[0].client_message_id"
-        )
+        first_id = page.evaluate("() => window.__hciCapturedBodies[0].client_message_id")
 
         page.evaluate("window.fetch = window.__hciOriginalFetch")
         with page.expect_response(
-            lambda response: response.url.endswith("/copilot/messages")
-            and response.request.method == "POST",
+            lambda response: response.url.endswith("/copilot/messages") and response.request.method == "POST",
             timeout=30_000,
         ) as retried_info:
             retry.click()
         retried = retried_info.value
         assert retried.status == 200, retried.text()
         assert json.loads(retried.request.post_data or "{}")["client_message_id"] == first_id
-        expect(page.locator("#copilot-lifecycle")).to_contain_text(
-            "Proposal ready", timeout=15_000
-        )
+        expect(page.locator("#copilot-lifecycle")).to_contain_text("Proposal ready", timeout=15_000)
         expect(page.locator('.message-user[data-client-message-id="' + first_id + '"]')).to_have_count(1)
-        assert not [
-            error for error in errors
-            if "/copilot/messages" in error or error.startswith("pageerror:")
-        ]
+        assert not [error for error in errors if "/copilot/messages" in error or error.startswith("pageerror:")]
     finally:
         page.context.close()
 
@@ -395,24 +379,17 @@ def test_incomplete_stream_retry_reconciles_the_same_message_identity(
         page.locator("#copilot-input").fill("Review a safer weather repair")
         page.locator("#copilot-submit").click()
 
-        expect(page.locator("#copilot-lifecycle")).to_have_attribute(
-            "data-state", "cancelled", timeout=15_000
-        )
-        cancelled = page.locator(
-            '.message-assistant[data-delivery-state="cancelled"]'
-        ).last
+        expect(page.locator("#copilot-lifecycle")).to_have_attribute("data-state", "cancelled", timeout=15_000)
+        cancelled = page.locator('.message-assistant[data-delivery-state="cancelled"]').last
         expect(cancelled).to_contain_text("result was not confirmed")
         expect(cancelled).to_contain_text("same request identity")
         retry = cancelled.get_by_role("button", name="Retry")
         expect(retry).to_be_visible()
         expect(cancelled.get_by_role("button", name="Edit message")).to_be_visible()
-        first_id = page.evaluate(
-            "() => window.__hciIncompleteStreamBodies[0].client_message_id"
-        )
+        first_id = page.evaluate("() => window.__hciIncompleteStreamBodies[0].client_message_id")
 
         with page.expect_response(
-            lambda response: response.url.endswith("/copilot/messages")
-            and response.request.method == "POST",
+            lambda response: response.url.endswith("/copilot/messages") and response.request.method == "POST",
             timeout=30_000,
         ) as retried_info:
             retry.click()
@@ -421,12 +398,8 @@ def test_incomplete_stream_retry_reconciles_the_same_message_identity(
         bodies = page.evaluate("window.__hciIncompleteStreamBodies")
         assert len(bodies) == 2
         assert bodies[0]["client_message_id"] == bodies[1]["client_message_id"] == first_id
-        expect(page.locator("#copilot-lifecycle")).to_contain_text(
-            "Proposal ready", timeout=15_000
-        )
-        expect(
-            page.locator(f'.message-user[data-client-message-id="{first_id}"]')
-        ).to_have_count(1)
+        expect(page.locator("#copilot-lifecycle")).to_contain_text("Proposal ready", timeout=15_000)
+        expect(page.locator(f'.message-user[data-client-message-id="{first_id}"]')).to_have_count(1)
         assert not [error for error in errors if error.startswith("pageerror:")]
     finally:
         page.context.close()
@@ -462,29 +435,18 @@ def test_truncated_terminal_recovers_persisted_success_without_false_failure(
             }"""
         )
         page.locator("#open-copilot").click()
-        page.locator("#copilot-input").fill(
-            "Replace Bixby Creek Bridge Viewpoint with Pfeiffer Big Sur State Park"
-        )
+        page.locator("#copilot-input").fill("Replace Bixby Creek Bridge Viewpoint with Pfeiffer Big Sur State Park")
         page.locator("#copilot-submit").click()
 
-        expect(page.locator("#copilot-lifecycle")).to_have_attribute(
-            "data-state", "proposal_ready", timeout=15_000
-        )
+        expect(page.locator("#copilot-lifecycle")).to_have_attribute("data-state", "proposal_ready", timeout=15_000)
         expect(page.locator("#copilot-lifecycle")).to_contain_text("Proposal ready")
         expect(page.locator(".copilot-proposal-card")).to_be_visible()
         expect(page.locator('.message-assistant[data-delivery-state="completed"]')).to_have_count(1)
         expect(page.get_by_role("button", name="Retry", exact=True)).to_have_count(0)
         assert page.evaluate("window.__hciRecoveredSuccessBodies.length") == 1
-        client_id = page.evaluate(
-            "window.__hciRecoveredSuccessBodies[0].client_message_id"
-        )
-        expect(
-            page.locator(f'.message-user[data-client-message-id="{client_id}"]')
-        ).to_have_count(1)
-        assert not [
-            error for error in errors
-            if "/copilot/messages" in error or error.startswith("pageerror:")
-        ]
+        client_id = page.evaluate("window.__hciRecoveredSuccessBodies[0].client_message_id")
+        expect(page.locator(f'.message-user[data-client-message-id="{client_id}"]')).to_have_count(1)
+        assert not [error for error in errors if "/copilot/messages" in error or error.startswith("pageerror:")]
     finally:
         page.context.close()
 
@@ -582,6 +544,7 @@ def test_reduced_height_mobile_copilot_traps_focus_and_closes_with_escape(
     finally:
         page.context.close()
 
+
 def test_w5_keep_original_records_and_restores_durable_decision(
     browser: Browser,
     product_server: str,
@@ -594,15 +557,15 @@ def test_w5_keep_original_records_and_restores_durable_decision(
 
     confirmation_messages: list[str] = []
 
-
     with page.expect_response(
-        lambda response: response.url.endswith("/keep-original")
-        and response.request.method == "POST"
+        lambda response: response.url.endswith("/keep-original") and response.request.method == "POST"
     ) as response_info:
         page.locator("#keep-original").click()
         expect(page.get_by_role("dialog", name="Confirm trip decision", exact=True)).to_be_visible()
         confirmation_messages.append(page.locator("#acceptance-message").inner_text())
-        page.get_by_role("dialog", name="Confirm trip decision", exact=True).get_by_role("button", name='Keep original', exact=True).click()
+        page.get_by_role("dialog", name="Confirm trip decision", exact=True).get_by_role(
+            "button", name="Keep original", exact=True
+        ).click()
     response = response_info.value
     assert response.status == 200
     action = response.json()
@@ -612,16 +575,11 @@ def test_w5_keep_original_records_and_restores_durable_decision(
     decision_id = action["result"]["decision"]["decision_id"]
     session_id = action["session"]["session_id"]
     assert action["result"]["pointer"]["decision_id"] == decision_id
-    assert confirmation_messages == [
-        "Keep the immutable original plan as the durable trip plan?"
-    ]
-    expect(page.locator("#toast-region")).to_contain_text(
-        "Original plan kept. The durable decision was recorded."
-    )
+    assert confirmation_messages == ["Keep the immutable original plan as the durable trip plan?"]
+    expect(page.locator("#toast-region")).to_contain_text("Original plan kept. The durable decision was recorded.")
 
     with page.expect_response(
-        lambda candidate: candidate.url.endswith(f"/api/sessions/{session_id}")
-        and candidate.request.method == "GET"
+        lambda candidate: candidate.url.endswith(f"/api/sessions/{session_id}") and candidate.request.method == "GET"
     ) as restored_info:
         page.reload(wait_until="domcontentloaded")
     restored = restored_info.value.json()
@@ -630,7 +588,6 @@ def test_w5_keep_original_records_and_restores_durable_decision(
     assert pointer["decision_id"] == decision_id
     assert pointer["revision"] == 1
     assert restored["session"]["accepted_plan_id"] == pointer["accepted_plan_id"]
-
 
     page.screenshot(path=str(tmp_path / "w5_keep_original_after_reload.png"), full_page=True)
     assert errors == []

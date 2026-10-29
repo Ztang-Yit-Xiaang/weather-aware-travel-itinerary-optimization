@@ -136,11 +136,7 @@ class AcceptanceStore:
         try:
             with self._lock(trip_id):
                 recovered = self._recover_locked(trip_id)
-                matches = [
-                    row
-                    for row in self._history_locked(trip_id)
-                    if row["idempotency_key"] == idempotency_key
-                ]
+                matches = [row for row in self._history_locked(trip_id) if row["idempotency_key"] == idempotency_key]
                 if not matches:
                     return None
                 if len(matches) != 1:
@@ -180,11 +176,7 @@ class AcceptanceStore:
         try:
             with self._lock(trip_id):
                 recovered = self._recover_locked(trip_id)
-                existing = [
-                    row
-                    for row in self._history_locked(trip_id)
-                    if row["idempotency_key"] == idempotency_key
-                ]
+                existing = [row for row in self._history_locked(trip_id) if row["idempotency_key"] == idempotency_key]
                 if existing:
                     if len(existing) != 1:
                         raise AcceptanceError("acceptance_ledger_invalid")
@@ -363,10 +355,7 @@ class AcceptanceStore:
             {row["idempotency_key"] for row in rows}
         ) != len(rows):
             raise AcceptanceError("acceptance_ledger_invalid")
-        if any(
-            row["pointer_revision_after"] != row["pointer_revision_before"] + 1
-            for row in rows
-        ):
+        if any(row["pointer_revision_after"] != row["pointer_revision_before"] + 1 for row in rows):
             raise AcceptanceError("acceptance_ledger_invalid")
         return rows
 
@@ -607,7 +596,10 @@ class AcceptanceStore:
         content_hash = payload.pop("content_hash", None)
         if content_hash != _content_hash(payload):
             raise AcceptanceError("acceptance_decision_invalid")
-        if decision["schema_version"] != DECISION_SCHEMA_VERSION or _DECISION_ID.fullmatch(decision["decision_id"]) is None:
+        if (
+            decision["schema_version"] != DECISION_SCHEMA_VERSION
+            or _DECISION_ID.fullmatch(decision["decision_id"]) is None
+        ):
             raise AcceptanceError("acceptance_decision_invalid")
         if _IDEMPOTENCY_KEY.fullmatch(decision["idempotency_key"]) is None:
             raise AcceptanceError("acceptance_decision_invalid")

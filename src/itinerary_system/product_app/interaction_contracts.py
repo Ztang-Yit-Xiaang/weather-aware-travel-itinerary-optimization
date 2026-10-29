@@ -141,12 +141,14 @@ EVALUATED_TYPED_EDIT_OPERATIONS = frozenset(
     }
 )
 DRAFT_ONLY_TYPED_EDIT_OPERATIONS = frozenset(TYPED_EDIT_OPERATION_NAMES) - EVALUATED_TYPED_EDIT_OPERATIONS
-ATOMIC_DIRECT_EDIT_OPERATIONS = frozenset({
-    DraftOperationTypeV2.SET_STOP_ORDER.value,
-    DraftOperationTypeV2.SET_STOP_ROLE.value,
-    DraftOperationTypeV2.SET_STOP_DURATION.value,
-    DraftOperationTypeV2.SET_STOP_TIME_WINDOW.value,
-})
+ATOMIC_DIRECT_EDIT_OPERATIONS = frozenset(
+    {
+        DraftOperationTypeV2.SET_STOP_ORDER.value,
+        DraftOperationTypeV2.SET_STOP_ROLE.value,
+        DraftOperationTypeV2.SET_STOP_DURATION.value,
+        DraftOperationTypeV2.SET_STOP_TIME_WINDOW.value,
+    }
+)
 ATOMIC_COMPOSABLE_OPERATIONS = ATOMIC_DIRECT_EDIT_OPERATIONS | {"keep_stop", "replace_nearby", "add_candidate"}
 
 
@@ -223,15 +225,11 @@ def typed_edit_capabilities(*, combinable_operation_types: tuple[str, ...] = ())
                 StopRoleV1.ORIGIN.value,
                 StopRoleV1.DESTINATION.value,
             ],
-            "unsupported_role_blocking_code": (
-                "stop_role_evaluation_not_supported"
-            ),
+            "unsupported_role_blocking_code": ("stop_role_evaluation_not_supported"),
             "typed_plan_field": "itinerary_role",
             "typed_source_field": "itinerary_role_source",
             "typed_source_value": "user_declared_itinerary_role",
-            "combinable_operation_types": [
-                DraftOperationTypeV2.SET_STOP_ROLE.value
-            ],
+            "combinable_operation_types": [DraftOperationTypeV2.SET_STOP_ROLE.value],
         }
     )
     operations[DraftOperationTypeV2.SET_STOP_TIME_WINDOW.value].update(
@@ -240,9 +238,7 @@ def typed_edit_capabilities(*, combinable_operation_types: tuple[str, ...] = ())
             "constraint_schema_version": "stop-time-window-constraint-v1",
             "early_arrival_policy": "wait_until_earliest_arrival",
             "latest_departure_semantics": "departure_after_visit",
-            "combinable_operation_types": [
-                DraftOperationTypeV2.SET_STOP_TIME_WINDOW.value
-            ],
+            "combinable_operation_types": [DraftOperationTypeV2.SET_STOP_TIME_WINDOW.value],
         }
     )
     for name in (DraftOperationTypeV2.SET_STOP_ROLE.value, DraftOperationTypeV2.SET_STOP_TIME_WINDOW.value):

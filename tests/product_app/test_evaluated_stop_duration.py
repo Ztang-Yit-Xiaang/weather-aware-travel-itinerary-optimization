@@ -146,9 +146,7 @@ def test_exact_duration_builds_versioned_diff_schedule_and_certificate() -> None
     assert certificate["plan_content_hash"] == child["content_hash"]
     assert certificate["comparison_eligibility"] == "eligible"
     assert certificate["evaluation_status"] == "PASSED_WITH_WARNINGS"
-    assert [row["code"] for row in certificate["warnings"]] == [
-        "opening_window_evidence_missing"
-    ]
+    assert [row["code"] for row in certificate["warnings"]] == ["opening_window_evidence_missing"]
     assert certificate["route_validation"]["required_leg_count"] == 16
     assert certificate["route_validation"]["road_validated_leg_count"] == 16
     assert certificate["route_validation"]["missing_leg_count"] == 0
@@ -199,9 +197,7 @@ def test_duration_only_overrun_is_ineligible_with_exact_failed_accounting() -> N
     assert compiled.reason == "independent_evaluation_failed"
     assert compiled.certificate["evaluation_status"] == "FAILED"
     assert compiled.certificate["comparison_eligibility"] == "ineligible"
-    assert "day_time_exceeded" in {
-        row["code"] for row in compiled.certificate["failures"]
-    }
+    assert "day_time_exceeded" in {row["code"] for row in compiled.certificate["failures"]}
     assert compiled.certificate["route_validation"]["required_leg_count"] == 16
     assert compiled.certificate["route_validation"]["road_validated_leg_count"] == 16
     assert compiled.certificate["route_validation"]["missing_leg_count"] == 0
@@ -221,17 +217,18 @@ def test_ineligible_duration_preview_api_preserves_evidence_and_w5_block(tmp_pat
         created = client.post("/api/sessions", json={}).json()
         session_id = created["session"]["session_id"]
         headers = {"X-Session-Token": created["mutation_token"]}
-        for revision, target in enumerate(
-            ("sequoia_national_park", "kings_canyon_national_park")
-        ):
-            assert _append(
-                client,
-                session_id,
-                headers,
-                revision=revision,
-                duration=_duration(minutes=480),
-                target=target,
-            ).status_code == 200
+        for revision, target in enumerate(("sequoia_national_park", "kings_canyon_national_park")):
+            assert (
+                _append(
+                    client,
+                    session_id,
+                    headers,
+                    revision=revision,
+                    duration=_duration(minutes=480),
+                    target=target,
+                ).status_code
+                == 200
+            )
         response = client.post(
             f"/api/sessions/{session_id}/preview",
             headers=headers,
@@ -258,9 +255,7 @@ def test_ineligible_duration_preview_api_preserves_evidence_and_w5_block(tmp_pat
     assert proposal["acceptance_blocking_code"] == "proposal_not_eligible"
     assert len(proposal["plan_diff"]["duration_changes"]) == 2
     assert proposal["schedule_impact"]["child"]["status"] == "failed"
-    assert proposal["schedule_impact"]["child"]["blocking_codes"] == [
-        "day_time_exceeded"
-    ]
+    assert proposal["schedule_impact"]["child"]["blocking_codes"] == ["day_time_exceeded"]
     metrics = proposal["schedule_impact"]["child"]["metrics"]
     assert metrics["day_4_overrun_minutes"] == pytest.approx(
         metrics["day_4_total_minutes"] - metrics["day_4_limit_minutes"]
@@ -301,11 +296,15 @@ def test_missing_to_explicit_default_is_material_but_explicit_exact_same_is_no_e
     )
 
     with pytest.raises(WorkspaceError, match="draft_no_effect"):
-        direct.compile(({
-            "type": "set_stop_duration",
-            "target": TARGET,
-            "parameters": {"duration": _duration(minutes=45)},
-        },))
+        direct.compile(
+            (
+                {
+                    "type": "set_stop_duration",
+                    "target": TARGET,
+                    "parameters": {"duration": _duration(minutes=45)},
+                },
+            )
+        )
 
 
 @pytest.mark.parametrize(
@@ -340,11 +339,15 @@ def test_parent_duration_corruption_fails_closed(mutation: dict) -> None:
     )
 
     with pytest.raises(WorkspaceError, match="draft_parent_duration_invalid"):
-        direct.compile(({
-            "type": "set_stop_duration",
-            "target": TARGET,
-            "parameters": {"duration": _duration()},
-        },))
+        direct.compile(
+            (
+                {
+                    "type": "set_stop_duration",
+                    "target": TARGET,
+                    "parameters": {"duration": _duration()},
+                },
+            )
+        )
 
 
 def test_changed_child_canonicalizes_consistent_legacy_scalar_aliases() -> None:
@@ -367,11 +370,15 @@ def test_changed_child_canonicalizes_consistent_legacy_scalar_aliases() -> None:
         default_visit_minutes=day_config.default_visit_minutes,
     )
 
-    compiled = direct.compile(({
-        "type": "set_stop_duration",
-        "target": TARGET,
-        "parameters": {"duration": _duration()},
-    },))
+    compiled = direct.compile(
+        (
+            {
+                "type": "set_stop_duration",
+                "target": TARGET,
+                "parameters": {"duration": _duration()},
+            },
+        )
+    )
     changed = next(row for row in compiled.child_plan.selected_stops if row.get("poi_id") == TARGET)
     assert changed["visit_duration_minutes"] == 90
     assert "duration_minutes" not in changed
@@ -514,21 +521,15 @@ def test_duration_preview_api_exposes_hash_bound_diff_and_schedule(tmp_path: Pat
     assert proposal["repair"]["tradeoffs"]["weather_risk_delta"] == 0.0
     assert proposal["plan_diff"]["schema_version"] == "plan-diff-v2"
     assert proposal["plan_diff"]["duration_changes"]
-    assert proposal["diff_identity"]["content_hash"] == stable_content_hash(
-        proposal["plan_diff"]
-    )
+    assert proposal["diff_identity"]["content_hash"] == stable_content_hash(proposal["plan_diff"])
     assert proposal["schedule_impact_identity"] == {
         "content_hash": proposal["schedule_impact"]["content_hash"],
         "evaluator_version": proposal["schedule_impact"]["evaluator_version"],
         "route_matrix_id": proposal["schedule_impact"]["route_matrix_id"],
         "parent_plan_id": proposal["schedule_impact"]["parent"]["plan_id"],
-        "parent_plan_content_hash": proposal["schedule_impact"]["parent"][
-            "plan_content_hash"
-        ],
+        "parent_plan_content_hash": proposal["schedule_impact"]["parent"]["plan_content_hash"],
         "child_plan_id": proposal["schedule_impact"]["child"]["plan_id"],
-        "child_plan_content_hash": proposal["schedule_impact"]["child"][
-            "plan_content_hash"
-        ],
+        "child_plan_content_hash": proposal["schedule_impact"]["child"]["plan_content_hash"],
         "certificate_id": proposal["certificate_id"],
         "certificate_content_hash": proposal["certificate_content_hash"],
     }
@@ -540,9 +541,7 @@ def test_duration_preview_api_exposes_hash_bound_diff_and_schedule(tmp_path: Pat
     assert certificate_schedule["certificate_id"] == proposal["certificate_id"]
     assert certificate_schedule["warning_codes"] == ["opening_window_evidence_missing"]
     assert certificate_schedule["failure_codes"] == ["weather_infeasible"]
-    assert certificate_schedule["schedule_metrics"][
-        "schedule_missing_opening_window_count"
-    ] == 8.0
+    assert certificate_schedule["schedule_metrics"]["schedule_missing_opening_window_count"] == 8.0
 
 
 def test_mixed_duration_and_order_impact_matches_evaluated_preview(tmp_path: Path) -> None:
@@ -590,9 +589,15 @@ def test_mixed_duration_and_order_impact_matches_evaluated_preview(tmp_path: Pat
         for response in (creation, duration, order, impact, preview, restored):
             body = response.json()
             body.pop("mutation_token", None)
-            exchanges.append({"method": response.request.method, "path": response.request.url.path,
-                "input_body_utf8": response.request.content.decode("utf-8"),
-                "status": response.status_code, "output": body})
+            exchanges.append(
+                {
+                    "method": response.request.method,
+                    "path": response.request.url.path,
+                    "input_body_utf8": response.request.content.decode("utf-8"),
+                    "status": response.status_code,
+                    "output": body,
+                }
+            )
         path = Path(destination)
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(json.dumps(exchanges, indent=2), encoding="utf-8")

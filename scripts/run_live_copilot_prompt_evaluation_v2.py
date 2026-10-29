@@ -253,9 +253,7 @@ async def evaluate_effort(
         reasoning_effort=effort,
         client=recording,
     )
-    request_controls = base.build_request_controls(
-        model=model, effort=effort, timeout_seconds=timeout_seconds
-    )
+    request_controls = base.build_request_controls(model=model, effort=effort, timeout_seconds=timeout_seconds)
     cases = {case["case_id"]: case for case in corpus["cases"]}
     fixtures = corpus["context_fixtures"]
     results: list[dict[str, Any]] = []
@@ -317,13 +315,9 @@ async def evaluate_effort(
                     "attempt_count": recording.responses.attempt_count,
                     "prompt_sha256": base.prompt_sha256(),
                     "provider_response_id_sha256": (
-                        recording.responses.provider_response_id_sha256
-                        if structured_valid
-                        else None
+                        recording.responses.provider_response_id_sha256 if structured_valid else None
                     ),
-                    "provider_created_at": (
-                        recording.responses.provider_created_at if structured_valid else None
-                    ),
+                    "provider_created_at": (recording.responses.provider_created_at if structured_valid else None),
                     "provider_model": recording.responses.provider_model or model,
                     "request_controls_sha256": request_controls["content_hash"],
                     "source_snapshot_sha256": source_snapshot["content_hash"],
@@ -465,15 +459,9 @@ async def _main(args: argparse.Namespace) -> int:
         "evaluation_scope": "live_fixed_24_exact_io",
         "reasoning_efforts": list(summaries),
         "recommended_reasoning_effort": recommended,
-        "all_thresholds_passed": all(
-            summary["thresholds_passed"] for summary in summaries.values()
-        ),
-        "provider_attempts_total": sum(
-            summary["provider_attempts_total"] for summary in summaries.values()
-        ),
-        "transport_attempts_total": sum(
-            summary["transport_attempts_total"] for summary in summaries.values()
-        ),
+        "all_thresholds_passed": all(summary["thresholds_passed"] for summary in summaries.values()),
+        "provider_attempts_total": sum(summary["provider_attempts_total"] for summary in summaries.values()),
+        "transport_attempts_total": sum(summary["transport_attempts_total"] for summary in summaries.values()),
         "case_evidence_sha256": evidence_hashes,
         "exact_llm_io_sha256": exact_io_hashes,
         "source_snapshot_sha256": source_snapshot["content_hash"],

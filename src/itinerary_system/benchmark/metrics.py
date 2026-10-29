@@ -43,8 +43,7 @@ def extract_benchmark_metrics(
     quality_utility_regret = _number(evaluation_metrics.get("utility_regret"))
     quality_weather_risk_delta = _number(evaluation_metrics.get("weather_risk_delta"))
     quality_metrics_present = any(
-        value is not None
-        for value in (quality_utility_retained, quality_utility_regret, quality_weather_risk_delta)
+        value is not None for value in (quality_utility_retained, quality_utility_regret, quality_weather_risk_delta)
     )
     ranking_eligible = (
         comparison_eligibility == "eligible"
@@ -54,9 +53,7 @@ def extract_benchmark_metrics(
     )
 
     return {
-        "preservation_weighted_edit_cost": (
-            _number(diff.get("weighted_edit_cost")) if diff_records else None
-        ),
+        "preservation_weighted_edit_cost": (_number(diff.get("weighted_edit_cost")) if diff_records else None),
         "preservation_metric_owner": "plan_diff" if diff_records else None,
         "preservation_unchanged_day_count": len(tuple(unchanged_days)),
         "preservation_affected_day_count": len(scenario.affected_days),

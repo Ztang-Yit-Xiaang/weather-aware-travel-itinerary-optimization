@@ -161,11 +161,7 @@ def test_euclidean_near_does_not_imply_route_near() -> None:
 
 
 def test_precheck_can_only_establish_likely_feasible() -> None:
-    result = _assess(
-        precheck=FastFeasibilityPrecheckV1(
-            status="passed", evidence_refs=("precheck_1",)
-        )
-    )
+    result = _assess(precheck=FastFeasibilityPrecheckV1(status="passed", evidence_refs=("precheck_1",)))
 
     assert result.likely_feasible is True
     assert result.evaluated_feasible is False
@@ -220,9 +216,7 @@ def test_only_independent_evaluator_can_make_candidate_recommended() -> None:
 
 
 def test_recommendation_requires_ranking_eligibility() -> None:
-    with pytest.raises(
-        CandidateBurdenError, match="recommendation_requires_ranking_eligibility"
-    ):
+    with pytest.raises(CandidateBurdenError, match="recommendation_requires_ranking_eligibility"):
         EvaluatorCandidateEvidenceV1(
             owner="independent_evaluator",
             decision_eligible=True,

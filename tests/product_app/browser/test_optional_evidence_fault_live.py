@@ -180,8 +180,12 @@ def test_optional_evidence_projection_fault_preserves_accepted_child_and_back_na
                 with page.expect_response(lambda r: r.url.endswith("/accept"), timeout=60_000) as accepted:
                     page.locator("#accept-repair").click()
                     expect(page.get_by_role("dialog", name="Confirm trip decision", exact=True)).to_be_visible()
-                    expect(page.locator("#acceptance-message")).to_have_text('Accept this independently evaluated repair as the durable trip plan?')
-                    page.get_by_role("dialog", name="Confirm trip decision", exact=True).get_by_role("button", name='Accept repair', exact=True).click()
+                    expect(page.locator("#acceptance-message")).to_have_text(
+                        "Accept this independently evaluated repair as the durable trip plan?"
+                    )
+                    page.get_by_role("dialog", name="Confirm trip decision", exact=True).get_by_role(
+                        "button", name="Accept repair", exact=True
+                    ).click()
                 assert accepted.value.status == 200
                 acceptance = accepted.value.json()
                 expect(page.locator(".map-stage")).to_have_attribute("data-preview-state", "PARENT_RENDERED")

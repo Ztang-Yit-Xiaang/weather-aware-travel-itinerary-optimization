@@ -254,9 +254,8 @@ def _validate_diff(
     affected_stop_id: str,
     replacement_stop_id: str,
 ) -> None:
-    if (
-        diff.get("parent_plan_id") != parent_plan.get("plan_id")
-        or diff.get("child_plan_id") != child_plan.get("plan_id")
+    if diff.get("parent_plan_id") != parent_plan.get("plan_id") or diff.get("child_plan_id") != child_plan.get(
+        "plan_id"
     ):
         _fail("product_demo_diff_lineage_invalid")
     deleted = diff.get("deleted_stops")
@@ -291,11 +290,13 @@ def _validate_explanation(
     ):
         _fail("product_demo_explanation_scope_invalid")
     claims = explanation.get("claims")
-    if not isinstance(claims, list) or not claims or any(
-        not isinstance(claim, Mapping)
-        or claim.get("unsupported") is True
-        or not claim.get("evidence_refs")
-        for claim in claims
+    if (
+        not isinstance(claims, list)
+        or not claims
+        or any(
+            not isinstance(claim, Mapping) or claim.get("unsupported") is True or not claim.get("evidence_refs")
+            for claim in claims
+        )
     ):
         _fail("product_demo_explanation_claims_invalid")
 
@@ -368,9 +369,7 @@ def _validate_route_legs(
             or not isinstance(geometry, list)
             or len(geometry) < 2
             or any(
-                not isinstance(point, list)
-                or len(point) != 2
-                or not _coordinate(point[0], point[1])
+                not isinstance(point, list) or len(point) != 2 or not _coordinate(point[0], point[1])
                 for point in geometry
             )
         ):

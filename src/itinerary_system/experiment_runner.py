@@ -1549,9 +1549,7 @@ def _solve_greedy_day_route(
             + remaining["travel_to_end"]
             <= float(available_visit_minutes)
         ].copy()
-        feasible = feasible[
-            spent_cost + feasible["estimated_stop_cost"] <= float(remaining_budget) + 1e-9
-        ].copy()
+        feasible = feasible[spent_cost + feasible["estimated_stop_cost"] <= float(remaining_budget) + 1e-9].copy()
         if feasible.empty:
             break
         next_row = feasible.sort_values(
@@ -1580,8 +1578,10 @@ def _placeholder_candidate_mask(frame: pd.DataFrame) -> pd.Series:
         return pd.Series(False, index=frame.index, dtype=bool)
     names = frame.get("name", pd.Series("", index=frame.index)).fillna("").astype(str)
     categories = frame.get("category", pd.Series("", index=frame.index)).fillna("").astype(str)
-    return (names + " " + categories).str.lower().str.contains(
-        "catalog pending|data_ingestion_needed", regex=True, na=False
+    return (
+        (names + " " + categories)
+        .str.lower()
+        .str.contains("catalog pending|data_ingestion_needed", regex=True, na=False)
     )
 
 

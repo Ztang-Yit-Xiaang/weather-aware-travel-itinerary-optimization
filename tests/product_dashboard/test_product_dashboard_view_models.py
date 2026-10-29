@@ -7,9 +7,7 @@ from itinerary_system.product_dashboard_view_models import (
 
 
 def test_customer_and_research_views_share_one_artifact_model(product_run_factory) -> None:
-    model = build_product_dashboard_view_model(
-        load_product_dashboard_source(product_run_factory())
-    )
+    model = build_product_dashboard_view_model(load_product_dashboard_source(product_run_factory()))
 
     assert model["repair"]["status"] == "Eligible repair"
     assert model["timeline"][0]["states"] == ["unchanged"]
@@ -20,12 +18,8 @@ def test_customer_and_research_views_share_one_artifact_model(product_run_factor
 
 
 def test_exact_failures_have_reasons_and_never_receive_ranks(product_run_factory) -> None:
-    model = build_product_dashboard_view_model(
-        load_product_dashboard_source(product_run_factory())
-    )
-    exact = next(
-        row for row in model["alternatives"] if row["method_id"] == "context_blind_solver"
-    )
+    model = build_product_dashboard_view_model(load_product_dashboard_source(product_run_factory()))
+    exact = next(row for row in model["alternatives"] if row["method_id"] == "context_blind_solver")
 
     assert exact["display_status"] == "Exact search incomplete"
     assert "candidate_limit_exceeded" in exact["failure_reason"]
@@ -34,9 +28,7 @@ def test_exact_failures_have_reasons_and_never_receive_ranks(product_run_factory
 
 
 def test_comparison_metrics_keep_owner_and_directionality(product_run_factory) -> None:
-    model = build_product_dashboard_view_model(
-        load_product_dashboard_source(product_run_factory())
-    )
+    model = build_product_dashboard_view_model(load_product_dashboard_source(product_run_factory()))
     metrics = {metric["id"]: metric for metric in model["comparison"]}
 
     assert metrics["weighted_edit_cost"]["owner"] == "plan_diff"
@@ -46,9 +38,7 @@ def test_comparison_metrics_keep_owner_and_directionality(product_run_factory) -
 
 
 def test_map_has_original_repaired_and_text_alternative(product_run_factory) -> None:
-    model = build_product_dashboard_view_model(
-        load_product_dashboard_source(product_run_factory())
-    )
+    model = build_product_dashboard_view_model(load_product_dashboard_source(product_run_factory()))
 
     assert model["map"]["parent"]["segments"]
     assert model["map"]["child"]["segments"]
@@ -77,6 +67,4 @@ def test_missing_evaluator_metric_remains_unavailable_not_zero(
 
     assert metrics["utility_retained"]["child"]["value"] is None
     assert metrics["utility_retained"]["child"]["state"] == "unavailable"
-    assert {"null_metric", "unavailable_metric"} <= {
-        state["id"] for state in model["truth_states"]
-    }
+    assert {"null_metric", "unavailable_metric"} <= {state["id"] for state in model["truth_states"]}

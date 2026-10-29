@@ -264,7 +264,9 @@ class ExplanationEvidenceBuilder:
         plan_record = _artifact_record(plan)
         evaluation_record = _artifact_record(evaluation)
         plan_id = _artifact_id(plan, plan_record, "plan_id", prefix="plan")
-        evaluation_id = _artifact_id(evaluation, evaluation_record, "certificate_id", "evaluation_id", prefix="evaluation")
+        evaluation_id = _artifact_id(
+            evaluation, evaluation_record, "certificate_id", "evaluation_id", prefix="evaluation"
+        )
         evaluation_source_type = _evaluation_source_type(evaluation_record)
         eligibility = str(evaluation_record.get("comparison_eligibility", "unknown"))
         evaluation_ref = f"{evaluation_source_type}:{evaluation_id}:comparison_eligibility"
@@ -304,7 +306,9 @@ class ExplanationEvidenceBuilder:
         diff_id = _artifact_id(diff, diff_record, "diff_id", prefix="diff")
         parent_plan_id = str(diff_record.get("parent_plan_id") or plan_record.get("parent_plan_id") or "")
         child_plan_id = str(diff_record.get("child_plan_id") or plan_id)
-        evaluation_id = _artifact_id(evaluation, evaluation_record, "certificate_id", "evaluation_id", prefix="evaluation")
+        evaluation_id = _artifact_id(
+            evaluation, evaluation_record, "certificate_id", "evaluation_id", prefix="evaluation"
+        )
         evaluation_source_type = _evaluation_source_type(evaluation_record)
         weighted_edit_cost = float(diff_record.get("weighted_edit_cost", 0.0) or 0.0)
         eligibility = str(evaluation_record.get("comparison_eligibility", "unknown"))

@@ -241,9 +241,7 @@ def test_confirmed_waypoint_appends_once_persists_and_exposes_truthful_capabilit
         additional_allowed_authorities=("testserver",),
     )
     with TestClient(restarted) as second:
-        restored = second.get(
-            f"/api/sessions/{session['session_id']}", headers={"X-Session-Token": token}
-        )
+        restored = second.get(f"/api/sessions/{session['session_id']}", headers={"X-Session-Token": token})
     assert restored.status_code == 200
     assert restored.json()["session"]["draft"][0]["target"] == operation["target"]
 

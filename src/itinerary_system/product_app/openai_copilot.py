@@ -26,6 +26,7 @@ try:
         RateLimitError,
     )
 except ImportError:  # pragma: no cover - exercised by integration packaging checks
+
     class _UnavailableSDKError(Exception):
         pass
 
@@ -120,12 +121,8 @@ _ACCEPTED_STOP_INCLUSION_REQUEST = re.compile(
     r"\b(?:want\s+to\s+(?:go\s+to|visit)|include|keep|retain)\b",
     re.IGNORECASE,
 )
-_MAP_DRAFT_OPERATION_TYPES = frozenset(
-    {"add_custom_waypoint", "add_route_waypoint", "relocate_custom_waypoint"}
-)
-_QUOTA_ERROR_CODES = frozenset(
-    {"billing_hard_limit_reached", "insufficient_quota", "usage_limit_reached"}
-)
+_MAP_DRAFT_OPERATION_TYPES = frozenset({"add_custom_waypoint", "add_route_waypoint", "relocate_custom_waypoint"})
+_QUOTA_ERROR_CODES = frozenset({"billing_hard_limit_reached", "insufficient_quota", "usage_limit_reached"})
 
 
 class OpenAICopilotError(RuntimeError):
@@ -144,13 +141,9 @@ class OpenAICopilotError(RuntimeError):
             raise ValueError("unknown_openai_error_code")
         if diagnostic_code is not None and diagnostic_code not in _SAFE_DIAGNOSTIC_CODES:
             raise ValueError("unknown_openai_diagnostic_code")
-        if provider_status is not None and (
-            not isinstance(provider_status, int) or not 400 <= provider_status <= 599
-        ):
+        if provider_status is not None and (not isinstance(provider_status, int) or not 400 <= provider_status <= 599):
             raise ValueError("invalid_openai_provider_status")
-        if provider_error_code is not None and _SAFE_PROVIDER_ERROR_CODE.fullmatch(
-            provider_error_code
-        ) is None:
+        if provider_error_code is not None and _SAFE_PROVIDER_ERROR_CODE.fullmatch(provider_error_code) is None:
             raise ValueError("invalid_openai_provider_error_code")
         self.code = code
         self.http_status = http_status
@@ -216,11 +209,25 @@ class OpenAIRoleEditV1(_StrictModel):
     role: Literal["attraction", "activity", "meal", "rest_stop", "scenic_stop"]
 
 
-
-
 class OpenAIIntentSchemaV2(OpenAIIntentSchemaV1):
-    type: Literal[*get_args(_INTENT_TYPES), "set_stop_duration", "set_stop_order", "set_stop_time_window", "set_stop_role", "replan_trip"]
-    parameters: OpenAIDurationEditV1 | OpenAIOrderEditV1 | OpenAITimeWindowEditV1 | OpenAIRoleEditV1 | YosemiteExtensionParameters | IndividualizedTripParameters | TripPlanParameters | None = None
+    type: Literal[
+        *get_args(_INTENT_TYPES),
+        "set_stop_duration",
+        "set_stop_order",
+        "set_stop_time_window",
+        "set_stop_role",
+        "replan_trip",
+    ]
+    parameters: (
+        OpenAIDurationEditV1
+        | OpenAIOrderEditV1
+        | OpenAITimeWindowEditV1
+        | OpenAIRoleEditV1
+        | YosemiteExtensionParameters
+        | IndividualizedTripParameters
+        | TripPlanParameters
+        | None
+    ) = None
 
 
 class OpenAIInterpretationSchemaV2(OpenAIInterpretationSchemaV1):
@@ -266,10 +273,7 @@ class OpenAICopilotAdapter:
         self._client = client
 
     def __repr__(self) -> str:
-        return (
-            f"{type(self).__name__}(model={self.model!r}, "
-            f"timeout_seconds={self.timeout_seconds!r})"
-        )
+        return f"{type(self).__name__}(model={self.model!r}, timeout_seconds={self.timeout_seconds!r})"
 
     async def interpret(
         self,
@@ -286,7 +290,9 @@ class OpenAICopilotAdapter:
             ),
         )
         guarded = request_semantic_guard(context, message)
-        combined = guarded if guarded is not None and guarded.state == "proposal_ready" and len(guarded.intents) > 1 else None
+        combined = (
+            guarded if guarded is not None and guarded.state == "proposal_ready" and len(guarded.intents) > 1 else None
+        )
         if guarded is not None and combined is None:
             return validate_copilot_interpretation(context=context, interpretation=guarded)
         from .copilot_memory import interpret_context_request
@@ -300,10 +306,7 @@ class OpenAICopilotAdapter:
                 context=context,
                 interpretation=draft_guidance,
             )
-        if (
-            is_stop_removal_request(message)
-            and not is_stop_replacement_request(message)
-        ):
+        if is_stop_removal_request(message) and not is_stop_replacement_request(message):
             return validate_copilot_interpretation(
                 context=context,
                 interpretation=unsupported_stop_removal(),
@@ -326,16 +329,16 @@ class OpenAICopilotAdapter:
             raise CopilotContractError from exc
 
         client = self._require_client()
-        response_schema = OpenAIInterpretationSchemaV2 if isinstance(context, CopilotContextV2) else OpenAIInterpretationSchemaV1
+        response_schema = (
+            OpenAIInterpretationSchemaV2 if isinstance(context, CopilotContextV2) else OpenAIInterpretationSchemaV1
+        )
         try:
             async with asyncio.timeout(self.timeout_seconds):
                 response = await self._request_once(client, bundle, response_schema=response_schema)
         except asyncio.CancelledError:
             raise
         except TimeoutError as exc:
-            raise OpenAICopilotError(
-                "openai_timeout", 504, diagnostic_code="local_timeout"
-            ) from exc
+            raise OpenAICopilotError("openai_timeout", 504, diagnostic_code="local_timeout") from exc
 
         if _contains_refusal(response):
             return CopilotInterpretationV1(
@@ -362,19 +365,22 @@ class OpenAICopilotAdapter:
                 return validate_copilot_interpretation(context=context, interpretation=guarded)
         resolved_request = combined or contextual
         if resolved_request is not None and interpretation.state == "proposal_ready":
-            expected = [{**intent.as_dict(), "parameters": getattr(intent, "parameters", None)}
-                        for intent in resolved_request.intents]
+            expected = [
+                {**intent.as_dict(), "parameters": getattr(intent, "parameters", None)}
+                for intent in resolved_request.intents
+            ]
             actual = [intent.as_dict() for intent in interpretation.intents]
             if actual != expected:
                 question = "The reply did not preserve every requested change exactly. Please restate the complete edits with each stop name; no part was staged or changed."
-                return CopilotInterpretationV1(state="clarification_required", assistant_message=question,
-                    intents=(CopilotIntentV1(type="request_clarification", clarification_question=question),))
+                return CopilotInterpretationV1(
+                    state="clarification_required",
+                    assistant_message=question,
+                    intents=(CopilotIntentV1(type="request_clarification", clarification_question=question),),
+                )
             interpretation = replace(interpretation, highlights=resolved_request.highlights)
         # Provider prose is untrusted and never reaches the UI or transcript.
         # The model supplies typed state/intents; user-facing copy is local.
-        interpretation = _canonicalize_provider_copy(
-            interpretation, context=context, message=message
-        )
+        interpretation = _canonicalize_provider_copy(interpretation, context=context, message=message)
         from .copilot_memory import guard_contextual_output
 
         interpretation = guard_contextual_output(context, interpretation)
@@ -387,9 +393,7 @@ class OpenAICopilotAdapter:
         if self._client is not None:
             return self._client
         if not self._api_key.strip():
-            raise OpenAICopilotError(
-                "openai_not_configured", 503, diagnostic_code="local_not_configured"
-            )
+            raise OpenAICopilotError("openai_not_configured", 503, diagnostic_code="local_not_configured")
         if AsyncOpenAI is None:
             raise OpenAICopilotError(
                 "openai_transport_unavailable",
@@ -411,7 +415,9 @@ class OpenAICopilotAdapter:
             ) from exc
         return self._client
 
-    async def _request_once(self, client: Any, bundle: Any, *, response_schema: Any = OpenAIInterpretationSchemaV1) -> Any:
+    async def _request_once(
+        self, client: Any, bundle: Any, *, response_schema: Any = OpenAIInterpretationSchemaV1
+    ) -> Any:
         # The durable service reservation authorizes exactly one attempt. Even a
         # transient transport error may have reached the provider and incurred usage.
         try:
@@ -469,8 +475,7 @@ def _to_dataclass(parsed: OpenAIInterpretationSchemaV1) -> CopilotInterpretation
         state=parsed.state,
         assistant_message=parsed.assistant_message,
         intents=tuple(
-            (CopilotIntentV2 if current else CopilotIntentV1)(**intent.model_dump())
-            for intent in parsed.intents
+            (CopilotIntentV2 if current else CopilotIntentV1)(**intent.model_dump()) for intent in parsed.intents
         ),
         permission=parsed.permission,
         highlights=CopilotHighlightsV1(
@@ -484,15 +489,9 @@ def _to_dataclass(parsed: OpenAIInterpretationSchemaV1) -> CopilotInterpretation
 
 def _canonical_assistant_copy(interpretation: CopilotInterpretationV1) -> str:
     if interpretation.state == "proposal_ready":
-        return (
-            "I prepared a typed itinerary suggestion for your review. "
-            "Nothing was changed or executed automatically."
-        )
+        return "I prepared a typed itinerary suggestion for your review. Nothing was changed or executed automatically."
     if interpretation.state == "clarification_required":
-        return (
-            "I need more itinerary detail before I can prepare a typed suggestion. "
-            "Nothing was changed."
-        )
+        return "I need more itinerary detail before I can prepare a typed suggestion. Nothing was changed."
     if interpretation.state == "permission_required":
         return (
             "This request involves an external booking or payment action that this "
@@ -505,14 +504,11 @@ def _canonical_assistant_copy(interpretation: CopilotInterpretationV1) -> str:
     return "Copilot could not prepare a safe typed suggestion. No application state changed."
 
 
-def _draft_point_removal_guidance(
-    context: CopilotContextV1, message: str
-) -> CopilotInterpretationV1 | None:
+def _draft_point_removal_guidance(context: CopilotContextV1, message: str) -> CopilotInterpretationV1 | None:
     if not _DRAFT_POINT_REMOVAL_REQUEST.search(message):
         return None
     if not any(
-        isinstance(operation, dict)
-        and operation.get("type") in _MAP_DRAFT_OPERATION_TYPES
+        isinstance(operation, dict) and operation.get("type") in _MAP_DRAFT_OPERATION_TYPES
         for operation in context.draft_operations
     ):
         return None
@@ -527,9 +523,7 @@ def _draft_point_removal_guidance(
     )
 
 
-def _accepted_stop_inclusion(
-    context: CopilotContextV1, message: str
-) -> CopilotInterpretationV1 | None:
+def _accepted_stop_inclusion(context: CopilotContextV1, message: str) -> CopilotInterpretationV1 | None:
     if (
         is_stop_removal_request(message)
         or is_stop_replacement_request(message)
@@ -566,14 +560,13 @@ def _canonicalize_provider_copy(
         if intent.type == "replan_trip" and parameters and "total_days" in parameters:
             p = IndividualizedTripParameters.model_validate(parameters)
             details = f"{p.total_days} 天；節奏 {p.pace}；每日開車上限 {p.max_daily_drive_minutes} 分鐘；興趣 {', '.join(p.interests) or '沿用既有偏好'}；必去 {', '.join(p.required_place_ids) or '保留既有景點'}；避開 {', '.join(p.excluded_place_ids) or '無新增排除'}"
-            copy = (f"已準備 {details} 的行程提案。未另指定的偏好會沿用已接受方案。Preview 會重新求解並檢查，尚未更改行程。" if re.search(r"[\u3400-\u9fff]", message) else
-                f"Prepared a {p.total_days}-day trip proposal, {p.pace} pace, at most {p.max_daily_drive_minutes} driving minutes per day. Unchanged preferences inherit the accepted profile. Preview will solve and check the route; nothing was applied.")
+            copy = (
+                f"已準備 {details} 的行程提案。未另指定的偏好會沿用已接受方案。Preview 會重新求解並檢查，尚未更改行程。"
+                if re.search(r"[\u3400-\u9fff]", message)
+                else f"Prepared a {p.total_days}-day trip proposal, {p.pace} pace, at most {p.max_daily_drive_minutes} driving minutes per day. Unchanged preferences inherit the accepted profile. Preview will solve and check the route; nothing was applied."
+            )
             return replace(interpretation, assistant_message=copy)
-    if (
-        is_stop_removal_request(message)
-        and "mark_flexible" in intent_types
-        and "replace_nearby" not in intent_types
-    ):
+    if is_stop_removal_request(message) and "mark_flexible" in intent_types and "replace_nearby" not in intent_types:
         return unsupported_stop_removal()
     place_copy = known_place_clarification(context, message)
     if interpretation.state == "clarification_required" and interpretation.intents:
@@ -626,12 +619,17 @@ def _safe_specific_question(question: str | None) -> bool:
         and question.count("?") == 1
         and not any(character in question for character in "\r\n<>`")
         and re.match(r"^(?:Which|What|Where|When|How|Would|Do|Should|Can)\b", question, re.IGNORECASE) is not None
-        and re.search(r"\b(?:day|stop|place|route|move|replace|add|candidate|duration|trade-off)\b", question, re.IGNORECASE) is not None
+        and re.search(
+            r"\b(?:day|stop|place|route|move|replace|add|candidate|duration|trade-off)\b", question, re.IGNORECASE
+        )
+        is not None
         and re.search(
             r"https?://|\b(?:ignore|instruction|password|token|secret|api.key|booked|paid|"
             r"secured|purchased|charged|reserved|cancelled|canceled|accepted|applied|activated)\b",
-            question, re.IGNORECASE,
-        ) is None
+            question,
+            re.IGNORECASE,
+        )
+        is None
     )
 
 
@@ -672,9 +670,7 @@ def _classify_error(exc: Exception) -> tuple[str, int | None]:
     return ("transport", status)
 
 
-def _normalized_error(
-    category: tuple[str, int | None], exc: Exception
-) -> OpenAICopilotError:
+def _normalized_error(category: tuple[str, int | None], exc: Exception) -> OpenAICopilotError:
     kind, status = category
     provider_error_code = _safe_provider_error_code(exc)
     if kind == "authentication":
@@ -713,9 +709,7 @@ def _normalized_error(
         return OpenAICopilotError(
             "openai_provider_unavailable",
             503,
-            diagnostic_code=(
-                "provider_unavailable" if status is not None else "transport_unavailable"
-            ),
+            diagnostic_code=("provider_unavailable" if status is not None else "transport_unavailable"),
             provider_status=status,
             provider_error_code=provider_error_code,
         )

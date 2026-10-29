@@ -98,11 +98,7 @@ def build_catalog_documents() -> tuple[bytes, bytes]:
         for region in CALIFORNIA_STATEWIDE_NATURE_REGIONS
     ]
     nature_names = {region.name for region in CALIFORNIA_STATEWIDE_NATURE_REGIONS}
-    gateway_names = sorted(
-        set(scenario.coordinate_fallbacks)
-        - nature_names
-        - EXCLUDED_NON_CALIFORNIA_COORDINATES
-    )
+    gateway_names = sorted(set(scenario.coordinate_fallbacks) - nature_names - EXCLUDED_NON_CALIFORNIA_COORDINATES)
     for name in gateway_names:
         coordinate = scenario.coordinate_fallbacks.get(name)
         if coordinate is None:

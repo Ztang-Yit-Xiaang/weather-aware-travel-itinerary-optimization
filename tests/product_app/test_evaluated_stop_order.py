@@ -101,11 +101,7 @@ def test_same_day_order_edit_builds_exact_child_diff_certificate_and_route_legs(
     assert certificate["route_validation"]["missing_leg_count"] == 0
     assert certificate["route_validation"]["fallback_leg_count"] == 0
     assert len(compiled.route_legs) == 16
-    assert {
-        (row["origin_id"], row["destination_id"])
-        for row in compiled.route_legs
-        if row["day"] == 4
-    } == {
+    assert {(row["origin_id"], row["destination_id"]) for row in compiled.route_legs if row["day"] == 4} == {
         ("the_line_la", "surf_n_wear_s_beach_house"),
         ("surf_n_wear_s_beach_house", "stearns_wharf"),
         ("stearns_wharf", "hotel_milo_santa_barbara"),
@@ -142,7 +138,8 @@ def test_order_batch_accepts_positions_already_satisfied_by_another_row(reverse)
     compiled = compiler.compile(operations, accepted_plan_id=PARENT_ID)
     assert compiled.state == "eligible"
     assert next(day["stop_ids"] for day in compiled.child_plan["ordered_days"] if day["day"] == 4) == [
-        "surf_n_wear_s_beach_house", "stearns_wharf",
+        "surf_n_wear_s_beach_house",
+        "stearns_wharf",
     ]
 
 
@@ -159,29 +156,38 @@ def test_same_day_reorder_preserves_complete_untouched_stop_records_and_constrai
             stop["stop_order"] = 6  # Real accepted-replacement artifact shape.
         if stop["day"] == 6:
             stop["time_window_constraint"] = {
-                "schema_version": "stop-time-window-constraint-v1", "earliest_arrival": "10:00",
-                "latest_departure": None, "early_arrival_policy": "wait_until_earliest_arrival",
+                "schema_version": "stop-time-window-constraint-v1",
+                "earliest_arrival": "10:00",
+                "latest_departure": None,
+                "early_arrival_policy": "wait_until_earliest_arrival",
                 "latest_departure_semantics": "departure_after_visit",
             }
         if stop["day"] == 7:
             stop["visit_duration_minutes"] = 60
-            stop["duration_constraint"] = {"mode": "exact", "preferred_minutes": 60,
-                "minimum_minutes": 60, "maximum_minutes": 60}
+            stop["duration_constraint"] = {
+                "mode": "exact",
+                "preferred_minutes": 60,
+                "minimum_minutes": 60,
+                "maximum_minutes": 60,
+            }
     parent = replace(compiler._parent_artifact, selected_stops=stops).to_record()
     original = deepcopy(parent)
     compiled = compiler.for_parent(parent).compile([_operation()], accepted_plan_id=parent["plan_id"])
     assert compiled.certificate["plan_content_hash"] == compiled.child_plan["content_hash"]
     assert compiled.certificate["comparison_eligibility"] == "eligible"
     assert [row for row in compiled.child_plan["selected_stops"] if row["day"] != 4] == [
-        row for row in parent["selected_stops"] if row["day"] != 4]
+        row for row in parent["selected_stops"] if row["day"] != 4
+    ]
     assert {row["day"] for row in compiled.diff["reorder_changes"]} == {4}
     assert len(compiled.diff["reorder_changes"]) == 2
     assert 5 in compiled.diff["unchanged_days"]
     assert compiled.diff["weighted_edit_cost"] == 4.0
     assert {day: value for day, value in compiled.child_plan["route_ids_by_day"].items() if str(day) != "4"} == {
-        day: value for day, value in parent["route_ids_by_day"].items() if str(day) != "4"}
+        day: value for day, value in parent["route_ids_by_day"].items() if str(day) != "4"
+    }
     assert [row for row in compiled.route_legs if row["day"] != 4] == [
-        row for row in compiled.parent_route_legs if row["day"] != 4]
+        row for row in compiled.parent_route_legs if row["day"] != 4
+    ]
     assert parent == original
 
 
@@ -246,14 +252,9 @@ def test_reorder_fails_closed_when_one_required_reverse_leg_is_missing() -> None
         matrix["cells"] = [
             row
             for row in matrix["cells"]
-            if not (
-                row["origin_id"] == "surf_n_wear_s_beach_house"
-                and row["destination_id"] == "stearns_wharf"
-            )
+            if not (row["origin_id"] == "surf_n_wear_s_beach_house" and row["destination_id"] == "stearns_wharf")
         ]
-        damaged_bundles[plan_id] = bundle.__class__(
-            **{**bundle.__dict__, "route_matrix": matrix}
-        )
+        damaged_bundles[plan_id] = bundle.__class__(**{**bundle.__dict__, "route_matrix": matrix})
 
     with pytest.raises(WorkspaceError, match="draft_candidate_route_evidence_missing"):
         _compiler(evidence_bundles=damaged_bundles).compile(
@@ -314,13 +315,9 @@ def test_preview_api_binds_revision_draft_lineage_evidence_and_geography(tmp_pat
     assert proposal["diff_id"] == proposal["diff_identity"]["diff_id"]
     assert proposal["diff_content_hash"] == proposal["diff_identity"]["content_hash"]
     assert proposal["child_plan_id"] == proposal["certificate_identity"]["plan_id"]
-    assert proposal["child_plan_content_hash"] == proposal["certificate_identity"][
-        "plan_content_hash"
-    ]
+    assert proposal["child_plan_content_hash"] == proposal["certificate_identity"]["plan_content_hash"]
     assert proposal["certificate_id"] == proposal["certificate_identity"]["certificate_id"]
-    assert proposal["certificate_content_hash"] == proposal["certificate_identity"][
-        "content_hash"
-    ]
+    assert proposal["certificate_content_hash"] == proposal["certificate_identity"]["content_hash"]
     assert proposal["route_validation_identity"] == {
         key: proposal["route_validation"][key]
         for key in (
@@ -336,10 +333,7 @@ def test_preview_api_binds_revision_draft_lineage_evidence_and_geography(tmp_pat
     assert geography["coverage"]["required_leg_count"] == 15
     assert geography["coverage"]["road_validated_leg_count"] == 15
     assert geography["coverage"]["gap_count"] == 0
-    route_path = [
-        feature["properties"]["node_id"]
-        for feature in geography["route_path"]["features"]
-    ]
+    route_path = [feature["properties"]["node_id"] for feature in geography["route_path"]["features"]]
     assert route_path.index("kings_canyon_national_park") < route_path.index("sequoia_national_park")
     assert stable_content_hash(proposal["compiled_request"]["operations"]) != ""
     restored_session = restored.json()["session"]
@@ -455,17 +449,11 @@ def test_mixed_order_impact_matches_compiler_rejection(tmp_path: Path) -> None:
         "blocking_codes": ["unsupported_optimizer_mapping", "draft_evaluated_operation_combination_unsupported"],
     }
     assert preview.status_code == 409
-    assert preview.json() == {
-        "detail": "draft_evaluated_operation_combination_unsupported"
-    }
+    assert preview.json() == {"detail": "draft_evaluated_operation_combination_unsupported"}
 
 
 def test_order_preview_does_not_mutate_frozen_product_artifacts(tmp_path: Path) -> None:
-    paths = tuple(
-        path
-        for path in (RUN / "alternatives").rglob("*.json")
-        if path.is_file()
-    )
+    paths = tuple(path for path in (RUN / "alternatives").rglob("*.json") if path.is_file())
     before = {path: sha256(path.read_bytes()).hexdigest() for path in paths}
     compiler = _compiler()
 
@@ -473,22 +461,45 @@ def test_order_preview_does_not_mutate_frozen_product_artifacts(tmp_path: Path) 
 
     assert {path: sha256(path.read_bytes()).hexdigest() for path in paths} == before
 
+
 @pytest.mark.parametrize("duration_first", [False, True])
 def test_current_order_plus_duration_survives_preview_reload_and_sequential_undo(tmp_path, duration_first):
-    order = [{"type": "set_stop_order", "target": target,
-              "parameters": {"day": 4, "sequence_index": index}, "source": "copilot", "evidence_refs": []}
-             for index, target in enumerate(("sequoia_national_park", "kings_canyon_national_park"))]
-    duration = {"type": "set_stop_duration", "target": "griffith_observatory", "source": "copilot", "evidence_refs": [],
-                "parameters": {"duration": {"mode": "exact", "preferred_minutes": 75, "minimum_minutes": 75, "maximum_minutes": 75}}}
+    order = [
+        {
+            "type": "set_stop_order",
+            "target": target,
+            "parameters": {"day": 4, "sequence_index": index},
+            "source": "copilot",
+            "evidence_refs": [],
+        }
+        for index, target in enumerate(("sequoia_national_park", "kings_canyon_national_park"))
+    ]
+    duration = {
+        "type": "set_stop_duration",
+        "target": "griffith_observatory",
+        "source": "copilot",
+        "evidence_refs": [],
+        "parameters": {
+            "duration": {"mode": "exact", "preferred_minutes": 75, "minimum_minutes": 75, "maximum_minutes": 75}
+        },
+    }
     operations = [duration, *order] if duration_first else [*order, duration]
-    with TestClient(create_product_app(repository_root=ROOT, registry_path=REGISTRY,
-                    state_root=tmp_path / "state", additional_allowed_authorities=("testserver",))) as client:
+    with TestClient(
+        create_product_app(
+            repository_root=ROOT,
+            registry_path=REGISTRY,
+            state_root=tmp_path / "state",
+            additional_allowed_authorities=("testserver",),
+        )
+    ) as client:
         created = client.post("/api/sessions", json={}).json()
         session_id = created["session"]["session_id"]
         accepted = created["session"]["accepted_plan_id"]
         headers = {"X-Session-Token": created["mutation_token"]}
         base = f"/api/sessions/{session_id}"
-        staged = client.post(base + "/draft/operations", headers=headers, json={"expected_revision": 0, "operations": operations})
+        staged = client.post(
+            base + "/draft/operations", headers=headers, json={"expected_revision": 0, "operations": operations}
+        )
         assert staged.status_code == 200, staged.text
         assert staged.json()["session"]["revision"] == 1
         assert len(staged.json()["session"]["draft"]) == 3
@@ -513,7 +524,9 @@ def test_current_order_plus_duration_survives_preview_reload_and_sequential_undo
             assert len(current["draft"]) == 2 - index
             assert current["proposal"] is None
             if index == 0 and not duration_first:
-                unchanged_order = client.post(base + "/preview", headers=headers, json={"expected_revision": revision + 1})
+                unchanged_order = client.post(
+                    base + "/preview", headers=headers, json={"expected_revision": revision + 1}
+                )
                 assert unchanged_order.status_code == 409
                 assert unchanged_order.json()["detail"] == "draft_no_effect"
                 after_refusal = client.get(base, headers=headers)
@@ -522,16 +535,32 @@ def test_current_order_plus_duration_survives_preview_reload_and_sequential_undo
 
 
 def test_wholly_current_order_batch_is_rejected_before_persistence(tmp_path):
-    operations = [{"type": "set_stop_order", "target": target,
-                   "parameters": {"day": 4, "sequence_index": index}, "source": "copilot", "evidence_refs": []}
-                  for index, target in enumerate(("sequoia_national_park", "kings_canyon_national_park"))]
-    with TestClient(create_product_app(repository_root=ROOT, registry_path=REGISTRY,
-                    state_root=tmp_path / "state", additional_allowed_authorities=("testserver",))) as client:
+    operations = [
+        {
+            "type": "set_stop_order",
+            "target": target,
+            "parameters": {"day": 4, "sequence_index": index},
+            "source": "copilot",
+            "evidence_refs": [],
+        }
+        for index, target in enumerate(("sequoia_national_park", "kings_canyon_national_park"))
+    ]
+    with TestClient(
+        create_product_app(
+            repository_root=ROOT,
+            registry_path=REGISTRY,
+            state_root=tmp_path / "state",
+            additional_allowed_authorities=("testserver",),
+        )
+    ) as client:
         created = client.post("/api/sessions", json={}).json()
         session_id = created["session"]["session_id"]
         headers = {"X-Session-Token": created["mutation_token"]}
-        response = client.post(f"/api/sessions/{session_id}/draft/operations", headers=headers,
-                               json={"expected_revision": 0, "operations": operations})
+        response = client.post(
+            f"/api/sessions/{session_id}/draft/operations",
+            headers=headers,
+            json={"expected_revision": 0, "operations": operations},
+        )
         assert response.status_code == 409
         assert response.json()["detail"] == "draft_no_effect"
         recovered = client.get(f"/api/sessions/{session_id}", headers=headers)
@@ -541,18 +570,43 @@ def test_wholly_current_order_batch_is_rejected_before_persistence(tmp_path):
 
 
 def test_redundant_order_rows_cannot_mask_invalid_duration_in_atomic_batch(tmp_path):
-    operations = [{"type": "set_stop_order", "target": target,
-                   "parameters": {"day": 4, "sequence_index": index}, "source": "copilot", "evidence_refs": []}
-                  for index, target in enumerate(("sequoia_national_park", "kings_canyon_national_park"))]
-    operations.append({"type": "set_stop_duration", "target": "griffith_observatory", "source": "copilot", "evidence_refs": [],
-                       "parameters": {"duration": {"mode": "exact", "preferred_minutes": 75, "minimum_minutes": 45, "maximum_minutes": 75}}})
-    with TestClient(create_product_app(repository_root=ROOT, registry_path=REGISTRY,
-                    state_root=tmp_path / "state", additional_allowed_authorities=("testserver",))) as client:
+    operations = [
+        {
+            "type": "set_stop_order",
+            "target": target,
+            "parameters": {"day": 4, "sequence_index": index},
+            "source": "copilot",
+            "evidence_refs": [],
+        }
+        for index, target in enumerate(("sequoia_national_park", "kings_canyon_national_park"))
+    ]
+    operations.append(
+        {
+            "type": "set_stop_duration",
+            "target": "griffith_observatory",
+            "source": "copilot",
+            "evidence_refs": [],
+            "parameters": {
+                "duration": {"mode": "exact", "preferred_minutes": 75, "minimum_minutes": 45, "maximum_minutes": 75}
+            },
+        }
+    )
+    with TestClient(
+        create_product_app(
+            repository_root=ROOT,
+            registry_path=REGISTRY,
+            state_root=tmp_path / "state",
+            additional_allowed_authorities=("testserver",),
+        )
+    ) as client:
         created = client.post("/api/sessions", json={}).json()
         session_id = created["session"]["session_id"]
         headers = {"X-Session-Token": created["mutation_token"]}
-        response = client.post(f"/api/sessions/{session_id}/draft/operations", headers=headers,
-                               json={"expected_revision": 0, "operations": operations})
+        response = client.post(
+            f"/api/sessions/{session_id}/draft/operations",
+            headers=headers,
+            json={"expected_revision": 0, "operations": operations},
+        )
         assert response.status_code == 422, response.text
         recovered = client.get(f"/api/sessions/{session_id}", headers=headers)
         assert recovered.status_code == 200

@@ -57,7 +57,7 @@ def test_renderer_uses_distinct_route_styles_and_linked_attribution() -> None:
     assert 'id: "v2-route-original"' in source
     assert 'id: "v2-route-active"' in source
     assert 'id: "v2-route-selected"' in source
-    assert 'line-dasharray' in source
+    assert "line-dasharray" in source
     assert "attribution.url" in APP_JS.read_text(encoding="utf-8")
     assert 'class="map-attribution"' in APP_JS.read_text(encoding="utf-8")
     assert "selectedRouteLegId" in source
@@ -171,7 +171,7 @@ def test_custom_waypoint_exposes_safe_latest_draft_removal() -> None:
     assert 'id="remove-custom-waypoint"' in source
     assert "Remove this draft waypoint" in source
     assert "Undo newer draft changes before removing this waypoint" in source
-    assert 'latestDraft?.target === waypoint.waypoint_id' in source
+    assert "latestDraft?.target === waypoint.waypoint_id" in source
     assert 'window.confirm("Remove this latest staged waypoint?' in source
     assert "void undoDraft();" in source
     assert ">Undo latest draft</button>" in source
@@ -203,19 +203,15 @@ def test_control_layout_preserves_comfort_and_map_clearance_across_breakpoints()
     assert "gap: 8px; pointer-events: none; }" in css
     assert ".map-accessibility-panel > * { pointer-events: auto; }" in css
     source = APP_JS.read_text(encoding="utf-8")
-    interaction_mode = source.split("function setMapInteractionMode", 1)[1].split(
-        "function selectMapStop", 1
-    )[0]
-    route_leg = source.split("function selectRouteLeg", 1)[1].split(
-        "function selectCustomWaypoint", 1
-    )[0]
+    interaction_mode = source.split("function setMapInteractionMode", 1)[1].split("function selectMapStop", 1)[0]
+    route_leg = source.split("function selectRouteLeg", 1)[1].split("function selectCustomWaypoint", 1)[0]
     assert 'if (mode === "edit") {' in interaction_mode
-    assert 'if (textRoute) textRoute.open = false;' in interaction_mode
-    assert 'if (textRoute) textRoute.open = false;' in route_leg
+    assert "if (textRoute) textRoute.open = false;" in interaction_mode
+    assert "if (textRoute) textRoute.open = false;" in route_leg
     custom_waypoint = source.split("function selectCustomWaypoint", 1)[1].split(
         "function beginCustomWaypointRelocation", 1
     )[0]
-    assert 'if (textRoute) textRoute.open = false;' in custom_waypoint
+    assert "if (textRoute) textRoute.open = false;" in custom_waypoint
     assert ".map-context-card { left: 12px; right: 12px; top: auto; bottom: 195px;" in css
     assert ".map-legend { left: 10px; right: 10px; bottom: 152px;" in css
     assert ".action-stack .primary:disabled { opacity: 1;" in css
@@ -239,7 +235,7 @@ def test_map_runtime_removes_failed_assets_and_reports_late_errors() -> None:
     assert "script.remove();" in source
     assert 'nextMap.on("error"' in source
     assert 'code: "map_render_failed"' in source
-    assert 'element.hidden = false;' in APP_JS.read_text(encoding="utf-8")
+    assert "element.hidden = false;" in APP_JS.read_text(encoding="utf-8")
 
 
 def test_selected_alternative_drives_its_own_markers_and_text_route() -> None:
@@ -263,7 +259,7 @@ def test_compare_and_evidence_preserve_nulls_and_selected_plan_ownership() -> No
     assert "Select one available repair above to preview its route" in compare
     assert "alternatives[0]" not in app
     assert '"Not evaluated for this plan"' in app
-    assert 'const selectedPlan = resolution.plan;' in app
+    assert "const selectedPlan = resolution.plan;" in app
     assert "const methods = selectedEvidence?.methods || {};" in app
     assert "const sourceHashCount = Object.keys(selectedEvidence?.source_hashes || {}).length;" in app
     assert "routeSummaryForPlan(selectedPlan)" in app
@@ -290,7 +286,7 @@ def test_w3_renders_evaluated_preview_state_and_metrics_without_registered_fallb
     index = INDEX.read_text(encoding="utf-8")
     css = APP_CSS.read_text(encoding="utf-8")
 
-    assert 'const repair = evaluated || registered ? proposal.repair : state.workspace.repair;' in app
+    assert "const repair = evaluated || registered ? proposal.repair : state.workspace.repair;" in app
     assert 'registered ? "Registered fixture proposal"' in app
     assert 'evaluated ? "No eligible draft repair"' in app
     assert 'proposal?.reason || "Unavailable"' in app
@@ -305,7 +301,7 @@ def test_w3_renders_evaluated_preview_state_and_metrics_without_registered_fallb
     assert "function activeGeography()" in app
     assert 'proposal?.schema_version === "draft-preview-v1"' in app
     assert 'state.session.proposal?.schema_version === "draft-preview-v1"' in app
-    assert 'const displayed = selectedAlternative || accepted || original;' in app
+    assert "const displayed = selectedAlternative || accepted || original;" in app
     assert 'code: "evaluated_preview_geography_unavailable"' in app
     assert 'const proposalMatches = context?.scope === "preview";' in app
     assert "This is evaluated preview evidence, not an accepted change." in app
@@ -323,8 +319,8 @@ def test_e2e1_active_plan_and_map_acknowledgement_contract() -> None:
     assert "|| acceptedPlan(geography)" in app
     assert "const timeline = timelineForPlan(renderedPlan);" in app
     assert "const displayed = selectedAlternative || accepted || original;" in app
-    assert 'state.tripPreviewPlanId = option.plan_id;' in app
-    assert 'registered_independent_evaluation' in app
+    assert "state.tripPreviewPlanId = option.plan_id;" in app
+    assert "registered_independent_evaluation" in app
     assert 'state.previewRuntime.status = "PREVIEW_RENDERED"' in app
     assert '"PREVIEW_RUNNING", "PREVIEW_FAILED", "PREVIEW_INELIGIBLE"' in app
     assert "stage.dataset.previewState = state.previewRuntime.status;" in app
@@ -333,9 +329,10 @@ def test_e2e1_active_plan_and_map_acknowledgement_contract() -> None:
     assert "status.activePlanId === renderedPlan.plan_id" in app
     assert "status.activePlanContentHash === renderedPlan.content_hash" in app
     assert 'plan.role === "original"' in renderer
-    assert 'plan.role === "registered_repair"' not in renderer.split(
-        "function activePlanId", 1
-    )[1].split("export function disposeGeographicMap", 1)[0]
+    assert (
+        'plan.role === "registered_repair"'
+        not in renderer.split("function activePlanId", 1)[1].split("export function disposeGeographicMap", 1)[0]
+    )
     assert "activeMarkerIds" in controller
     assert "container.dataset.renderedMapPlanId" in controller
     assert "container.dataset.renderedPlanContentHash" in controller

@@ -175,7 +175,6 @@ class RouteMatrixTests(unittest.TestCase):
         self.assertEqual(matrix.duration_minutes("start", "poi_a", strict=True), 10.0)
         self.assertEqual(matrix.leg("start", "poi_a", strict=True).provider, "unit_cache")
 
-
     def test_loaded_matrix_id_hashes_content_not_file_location(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             first_path = Path(temp_dir) / "first.csv"

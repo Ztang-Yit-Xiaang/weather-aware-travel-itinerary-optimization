@@ -1,4 +1,5 @@
 """Adversarial observer evidence checks; not a substitute for the browser run."""
+
 from __future__ import annotations
 
 import json
@@ -17,27 +18,66 @@ def fixture():
     def time(seconds):
         return f"2026-09-08T12:00:{seconds:06.3f}+00:00"
 
-    ack = {"active_plan_id": "child", "active_plan_content_hash": "child-hash", "rendered_map_plan_id": "child",
-        "rendered_geometry_hash": "geometry", "rendered_marker_ids": ["pfeiffer"]}
-    rendered = {"renderedMapPlanId": "child", "renderedGeometryHash": "geometry",
-        "renderedMarkerIds": json.dumps(["pfeiffer"])}
-    stage = {**rendered, "activePlanId": "child", "activePlanContentHash": "child-hash",
-        "previewRequestId": "request", "previewState": "PREVIEW_RENDERED"}
-    data = {**rendered, "renderedPlanContentHash": "child-hash", "mapReady": "true",
-        "mapReadyAt": time(0), "mapTileCoverage": "1", "mapCoverageMethod": "loaded_tile_projected_union_area_v1"}
-    base = {"reason": "armed", "detail": None, "sequence": 1, "observed_at": time(1), "performance_ms": 1,
-        "path": "/app/itinerary", "previous_map_id": 1, "previous_connected": True, "previous_map": data,
-        "current_map_id": 1, "current_connected": True, "current_map": data, "stage": stage,
-        "accept": {"present": True, "disabled": False, "visible": True}}
+    ack = {
+        "active_plan_id": "child",
+        "active_plan_content_hash": "child-hash",
+        "rendered_map_plan_id": "child",
+        "rendered_geometry_hash": "geometry",
+        "rendered_marker_ids": ["pfeiffer"],
+    }
+    rendered = {
+        "renderedMapPlanId": "child",
+        "renderedGeometryHash": "geometry",
+        "renderedMarkerIds": json.dumps(["pfeiffer"]),
+    }
+    stage = {
+        **rendered,
+        "activePlanId": "child",
+        "activePlanContentHash": "child-hash",
+        "previewRequestId": "request",
+        "previewState": "PREVIEW_RENDERED",
+    }
+    data = {
+        **rendered,
+        "renderedPlanContentHash": "child-hash",
+        "mapReady": "true",
+        "mapReadyAt": time(0),
+        "mapTileCoverage": "1",
+        "mapCoverageMethod": "loaded_tile_projected_union_area_v1",
+    }
+    base = {
+        "reason": "armed",
+        "detail": None,
+        "sequence": 1,
+        "observed_at": time(1),
+        "performance_ms": 1,
+        "path": "/app/itinerary",
+        "previous_map_id": 1,
+        "previous_connected": True,
+        "previous_map": data,
+        "current_map_id": 1,
+        "current_connected": True,
+        "current_map": data,
+        "stage": stage,
+        "accept": {"present": True, "disabled": False, "visible": True},
+    }
     rows = [deepcopy(base) for _ in range(4)]
     for index, row in enumerate(rows, 1):
         row.update(sequence=index, observed_at=time(index), performance_ms=index)
     rows[1].update(reason="trusted_control_event", detail={"trusted": True, "target_id": "map-select-button"})
     for row in rows[2:]:
         row.update(previous_connected=False, previous_map={"mapReady": "false"}, current_map_id=2)
-    rows[2].update(reason="mutation", current_map={"mapReady": "false"},
-        stage={"activePlanId": "child", "activePlanContentHash": "child-hash", "previewRequestId": "request",
-            "previewState": "PREVIEW_DATA_READY"}, accept={"present": True, "disabled": True, "visible": True})
+    rows[2].update(
+        reason="mutation",
+        current_map={"mapReady": "false"},
+        stage={
+            "activePlanId": "child",
+            "activePlanContentHash": "child-hash",
+            "previewRequestId": "request",
+            "previewState": "PREVIEW_DATA_READY",
+        },
+        accept={"present": True, "disabled": True, "visible": True},
+    )
     rows[3]["reason"] = "stopped"
     rows[3]["current_map"]["mapReadyAt"] = time(3.5)
     return {"label": "select_remount", "rows": rows, "overflow": False}, ack
@@ -48,9 +88,29 @@ def test_real_loading_interval_precedes_same_child_readiness():
     assert verifier.verify_observation(observation, "select_remount", "#map-select-button", ack, "request") == 1
 
 
-@pytest.mark.parametrize("fault", ["enabled_while_pending", "old_ack", "new_ack", "stage_ack", "wrong_state",
-    "not_replaced", "old_map_connected", "synthetic_click", "no_loading", "wrong_request", "wrong_hash",
-    "wrong_marker", "nan_coverage", "low_coverage", "stale_ready_time", "future_ready_time", "overflow", "out_of_order"])
+@pytest.mark.parametrize(
+    "fault",
+    [
+        "enabled_while_pending",
+        "old_ack",
+        "new_ack",
+        "stage_ack",
+        "wrong_state",
+        "not_replaced",
+        "old_map_connected",
+        "synthetic_click",
+        "no_loading",
+        "wrong_request",
+        "wrong_hash",
+        "wrong_marker",
+        "nan_coverage",
+        "low_coverage",
+        "stale_ready_time",
+        "future_ready_time",
+        "overflow",
+        "out_of_order",
+    ],
+)
 def test_remount_counterexamples_are_rejected_after_valid_baseline(fault):
     observation, ack = fixture()
     assert verifier.verify_observation(observation, "select_remount", "#map-select-button", ack, "request") == 1

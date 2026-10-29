@@ -61,26 +61,17 @@ def test_coherent_package_uses_one_trip_order_and_exact_alternative_requests() -
     for row in manifest["alternatives"]:
         request = _json(RUN / row["request_relative_path"])
         diff = _json(RUN / row["diff_relative_path"])
-        assert request["confirmed_constraints"]["target_stop_ids"] == [
-            "bixby_creek_bridge_viewpoint"
-        ]
+        assert request["confirmed_constraints"]["target_stop_ids"] == ["bixby_creek_bridge_viewpoint"]
         assert len(request["candidate_pois"]) == 1
         assert request["candidate_pois"][0]["stop_id"] == row["replacement_stop_id"]
-        assert [change["stop_id"] for change in diff["deleted_stops"]] == [
-            "bixby_creek_bridge_viewpoint"
-        ]
-        assert [change["stop_id"] for change in diff["added_stops"]] == [
-            row["replacement_stop_id"]
-        ]
+        assert [change["stop_id"] for change in diff["deleted_stops"]] == ["bixby_creek_bridge_viewpoint"]
+        assert [change["stop_id"] for change in diff["added_stops"]] == [row["replacement_stop_id"]]
 
 
 def test_coherent_route_evidence_is_complete_road_validated_and_nonfallback() -> None:
     manifest = _json(RUN / "manifest.json")
     matrix = _json(RUN / manifest["route_evidence"]["relative_path"])
-    cells = {
-        (cell["origin_id"], cell["destination_id"]): cell
-        for cell in matrix["cells"]
-    }
+    cells = {(cell["origin_id"], cell["destination_id"]): cell for cell in matrix["cells"]}
 
     for plan in [manifest["parent"], *manifest["alternatives"]]:
         legs = plan["route_legs"]

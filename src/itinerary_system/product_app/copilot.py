@@ -98,7 +98,8 @@ _STOP_REPLACEMENT_REQUEST = re.compile(
 )
 _PRESENTATION_REMOVAL = re.compile(
     r"\b(?:remove|delete|exclude|skip)\s+(?:the\s+)?"
-    r"(?:explanation|details|summary|introduction|preamble|description)\b", re.IGNORECASE,
+    r"(?:explanation|details|summary|introduction|preamble|description)\b",
+    re.IGNORECASE,
 )
 _NEGATED_EDIT = re.compile(
     r"\b(?:do\s+not|don't|dont|never|not)\s+(?:want\s+to\s+)?"
@@ -108,7 +109,8 @@ _NEGATED_EDIT = re.compile(
 )
 _EDIT_ACTION = re.compile(
     r"\b(?:keep|retain|lock|flexible|move|replace|swap|substitute|add|include|"
-    r"remove|delete|exclude|skip|shorten|extend|reschedule|set|change|spend|stay|visit|give|treat|classify|reorder|arrive|leave|I(?:'d| would) like)\b", re.IGNORECASE,
+    r"remove|delete|exclude|skip|shorten|extend|reschedule|set|change|spend|stay|visit|give|treat|classify|reorder|arrive|leave|I(?:'d| would) like)\b",
+    re.IGNORECASE,
 )
 
 
@@ -117,11 +119,17 @@ def request_edit_text(message: str) -> str:
     text = re.sub(
         r"\b(?:keep|preserve|preserving|leave)\s+(?:the\s+)?"
         r"(?:other days|(?:rest|remaining|other)(?:\s+stops)?(?:\s+of\s+the\s+(?:seven-day\s+)?(?:trip|itinerary))?)"
-        r"(?:\s+(?:unchanged|alone|as is))?\b", "", message, flags=re.I,
+        r"(?:\s+(?:unchanged|alone|as is))?\b",
+        "",
+        message,
+        flags=re.I,
     )
     return re.sub(
         r"(?:^|(?<=[.!?]))\s*(?:the\s+)?(?:coast|weather|forecast)\s+"
-        r"(?:looks|is|seems)\s+(?:stormy|rainy|wet|windy)[.!?]", "", text, flags=re.I,
+        r"(?:looks|is|seems)\s+(?:stormy|rainy|wet|windy)[.!?]",
+        "",
+        text,
+        flags=re.I,
     )
 
 
@@ -139,8 +147,7 @@ def unsupported_stop_removal() -> CopilotInterpretationV1:
     return CopilotInterpretationV1(
         state="unsupported",
         assistant_message=(
-            "Removing or excluding an accepted stop is not enabled in this repair workflow. "
-            "Nothing was changed."
+            "Removing or excluding an accepted stop is not enabled in this repair workflow. Nothing was changed."
         ),
         intents=(CopilotIntentV1(type="unsupported_request"),),
     )
@@ -166,15 +173,18 @@ def _bounded_chinese_edit_request(context: CopilotContextV1, message: str) -> Co
         clause = " ".join(clause.split())
         replacement = re.fullmatch(
             r"(?:請|请)?\s*(?:把|將|将)?\s*(COPILOTZHPLACE\d+)\s*"
-            r"(?:換成|换成|替換(?:為|成)|替换(?:为|成))\s*(COPILOTZHPLACE\d+)", clause,
+            r"(?:換成|换成|替換(?:為|成)|替换(?:为|成))\s*(COPILOTZHPLACE\d+)",
+            clause,
         )
         duration = re.fullmatch(
             r"(?:請|请)?\s*(?:把|將|将)?\s*(COPILOTZHPLACE\d+)\s*(?:的)?\s*"
             r"(?:停留(?:時間|时间|時長|时长)?|遊覽時間|游览时间)\s*"
-            r"(?:設(?:為|置為)|设(?:为|置为)|改(?:為|为))\s*(\d+)\s*(分鐘|分钟|小時|小时)", clause,
+            r"(?:設(?:為|置為)|设(?:为|置为)|改(?:為|为))\s*(\d+)\s*(分鐘|分钟|小時|小时)",
+            clause,
         ) or re.fullmatch(
             r"(?:請|请)?\s*(?:在)?\s*(COPILOTZHPLACE\d+)\s*(?:停留|遊覽|游览)\s*"
-            r"(\d+)\s*(分鐘|分钟|小時|小时)", clause,
+            r"(\d+)\s*(分鐘|分钟|小時|小时)",
+            clause,
         )
         if replacement:
             normalized.append(f"Replace {names[replacement[1]]} with {names[replacement[2]]}")
@@ -192,12 +202,18 @@ def _bounded_chinese_edit_request(context: CopilotContextV1, message: str) -> Co
             if resolved is not None:
                 return resolved
     question = "Please restate every requested edit with its stop name and exact replacement or duration; I could not safely resolve the complete request."
-    return CopilotInterpretationV1(state="clarification_required", assistant_message=question + " Nothing was staged or changed.",
-        intents=(CopilotIntentV1(type="request_clarification", clarification_question=question),))
+    return CopilotInterpretationV1(
+        state="clarification_required",
+        assistant_message=question + " Nothing was staged or changed.",
+        intents=(CopilotIntentV1(type="request_clarification", clarification_question=question),),
+    )
 
 
 def request_semantic_guard(
-    context: CopilotContextV1, message: str, *, proposed_edit: bool = False,
+    context: CopilotContextV1,
+    message: str,
+    *,
+    proposed_edit: bool = False,
 ) -> CopilotInterpretationV1 | None:
     """Fail closed on negation and multi-clause edits our shortcuts cannot preserve.
 
@@ -214,15 +230,19 @@ def request_semantic_guard(
         r"\bwithout\s+(?:making\s+(?:any\s+)?(?:changes?|edits?)|changing|editing|modifying)\b|"
         r"(?:不要|別|别|請勿|请勿)\s*(?:先|再)?\s*(?:(?:幫|帮|替|為|为)\s*(?:我|我們|我们)\s*)?"
         r"(?:直接|自動|自动)?\s*(?:修改|更改|改動|改动|變更|变更|重新(?:安排|規劃|规划))",
-        message, re.IGNORECASE,
+        message,
+        re.IGNORECASE,
     ):
         question = (
             "我會保留目前行程，不提出修改。你想先檢視駕車時間、景點之間的安排，還是某一天的細節？尚未加入草稿或更改行程。"
-            if re.search(r"[\u3400-\u9fff]", message) else
-            "I will keep the itinerary unchanged. Would you like to review driving time, stop spacing, or a particular day's details? Nothing was staged or changed."
+            if re.search(r"[\u3400-\u9fff]", message)
+            else "I will keep the itinerary unchanged. Would you like to review driving time, stop spacing, or a particular day's details? Nothing was staged or changed."
         )
-        return CopilotInterpretationV1(state="clarification_required", assistant_message=question,
-            intents=(CopilotIntentV1(type="request_clarification", clarification_question=question),))
+        return CopilotInterpretationV1(
+            state="clarification_required",
+            assistant_message=question,
+            intents=(CopilotIntentV1(type="request_clarification", clarification_question=question),),
+        )
     trip = trip_request_interpretation(context, message)
     if trip is not None:
         return trip
@@ -232,7 +252,9 @@ def request_semantic_guard(
     if re.fullmatch(
         r"\s*(?:please\s+)?(?:keep|retain)\s+(?:the\s+)?"
         r"(?:original|same|current|accepted)\s+(?:plan|itinerary|trip)"
-        r"(?:\s+(?:unchanged|as\s+is))?[.!]?\s*", message, re.IGNORECASE,
+        r"(?:\s+(?:unchanged|as\s+is))?[.!]?\s*",
+        message,
+        re.IGNORECASE,
     ):
         return CopilotInterpretationV1(
             state="proposal_ready",
@@ -257,37 +279,53 @@ def request_semantic_guard(
         token = f"COPILOTPLACE{index}"
         place_names[token.lower()] = str(place["name"])
         for name in sorted((str(place["name"]), *place["aliases"]), key=len, reverse=True):
-            instruction_text = re.sub(r"(?<!\w)" + re.escape(name) + r"(?!\w)", token, instruction_text, flags=re.IGNORECASE)
+            instruction_text = re.sub(
+                r"(?<!\w)" + re.escape(name) + r"(?!\w)", token, instruction_text, flags=re.IGNORECASE
+            )
     # A conjunction joining clock bounds is part of one time-window value.
     instruction_text = re.sub(r"(\d{2}:\d{2})\s+and\s+(?=\d{2}:\d{2})", r"\1 to ", instruction_text, flags=re.I)
-    instruction_text = re.sub(r"(\d{2}:\d{2})\s+and\s+(?=latest departure\b)", r"\1 with ", instruction_text, flags=re.I)
+    instruction_text = re.sub(
+        r"(\d{2}:\d{2})\s+and\s+(?=latest departure\b)", r"\1 with ", instruction_text, flags=re.I
+    )
     # These exact clock phrases are values of one time-window edit. Keep other
     # verbs, clauses, place names and the original negation checks visible.
     instruction_text = re.sub(
         r"\b(?:arrive\s+(?:(?:at|not before)\s+)?|leave\s+by\s+)\d{2}:\d{2}\b",
-        "COPILOTCLOCK", instruction_text, flags=re.I,
+        "COPILOTCLOCK",
+        instruction_text,
+        flags=re.I,
     )
     instruction_text = re.sub(
-        r"(COPILOTCLOCK)\s*(?:,|and)\s*(?=COPILOTCLOCK\b)", r"\1 with ", instruction_text, flags=re.I,
+        r"(COPILOTCLOCK)\s*(?:,|and)\s*(?=COPILOTCLOCK\b)",
+        r"\1 with ",
+        instruction_text,
+        flags=re.I,
     )
     # A leading day label within each clause qualifies its edit; its comma
     # is not a second request. Retain the day value for the typed order parser.
     instruction_text = re.sub(
         r"(^\s*|(?:\b(?:and|but|then|also)\b|[;,.!?])\s*)((?:(?:if possible|if you can)\s*,?\s*)?on\s+day\s+\d+)\s*,\s*",
-        r"\1\2 ", instruction_text, flags=re.I,
+        r"\1\2 ",
+        instruction_text,
+        flags=re.I,
     )
     actions = [match.group().lower() for match in _EDIT_ACTION.finditer(instruction_text)]
     # A typed edit has no condition field. Preserve weather/event prerequisites
     # by asking, rather than silently proposing the unconditional subset.
     # Capability/feasibility courtesies still use the normal evaluated preview.
     condition_text = re.sub(
-        r"\bif (?:possible|you can)(?=\s*[.!?]?$|\s*[,;]?\s+(?:on\s+day\s+\d+\s*,?\s*)?(?:please\s+)?" + _EDIT_ACTION.pattern + r")",
-        "", instruction_text, flags=re.I,
+        r"\bif (?:possible|you can)(?=\s*[.!?]?$|\s*[,;]?\s+(?:on\s+day\s+\d+\s*,?\s*)?(?:please\s+)?"
+        + _EDIT_ACTION.pattern
+        + r")",
+        "",
+        instruction_text,
+        flags=re.I,
     )
     # A hypothetical visit request has no event prerequisite of its own.
     # Leave any later condition or additional clause visible to the guards.
-    condition_text = re.sub(r"^\s*what\s+if\s+I\s+(?:want\s+to\s+)?(?=(?:visit|add|include)\b)",
-                            "", condition_text, flags=re.I)
+    condition_text = re.sub(
+        r"^\s*what\s+if\s+I\s+(?:want\s+to\s+)?(?=(?:visit|add|include)\b)", "", condition_text, flags=re.I
+    )
     # Unknown edit wording can still name a known stop. Its condition must
     # not disappear just because the action is outside the local verb list.
     if places or proposed_edit:
@@ -301,23 +339,47 @@ def request_semantic_guard(
         r"presuming|supposing|depending\s+on|conditional\s+(?:on|upon))\b|"
         r"\b(?:weather|traffic|parking|conditions)\s+permitting\b|"
         r"\bonce\s+(?=\w)|"
-        r"\b(?:before|after)\b(?!\s+(?:copilotplace\d+|\d{2}:\d{2})\b)", condition_text, re.I,
+        r"\b(?:before|after)\b(?!\s+(?:copilotplace\d+|\d{2}:\d{2})\b)",
+        condition_text,
+        re.I,
     ):
-        question = ("Your edit includes a condition or event trigger that this workflow cannot evaluate. "
-                    "Should I propose the edit unconditionally, or wait until you confirm the condition is met?")
+        question = (
+            "Your edit includes a condition or event trigger that this workflow cannot evaluate. "
+            "Should I propose the edit unconditionally, or wait until you confirm the condition is met?"
+        )
         return CopilotInterpretationV1(
-            state="clarification_required", assistant_message=question + " Nothing was staged or changed.",
+            state="clarification_required",
+            assistant_message=question + " Nothing was staged or changed.",
             intents=(CopilotIntentV1(type="request_clarification", clarification_question=question),),
         )
     negation = _NEGATED_EDIT.search(text)
     question = None
-    clauses = [part.strip().lower() for part in re.split(
-        r"\b(?:and|but|then|also)\b|[;,.!?]", instruction_text, flags=re.IGNORECASE,
-    )]
-    clauses = [part for part in clauses if part and part not in {
-        "please", "hi", "hello", "thanks", "thank you", "okay", "ok", "sure",
-        "if possible", "if you can",
-    }]
+    clauses = [
+        part.strip().lower()
+        for part in re.split(
+            r"\b(?:and|but|then|also)\b|[;,.!?]",
+            instruction_text,
+            flags=re.IGNORECASE,
+        )
+    ]
+    clauses = [
+        part
+        for part in clauses
+        if part
+        and part
+        not in {
+            "please",
+            "hi",
+            "hello",
+            "thanks",
+            "thank you",
+            "okay",
+            "ok",
+            "sure",
+            "if possible",
+            "if you can",
+        }
+    ]
     clauses = [part for part in clauses if not re.fullmatch(r"for copilotplace\d+", part)]
     # 'Remove A and replace it with B' is one replacement, not two edits.
     same_stop_replacement = (
@@ -328,16 +390,25 @@ def request_semantic_guard(
         and re.search(r"\b(?:replace|swap|substitute)\s+it\b", text, re.IGNORECASE)
     )
     replacement_pair = same_stop_replacement and len(actions) == 2 and len(clauses) == 2
-    order = re.fullmatch(
-        r"(?:on\s+day\s+(?P<day>\d+)\s+)?(?:please\s+)?visit\s+copilotplace(?P<first>\d+)\s+"
-        r"(?P<relation>before|after)\s+copilotplace(?P<second>\d+)", clauses[0], re.I,
-    ) if len(clauses) == 1 else None
+    order = (
+        re.fullmatch(
+            r"(?:on\s+day\s+(?P<day>\d+)\s+)?(?:please\s+)?visit\s+copilotplace(?P<first>\d+)\s+"
+            r"(?P<relation>before|after)\s+copilotplace(?P<second>\d+)",
+            clauses[0],
+            re.I,
+        )
+        if len(clauses) == 1
+        else None
+    )
     unhandled_clause = len(clauses) > 1 and bool(actions)
     if (len(actions) > 1 or unhandled_clause) and not replacement_pair:
         labels = ", ".join(dict.fromkeys(actions)) or "multiple clauses"
-        if any(re.search(r"\b(?:remove|delete|exclude|skip)\s+copilotplace\d+\b", clause)
-               and _NEGATED_EDIT.search(clause) is None
-               and not (index == 0 and same_stop_replacement) for index, clause in enumerate(clauses)):
+        if any(
+            re.search(r"\b(?:remove|delete|exclude|skip)\s+copilotplace\d+\b", clause)
+            and _NEGATED_EDIT.search(clause) is None
+            and not (index == 0 and same_stop_replacement)
+            for index, clause in enumerate(clauses)
+        ):
             return CopilotInterpretationV1(
                 state="unsupported",
                 assistant_message=(
@@ -371,20 +442,27 @@ def request_semantic_guard(
             second_row = next((row for row in positions if row["stop_id"] == second), None)
             day = int(order["day"]) if order["day"] else first_row["day"] if first_row else None
             if first_row and second_row and first_row["day"] == second_row["day"] == day:
-                day_rows = sorted((row for row in positions if row["day"] == day), key=lambda row: row["sequence_index"])
+                day_rows = sorted(
+                    (row for row in positions if row["day"] == day), key=lambda row: row["sequence_index"]
+                )
                 names = {str(place["place_id"]): str(place["name"]) for place in context.known_places}
                 ordered = [row["stop_id"] for row in day_rows]
                 ordered.remove(first)
                 ordered.insert(ordered.index(second) + (order["relation"].lower() == "after"), first)
                 if len(ordered) <= MAX_INTENTS and all(stop in names for stop in ordered):
-                    resolved = _compound_proposal(context, tuple(
-                        f"Set {names[stop]} to position {index + 1} on Day {day}"
-                        for index, stop in enumerate(ordered)
-                    ))
+                    resolved = _compound_proposal(
+                        context,
+                        tuple(
+                            f"Set {names[stop]} to position {index + 1} on Day {day}"
+                            for index, stop in enumerate(ordered)
+                        ),
+                    )
                     if resolved is not None:
                         return resolved
-        question = ("Relative ordering needs two different accepted stops on the same accepted day. "
-                    "Please confirm those stops and their accepted day; no part was staged or changed.")
+        question = (
+            "Relative ordering needs two different accepted stops on the same accepted day. "
+            "Please confirm those stops and their accepted day; no part was staged or changed."
+        )
     elif len(places) > (2 if is_stop_replacement_request(text) else 1) and actions:
         question = "Your request names multiple places. Which single stop and edit should I handle first?"
     elif len(set(re.findall(r"\bday\s+(\d+)\b", text, re.IGNORECASE))) > 1 and actions:
@@ -407,7 +485,8 @@ def request_semantic_guard(
     if question is None:
         return None
     return CopilotInterpretationV1(
-        state="clarification_required", assistant_message=question,
+        state="clarification_required",
+        assistant_message=question,
         intents=(CopilotIntentV1(type="request_clarification", clarification_question=question),),
     )
 
@@ -422,30 +501,53 @@ def _compound_proposal(context: CopilotContextV2, clauses: tuple[str, ...]) -> C
         if part is None:
             return None
         if part.state != "proposal_ready":
-            return replace(part, assistant_message=f"Change {index}: {part.assistant_message} No part of the combined request was staged or changed.")
+            return replace(
+                part,
+                assistant_message=f"Change {index}: {part.assistant_message} No part of the combined request was staged or changed.",
+            )
         if not part.intents or sum(len(previous.intents) for previous in parts) + len(part.intents) > MAX_INTENTS:
             return None
         days = {int(day) for day in re.findall(r"\bday\s+(\d+)\b", clause, re.IGNORECASE)}
         for intent in part.intents:
             if days and intent.target_stop_id is not None:
-                accepted_day = next((row["day"] for row in context.capabilities["stop_positions"]
-                                     if row["stop_id"] == intent.target_stop_id), None)
+                accepted_day = next(
+                    (
+                        row["day"]
+                        for row in context.capabilities["stop_positions"]
+                        if row["stop_id"] == intent.target_stop_id
+                    ),
+                    None,
+                )
                 if days != {accepted_day}:
-                    question = (f"Change {index} names a different day, but this stop is accepted on Day {accepted_day}. "
-                                "Moving stops between days is not enabled. Should I keep its accepted day instead? "
-                                "No part of the combined request was staged or changed.")
-                    return CopilotInterpretationV1(state="clarification_required", assistant_message=question,
-                        intents=(CopilotIntentV1(type="request_clarification", clarification_question=question),))
+                    question = (
+                        f"Change {index} names a different day, but this stop is accepted on Day {accepted_day}. "
+                        "Moving stops between days is not enabled. Should I keep its accepted day instead? "
+                        "No part of the combined request was staged or changed."
+                    )
+                    return CopilotInterpretationV1(
+                        state="clarification_required",
+                        assistant_message=question,
+                        intents=(CopilotIntentV1(type="request_clarification", clarification_question=question),),
+                    )
         parts.append(part)
-    intents = tuple(CopilotIntentV2(**{**intent.as_dict(), "parameters": getattr(intent, "parameters", None)})
-                    for part in parts for intent in part.intents)
+    intents = tuple(
+        CopilotIntentV2(**{**intent.as_dict(), "parameters": getattr(intent, "parameters", None)})
+        for part in parts
+        for intent in part.intents
+    )
     resolved_highlights = [DeterministicCopilotAdapter._operation_highlights(context, intent) for intent in intents]
-    highlights = CopilotHighlightsV1(**{
-        name: tuple(dict.fromkeys(value for scoped in resolved_highlights for value in getattr(scoped, name)))
-        for name in ("day_ids", "stop_ids", "segment_ids", "candidate_ids")
-    })
-    result = CopilotInterpretationV2(state="proposal_ready", intents=intents, highlights=highlights,
-        assistant_message=f"I prepared all {len(intents)} requested changes as one combined suggestion. Nothing was staged or changed.")
+    highlights = CopilotHighlightsV1(
+        **{
+            name: tuple(dict.fromkeys(value for scoped in resolved_highlights for value in getattr(scoped, name)))
+            for name in ("day_ids", "stop_ids", "segment_ids", "candidate_ids")
+        }
+    )
+    result = CopilotInterpretationV2(
+        state="proposal_ready",
+        intents=intents,
+        highlights=highlights,
+        assistant_message=f"I prepared all {len(intents)} requested changes as one combined suggestion. Nothing was staged or changed.",
+    )
     return guard_contextual_output(context, result)
 
 
@@ -478,7 +580,10 @@ def validate_copilot_interpretation(
     """Fail closed unless an interpretation belongs to the current workspace universe."""
 
     _validate_context(context)
-    versions = {CopilotInterpretationV1: "copilot-interpretation-v1", CopilotInterpretationV2: "copilot-interpretation-v2"}
+    versions = {
+        CopilotInterpretationV1: "copilot-interpretation-v1",
+        CopilotInterpretationV2: "copilot-interpretation-v2",
+    }
     if type(interpretation) not in versions or interpretation.schema_version != versions[type(interpretation)]:
         raise CopilotContractError
     if interpretation.state not in ALLOWED_STATES:
@@ -498,7 +603,9 @@ def validate_copilot_interpretation(
         raise CopilotContractError
 
     for intent in interpretation.intents:
-        if type(intent) is not (CopilotIntentV2 if type(interpretation) is CopilotInterpretationV2 else CopilotIntentV1):
+        if type(intent) is not (
+            CopilotIntentV2 if type(interpretation) is CopilotInterpretationV2 else CopilotIntentV1
+        ):
             raise CopilotContractError
         _validate_intent(context, intent)
     _validate_highlights(context, interpretation.highlights)
@@ -644,14 +751,12 @@ class DeterministicCopilotAdapter:
         )
         stop_id = (
             str(mentioned_stop["place_id"])
-            if mentioned_stop is not None
-            and mentioned_stop["place_id"] in context.allowed_stop_ids
+            if mentioned_stop is not None and mentioned_stop["place_id"] in context.allowed_stop_ids
             else context.selected_stop_id
         )
         candidate_id = (
             str(mentioned_candidate["place_id"])
-            if mentioned_candidate is not None
-            and mentioned_candidate["place_id"] in context.allowed_candidate_ids
+            if mentioned_candidate is not None and mentioned_candidate["place_id"] in context.allowed_candidate_ids
             else context.selected_candidate_id
         )
         if "keep" in normalized and ("stop" in normalized or mentioned_stop is not None) and stop_id is not None:
@@ -726,10 +831,14 @@ class DeterministicCopilotAdapter:
             return DeterministicCopilotAdapter._selected_highlights(context)
         target_day = operation.destination_day
         if target_day is None and operation.target_stop_id is not None:
-            target_day = next((
-                row["day"] for row in getattr(context, "capabilities", {}).get("stop_positions", ())
-                if row.get("stop_id") == operation.target_stop_id
-            ), None)
+            target_day = next(
+                (
+                    row["day"]
+                    for row in getattr(context, "capabilities", {}).get("stop_positions", ())
+                    if row.get("stop_id") == operation.target_stop_id
+                ),
+                None,
+            )
         return CopilotHighlightsV1(
             day_ids=((target_day,) if target_day is not None else ()),
             stop_ids=((operation.target_stop_id,) if operation.target_stop_id is not None else ()),
@@ -774,10 +883,7 @@ def _validate_context(context: CopilotContextV1) -> None:
     for selected in (context.selected_stop_id, context.selected_candidate_id):
         if selected is not None and type(selected) is not str:
             raise CopilotContractError
-    if (
-        context.selected_segment_id is not None
-        and context.selected_segment_id not in context.allowed_segment_ids
-    ):
+    if context.selected_segment_id is not None and context.selected_segment_id not in context.allowed_segment_ids:
         raise CopilotContractError
     if (
         context.selected_alternative_id is not None
@@ -804,8 +910,11 @@ def _validate_intent(context: CopilotContextV1, intent: CopilotIntentV1) -> None
         raise CopilotContractError
     if intent.type == "replan_trip":
         from .trip_planning import validate_trip_parameters
-        if type(intent) is not CopilotIntentV2 or any(getattr(intent, key) is not None for key in (
-            "target_stop_id", "destination_day", "candidate_id", "preference", "clarification_question")):
+
+        if type(intent) is not CopilotIntentV2 or any(
+            getattr(intent, key) is not None
+            for key in ("target_stop_id", "destination_day", "candidate_id", "preference", "clarification_question")
+        ):
             raise CopilotContractError
         try:
             validate_trip_parameters(intent.parameters)
@@ -813,8 +922,14 @@ def _validate_intent(context: CopilotContextV1, intent: CopilotIntentV1) -> None
             raise CopilotContractError from None
         return
     if intent.type in TYPED_CHAT_OPERATIONS:
-        if (type(intent) is not CopilotIntentV2 or intent.target_stop_id not in context.allowed_stop_ids
-                or any(getattr(intent, key) is not None for key in ("destination_day", "candidate_id", "preference", "clarification_question"))):
+        if (
+            type(intent) is not CopilotIntentV2
+            or intent.target_stop_id not in context.allowed_stop_ids
+            or any(
+                getattr(intent, key) is not None
+                for key in ("destination_day", "candidate_id", "preference", "clarification_question")
+            )
+        ):
             raise CopilotContractError
         try:
             validate_parameters(intent.type, intent.parameters)
@@ -970,7 +1085,8 @@ def _validate_known_places(values: object) -> None:
             or any(type(item) is not str or not item.strip() for item in (*aliases, *categories))
             or len(aliases) != len({item.casefold() for item in aliases})
             or len(categories) != len({item.casefold() for item in categories})
-            or region_id is not None and (type(region_id) is not str or not region_id)
+            or region_id is not None
+            and (type(region_id) is not str or not region_id)
             or route_status not in KNOWN_PLACE_ROUTE_STATUSES
         ):
             raise CopilotContractError
@@ -994,7 +1110,10 @@ def matched_known_place(
 
 
 def _matched_known_places(
-    context: CopilotContextV1, message: str, *, route_status: str | None = None,
+    context: CopilotContextV1,
+    message: str,
+    *,
+    route_status: str | None = None,
 ) -> list[dict[str, object]]:
     if route_status is not None and route_status not in KNOWN_PLACE_ROUTE_STATUSES:
         raise CopilotContractError
@@ -1015,16 +1134,17 @@ def _matched_known_places(
     # A longer name may contain a shorter alias, but a separate named place
     # elsewhere in the sentence must never disappear behind a longest match.
     unique = {
-        str(place["place_id"]): place for start, end, place in matches
-        if not any(other_start <= start and end <= other_end and other_end - other_start > end - start
-                   for other_start, other_end, _ in matches)
+        str(place["place_id"]): place
+        for start, end, place in matches
+        if not any(
+            other_start <= start and end <= other_end and other_end - other_start > end - start
+            for other_start, other_end, _ in matches
+        )
     }
     return list(unique.values())
 
 
-def known_place_clarification(
-    context: CopilotContextV1, message: str
-) -> tuple[str, str] | None:
+def known_place_clarification(context: CopilotContextV1, message: str) -> tuple[str, str] | None:
     """Return safe local copy for one recognized place without claiming feasibility."""
 
     place = matched_known_place(context, message)

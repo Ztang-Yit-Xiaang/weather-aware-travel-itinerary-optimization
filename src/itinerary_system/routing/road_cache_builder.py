@@ -162,7 +162,6 @@ def _payload_route(payload: dict[str, Any]) -> dict[str, Any]:
     return {}
 
 
-
 def _endpoint_snap_distances(payload: dict[str, Any]) -> tuple[float, float]:
     raw = payload.get("raw") if isinstance(payload.get("raw"), dict) else payload
     waypoints = raw.get("waypoints", []) if isinstance(raw, dict) else []
@@ -171,6 +170,7 @@ def _endpoint_snap_distances(payload: dict[str, Any]) -> tuple[float, float]:
     origin = _safe_float(waypoints[0].get("distance") if isinstance(waypoints[0], dict) else None)
     destination = _safe_float(waypoints[-1].get("distance") if isinstance(waypoints[-1], dict) else None)
     return origin, destination
+
 
 def _latlon_geometry(payload: dict[str, Any]) -> list[list[float]]:
     latlon = payload.get("latlon_geometry")
@@ -529,9 +529,7 @@ def build_road_route_cache_from_artifacts(
             max(origin_snap_distance_m, destination_snap_distance_m) if snap_distances_present else math.nan
         )
         snap_validated = bool(
-            row is not None
-            and snap_distances_present
-            and observed_max_snap_distance_m <= float(max_snap_distance_m)
+            row is not None and snap_distances_present and observed_max_snap_distance_m <= float(max_snap_distance_m)
         )
         if row is not None:
             rows.append(row)

@@ -235,9 +235,7 @@ class RuntimeRoutingService:
         geometry = _geometry(route.get("geometry"))
         waypoints = _records(payload, "waypoints", exact_length=2)
         origin_snap = _nonnegative_finite(waypoints[0].get("distance"), "routing_response_invalid")
-        destination_snap = _nonnegative_finite(
-            waypoints[1].get("distance"), "routing_response_invalid"
-        )
+        destination_snap = _nonnegative_finite(waypoints[1].get("distance"), "routing_response_invalid")
         if max(origin_snap, destination_snap) > self.thresholds.warning_max_m:
             raise RuntimeRoutingError("route_endpoint_snap_too_far")
         query_hash = _query_hash(
@@ -471,9 +469,7 @@ def _require_ok(payload: Mapping[str, Any]) -> None:
         raise RuntimeRoutingError("routing_provider_rejected_request")
 
 
-def _records(
-    payload: Mapping[str, Any], key: str, *, exact_length: int | None = None
-) -> tuple[Mapping[str, Any], ...]:
+def _records(payload: Mapping[str, Any], key: str, *, exact_length: int | None = None) -> tuple[Mapping[str, Any], ...]:
     value = payload.get(key)
     if not isinstance(value, list) or (exact_length is not None and len(value) != exact_length):
         raise RuntimeRoutingError("routing_response_invalid")

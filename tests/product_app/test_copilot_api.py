@@ -72,11 +72,7 @@ def _message(
 def _sse_events(response) -> list[dict]:
     events = []
     for block in response.text.replace("\r\n", "\n").split("\n\n"):
-        data = "\n".join(
-            line[5:].lstrip()
-            for line in block.splitlines()
-            if line.startswith("data:")
-        )
+        data = "\n".join(line[5:].lstrip() for line in block.splitlines() if line.startswith("data:"))
         if data:
             events.append(json.loads(data))
     return events
@@ -129,25 +125,41 @@ def test_capacity_block_is_explicit_before_dispatch_in_json_and_stream(api, limi
         template = replace(template, user_message="u" * 2000, assistant_message="a" * 4000, interpretation=None)
     turns = []
     while len(turns) < MAX_TURNS:
-        turns.append(replace(template, turn_id="copilot_turn_" + uuid4().hex, client_message_id="client_message_" + uuid4().hex))
-        if limit == "bytes" and service.conversations._encoded_size(replace(conversation, turns=tuple(turns), revision=len(turns)).as_dict()) >= MAX_FILE_BYTES - 64 * 1024:
+        turns.append(
+            replace(template, turn_id="copilot_turn_" + uuid4().hex, client_message_id="client_message_" + uuid4().hex)
+        )
+        if (
+            limit == "bytes"
+            and service.conversations._encoded_size(
+                replace(conversation, turns=tuple(turns), revision=len(turns)).as_dict()
+            )
+            >= MAX_FILE_BYTES - 64 * 1024
+        ):
             break
     if limit == "bytes":
         assert len(turns) < MAX_TURNS
     service.conversations._save(replace(conversation, turns=tuple(turns), revision=len(turns)))
+
     class NoDispatch:
         provider_name = "openai"
         model = "fake-no-network"
         calls = 0
+
         async def interpret(self, **kwargs):
             self.calls += 1
             pytest.fail("Capacity must block before any provider dispatch")
+
     adapter = NoDispatch()
     service.copilot = adapter
     before = current.public_dict()
     history = service.conversations.dispatch_history(conversation.conversation_id, current.session_id)
     message_id = "client_message_" + uuid4().hex
-    response = _message(client, session, {**headers, **({"Accept": "text/event-stream"} if streamed else {})}, client_message_id=message_id)
+    response = _message(
+        client,
+        session,
+        {**headers, **({"Accept": "text/event-stream"} if streamed else {})},
+        client_message_id=message_id,
+    )
     expected = "conversation_turn_limit_reached" if limit == "turns" else "conversation_size_limit_reached"
     if streamed:
         assert response.status_code == 200
@@ -159,7 +171,12 @@ def test_capacity_block_is_explicit_before_dispatch_in_json_and_stream(api, limi
         assert response.status_code == 422 and response.json() == {"detail": expected}
     assert adapter.calls == 0 and current.public_dict() == before
     assert service.conversations.dispatch_history(conversation.conversation_id, current.session_id) == history
-    assert service.conversations.dispatch_record(conversation.conversation_id, current.session_id, message_id, "Review the safer repair") is None
+    assert (
+        service.conversations.dispatch_record(
+            conversation.conversation_id, current.session_id, message_id, "Review the safer repair"
+        )
+        is None
+    )
 
 
 def test_event_stream_is_versioned_ordered_and_returns_the_canonical_turn(api) -> None:
@@ -292,9 +309,9 @@ def test_stale_revision_blocks_dispatch_but_preserves_an_already_obtained_result
     service.copilot = RevisionChangingAdapter(service)
     stale_post = _message(client, session, headers)
     assert stale_post.status_code == 409
-    conversation = client.get(
-        f"/api/sessions/{session['session_id']}/conversation", headers=headers
-    ).json()["conversation"]
+    conversation = client.get(f"/api/sessions/{session['session_id']}/conversation", headers=headers).json()[
+        "conversation"
+    ]
     assert len(conversation["turns"]) == 1
     assert conversation["turns"][0]["state"] == "completed"
     assert conversation["turns"][0]["context_revision"] == session["revision"]
@@ -309,16 +326,14 @@ def test_provider_failure_is_sanitized_and_persisted_without_itinerary_mutation(
 
     assert failed.status_code == 504
     assert failed.json() == {"detail": "openai_timeout"}
-    conversation = client.get(
-        f"/api/sessions/{session['session_id']}/conversation", headers=headers
-    ).json()["conversation"]
+    conversation = client.get(f"/api/sessions/{session['session_id']}/conversation", headers=headers).json()[
+        "conversation"
+    ]
     assert conversation["revision"] == 1
     assert conversation["turns"][0]["state"] == "failed"
     assert conversation["turns"][0]["error_code"] == "openai_timeout"
     assert "raw provider detail" not in str(conversation)
-    restored = client.get(f"/api/sessions/{session['session_id']}", headers=headers).json()[
-        "session"
-    ]
+    restored = client.get(f"/api/sessions/{session['session_id']}", headers=headers).json()["session"]
     assert restored["revision"] == session["revision"]
     assert restored["draft"] == []
     assert restored["proposal"] is None
@@ -351,9 +366,9 @@ def test_uncertain_event_stream_failure_is_terminal_not_silently_retryable_and_s
     assert terminal["status"] == 504
     assert terminal["retryable"] is False
     assert "raw provider detail" not in failed.text
-    conversation = client.get(
-        f"/api/sessions/{session['session_id']}/conversation", headers=headers
-    ).json()["conversation"]
+    conversation = client.get(f"/api/sessions/{session['session_id']}/conversation", headers=headers).json()[
+        "conversation"
+    ]
     assert conversation["turns"][0]["client_message_id"] == client_message_id
     assert conversation["turns"][0]["state"] == "failed"
 
@@ -367,9 +382,9 @@ def test_quota_failure_is_distinct_from_rate_limit_and_remains_sanitized(api) ->
 
     assert failed.status_code == 429
     assert failed.json() == {"detail": "openai_quota_exhausted"}
-    conversation = client.get(
-        f"/api/sessions/{session['session_id']}/conversation", headers=headers
-    ).json()["conversation"]
+    conversation = client.get(f"/api/sessions/{session['session_id']}/conversation", headers=headers).json()[
+        "conversation"
+    ]
     assert conversation["turns"][0]["error_code"] == "openai_quota_exhausted"
     assert "raw billing detail" not in str(conversation)
 
@@ -382,9 +397,7 @@ def test_delete_current_and_delete_all_require_owner_revision_and_confirmation(a
     assert _message(client, second, second_headers).status_code == 200
 
     current_path = f"/api/sessions/{first['session_id']}/conversation"
-    assert client.request(
-        "DELETE", current_path, json={"expected_revision": 0}
-    ).status_code == 403
+    assert client.request("DELETE", current_path, json={"expected_revision": 0}).status_code == 403
     stale = client.request(
         "DELETE",
         current_path,
@@ -436,9 +449,7 @@ def test_delete_current_and_delete_all_require_owner_revision_and_confirmation(a
     assert removed.json()["deleted_count"] >= 1
 
 
-def test_delete_current_restores_session_binding_when_file_deletion_fails(
-    api, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_delete_current_restores_session_binding_when_file_deletion_fails(api, monkeypatch: pytest.MonkeyPatch) -> None:
     client, service = api
     session, headers = _session(client)
     assert _message(client, session, headers).status_code == 200

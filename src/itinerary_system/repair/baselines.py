@@ -187,13 +187,13 @@ def _merge_day_candidates(
         candidate = selected_by_day.get(day)
         if candidate is None:
             sequence = tuple(
-                str(stop_id)
-                for stop_id in parent.sequence
-                if int(parent_day_by_stop.get(str(stop_id), -1)) == day
+                str(stop_id) for stop_id in parent.sequence if int(parent_day_by_stop.get(str(stop_id), -1)) == day
             )
         else:
             sequence = candidate.stop_sequence
-            route_ids.update({int(key): str(value) for key, value in candidate.repair_solution.route_ids_by_day.items()})
+            route_ids.update(
+                {int(key): str(value) for key, value in candidate.repair_solution.route_ids_by_day.items()}
+            )
             selected_candidate_ids.append(str(candidate.repair_solution.metadata.get("candidate_id", "")))
         day_sequences[str(day)] = sequence
         for stop_id in sequence:

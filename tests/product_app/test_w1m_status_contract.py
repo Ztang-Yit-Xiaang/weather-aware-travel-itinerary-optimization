@@ -11,13 +11,16 @@ PROBLEMS = ROOT / "docs" / "current" / "current_problem_manifest.md"
 
 
 def test_w1m_authority_chain_is_strict_utf8_and_has_one_status_story() -> None:
-    documents = [path.read_bytes().decode("utf-8", errors="strict") for path in (
-        DECISION,
-        EXECUTION,
-        GATE_MAP,
-        PLANNING_README,
-        PROBLEMS,
-    )]
+    documents = [
+        path.read_bytes().decode("utf-8", errors="strict")
+        for path in (
+            DECISION,
+            EXECUTION,
+            GATE_MAP,
+            PLANNING_README,
+            PROBLEMS,
+        )
+    ]
     combined = "\n".join(documents)
 
     assert documents[0].startswith("# MAP-DEC-002 - Local Map Runtime Substitution")
@@ -53,8 +56,7 @@ def test_w1m_authority_chain_is_strict_utf8_and_has_one_status_story() -> None:
 
 def test_w1m_authority_chain_contains_no_known_mojibake_sequences() -> None:
     combined = "\n".join(
-        path.read_text(encoding="utf-8")
-        for path in (DECISION, EXECUTION, GATE_MAP, PLANNING_README, PROBLEMS)
+        path.read_text(encoding="utf-8") for path in (DECISION, EXECUTION, GATE_MAP, PLANNING_README, PROBLEMS)
     )
     forbidden = ("\ufffd", "鈥", "锟", "漏 OpenStreetMap", "бк", "иC")
     assert all(value not in combined for value in forbidden)

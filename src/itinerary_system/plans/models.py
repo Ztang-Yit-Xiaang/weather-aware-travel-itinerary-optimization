@@ -373,9 +373,7 @@ class PlanDiff:
             or self.role_changes
             or sum((bool(self.duration_changes), bool(self.time_window_changes))) > 1
         ):
-            raise ValueError(
-                "plan-diff-v5 requires ownership evidence and excludes role changes"
-            )
+            raise ValueError("plan-diff-v5 requires ownership evidence and excludes role changes")
         if self.schema_version == "plan-diff-v5":
             _validate_v5_attribute_ownership_evidence(
                 self.attribute_ownership_evidence,
@@ -388,9 +386,20 @@ class PlanDiff:
         ):
             raise ValueError("plan-diff-v6 requires multiple typed attribute families")
         if self.schema_version == "plan-diff-v7":
-            base_changes = any((self.added_stops, self.deleted_stops, self.day_moves, self.time_shifts,
-                                self.reorder_changes, self.lodging_changes, self.road_changes))
-            if (sum(typed_presence) < 2 and not (self.role_changes and base_changes)) or not self.attribute_ownership_evidence:
+            base_changes = any(
+                (
+                    self.added_stops,
+                    self.deleted_stops,
+                    self.day_moves,
+                    self.time_shifts,
+                    self.reorder_changes,
+                    self.lodging_changes,
+                    self.road_changes,
+                )
+            )
+            if (
+                sum(typed_presence) < 2 and not (self.role_changes and base_changes)
+            ) or not self.attribute_ownership_evidence:
                 raise ValueError("plan-diff-v7 requires mixed changes and ownership evidence")
             _validate_v5_attribute_ownership_evidence(
                 self.attribute_ownership_evidence,
@@ -437,17 +446,11 @@ class PlanDiff:
                     record[name] = [change.to_record() for change in changes]
         elif self.schema_version == "plan-diff-v5":
             if self.duration_changes:
-                record["duration_changes"] = [
-                    change.to_record() for change in self.duration_changes
-                ]
+                record["duration_changes"] = [change.to_record() for change in self.duration_changes]
             if self.time_window_changes:
-                record["time_window_changes"] = [
-                    change.to_record() for change in self.time_window_changes
-                ]
+                record["time_window_changes"] = [change.to_record() for change in self.time_window_changes]
         if self.schema_version in {"plan-diff-v5", "plan-diff-v7"}:
-            record["attribute_ownership_evidence"] = dict(
-                self.attribute_ownership_evidence or {}
-            )
+            record["attribute_ownership_evidence"] = dict(self.attribute_ownership_evidence or {})
         return record
 
 
@@ -537,31 +540,18 @@ def _v5_expected_change_rows(diff: PlanDiff) -> list[dict[str, Any]]:
             target_stop_id=change.stop_id,
             attributes=attributes,
             before_value={
-                attribute: (
-                    change.from_start
-                    if attribute == "start_time"
-                    else change.from_end
-                )
+                attribute: (change.from_start if attribute == "start_time" else change.from_end)
                 for attribute in attributes
             },
             after_value={
-                attribute: (
-                    change.to_start
-                    if attribute == "start_time"
-                    else change.to_end
-                )
-                for attribute in attributes
+                attribute: (change.to_start if attribute == "start_time" else change.to_end) for attribute in attributes
             },
             owner_strength=change.owner_strength,
             delta_scale=max(1.0, abs(float(change.delta_minutes)) / 60.0),
             cost=change.cost,
         )
     for change in diff.duration_changes:
-        delta_scale = (
-            1.0
-            if change.delta_minutes is None
-            else max(1.0, abs(float(change.delta_minutes)) / 60.0)
-        )
+        delta_scale = 1.0 if change.delta_minutes is None else max(1.0, abs(float(change.delta_minutes)) / 60.0)
         append(
             change_kind="duration_change",
             target_stop_id=change.stop_id,
@@ -692,38 +682,34 @@ def _validate_v5_attribute_ownership_evidence(
     changes = value.get("changes")
     ownership_policy = value.get("ownership_policy")
     if (
-        value.get("schema_version")
-        != f"plan-diff-attribute-ownership-evidence-v{2 if include_role else 1}"
+        value.get("schema_version") != f"plan-diff-attribute-ownership-evidence-v{2 if include_role else 1}"
         or value.get("parent_plan_id") != parent_plan_id
         or not isinstance(value.get("parent_plan_content_hash"), str)
-        or re.fullmatch(
-            r"[0-9a-f]{16}", value["parent_plan_content_hash"]
-        )
-        is None
+        or re.fullmatch(r"[0-9a-f]{16}", value["parent_plan_content_hash"]) is None
         or semantic_scope
         != {
             "cost_semantics": "attribute_sensitivity",
             "permission_claim": "not_evaluated",
             "feasibility_claim": "not_evaluated",
             "cost_coverage": "all_listed_diff_changes",
-            "relation_specific_attributes": sorted([
-                "day",
-                "duration",
-                "end_time",
-                "existence",
-                "order",
-                "start_time",
-                "time_window",
-            ] + (["role"] if include_role else [])),
+            "relation_specific_attributes": sorted(
+                [
+                    "day",
+                    "duration",
+                    "end_time",
+                    "existence",
+                    "order",
+                    "start_time",
+                    "time_window",
+                ]
+                + (["role"] if include_role else [])
+            ),
             "lodging_and_road_relations": "not_migrated",
         }
         or not isinstance(ownership_policy, dict)
-        or set(ownership_policy)
-        != {"change_type_weights", "constraint_strength_weights"}
+        or set(ownership_policy) != {"change_type_weights", "constraint_strength_weights"}
         or not _valid_v5_weight_map(ownership_policy["change_type_weights"])
-        or not _valid_v5_weight_map(
-            ownership_policy["constraint_strength_weights"]
-        )
+        or not _valid_v5_weight_map(ownership_policy["constraint_strength_weights"])
         or not isinstance(constraints, list)
         or not constraints
         or not isinstance(changes, list)
@@ -764,17 +750,12 @@ def _validate_v5_attribute_ownership_evidence(
         raise ValueError("plan-diff-v5 ownership change evidence is invalid")
     constraint_ids = [row.get("constraint_id") for row in constraints]
     if (
-        any(
-            not _valid_v5_constraint_row(row, include_role=include_role)
-            for row in constraints
-        )
+        any(not _valid_v5_constraint_row(row, include_role=include_role) for row in constraints)
         or constraint_ids != sorted(constraint_ids)
         or len(set(constraint_ids)) != len(constraint_ids)
     ):
         raise ValueError("plan-diff-v5 ownership constraint evidence is invalid")
-    constraints_by_id = {
-        str(row["constraint_id"]): row for row in constraints
-    }
+    constraints_by_id = {str(row["constraint_id"]): row for row in constraints}
     ordered_changes = sorted(
         changes,
         key=lambda row: (
@@ -799,11 +780,7 @@ def _validate_v5_attribute_ownership_evidence(
     ):
         raise ValueError("plan-diff-v5 ownership change evidence is invalid")
     consumed_constraint_ids = sorted(
-        {
-            constraint_id
-            for row in changes
-            for constraint_id in row["applicable_constraint_ids"]
-        }
+        {constraint_id for row in changes for constraint_id in row["applicable_constraint_ids"]}
     )
     if consumed_constraint_ids != constraint_ids:
         raise ValueError("plan-diff-v5 ownership constraint evidence is invalid")
@@ -888,8 +865,7 @@ def _valid_v5_constraint_row(value: dict[str, Any], *, include_role: bool = Fals
         and value.get("strength") in {item.value for item in ConstraintStrength}
         and value.get("scope") in {ConstraintScope.STOP.value, ConstraintScope.POI.value}
         and value.get("origin") in {item.value for item in ConstraintOrigin}
-        and value.get("relaxation_policy")
-        in {item.value for item in RelaxationPolicy}
+        and value.get("relaxation_policy") in {item.value for item in RelaxationPolicy}
         and not (relation == "must_keep" and value.get("canonical_value") is not True)
     )
 
@@ -900,8 +876,16 @@ def _valid_v5_attribute_value(attribute: str, value: Any) -> bool:
         return isinstance(value, bool)
     if attribute == "role":
         return isinstance(value, str) and value in {
-            "attraction", "activity", "meal", "lodging", "transport_hub", "rest_stop",
-            "scenic_stop", "route_waypoint", "origin", "destination",
+            "attraction",
+            "activity",
+            "meal",
+            "lodging",
+            "transport_hub",
+            "rest_stop",
+            "scenic_stop",
+            "route_waypoint",
+            "origin",
+            "destination",
         }
     if attribute == "day":
         return isinstance(value, int) and not isinstance(value, bool) and 1 <= value <= 366
@@ -912,8 +896,7 @@ def _valid_v5_attribute_value(attribute: str, value: Any) -> bool:
     if attribute == "duration":
         return (
             isinstance(value, dict)
-            and set(value)
-            == {"mode", "preferred_minutes", "minimum_minutes", "maximum_minutes"}
+            and set(value) == {"mode", "preferred_minutes", "minimum_minutes", "maximum_minutes"}
             and value.get("mode") == "exact"
             and isinstance(value.get("preferred_minutes"), int)
             and not isinstance(value.get("preferred_minutes"), bool)
@@ -937,21 +920,9 @@ def _valid_v5_attribute_value(attribute: str, value: Any) -> bool:
             and value.get("early_arrival_policy") == "wait_until_earliest_arrival"
             and value.get("latest_departure_semantics") == "departure_after_visit"
             and not (earliest is None and latest is None)
-            and (
-                earliest is None
-                or isinstance(earliest, str)
-                and clock.fullmatch(earliest) is not None
-            )
-            and (
-                latest is None
-                or isinstance(latest, str)
-                and clock.fullmatch(latest) is not None
-            )
-            and not (
-                isinstance(earliest, str)
-                and isinstance(latest, str)
-                and earliest > latest
-            )
+            and (earliest is None or isinstance(earliest, str) and clock.fullmatch(earliest) is not None)
+            and (latest is None or isinstance(latest, str) and clock.fullmatch(latest) is not None)
+            and not (isinstance(earliest, str) and isinstance(latest, str) and earliest > latest)
         )
     return False
 
@@ -1035,28 +1006,19 @@ def _valid_v5_change_row(
         return False
     for attribute in attributes:
         if attribute in {"lodging", "road"}:
-            if before[attribute] is not None and (
-                not isinstance(before[attribute], str) or not before[attribute]
-            ):
+            if before[attribute] is not None and (not isinstance(before[attribute], str) or not before[attribute]):
                 return False
-            if after[attribute] is not None and (
-                not isinstance(after[attribute], str) or not after[attribute]
-            ):
+            if after[attribute] is not None and (not isinstance(after[attribute], str) or not after[attribute]):
                 return False
         else:
-            if before[attribute] is not None and not _valid_v5_attribute_value(
-                attribute, before[attribute]
-            ):
+            if before[attribute] is not None and not _valid_v5_attribute_value(attribute, before[attribute]):
                 return False
-            if after[attribute] is not None and not _valid_v5_attribute_value(
-                attribute, after[attribute]
-            ):
+            if after[attribute] is not None and not _valid_v5_attribute_value(attribute, after[attribute]):
                 return False
     expected_applicable = sorted(
         constraint_id
         for constraint_id, row in constraints_by_id.items()
-        if row["target_stop_id"] == value["target_stop_id"]
-        and row["attribute"] in attributes
+        if row["target_stop_id"] == value["target_stop_id"] and row["attribute"] in attributes
     )
     if applicable != expected_applicable:
         return False
@@ -1071,8 +1033,7 @@ def _valid_v5_change_row(
     expected_selected = sorted(
         constraint_id
         for constraint_id in applicable
-        if float(strength_weights.get(constraints_by_id[constraint_id]["strength"], 1.0))
-        == multiplier
+        if float(strength_weights.get(constraints_by_id[constraint_id]["strength"], 1.0)) == multiplier
     )
     change_weights = ownership_policy["change_type_weights"]
     base = float(change_weights.get(change_kind, 1.0))
@@ -1122,12 +1083,18 @@ def _v5_satisfaction(actual: Any, required: Any) -> str:
     return "satisfied" if actual == required else "unsatisfied"
 
 
-def validate_owned_constraints(constraints: tuple[OwnedConstraint, ...] | tuple[dict[str, Any], ...]) -> tuple[str, ...]:
+def validate_owned_constraints(
+    constraints: tuple[OwnedConstraint, ...] | tuple[dict[str, Any], ...],
+) -> tuple[str, ...]:
     errors: list[str] = []
     seen_ids: set[str] = set()
     for index, raw_constraint in enumerate(constraints):
         try:
-            constraint = raw_constraint if isinstance(raw_constraint, OwnedConstraint) else OwnedConstraint.from_record(raw_constraint)
+            constraint = (
+                raw_constraint
+                if isinstance(raw_constraint, OwnedConstraint)
+                else OwnedConstraint.from_record(raw_constraint)
+            )
         except Exception as exc:
             errors.append(f"constraint[{index}] has invalid enum or shape: {exc}")
             continue
@@ -1142,15 +1109,15 @@ def validate_owned_constraints(constraints: tuple[OwnedConstraint, ...] | tuple[
             errors.append(f"constraint[{index}] is missing target_id")
         if not constraint.relation:
             errors.append(f"constraint[{index}] is missing relation")
-        if (
-            constraint.strength == ConstraintStrength.LOCKED
-            and constraint.relaxation_policy in {RelaxationPolicy.AUTO_WITH_PENALTY, RelaxationPolicy.ALWAYS}
-        ):
+        if constraint.strength == ConstraintStrength.LOCKED and constraint.relaxation_policy in {
+            RelaxationPolicy.AUTO_WITH_PENALTY,
+            RelaxationPolicy.ALWAYS,
+        }:
             errors.append(f"{constraint.constraint_id} is locked but has automatic relaxation")
-        if (
-            constraint.strength == ConstraintStrength.BOOKED
-            and constraint.relaxation_policy in {RelaxationPolicy.AUTO_WITH_PENALTY, RelaxationPolicy.ALWAYS}
-        ):
+        if constraint.strength == ConstraintStrength.BOOKED and constraint.relaxation_policy in {
+            RelaxationPolicy.AUTO_WITH_PENALTY,
+            RelaxationPolicy.ALWAYS,
+        }:
             errors.append(f"{constraint.constraint_id} is booked but does not require explicit relaxation permission")
     return tuple(errors)
 
@@ -1160,7 +1127,11 @@ def active_owned_constraints(
 ) -> tuple[OwnedConstraint, ...]:
     active: list[OwnedConstraint] = []
     for raw_constraint in constraints:
-        constraint = raw_constraint if isinstance(raw_constraint, OwnedConstraint) else OwnedConstraint.from_record(raw_constraint)
+        constraint = (
+            raw_constraint
+            if isinstance(raw_constraint, OwnedConstraint)
+            else OwnedConstraint.from_record(raw_constraint)
+        )
         if constraint.is_active:
             active.append(constraint)
     return tuple(active)

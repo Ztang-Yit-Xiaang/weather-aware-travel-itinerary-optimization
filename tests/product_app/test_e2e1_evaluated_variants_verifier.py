@@ -1,4 +1,5 @@
 """Adversarial typed preview artifact and semantic evidence fixtures."""
+
 from __future__ import annotations
 
 import sys
@@ -13,30 +14,90 @@ import verify_e2e1_vertical_slice as core  # noqa: E402
 
 
 def _fixture(outcome="eligible"):
-    geo = {"plan_id": "child", "content_hash": "childhash", "coverage": {"complete": True, "gap_count": 0},
-        "stops": {"type": "FeatureCollection", "features": []}, "validated_legs": {"type": "FeatureCollection", "features": []}}
-    certificate = {"plan_id": "child", "plan_content_hash": "childhash", "certificate_id": "certificate",
-        "comparison_eligibility": outcome, "failures": [{"code": "weather_infeasible"}] if outcome == "ineligible" else [],
-        "route_validation": {"required_leg_count": 1, "road_validated_leg_count": 1, "missing_leg_count": 0, "fallback_leg_count": 0}}
+    geo = {
+        "plan_id": "child",
+        "content_hash": "childhash",
+        "coverage": {"complete": True, "gap_count": 0},
+        "stops": {"type": "FeatureCollection", "features": []},
+        "validated_legs": {"type": "FeatureCollection", "features": []},
+    }
+    certificate = {
+        "plan_id": "child",
+        "plan_content_hash": "childhash",
+        "certificate_id": "certificate",
+        "comparison_eligibility": outcome,
+        "failures": [{"code": "weather_infeasible"}] if outcome == "ineligible" else [],
+        "route_validation": {
+            "required_leg_count": 1,
+            "road_validated_leg_count": 1,
+            "missing_leg_count": 0,
+            "fallback_leg_count": 0,
+        },
+    }
     certificate["content_hash"] = core._artifact_content_hash(certificate)
     diff = {"parent_plan_id": "parent", "child_plan_id": "child", "diff_id": "diff"}
-    staged = {"operation_id": "operation", "type": "set_stop_role", "target": "target", "parameters": {"role": "meal"}, "created_at": "stamp"}
-    proposal = {"execution_mode": "typed_direct_edit_independent_evaluation", "state": outcome, "eligibility": outcome,
-        "parent_plan_id": "parent", "parent_plan_content_hash": "parenthash", "child_plan_id": "child", "child_plan_content_hash": "childhash",
-        "compiled_request": {"source_request_id": "request", "operations": [{key: value for key, value in staged.items() if key != "created_at"}]},
-        "evaluation_certificate": certificate, "plan_diff": diff, "geography_plan": geo, "certificate_id": "certificate",
-        "certificate_content_hash": certificate["content_hash"], "diff_id": "diff", "diff_content_hash": core._artifact_content_hash(diff),
-        "acceptance_eligible": outcome == "eligible"}
-    parent = {"active_plan_id": "parent", "active_plan_content_hash": "parenthash", "rendered_map_plan_id": "parent",
-        "rendered_geometry_hash": "parentgeo", "rendered_marker_ids": [], "preview_state": "PARENT_RENDERED"}
-    rendered = {"active_plan_id": "child", "active_plan_content_hash": "childhash", "rendered_map_plan_id": "child",
-        "rendered_geometry_hash": core._completed_race_geometry_hash(geo), "rendered_marker_ids": [], "preview_state": "PREVIEW_RENDERED"}
+    staged = {
+        "operation_id": "operation",
+        "type": "set_stop_role",
+        "target": "target",
+        "parameters": {"role": "meal"},
+        "created_at": "stamp",
+    }
+    proposal = {
+        "execution_mode": "typed_direct_edit_independent_evaluation",
+        "state": outcome,
+        "eligibility": outcome,
+        "parent_plan_id": "parent",
+        "parent_plan_content_hash": "parenthash",
+        "child_plan_id": "child",
+        "child_plan_content_hash": "childhash",
+        "compiled_request": {
+            "source_request_id": "request",
+            "operations": [{key: value for key, value in staged.items() if key != "created_at"}],
+        },
+        "evaluation_certificate": certificate,
+        "plan_diff": diff,
+        "geography_plan": geo,
+        "certificate_id": "certificate",
+        "certificate_content_hash": certificate["content_hash"],
+        "diff_id": "diff",
+        "diff_content_hash": core._artifact_content_hash(diff),
+        "acceptance_eligible": outcome == "eligible",
+    }
+    parent = {
+        "active_plan_id": "parent",
+        "active_plan_content_hash": "parenthash",
+        "rendered_map_plan_id": "parent",
+        "rendered_geometry_hash": "parentgeo",
+        "rendered_marker_ids": [],
+        "preview_state": "PARENT_RENDERED",
+    }
+    rendered = {
+        "active_plan_id": "child",
+        "active_plan_content_hash": "childhash",
+        "rendered_map_plan_id": "child",
+        "rendered_geometry_hash": core._completed_race_geometry_hash(geo),
+        "rendered_marker_ids": [],
+        "preview_state": "PREVIEW_RENDERED",
+    }
     if outcome == "ineligible":
         rendered = {**parent, "preview_state": "PREVIEW_INELIGIBLE"}
-    trace = {"parent": parent, "parent_plan_id": "parent", "parent_plan_content_hash": "parenthash", "child_plan_id": "child",
-        "child_plan_content_hash": "childhash", "request_id": "request", "evaluation_id": "certificate", "comparison_eligibility": outcome,
-        "failure_codes": [row["code"] for row in certificate["failures"]], "child_geometry_hash": core._completed_race_geometry_hash(geo),
-        "rendered": rendered, "reloaded": deepcopy(rendered), "staged": deepcopy(parent), "restored": deepcopy(parent)}
+    trace = {
+        "parent": parent,
+        "parent_plan_id": "parent",
+        "parent_plan_content_hash": "parenthash",
+        "child_plan_id": "child",
+        "child_plan_content_hash": "childhash",
+        "request_id": "request",
+        "evaluation_id": "certificate",
+        "comparison_eligibility": outcome,
+        "failure_codes": [row["code"] for row in certificate["failures"]],
+        "child_geometry_hash": core._completed_race_geometry_hash(geo),
+        "rendered": rendered,
+        "reloaded": deepcopy(rendered),
+        "staged": deepcopy(parent),
+        "restored": deepcopy(parent),
+    }
     return proposal, staged, trace
 
 
@@ -46,8 +107,24 @@ def test_eligible_child_or_weather_blocked_parent_are_distinct_valid_states(outc
     verifier.artifact_chain(proposal, staged, trace, outcome)
 
 
-@pytest.mark.parametrize("fault", ["request", "operation", "parent", "certificate_hash", "diff_hash", "fallback", "geometry_hash",
-    "ineligible_child_shown", "wrong_ineligibility_reason", "eligible_parent_shown", "staged_child", "reload_changed", "undo_not_parent"])
+@pytest.mark.parametrize(
+    "fault",
+    [
+        "request",
+        "operation",
+        "parent",
+        "certificate_hash",
+        "diff_hash",
+        "fallback",
+        "geometry_hash",
+        "ineligible_child_shown",
+        "wrong_ineligibility_reason",
+        "eligible_parent_shown",
+        "staged_child",
+        "reload_changed",
+        "undo_not_parent",
+    ],
+)
 def test_schema_valid_but_disconnected_artifacts_are_rejected(fault):
     outcome = "ineligible" if fault in {"ineligible_child_shown", "wrong_ineligibility_reason"} else "eligible"
     proposal, staged, trace = _fixture(outcome)
@@ -88,15 +165,48 @@ def _window_fixture():
     stop = {"stop_id": "stearns_wharf", "day": 6, "stop_order": 1}
     parent = {"stops": {"features": [{"properties": stop}]}}
     source_trace = {"stop_id": "stearns_wharf", "departure_minute": 634}
-    earliest = {"child_plan_id": "earlier_child", "certificate_id": "earlier_evaluation",
-        "schedule_impact": {"child": {"stop_traces": [source_trace]}}}
-    evidence = {"parent_stop": stop, "latest_bound_source": {"case": "time_window_earliest_only",
-        "child_plan_id": "earlier_child", "evaluation_id": "earlier_evaluation", "trace": source_trace, "chosen_latest_departure": "11:30"}}
-    operation = {"type": "set_stop_time_window", "target": "stearns_wharf", "source": "map",
-        "parameters": {"earliest_arrival": None, "latest_departure": "11:30"}}
-    proposal = {"geography_plan": parent, "plan_diff": {"time_window_changes": [{"stop_id": "stearns_wharf",
-        "from_earliest_arrival": None, "from_latest_departure": None, "to_earliest_arrival": None, "to_latest_departure": "11:30"}]},
-        "schedule_impact": {"child": {"stop_traces": [{"stop_id": "stearns_wharf", "departure_minute": 634, "latest_departure_status": "satisfied"}]}}}
+    earliest = {
+        "child_plan_id": "earlier_child",
+        "certificate_id": "earlier_evaluation",
+        "schedule_impact": {"child": {"stop_traces": [source_trace]}},
+    }
+    evidence = {
+        "parent_stop": stop,
+        "latest_bound_source": {
+            "case": "time_window_earliest_only",
+            "child_plan_id": "earlier_child",
+            "evaluation_id": "earlier_evaluation",
+            "trace": source_trace,
+            "chosen_latest_departure": "11:30",
+        },
+    }
+    operation = {
+        "type": "set_stop_time_window",
+        "target": "stearns_wharf",
+        "source": "map",
+        "parameters": {"earliest_arrival": None, "latest_departure": "11:30"},
+    }
+    proposal = {
+        "geography_plan": parent,
+        "plan_diff": {
+            "time_window_changes": [
+                {
+                    "stop_id": "stearns_wharf",
+                    "from_earliest_arrival": None,
+                    "from_latest_departure": None,
+                    "to_earliest_arrival": None,
+                    "to_latest_departure": "11:30",
+                }
+            ]
+        },
+        "schedule_impact": {
+            "child": {
+                "stop_traces": [
+                    {"stop_id": "stearns_wharf", "departure_minute": 634, "latest_departure_status": "satisfied"}
+                ]
+            }
+        },
+    }
     return operation, evidence, proposal, parent, earliest
 
 
@@ -116,7 +226,9 @@ def test_time_window_plausibility_cannot_replace_evaluator_evidence(fault):
     else:
         operation["target"] = "other"
     with pytest.raises(core.E2E1VerificationError):
-        verifier.semantics("time_window", "latest_only", "stearns_wharf", operation, evidence, proposal, parent, earliest)
+        verifier.semantics(
+            "time_window", "latest_only", "stearns_wharf", operation, evidence, proposal, parent, earliest
+        )
 
 
 def test_missing_evaluated_variant_evidence_rejects_stably(tmp_path):

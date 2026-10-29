@@ -207,8 +207,10 @@ def _latlon_to_geojson(value: Any) -> list[float]:
 
 
 def _points(value: Any) -> list[list[float]]:
-    if isinstance(value, list) and len(value) == 2 and all(
-        isinstance(item, (int, float)) and not isinstance(item, bool) for item in value
+    if (
+        isinstance(value, list)
+        and len(value) == 2
+        and all(isinstance(item, (int, float)) and not isinstance(item, bool) for item in value)
     ):
         return [value]
     if isinstance(value, list):

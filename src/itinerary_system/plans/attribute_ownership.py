@@ -11,19 +11,11 @@ from ..research_artifacts import PlanArtifactV2, stable_content_hash
 from .models import OwnedConstraint, OwnershipPolicy
 
 _ATTRIBUTE_RELATIONS = {
-    "existence": frozenset(
-        {"must_keep", "existence", "exists", "attribute:existence"}
-    ),
+    "existence": frozenset({"must_keep", "existence", "exists", "attribute:existence"}),
     "day": frozenset({"day", "stop_day", "assigned_day", "attribute:day"}),
-    "start_time": frozenset(
-        {"start_time", "arrival_time", "stop_start_time", "attribute:start_time"}
-    ),
-    "end_time": frozenset(
-        {"end_time", "departure_time", "stop_end_time", "attribute:end_time"}
-    ),
-    "duration": frozenset(
-        {"duration", "visit_duration", "duration_constraint", "attribute:duration"}
-    ),
+    "start_time": frozenset({"start_time", "arrival_time", "stop_start_time", "attribute:start_time"}),
+    "end_time": frozenset({"end_time", "departure_time", "stop_end_time", "attribute:end_time"}),
+    "duration": frozenset({"duration", "visit_duration", "duration_constraint", "attribute:duration"}),
     "time_window": frozenset(
         {
             "time_window",
@@ -37,15 +29,23 @@ _ATTRIBUTE_RELATIONS = {
     "order": frozenset({"stop_order", "attribute:stop_order"}),
 }
 _RELATION_TO_ATTRIBUTE = {
-    relation: attribute
-    for attribute, relations in _ATTRIBUTE_RELATIONS.items()
-    for relation in relations
+    relation: attribute for attribute, relations in _ATTRIBUTE_RELATIONS.items() for relation in relations
 }
 _ROLE_RELATIONS = frozenset({"role", "itinerary_role", "role_equals", "set_role", "attribute:role"})
-_ROLES = frozenset({
-    "attraction", "activity", "meal", "lodging", "transport_hub", "rest_stop",
-    "scenic_stop", "route_waypoint", "origin", "destination",
-})
+_ROLES = frozenset(
+    {
+        "attraction",
+        "activity",
+        "meal",
+        "lodging",
+        "transport_hub",
+        "rest_stop",
+        "scenic_stop",
+        "route_waypoint",
+        "origin",
+        "destination",
+    }
+)
 _STOP_SCOPES = frozenset({"stop", "poi"})
 _CLOCK_PATTERN = re.compile(r"^(?:[01]\d|2[0-3]):[0-5]\d$")
 _OWNED_CONSTRAINT_FIELDS = frozenset(
@@ -113,19 +113,13 @@ def resolve_attribute_ownership(
     activated = bool(parent_rows or child_rows)
     if not activated:
         return AttributeOwnershipResolution(rows_by_key={}, activated=False)
-    if _normalized_constraints(parent.owned_constraints) != _normalized_constraints(
-        child.owned_constraints
-    ):
-        raise ValueError(
-            "child owned constraints must exactly match accepted parent constraints"
-        )
+    if _normalized_constraints(parent.owned_constraints) != _normalized_constraints(child.owned_constraints):
+        raise ValueError("child owned constraints must exactly match accepted parent constraints")
     if any(attribute == "role" for _, attribute in changed_keys):
         parent_rows = attribute_ownership_rows(parent.owned_constraints, changed_keys, include_role=True)
         child_rows = attribute_ownership_rows(child.owned_constraints, changed_keys, include_role=True)
     if child_rows != parent_rows:
-        raise ValueError(
-            "child attribute ownership evidence must exactly match accepted parent"
-        )
+        raise ValueError("child attribute ownership evidence must exactly match accepted parent")
     return AttributeOwnershipResolution(rows_by_key=parent_rows, activated=True)
 
 
@@ -154,14 +148,8 @@ def build_attribute_ownership_evidence(
             or float(value) < 0
             for key, value in weights.items()
         ):
-            raise ValueError(
-                "attribute ownership policy weights must be finite and nonnegative"
-            )
-    constraint_rows = {
-        str(row["constraint_id"]): row
-        for rows in resolution.rows_by_key.values()
-        for row in rows
-    }
+            raise ValueError("attribute ownership policy weights must be finite and nonnegative")
+    constraint_rows = {str(row["constraint_id"]): row for rows in resolution.rows_by_key.values() for row in rows}
     payload = {
         "schema_version": f"plan-diff-attribute-ownership-evidence-v{2 if mixed_attributes else 1}",
         "parent_plan_id": parent.plan_id,
@@ -171,19 +159,17 @@ def build_attribute_ownership_evidence(
             "permission_claim": "not_evaluated",
             "feasibility_claim": "not_evaluated",
             "cost_coverage": "all_listed_diff_changes",
-            "relation_specific_attributes": sorted(set(_ATTRIBUTE_RELATIONS) | ({"role"} if mixed_attributes else set())),
+            "relation_specific_attributes": sorted(
+                set(_ATTRIBUTE_RELATIONS) | ({"role"} if mixed_attributes else set())
+            ),
             "lodging_and_road_relations": "not_migrated",
         },
         "ownership_policy": {
             "change_type_weights": {
-                str(key): float(value)
-                for key, value in sorted(policy.change_type_weights.items())
+                str(key): float(value) for key, value in sorted(policy.change_type_weights.items())
             },
             "constraint_strength_weights": {
-                str(key): float(value)
-                for key, value in sorted(
-                    policy.constraint_strength_weights.items()
-                )
+                str(key): float(value) for key, value in sorted(policy.constraint_strength_weights.items())
             },
         },
         "constraints": [constraint_rows[key] for key in sorted(constraint_rows)],
@@ -210,22 +196,17 @@ def ownership_change_evidence(
     if set(before_value) != set(attributes) or set(after_value) != set(attributes):
         raise ValueError("attribute ownership values must match changed attributes")
     normalized_before = {
-        attribute: _canonical_observed_value(attribute, before_value[attribute])
-        for attribute in attributes
+        attribute: _canonical_observed_value(attribute, before_value[attribute]) for attribute in attributes
     }
     normalized_after = {
-        attribute: _canonical_observed_value(attribute, after_value[attribute])
-        for attribute in attributes
+        attribute: _canonical_observed_value(attribute, after_value[attribute]) for attribute in attributes
     }
     rows = resolution.rows_for(target_stop_id, attributes)
     owner_strength = resolution.strength_for(target_stop_id, attributes, policy)
     strength_multiplier = policy.weight_for_strength(owner_strength)
     base_change_weight = policy.weight_for_change(change_kind)
     cost = float(base_change_weight * strength_multiplier * delta_scale)
-    if not all(
-        isfinite(value)
-        for value in (strength_multiplier, base_change_weight, cost)
-    ) or any(
+    if not all(isfinite(value) for value in (strength_multiplier, base_change_weight, cost)) or any(
         value < 0 for value in (strength_multiplier, base_change_weight, cost)
     ):
         raise ValueError("attribute ownership cost must be finite and nonnegative")
@@ -243,21 +224,15 @@ def ownership_change_evidence(
                 "constraint_id": str(row["constraint_id"]),
                 "attribute": attribute,
                 "canonical_value": required,
-                "satisfaction_before": _satisfaction(
-                    normalized_before[attribute], required
-                ),
-                "satisfaction_after": _satisfaction(
-                    normalized_after[attribute], required
-                ),
+                "satisfaction_before": _satisfaction(normalized_before[attribute], required),
+                "satisfaction_after": _satisfaction(normalized_after[attribute], required),
             }
         )
     return {
         "change_kind": change_kind,
         "target_stop_id": target_stop_id,
         "attributes": list(attributes),
-        "applicable_constraint_ids": sorted(
-            str(row["constraint_id"]) for row in rows
-        ),
+        "applicable_constraint_ids": sorted(str(row["constraint_id"]) for row in rows),
         "selected_constraint_ids": selected_ids,
         "before_value": normalized_before,
         "after_value": normalized_after,
@@ -335,8 +310,7 @@ def attribute_ownership_rows(
             }
         )
     return {
-        key: tuple(sorted(rows, key=lambda row: str(row["constraint_id"])))
-        for key, rows in sorted(rows_by_key.items())
+        key: tuple(sorted(rows, key=lambda row: str(row["constraint_id"]))) for key, rows in sorted(rows_by_key.items())
     }
 
 
@@ -409,12 +383,10 @@ def _canonical_duration(value: Any) -> dict[str, Any]:
     if not isinstance(value, dict) or set(value) != expected or value.get("mode") != "exact":
         raise ValueError("attribute duration value must be a canonical exact object")
     values = tuple(value.get(key) for key in ("preferred_minutes", "minimum_minutes", "maximum_minutes"))
-    if any(
-        isinstance(item, bool)
-        or not isinstance(item, int)
-        or not 15 <= item <= 480
-        for item in values
-    ) or not values[0] == values[1] == values[2]:
+    if (
+        any(isinstance(item, bool) or not isinstance(item, int) or not 15 <= item <= 480 for item in values)
+        or not values[0] == values[1] == values[2]
+    ):
         raise ValueError("attribute duration value must be a canonical exact object")
     minutes = values[0]
     return {
@@ -445,19 +417,9 @@ def _canonical_time_window(value: Any) -> dict[str, Any]:
     latest = value.get("latest_departure")
     if (
         (earliest is None and latest is None)
-        or (earliest is not None and (
-            not isinstance(earliest, str)
-            or _CLOCK_PATTERN.fullmatch(earliest) is None
-        ))
-        or (latest is not None and (
-            not isinstance(latest, str)
-            or _CLOCK_PATTERN.fullmatch(latest) is None
-        ))
-        or (
-            isinstance(earliest, str)
-            and isinstance(latest, str)
-            and earliest > latest
-        )
+        or (earliest is not None and (not isinstance(earliest, str) or _CLOCK_PATTERN.fullmatch(earliest) is None))
+        or (latest is not None and (not isinstance(latest, str) or _CLOCK_PATTERN.fullmatch(latest) is None))
+        or (isinstance(earliest, str) and isinstance(latest, str) and earliest > latest)
     ):
         raise ValueError("attribute time-window value must be canonical")
     return dict(value)

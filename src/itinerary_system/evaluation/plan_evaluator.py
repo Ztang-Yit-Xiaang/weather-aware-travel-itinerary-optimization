@@ -110,16 +110,18 @@ class PlanEvaluator:
         self._check_budget_weather_and_closures(plan, stop_lookup, failures, warnings)
         stop_traces: list[dict[str, Any]] = []
         route_record = self._check_routes_and_schedule(
-            plan, matrix, stop_lookup, day_sequences, failures, metrics, stop_traces=stop_traces,
+            plan,
+            matrix,
+            stop_lookup,
+            day_sequences,
+            failures,
+            metrics,
+            stop_traces=stop_traces,
         )
         self._check_owned_attribute_values(plan, attribute_rows, stop_traces, failures, warnings)
         if self.config.include_schedule_metrics:
             missing_windows = tuple(
-                sorted(
-                    stop_id
-                    for stop_id, stop in stop_lookup.items()
-                    if _opening_window(stop) == (None, None)
-                )
+                sorted(stop_id for stop_id, stop in stop_lookup.items() if _opening_window(stop) == (None, None))
             )
             metrics["schedule_missing_opening_window_count"] = float(len(missing_windows))
             if missing_windows:
@@ -190,11 +192,7 @@ class PlanEvaluator:
             metrics,
         )
         missing_windows = tuple(
-            sorted(
-                stop_id
-                for stop_id, stop in stop_lookup.items()
-                if _opening_window(stop) == (None, None)
-            )
+            sorted(stop_id for stop_id, stop in stop_lookup.items() if _opening_window(stop) == (None, None))
         )
         payload = {
             "schema_version": "evaluated-schedule-accounting-v1",
@@ -202,13 +200,7 @@ class PlanEvaluator:
             "plan_id": plan.plan_id,
             "plan_content_hash": plan.content_hash,
             "route_matrix_id": route_validation.get("matrix_id") if route_validation else None,
-            "status": (
-                "failed"
-                if failures
-                else "incomplete_evidence"
-                if missing_windows
-                else "passed"
-            ),
+            "status": ("failed" if failures else "incomplete_evidence" if missing_windows else "passed"),
             "modeled_components": [
                 "road_travel",
                 "visit_duration",
@@ -251,27 +243,15 @@ class PlanEvaluator:
             stop_traces=stop_traces,
         )
         missing_windows = tuple(
-            sorted(
-                stop_id
-                for stop_id, stop in stop_lookup.items()
-                if _opening_window(stop) == (None, None)
-            )
+            sorted(stop_id for stop_id, stop in stop_lookup.items() if _opening_window(stop) == (None, None))
         )
         payload = {
             "schema_version": "evaluated-time-window-schedule-accounting-v1",
             "evaluator_version": self.evaluator_version,
             "plan_id": plan.plan_id,
             "plan_content_hash": plan.content_hash,
-            "route_matrix_id": (
-                route_validation.get("matrix_id") if route_validation else None
-            ),
-            "status": (
-                "failed"
-                if failures
-                else "incomplete_evidence"
-                if missing_windows
-                else "passed"
-            ),
+            "route_matrix_id": (route_validation.get("matrix_id") if route_validation else None),
+            "status": ("failed" if failures else "incomplete_evidence" if missing_windows else "passed"),
             "modeled_components": [
                 "road_travel",
                 "visit_duration",
@@ -286,9 +266,7 @@ class PlanEvaluator:
                 "queue_wait",
                 "service_buffer",
             ],
-            "blocking_codes": list(
-                dict.fromkeys(finding.code for finding in failures)
-            ),
+            "blocking_codes": list(dict.fromkeys(finding.code for finding in failures)),
             "missing_opening_window_stop_ids": list(missing_windows),
             "metrics": metrics,
             "stop_traces": stop_traces,
@@ -328,16 +306,26 @@ class PlanEvaluator:
                 )
             )
         if planner_run is None:
-            failures.append(_failure("source_run_not_found", "No matching planner run was available for the plan.", "artifact"))
+            failures.append(
+                _failure("source_run_not_found", "No matching planner run was available for the plan.", "artifact")
+            )
             return
         if plan.source_run_id != planner_run.run_id:
-            failures.append(_failure("source_run_mismatch", "Plan source_run_id does not match planner run.", "artifact"))
+            failures.append(
+                _failure("source_run_mismatch", "Plan source_run_id does not match planner run.", "artifact")
+            )
         if plan.planning_request_id != planner_run.planning_request_id:
-            failures.append(_failure("planning_request_mismatch", "Plan request does not match planner run.", "artifact"))
+            failures.append(
+                _failure("planning_request_mismatch", "Plan request does not match planner run.", "artifact")
+            )
         if plan.catalog_snapshot_id != planner_run.catalog_snapshot_id:
-            failures.append(_failure("catalog_snapshot_mismatch", "Plan catalog snapshot does not match planner run.", "artifact"))
+            failures.append(
+                _failure("catalog_snapshot_mismatch", "Plan catalog snapshot does not match planner run.", "artifact")
+            )
         if plan.context_snapshot_id != planner_run.context_snapshot_id:
-            failures.append(_failure("context_snapshot_mismatch", "Plan context snapshot does not match planner run.", "artifact"))
+            failures.append(
+                _failure("context_snapshot_mismatch", "Plan context snapshot does not match planner run.", "artifact")
+            )
         if planner_run.execution_status not in {"COMPLETED", "FALLBACK_USED"}:
             failures.append(
                 _failure(
@@ -400,8 +388,7 @@ class PlanEvaluator:
                 and (
                     not isinstance(stop.get("itinerary_role"), str)
                     or stop.get("itinerary_role") not in _ITINERARY_STOP_ROLES
-                    or stop.get("itinerary_role_source")
-                    != "user_declared_itinerary_role"
+                    or stop.get("itinerary_role_source") != "user_declared_itinerary_role"
                 )
             )
         )
@@ -409,8 +396,7 @@ class PlanEvaluator:
             sorted(
                 stop_id
                 for stop_id, stop in stop_lookup.items()
-                if stop.get("itinerary_role") is None
-                and stop.get("itinerary_role_source") not in {None, "unavailable"}
+                if stop.get("itinerary_role") is None and stop.get("itinerary_role_source") not in {None, "unavailable"}
             )
         )
         if invalid_role_stop_ids or invalid_missing_role_source_ids:
@@ -419,26 +405,23 @@ class PlanEvaluator:
                     "itinerary_stop_role_invalid",
                     "A trip-owned itinerary role or its provenance is invalid.",
                     "artifact",
-                    tuple(
-                        sorted(
-                            set(invalid_role_stop_ids)
-                            | set(invalid_missing_role_source_ids)
-                        )
-                    ),
+                    tuple(sorted(set(invalid_role_stop_ids) | set(invalid_missing_role_source_ids))),
                 )
             )
         if len(sequence) != len(set(sequence)):
             failures.append(_failure("duplicate_visit", "Plan sequence contains duplicate stop visits.", "hard"))
-        assigned_stop_ids = {
-            stop_id
-            for stop_ids in day_sequences.values()
-            for stop_id in stop_ids
-        }
+        assigned_stop_ids = {stop_id for stop_ids in day_sequences.values() for stop_id in stop_ids}
         for stop_id in sequence:
             if stop_id not in stop_lookup:
-                failures.append(_failure("sequence_stop_missing_record", f"Sequence stop {stop_id!r} lacks a stop record.", "artifact"))
+                failures.append(
+                    _failure(
+                        "sequence_stop_missing_record", f"Sequence stop {stop_id!r} lacks a stop record.", "artifact"
+                    )
+                )
             if stop_id not in assigned_stop_ids:
-                failures.append(_failure("day_assignment_missing", f"Sequence stop {stop_id!r} lacks a day assignment.", "hard"))
+                failures.append(
+                    _failure("day_assignment_missing", f"Sequence stop {stop_id!r} lacks a day assignment.", "hard")
+                )
         selected_ids = set(stop_lookup)
         missing_from_sequence = selected_ids.difference(sequence)
         if missing_from_sequence:
@@ -451,7 +434,9 @@ class PlanEvaluator:
                 )
             )
         if not day_sequences:
-            failures.append(_failure("day_sequences_missing", "Plan has no day-grouped displayed sequence.", "artifact"))
+            failures.append(
+                _failure("day_sequences_missing", "Plan has no day-grouped displayed sequence.", "artifact")
+            )
         conflicting: set[str] = set()
         if tuple(sid for _, ids in sorted(day_sequences.items()) for sid in ids) != sequence:
             conflicting.add("sequence")
@@ -459,25 +444,38 @@ class PlanEvaluator:
             for order, stop_id in enumerate(stop_ids, 1):
                 stop = stop_lookup.get(stop_id, {})
                 assigned = plan.day_assignments.get(stop_id)
-                if day <= 0 or (assigned is not None and (isinstance(assigned, bool) or _coerce_float(assigned) != day)):
+                if day <= 0 or (
+                    assigned is not None and (isinstance(assigned, bool) or _coerce_float(assigned) != day)
+                ):
                     conflicting.add(stop_id)
-                for key, expected in (("day", day), ("stop_order", order), ("order", order),
-                                      ("route_sequence_index", order), ("visit_order", order)):
+                for key, expected in (
+                    ("day", day),
+                    ("stop_order", order),
+                    ("order", order),
+                    ("route_sequence_index", order),
+                    ("visit_order", order),
+                ):
                     value = stop.get(key)
                     if value is not None and (isinstance(value, bool) or _coerce_float(value) != expected):
                         conflicting.add(stop_id)
         if plan.ordered_days:
-            declared = tuple((_coerce_float(row.get("day")), tuple(str(sid) for sid in row["stop_ids"]))
-                             for row in plan.ordered_days if isinstance(row.get("stop_ids"), (list, tuple)))
+            declared = tuple(
+                (_coerce_float(row.get("day")), tuple(str(sid) for sid in row["stop_ids"]))
+                for row in plan.ordered_days
+                if isinstance(row.get("stop_ids"), (list, tuple))
+            )
             expected_days = tuple(sorted(day_sequences.items()))
             if len(declared) != len(plan.ordered_days) or declared != expected_days:
                 conflicting.add("ordered_days")
         if conflicting:
-            failures.append(_failure(
-                "plan_representation_conflict",
-                "Stop day/order fields or ordered_days disagree with the displayed sequence and assignments.",
-                "artifact", tuple(sorted(conflicting)),
-            ))
+            failures.append(
+                _failure(
+                    "plan_representation_conflict",
+                    "Stop day/order fields or ordered_days disagree with the displayed sequence and assignments.",
+                    "artifact",
+                    tuple(sorted(conflicting)),
+                )
+            )
 
     def _check_owned_constraints(
         self,
@@ -495,17 +493,24 @@ class PlanEvaluator:
                 parent_constraints = active_owned_constraints(self.reference_plan.owned_constraints)
                 attribute_ownership_rows(self.reference_plan.owned_constraints)
                 if sorted((row.to_record() for row in constraints), key=lambda row: row["constraint_id"]) != sorted(
-                    (row.to_record() for row in parent_constraints), key=lambda row: row["constraint_id"],
+                    (row.to_record() for row in parent_constraints),
+                    key=lambda row: row["constraint_id"],
                 ):
-                    failures.append(_failure(
-                        "owned_constraints_changed_from_parent",
-                        "Child ownership constraints differ from the immutable accepted parent; no relaxation is certified.",
-                        "artifact",
-                    ))
+                    failures.append(
+                        _failure(
+                            "owned_constraints_changed_from_parent",
+                            "Child ownership constraints differ from the immutable accepted parent; no relaxation is certified.",
+                            "artifact",
+                        )
+                    )
         except (ValueError, TypeError):
-            failures.append(_failure(
-                "owned_attribute_constraint_invalid", "Active ownership constraints are malformed or contradictory.", "artifact",
-            ))
+            failures.append(
+                _failure(
+                    "owned_attribute_constraint_invalid",
+                    "Active ownership constraints are malformed or contradictory.",
+                    "artifact",
+                )
+            )
             return {}
         attribute_ids = {row["constraint_id"] for rows in attribute_rows.values() for row in rows}
         for constraint in constraints:
@@ -518,15 +523,21 @@ class PlanEvaluator:
                 ConstraintStrength.STRONG,
             }
             if constraint.scope in {ConstraintScope.STOP, ConstraintScope.POI} and constraint.target_id not in selected:
-                code = "locked_stop_missing" if constraint.strength == ConstraintStrength.LOCKED else "owned_stop_missing"
-                finding = _failure(code, f"Owned stop constraint {constraint.constraint_id!r} is not satisfied.", "hard", (constraint.constraint_id,))
-                (failures if hard else warnings).append(finding if hard else _warning(code, finding.message, "soft", finding.evidence_refs))
+                code = (
+                    "locked_stop_missing" if constraint.strength == ConstraintStrength.LOCKED else "owned_stop_missing"
+                )
+                finding = _failure(
+                    code,
+                    f"Owned stop constraint {constraint.constraint_id!r} is not satisfied.",
+                    "hard",
+                    (constraint.constraint_id,),
+                )
+                (failures if hard else warnings).append(
+                    finding if hard else _warning(code, finding.message, "soft", finding.evidence_refs)
+                )
             if _is_role_owned_constraint(constraint):
                 required_role = constraint.value
-                if (
-                    not isinstance(required_role, str)
-                    or required_role not in _ITINERARY_STOP_ROLES
-                ):
+                if not isinstance(required_role, str) or required_role not in _ITINERARY_STOP_ROLES:
                     failures.append(
                         _failure(
                             "owned_role_constraint_invalid",
@@ -536,19 +547,19 @@ class PlanEvaluator:
                         )
                     )
                 elif constraint.target_id in stop_lookup and (
-                    stop_lookup[constraint.target_id].get("itinerary_role")
-                    != required_role
+                    stop_lookup[constraint.target_id].get("itinerary_role") != required_role
                 ):
-                    role_hard = constraint.strength in {
-                        ConstraintStrength.LOCKED,
-                        ConstraintStrength.BOOKED,
-                        ConstraintStrength.HARD,
-                    } or not constraint.can_relax()
-                    code = "owned_role_constraint_unsatisfied"
-                    message = (
-                        f"Owned itinerary-role constraint "
-                        f"{constraint.constraint_id!r} is not satisfied."
+                    role_hard = (
+                        constraint.strength
+                        in {
+                            ConstraintStrength.LOCKED,
+                            ConstraintStrength.BOOKED,
+                            ConstraintStrength.HARD,
+                        }
+                        or not constraint.can_relax()
                     )
+                    code = "owned_role_constraint_unsatisfied"
+                    message = f"Owned itinerary-role constraint {constraint.constraint_id!r} is not satisfied."
                     if role_hard:
                         failures.append(
                             _failure(
@@ -568,9 +579,20 @@ class PlanEvaluator:
                             )
                         )
             if constraint.scope == ConstraintScope.LODGING and constraint.target_id not in lodging_ids:
-                code = "booked_lodging_missing" if constraint.strength == ConstraintStrength.BOOKED else "owned_lodging_missing"
-                finding = _failure(code, f"Owned lodging constraint {constraint.constraint_id!r} is not satisfied.", "hard", (constraint.constraint_id,))
-                (failures if hard else warnings).append(finding if hard else _warning(code, finding.message, "soft", finding.evidence_refs))
+                code = (
+                    "booked_lodging_missing"
+                    if constraint.strength == ConstraintStrength.BOOKED
+                    else "owned_lodging_missing"
+                )
+                finding = _failure(
+                    code,
+                    f"Owned lodging constraint {constraint.constraint_id!r} is not satisfied.",
+                    "hard",
+                    (constraint.constraint_id,),
+                )
+                (failures if hard else warnings).append(
+                    finding if hard else _warning(code, finding.message, "soft", finding.evidence_refs)
+                )
         return attribute_rows
 
     def _check_owned_attribute_values(
@@ -596,30 +618,43 @@ class PlanEvaluator:
                         raise ValueError("Stop day differs from the evaluated sequence")
                 elif attribute == "order":
                     actual = trace["sequence_index"] + 1 if trace else None
-                    if stop.get("stop_order") is not None and canonical_attribute_value("order", stop["stop_order"]) != actual:
+                    if (
+                        stop.get("stop_order") is not None
+                        and canonical_attribute_value("order", stop["stop_order"]) != actual
+                    ):
                         raise ValueError("Stop order differs from the evaluated sequence")
                 elif attribute in {"start_time", "end_time"}:
                     actual = trace.get("service_start_minute" if attribute == "start_time" else "departure_minute")
                 elif attribute == "duration":
                     actual = trace.get("visit_minutes")
                     declared = stop.get("duration_constraint")
-                    if declared is not None and canonical_attribute_value("duration", declared)["preferred_minutes"] != actual:
+                    if (
+                        declared is not None
+                        and canonical_attribute_value("duration", declared)["preferred_minutes"] != actual
+                    ):
                         raise ValueError("Declared duration differs from the evaluated visit")
                     for key in ("visit_duration_minutes", "duration_minutes", "service_minutes", "dwell_minutes"):
                         value = stop.get(key)
                         if value is not None and (
-                            isinstance(value, bool) or not isinstance(value, (int, float))
-                            or not isfinite(value) or not 15 <= value <= 480 or value != actual
+                            isinstance(value, bool)
+                            or not isinstance(value, (int, float))
+                            or not isfinite(value)
+                            or not 15 <= value <= 480
+                            or value != actual
                         ):
                             raise ValueError("Duration aliases differ from the evaluated visit")
                 else:
                     declared = stop.get("time_window_constraint")
                     actual = canonical_attribute_value("time_window", declared) if declared is not None else None
             except (ValueError, TypeError):
-                failures.append(_failure(
-                    "owned_attribute_value_invalid", f"Stop {target!r} has inconsistent {attribute!r} evidence.",
-                    "artifact", (target, *(row["constraint_id"] for row in rows)),
-                ))
+                failures.append(
+                    _failure(
+                        "owned_attribute_value_invalid",
+                        f"Stop {target!r} has inconsistent {attribute!r} evidence.",
+                        "artifact",
+                        (target, *(row["constraint_id"] for row in rows)),
+                    )
+                )
                 continue
             for row in rows:
                 required = row["canonical_value"]
@@ -637,7 +672,8 @@ class PlanEvaluator:
                 finding = (_failure if protected else _warning)(
                     "owned_attribute_constraint_unsatisfied",
                     f"Owned {attribute!r} constraint {row['constraint_id']!r} is not satisfied by the evaluated plan.",
-                    "hard" if protected else "soft", (row["constraint_id"], target),
+                    "hard" if protected else "soft",
+                    (row["constraint_id"], target),
                 )
                 (failures if protected else warnings).append(finding)
 
@@ -727,21 +763,36 @@ class PlanEvaluator:
         if self.config.budget_limit is not None:
             cost = _first_float(plan.modeled_metrics, *self.config.budget_metric_names)
             if cost is None:
-                warnings.append(_warning("budget_metric_missing", "Budget limit configured but no cost metric was found.", "soft"))
+                warnings.append(
+                    _warning("budget_metric_missing", "Budget limit configured but no cost metric was found.", "soft")
+                )
             elif cost > self.config.budget_limit:
                 failures.append(_failure("budget_exceeded", "Plan exceeds the configured budget limit.", "hard"))
         for stop_id, stop in stop_lookup.items():
-            if _truthy(stop.get("closed")) or str(stop.get("closure_status", "")).lower() in {"closed", "cancelled", "canceled"}:
+            if _truthy(stop.get("closed")) or str(stop.get("closure_status", "")).lower() in {
+                "closed",
+                "cancelled",
+                "canceled",
+            }:
                 failures.append(_failure("stop_closed", f"Stop {stop_id!r} is closed.", "hard", (stop_id,)))
             if stop.get("weather_feasible") is False:
-                failures.append(_failure("weather_infeasible", f"Stop {stop_id!r} is weather infeasible.", "hard", (stop_id,)))
+                failures.append(
+                    _failure("weather_infeasible", f"Stop {stop_id!r} is weather infeasible.", "hard", (stop_id,))
+                )
             weather_risk = _coerce_float(stop.get("weather_risk"))
             if (
                 self.config.weather_warning_threshold is not None
                 and weather_risk is not None
                 and weather_risk > self.config.weather_warning_threshold
             ):
-                warnings.append(_warning("weather_risk_warning", f"Stop {stop_id!r} exceeds weather risk warning threshold.", "soft", (stop_id,)))
+                warnings.append(
+                    _warning(
+                        "weather_risk_warning",
+                        f"Stop {stop_id!r} exceeds weather risk warning threshold.",
+                        "soft",
+                        (stop_id,),
+                    )
+                )
 
     def _check_routes_and_schedule(
         self,
@@ -754,9 +805,15 @@ class PlanEvaluator:
         *,
         stop_traces: list[dict[str, Any]] | None = None,
     ) -> dict[str, Any] | None:
-        route_sequences = tuple(_route_sequence(day, sequence, self.config) for day, sequence in sorted(day_sequences.items()))
+        route_sequences = tuple(
+            _route_sequence(day, sequence, self.config) for day, sequence in sorted(day_sequences.items())
+        )
         if route_matrix is None:
-            failures.append(_failure("route_matrix_missing", "No RouteMatrix was provided for independent route validation.", "hard"))
+            failures.append(
+                _failure(
+                    "route_matrix_missing", "No RouteMatrix was provided for independent route validation.", "hard"
+                )
+            )
             return None
         report = validate_route_matrix(
             route_matrix,
@@ -791,9 +848,7 @@ class PlanEvaluator:
                 stop_traces=stop_traces,
             )
             if self.config.include_schedule_metrics:
-                metrics.update(
-                    {f"day_{day}_{name}": value for name, value in day_metrics.items()}
-                )
+                metrics.update({f"day_{day}_{name}": value for name, value in day_metrics.items()})
         return report.to_record()
 
     def _check_day_schedule(
@@ -819,7 +874,13 @@ class PlanEvaluator:
             if current_id:
                 leg_minutes = _route_minutes(route_matrix, current_id, stop_id, strict=self.config.strict_routes)
                 if leg_minutes is None:
-                    failures.append(_failure("route_leg_unavailable", f"Missing or invalid route leg {current_id!r}->{stop_id!r}.", "hard"))
+                    failures.append(
+                        _failure(
+                            "route_leg_unavailable",
+                            f"Missing or invalid route leg {current_id!r}->{stop_id!r}.",
+                            "hard",
+                        )
+                    )
                     leg_minutes = 0.0
                 else:
                     cell = route_matrix.cells.get((current_id, stop_id))
@@ -851,22 +912,14 @@ class PlanEvaluator:
                     )
                 )
                 trace_failure_codes.append("time_window_constraint_invalid")
-            earliest = (
-                _parse_minutes(required_window.get("earliest_arrival"))
-                if required_window is not None
-                else None
-            )
+            earliest = _parse_minutes(required_window.get("earliest_arrival")) if required_window is not None else None
             required_wait = None if earliest is None else 0.0
             if earliest is not None and current_time < earliest:
                 required_wait = float(earliest - current_time)
                 waiting_minutes += required_wait
                 current_time = float(earliest)
             service_start = float(current_time)
-            if (
-                self.config.enforce_opening_windows
-                and window_end is not None
-                and service_start > window_end
-            ):
+            if self.config.enforce_opening_windows and window_end is not None and service_start > window_end:
                 failures.append(
                     _failure(
                         "opening_window_missed",
@@ -883,11 +936,7 @@ class PlanEvaluator:
             visit_minutes += duration
             current_time += duration
             departure = float(current_time)
-            latest = (
-                _parse_minutes(required_window.get("latest_departure"))
-                if required_window is not None
-                else None
-            )
+            latest = _parse_minutes(required_window.get("latest_departure")) if required_window is not None else None
             latest_status = "not_set"
             latest_overrun: float | None = None
             if latest is not None:
@@ -897,17 +946,12 @@ class PlanEvaluator:
                     failures.append(
                         _failure(
                             "stop_time_window_latest_departure_exceeded",
-                            (
-                                f"Stop {stop_id!r} departs after its trip-specific "
-                                "latest-departure bound."
-                            ),
+                            (f"Stop {stop_id!r} departs after its trip-specific latest-departure bound."),
                             "hard",
                             (stop_id,),
                         )
                     )
-                    trace_failure_codes.append(
-                        "stop_time_window_latest_departure_exceeded"
-                    )
+                    trace_failure_codes.append("stop_time_window_latest_departure_exceeded")
             if stop_traces is not None:
                 stop_traces.append(
                     {
@@ -918,19 +962,13 @@ class PlanEvaluator:
                         "incoming_travel_minutes": incoming_travel_minutes,
                         "incoming_route_query_hash": incoming_route_query_hash,
                         "road_arrival_minute": road_arrival,
-                        "opening_start_minute": (
-                            float(window_start) if window_start is not None else None
-                        ),
-                        "opening_end_minute": (
-                            float(window_end) if window_end is not None else None
-                        ),
+                        "opening_start_minute": (float(window_start) if window_start is not None else None),
+                        "opening_end_minute": (float(window_end) if window_end is not None else None),
                         "opening_wait_minutes": opening_wait,
                         "opening_window_source": opening_window_source,
                         "time_window_constraint": required_window,
                         "time_window_source": (
-                            "trip_specific_user_constraint"
-                            if required_window is not None
-                            else None
+                            "trip_specific_user_constraint" if required_window is not None else None
                         ),
                         "required_window_wait_minutes": required_wait,
                         "service_start_minute": service_start,
@@ -947,14 +985,20 @@ class PlanEvaluator:
         if end_anchor and current_id:
             leg_minutes = _route_minutes(route_matrix, current_id, end_anchor, strict=self.config.strict_routes)
             if leg_minutes is None:
-                failures.append(_failure("route_leg_unavailable", f"Missing or invalid route leg {current_id!r}->{end_anchor!r}.", "hard"))
+                failures.append(
+                    _failure(
+                        "route_leg_unavailable", f"Missing or invalid route leg {current_id!r}->{end_anchor!r}.", "hard"
+                    )
+                )
                 leg_minutes = 0.0
             travel_minutes += leg_minutes
         total = travel_minutes + visit_minutes + waiting_minutes
         slack = max(0.0, self.config.max_day_minutes - total)
         overrun = max(0.0, total - self.config.max_day_minutes)
         if total > self.config.max_day_minutes:
-            failures.append(_failure("day_time_exceeded", f"Day {day} exceeds the configured time limit.", "hard", (str(day),)))
+            failures.append(
+                _failure("day_time_exceeded", f"Day {day} exceeds the configured time limit.", "hard", (str(day),))
+            )
         return {
             "travel_minutes": float(travel_minutes),
             "visit_minutes": float(visit_minutes),
@@ -1036,11 +1080,15 @@ def _utility_total(stops: Any) -> tuple[float | None, str | None]:
 
 
 def _failure(code: str, message: str, category: str, evidence_refs: tuple[str, ...] = ()) -> EvaluationFinding:
-    return EvaluationFinding(code=code, message=message, severity="failure", category=category, evidence_refs=evidence_refs)
+    return EvaluationFinding(
+        code=code, message=message, severity="failure", category=category, evidence_refs=evidence_refs
+    )
 
 
 def _warning(code: str, message: str, category: str, evidence_refs: tuple[str, ...] = ()) -> EvaluationFinding:
-    return EvaluationFinding(code=code, message=message, severity="warning", category=category, evidence_refs=evidence_refs)
+    return EvaluationFinding(
+        code=code, message=message, severity="warning", category=category, evidence_refs=evidence_refs
+    )
 
 
 def _coerce_run(value: PlannerRun | dict[str, Any] | None) -> PlannerRun | None:
@@ -1112,7 +1160,9 @@ def _route_minutes(route_matrix: RouteMatrix, origin: str, destination: str, *, 
 
 def _opening_window(stop: dict[str, Any]) -> tuple[int | None, int | None]:
     return (
-        _parse_minutes(_first_nonempty(stop, "opening_start", "window_start", "start_time", "earliest_start", "open_time")),
+        _parse_minutes(
+            _first_nonempty(stop, "opening_start", "window_start", "start_time", "earliest_start", "open_time")
+        ),
         _parse_minutes(_first_nonempty(stop, "opening_end", "window_end", "latest_start", "close_time")),
     )
 
@@ -1181,11 +1231,7 @@ def _time_window_constraint(value: Any) -> dict[str, Any] | None:
         or (earliest is None and latest is None)
         or not _valid_clock(earliest)
         or not _valid_clock(latest)
-        or (
-            earliest is not None
-            and latest is not None
-            and _parse_minutes(earliest) > _parse_minutes(latest)
-        )
+        or (earliest is not None and latest is not None and _parse_minutes(earliest) > _parse_minutes(latest))
     ):
         raise ValueError("time_window_constraint_invalid")
     return {field: value[field] for field in fields}
@@ -1193,8 +1239,7 @@ def _time_window_constraint(value: Any) -> dict[str, Any] | None:
 
 def _valid_clock(value: Any) -> bool:
     return value is None or (
-        isinstance(value, str)
-        and re.fullmatch(r"(?:[01][0-9]|2[0-3]):[0-5][0-9]", value) is not None
+        isinstance(value, str) and re.fullmatch(r"(?:[01][0-9]|2[0-3]):[0-5][0-9]", value) is not None
     )
 
 

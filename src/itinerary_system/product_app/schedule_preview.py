@@ -372,11 +372,7 @@ def _preview_stop(stop: ScheduleStopInputV1, current: float | None) -> tuple[Sch
 
     if current is not None and stop.travel.minutes is not None:
         arrival = current + stop.travel.minutes
-    access_ready = (
-        None
-        if arrival is None or stop.parking_walk.minutes is None
-        else arrival + stop.parking_walk.minutes
-    )
+    access_ready = None if arrival is None or stop.parking_walk.minutes is None else arrival + stop.parking_walk.minutes
     wait_ready = (
         None
         if access_ready is None or stop.expected_wait.minutes is None

@@ -24,7 +24,9 @@ def owned_constraint(constraint_id: str, *, target_id: str, strength: Constraint
         relation="protect",
         value=True,
         confirmed=True,
-        relaxation_policy=RelaxationPolicy.NEVER if strength == ConstraintStrength.LOCKED else RelaxationPolicy.AUTO_WITH_PENALTY,
+        relaxation_policy=RelaxationPolicy.NEVER
+        if strength == ConstraintStrength.LOCKED
+        else RelaxationPolicy.AUTO_WITH_PENALTY,
     ).to_record()
 
 
@@ -111,7 +113,9 @@ def route_matrix() -> RouteMatrix:
         ("poi_b", "poi_e"): cell("poi_b", "poi_e", 8),
         ("poi_e", "hotel_y_end"): cell("poi_e", "hotel_y_end", 12),
     }
-    return RouteMatrix(matrix_id="matrix_progressive", context_snapshot_id="context_static_demo_2026_06", entity_ids=(), cells=cells)
+    return RouteMatrix(
+        matrix_id="matrix_progressive", context_snapshot_id="context_static_demo_2026_06", entity_ids=(), cells=cells
+    )
 
 
 def day_route_config() -> DayRouteSolverConfig:

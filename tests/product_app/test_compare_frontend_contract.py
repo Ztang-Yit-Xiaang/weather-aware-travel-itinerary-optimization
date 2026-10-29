@@ -11,7 +11,9 @@ APP = STATIC / "js" / "app.js"
 CSS = STATIC / "css" / "app.css"
 
 
-def _resolve_with_node(selected: str | None, *, plan_hash: str = "hash-child", evidence_hash: str = "hash-child") -> dict[str, object]:
+def _resolve_with_node(
+    selected: str | None, *, plan_hash: str = "hash-child", evidence_hash: str = "hash-child"
+) -> dict[str, object]:
     workspace = {
         "alternatives": [
             {
@@ -43,7 +45,7 @@ def _resolve_with_node(selected: str | None, *, plan_hash: str = "hash-child", e
     }
     session = {"selected_alternative_id": selected}
     script = f"""
-      const module = await import({json.dumps(COMPARE.as_uri() + '?contract-test')});
+      const module = await import({json.dumps(COMPARE.as_uri() + "?contract-test")});
       const result = module.resolveCompareSelection(
         {json.dumps(workspace)},
         {json.dumps(session)},
@@ -119,7 +121,7 @@ def test_compare_owns_two_map_controllers_and_mobile_toggle() -> None:
 def test_baseline_map_renders_before_an_option_is_selected() -> None:
     source = COMPARE.read_text(encoding="utf-8")
 
-    assert 'if (!baseline) {' in source
+    assert "if (!baseline) {" in source
     assert 'if (!baseline || resolution.state !== "selected")' not in source
     baseline_render = source.index("baselineController.render({")
     option_gate = source.index('if (resolution.state === "selected") {', baseline_render)
@@ -166,8 +168,8 @@ def test_compare_preserves_unavailable_and_has_no_acceptance_action() -> None:
 def test_each_map_pane_has_local_status_and_text_fallback() -> None:
     source = COMPARE.read_text(encoding="utf-8")
 
-    assert 'data-compare-map-status' in source
-    assert 'data-compare-text' in source
+    assert "data-compare-map-status" in source
+    assert "data-compare-text" in source
     assert "setPaneFallback(baselinePane, payload)" in source
     assert "setPaneFallback(optionPane, payload)" in source
     assert "setPaneStatus(baselinePane, payload)" in source
@@ -181,7 +183,10 @@ def test_compare_maps_wait_for_nonzero_layout_without_ready_resize_recursion() -
 
     assert 'class="map-stage compare-map-stage"' in source
     assert 'class="compare-map-canvas"' in source
-    assert ".map-stage.compare-map-stage { width: 100%; height: clamp(320px, 42vh, 520px); min-height: 320px; max-height: 520px; }" in css
+    assert (
+        ".map-stage.compare-map-stage { width: 100%; height: clamp(320px, 42vh, 520px); min-height: 320px; max-height: 520px; }"
+        in css
+    )
     assert ".compare-map-canvas { position: absolute; inset: 0; width: 100%; height: 100%;" in css
     assert "const generation = compareGeneration;" in source
     assert "if (generation !== compareGeneration || !root.isConnected) return;" in source
@@ -205,7 +210,7 @@ def test_status_reporting_cannot_retrigger_resize_and_loading_is_not_ready():
       assert.doesNotMatch(status.textContent,/Map ready/i);
       assert.match(status.textContent,/Loading|Rechecking/i);
     """
-    subprocess.run(["node","--input-type=module","--eval",script],cwd=ROOT,check=True)
+    subprocess.run(["node", "--input-type=module", "--eval", script], cwd=ROOT, check=True)
 
 
 def test_camera_sync_starts_only_after_both_maps_finish_their_initial_fit() -> None:
@@ -213,7 +218,7 @@ def test_camera_sync_starts_only_after_both_maps_finish_their_initial_fit() -> N
     lifecycle = source[source.index("function startCompareMaps(") :]
     lifecycle = lifecycle[: lifecycle.index("export function disposeCompareWorkspace")]
 
-    ready_gate = lifecycle.index('if (readyPanes.size !== 2')
+    ready_gate = lifecycle.index("if (readyPanes.size !== 2")
     sync_assignment = lifecycle.index(
         "stopCameraSync = synchronizeMapCameras(baselineController, optionController)",
     )

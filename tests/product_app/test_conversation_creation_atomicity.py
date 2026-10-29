@@ -1,4 +1,5 @@
 """Real repository creation/binding races; no browser, provider, or fake outcome."""
+
 from __future__ import annotations
 
 import json
@@ -19,8 +20,9 @@ ROOT = Path(__file__).resolve().parents[2]
 def test_concurrent_first_reads_share_one_bound_conversation(tmp_path, after_delete):
     service = ProductService(ProductRunRegistry(ROOT, ROOT / "configs/product_app_registry.json"), tmp_path)
     bundle, _ = service.load(service.registry.default.run_id)
-    owner, token = service.workspace.create_session(service.registry.default.run_id,
-        bundle.parent_plan["plan_id"], 5, trip_id=service.registry.default.trip_id)
+    owner, token = service.workspace.create_session(
+        service.registry.default.run_id, bundle.parent_plan["plan_id"], 5, trip_id=service.registry.default.trip_id
+    )
     if after_delete:
         service.read_conversation(owner)
         assert service.delete_conversation(owner, owner.revision)
@@ -45,11 +47,11 @@ def test_concurrent_first_reads_share_one_bound_conversation(tmp_path, after_del
         try:
             session = service.workspace.authenticate(owner.session_id, token)
             conversation = service.read_conversation(session)
-            value = {"conversation":conversation.as_dict(), "session":session.public_dict()}
-            trace.append({"result":"ok", "output":value})
+            value = {"conversation": conversation.as_dict(), "session": session.public_dict()}
+            trace.append({"result": "ok", "output": value})
             return value
         except Exception as exc:
-            trace.append({"result":"error", "type":type(exc).__name__, "code":str(exc)})
+            trace.append({"result": "error", "type": type(exc).__name__, "code": str(exc)})
             raise
 
     with patch.object(service.conversations, "get_or_create", before_bind):
@@ -68,11 +70,20 @@ def test_concurrent_first_reads_share_one_bound_conversation(tmp_path, after_del
             try:
                 results = [first.result(timeout=5), second.result(timeout=5)]
             finally:
-                (tmp_path / "creation_binding_io.json").write_text(json.dumps({
-                    "after_delete":after_delete, "repository_outputs":calls, "reader_results":trace,
-                    "boundary_unlocked":unlocked, "second_repository_overlapped":overlapped,
-                    "instrumentation":"Pause only after the actual first repository result",
-                }, indent=2), encoding="utf-8")
+                (tmp_path / "creation_binding_io.json").write_text(
+                    json.dumps(
+                        {
+                            "after_delete": after_delete,
+                            "repository_outputs": calls,
+                            "reader_results": trace,
+                            "boundary_unlocked": unlocked,
+                            "second_repository_overlapped": overlapped,
+                            "instrumentation": "Pause only after the actual first repository result",
+                        },
+                        indent=2,
+                    ),
+                    encoding="utf-8",
+                )
     assert not unlocked and not overlapped
     current = service.workspace.authenticate(owner.session_id, token)
     assert {row["conversation"]["conversation_id"] for row in results} == {current.conversation_id}
@@ -90,7 +101,9 @@ def test_evidence_observer_does_not_create_a_deleted_conversation(tmp_path):
     browser = ROOT / "tests/product_app/browser"
     sys.path.insert(0, str(browser))
     try:
-        spec = importlib.util.spec_from_file_location("conversation_fixture_under_test", browser / "copilot_conversation_fixture.py")
+        spec = importlib.util.spec_from_file_location(
+            "conversation_fixture_under_test", browser / "copilot_conversation_fixture.py"
+        )
         fixture = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(fixture)
     finally:

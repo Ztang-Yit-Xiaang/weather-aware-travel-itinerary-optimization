@@ -248,9 +248,7 @@ def test_host_origin_csp_and_cache_boundaries(api_client: TestClient) -> None:
         assert blocked_origin.json() == {"detail": "origin_not_allowed"}
         assert blocked_origin.headers["cache-control"] == "no-store"
 
-    allowed = api_client.post(
-        "/api/sessions", headers={"Origin": "http://localhost:8127"}, json={}
-    )
+    allowed = api_client.post("/api/sessions", headers={"Origin": "http://localhost:8127"}, json={})
     assert allowed.status_code == 200
     assert api_client.get("/api/health", headers={"Origin": "https://example.com"}).status_code == 200
 
@@ -265,10 +263,10 @@ def test_host_origin_csp_and_cache_boundaries(api_client: TestClient) -> None:
     assert "default-src 'self'" in csp
     assert "http://127.0.0.1:8080" in csp
     assert "frame-ancestors 'none'" in csp
-    directives = dict(part.strip().split(" ",1) for part in csp.split(";"))
+    directives = dict(part.strip().split(" ", 1) for part in csp.split(";"))
     approved_photos = {"https://www.nps.gov/yose/", "https://www.nps.gov/common/uploads/"}
     assert {v for v in directives["img-src"].split() if v.startswith("https://")} == approved_photos
-    assert all("https://" not in value for key,value in directives.items() if key != "img-src")
+    assert all("https://" not in value for key, value in directives.items() if key != "img-src")
     assert "*" not in csp
 
 
@@ -312,12 +310,12 @@ def test_maplibre_container_validates_origin_before_nginx_template_expansion() -
     compose = MAP_COMPOSE.read_text(encoding="utf-8")
     nginx = MAP_NGINX.read_text(encoding="utf-8")
 
-    assert "origin=\"$${PRODUCT_APP_ORIGIN}\"" in compose
+    assert 'origin="$${PRODUCT_APP_ORIGIN}"' in compose
     assert "*[!0-9]*" in compose
     assert '"$${port}" -gt 65535' in compose
     assert "exec /docker-entrypoint.sh" in compose
     assert 'Access-Control-Allow-Origin "${PRODUCT_APP_ORIGIN}"' in nginx
-    assert "Access-Control-Allow-Origin \"*\"" not in nginx
+    assert 'Access-Control-Allow-Origin "*"' not in nginx
     assert "$request_uri ~*" in nginx
     for encoded_segment in ("%2e", "%2f", "%5c"):
         assert encoded_segment in nginx
@@ -349,9 +347,7 @@ def test_request_body_and_schema_failures_are_stable_and_no_store(
     assert response.headers["cache-control"] == "no-store"
 
 
-def test_streamed_body_limit_applies_without_content_length(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_streamed_body_limit_applies_without_content_length(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     config = ProductRuntimeConfig.from_environment(
         repository_root=tmp_path,
         registry_path=tmp_path / "registry.json",
@@ -493,8 +489,7 @@ def test_operation_parameters_reject_nonfinite_and_excessive_nesting(
         path,
         headers={**headers, "Content-Type": "application/json"},
         content=(
-            '{"expected_revision":0,"type":"route_feedback",'
-            '"target":"selected_route","parameters":{"weight":NaN}}'
+            '{"expected_revision":0,"type":"route_feedback","target":"selected_route","parameters":{"weight":NaN}}'
         ),
     )
     nested: object = "value"

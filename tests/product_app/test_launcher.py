@@ -52,7 +52,12 @@ def health_payload(*, status: str = "ready", core_ready: bool = True) -> dict[st
         "default_run": "demo",
         "legacy_enabled": False,
         "components": {
-            "registry": component("registry", "ready" if core_ready else "failed", True, "registry_ready" if core_ready else "registry_unavailable"),
+            "registry": component(
+                "registry",
+                "ready" if core_ready else "failed",
+                True,
+                "registry_ready" if core_ready else "registry_unavailable",
+            ),
             "default_workspace": component(
                 "default_workspace",
                 "ready" if core_ready else "failed",
@@ -66,9 +71,7 @@ def health_payload(*, status: str = "ready", core_ready: bool = True) -> dict[st
                 False,
                 "maplibre_unavailable" if status == "degraded" else "maplibre_ready",
             ),
-            "openai": component(
-                "openai", "disabled", False, "deterministic_adapter_selected"
-            ),
+            "openai": component("openai", "disabled", False, "deterministic_adapter_selected"),
         },
     }
 

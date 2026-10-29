@@ -303,9 +303,7 @@ def _assess_candidate_context(
     identifiers = (candidate_id, place_id, predecessor_id, successor_id)
     if any(not isinstance(value, str) or not value.strip() for value in identifiers):
         raise CandidateBurdenError("candidate_identifier_invalid")
-    geographic_distance = _optional_nonnegative(
-        geographic_distance_m, "geographic_distance_invalid"
-    )
+    geographic_distance = _optional_nonnegative(geographic_distance_m, "geographic_distance_invalid")
     nearby_radius = _positive(nearby_radius_m, "nearby_radius_invalid")
     maximum_detour = _nonnegative(maximum_detour_minutes, "maximum_detour_invalid")
     components = (
@@ -352,15 +350,9 @@ def _assess_candidate_context(
         baseline_route_leg_ids = tuple(cell.route_leg_id for cell in baseline_cells)
         if context_kind == "insertion":
             predecessor_successor_minutes = baseline_minutes
-        marginal_minutes = (
-            predecessor_candidate_minutes
-            + candidate_successor_minutes
-            - baseline_minutes
-        )
+        marginal_minutes = predecessor_candidate_minutes + candidate_successor_minutes - baseline_minutes
         marginal_distance = (
-            predecessor_candidate.require_distance_m()
-            + candidate_successor.require_distance_m()
-            - baseline_distance
+            predecessor_candidate.require_distance_m() + candidate_successor.require_distance_m() - baseline_distance
         )
 
     missing_component_codes = tuple(
@@ -397,15 +389,9 @@ def _assess_candidate_context(
     if precheck is not None:
         evidence_refs.extend(precheck.evidence_refs)
 
-    evaluated_feasible = bool(
-        marginal_minutes is not None and evaluator is not None and evaluator.decision_eligible
-    )
-    ranking_eligible = bool(
-        evaluated_feasible and evaluator is not None and evaluator.ranking_eligible
-    )
-    recommended = bool(
-        ranking_eligible and evaluator is not None and evaluator.recommended
-    )
+    evaluated_feasible = bool(marginal_minutes is not None and evaluator is not None and evaluator.decision_eligible)
+    ranking_eligible = bool(evaluated_feasible and evaluator is not None and evaluator.ranking_eligible)
+    recommended = bool(ranking_eligible and evaluator is not None and evaluator.recommended)
     if evaluator is None:
         blocking_codes.append("evaluator_evidence_unavailable")
     else:

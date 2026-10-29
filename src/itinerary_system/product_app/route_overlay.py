@@ -148,9 +148,7 @@ def _base_overlay_leg(
         route_leg_id=(str(cell.get("route_leg_id") or "") or None)
         if failure_code is None and cell is not None
         else None,
-        query_hash=(str(cell.get("query_hash") or "") or None)
-        if failure_code is None and cell is not None
-        else None,
+        query_hash=(str(cell.get("query_hash") or "") or None) if failure_code is None and cell is not None else None,
         distance_m=_number(cell.get("distance_m")) if failure_code is None and cell else None,
         duration_s=_number(cell.get("duration_s")) if failure_code is None and cell else None,
         geometry=geometry,

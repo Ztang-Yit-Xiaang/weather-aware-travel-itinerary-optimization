@@ -27,12 +27,8 @@ MAX_QUERY_CHARACTERS = 120
 
 _IDENTIFIER = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$")
 _SHA256 = re.compile(r"^[0-9a-fA-F]{64}$")
-_SOURCE_TYPES = frozenset(
-    {"official", "informational", "curated_dataset", "provider", "user_supplied"}
-)
-_ACCESS_CONFIDENCE = frozenset(
-    {"verified_entrance", "provider_access_point", "road_snap_only", "uncertain"}
-)
+_SOURCE_TYPES = frozenset({"official", "informational", "curated_dataset", "provider", "user_supplied"})
+_ACCESS_CONFIDENCE = frozenset({"verified_entrance", "provider_access_point", "road_snap_only", "uncertain"})
 
 
 class POICatalogError(ValueError):
@@ -170,26 +166,18 @@ class ProductPOICatalogV1:
                 continue
             if source_filter:
                 place_source_types = {
-                    sources[source_ref].source_type
-                    for source_ref in place.source_refs
-                    if source_ref in sources
+                    sources[source_ref].source_type for source_ref in place.source_refs if source_ref in sources
                 }
                 if not source_filter.intersection(place_source_types):
                     continue
-            if require_road_access is not None and (
-                place.has_road_validated_access is not require_road_access
-            ):
+            if require_road_access is not None and (place.has_road_validated_access is not require_road_access):
                 continue
-            if parsed_bounds is not None and not _coordinate_in_bounds(
-                place.display_coordinate, parsed_bounds
-            ):
+            if parsed_bounds is not None and not _coordinate_in_bounds(place.display_coordinate, parsed_bounds):
                 continue
             match_rank = _lexical_match_rank(place, normalized_query)
             if match_rank is None:
                 continue
-            matched.append(
-                ((match_rank, place.name.casefold(), place.place_id.casefold()), place)
-            )
+            matched.append(((match_rank, place.name.casefold(), place.place_id.casefold()), place))
         matched.sort(key=lambda row: row[0])
         return tuple(place for _, place in matched[:limit])
 
@@ -288,11 +276,7 @@ def _parse_catalog(data: Mapping[str, Any], *, manifest_sha256: str) -> ProductP
     places = tuple(_parse_place(item, source_ids=source_ids) for item in places_raw)
     _reject_duplicate_values((place.place_id for place in places), "place_id_duplicate")
     _reject_duplicate_values(
-        (
-            access.access_point_id
-            for place in places
-            for access in place.access_points
-        ),
+        (access.access_point_id for place in places for access in place.access_points),
         "access_point_id_duplicate",
     )
     return ProductPOICatalogV1(
@@ -356,9 +340,7 @@ def _parse_place(value: Any, *, source_ids: set[str]) -> PlaceEntityV1:
         for item in _list(data["access_points"], "access_points_invalid")
     )
     official_url = _safe_url(data.get("official_url"), "official_url_invalid")
-    informational_urls = _url_tuple(
-        data.get("informational_urls", []), "informational_url_invalid"
-    )
+    informational_urls = _url_tuple(data.get("informational_urls", []), "informational_url_invalid")
     if official_url is not None and official_url in informational_urls:
         raise POICatalogError("place_url_role_duplicate")
     return PlaceEntityV1(
@@ -373,21 +355,15 @@ def _parse_place(value: Any, *, source_ids: set[str]) -> PlaceEntityV1:
         source_refs=source_refs,
         aliases=_text_tuple(data.get("aliases", []), "place_aliases_invalid", maximum=32),
         region_id=_optional_identifier(data.get("region_id"), "place_region_id_invalid"),
-        source_freshness=_timestamp(
-            data.get("source_freshness"), "place_source_freshness_invalid"
-        ),
+        source_freshness=_timestamp(data.get("source_freshness"), "place_source_freshness_invalid"),
         opening_hours_evidence_ref=_optional_identifier(
             data.get("opening_hours_evidence_ref"), "opening_hours_evidence_ref_invalid"
         ),
         recommended_visit_minutes=_optional_positive_int(
             data.get("recommended_visit_minutes"), "recommended_visit_minutes_invalid"
         ),
-        weather_suitability=_optional_finite_number(
-            data.get("weather_suitability"), "weather_suitability_invalid"
-        ),
-        static_utility=_optional_finite_number(
-            data.get("static_utility"), "static_utility_invalid"
-        ),
+        weather_suitability=_optional_finite_number(data.get("weather_suitability"), "weather_suitability_invalid"),
+        static_utility=_optional_finite_number(data.get("static_utility"), "static_utility_invalid"),
     )
 
 
@@ -409,14 +385,10 @@ def _parse_access_point(value: Any, *, source_ids: set[str]) -> RouteAccessPoint
     road_validated = data["road_validated"]
     if not isinstance(road_validated, bool):
         raise POICatalogError("access_point_road_validated_invalid")
-    confidence = _required_text(
-        data["access_confidence"], "access_point_confidence_invalid", 32
-    )
+    confidence = _required_text(data["access_confidence"], "access_point_confidence_invalid", 32)
     if confidence not in _ACCESS_CONFIDENCE:
         raise POICatalogError("access_point_confidence_unknown")
-    evidence_refs = _identifier_tuple(
-        data["evidence_refs"], "access_point_evidence_refs_invalid", maximum=16
-    )
+    evidence_refs = _identifier_tuple(data["evidence_refs"], "access_point_evidence_refs_invalid", maximum=16)
     if road_validated and not evidence_refs:
         raise POICatalogError("road_validated_access_missing_evidence")
     if road_validated and confidence in {"road_snap_only", "uncertain"}:
@@ -460,7 +432,8 @@ def _safe_url(value: Any, code: str) -> str | None:
         or parsed.username is not None
         or parsed.password is not None
         or any(character in url for character in "\r\n\t")
-        or port is not None and not 1 <= port <= 65_535
+        or port is not None
+        and not 1 <= port <= 65_535
     ):
         raise POICatalogError(code)
     return url
@@ -613,17 +586,13 @@ def _validate_bounds(
         return None
     if not isinstance(bounds, tuple) or len(bounds) != 4:
         raise POICatalogError("search_bounds_invalid")
-    west, south, east, north = (
-        _finite_number(value, "search_bounds_invalid") for value in bounds
-    )
+    west, south, east, north = (_finite_number(value, "search_bounds_invalid") for value in bounds)
     if not (-180 <= west <= east <= 180 and -90 <= south <= north <= 90):
         raise POICatalogError("search_bounds_invalid")
     return west, south, east, north
 
 
-def _coordinate_in_bounds(
-    coordinate: CoordinateV1, bounds: tuple[float, float, float, float]
-) -> bool:
+def _coordinate_in_bounds(coordinate: CoordinateV1, bounds: tuple[float, float, float, float]) -> bool:
     west, south, east, north = bounds
     return west <= coordinate.longitude <= east and south <= coordinate.latitude <= north
 

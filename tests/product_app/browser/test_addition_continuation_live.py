@@ -38,7 +38,9 @@ LOBOS = "point_lobos_state_natural_reserve"
 
 def _artifact_hash(record: dict) -> str:
     payload = {key: value for key, value in record.items() if key != "content_hash"}
-    return hashlib.sha256(json.dumps(payload, sort_keys=True, separators=(",", ":"), default=str).encode()).hexdigest()[:16]
+    return hashlib.sha256(json.dumps(payload, sort_keys=True, separators=(",", ":"), default=str).encode()).hexdigest()[
+        :16
+    ]
 
 
 @pytest.mark.skipif(not BASE_URL or not DISPOSABLE, reason="Requires a fresh isolated addition-continuation app")
@@ -52,8 +54,10 @@ def test_browser_accept_replacement_then_add_candidate_and_preserve_lineage(tmp_
     phase = "initial_parent"
 
     with sync_playwright() as runtime:
-        launch = {"headless": os.environ.get("PRODUCT_E2E_HEADED") != "1",
-            "slow_mo": int(os.environ.get("PRODUCT_E2E_SLOW_MO_MS", "0"))}
+        launch = {
+            "headless": os.environ.get("PRODUCT_E2E_HEADED") != "1",
+            "slow_mo": int(os.environ.get("PRODUCT_E2E_SLOW_MO_MS", "0")),
+        }
         if CHROME.is_file():
             launch["executable_path"] = str(CHROME)
         browser = runtime.chromium.launch(**launch)
@@ -72,9 +76,15 @@ def test_browser_accept_replacement_then_add_candidate_and_preserve_lineage(tmp_
           },true);
         })();""")
         page = context.new_page()
-        page.on("console", lambda message: errors["console_errors"].append(message.text) if message.type == "error" else None)
+        page.on(
+            "console",
+            lambda message: errors["console_errors"].append(message.text) if message.type == "error" else None,
+        )
         page.on("pageerror", lambda error: errors["console_errors"].append(str(error)))
-        page.on("requestfailed", lambda request: errors["request_failures"].append(f"{request.method} {request.url}: {request.failure}"))
+        page.on(
+            "requestfailed",
+            lambda request: errors["request_failures"].append(f"{request.method} {request.url}: {request.failure}"),
+        )
 
         def record_response(response):
             nonlocal current_session
@@ -87,15 +97,25 @@ def test_browser_accept_replacement_then_add_candidate_and_preserve_lineage(tmp_
                 row = {"phase": phase, "observed_at": datetime.now(UTC).isoformat(), **_http_record(response)}
                 filename = f"http_{len(http_index) + 1:03d}.json"
                 _write_json(evidence / filename, row)
-                http_index.append({"file": filename, "phase": phase, "method": row["method"], "url": response.url, "status": row["response_status_code"]})
-                if response.status==200:
-                    body=json.loads(row['response_body_utf8'])
-                    if isinstance(body,dict) and 'session' in body:
-                        current_session=body['session']
+                http_index.append(
+                    {
+                        "file": filename,
+                        "phase": phase,
+                        "method": row["method"],
+                        "url": response.url,
+                        "status": row["response_status_code"],
+                    }
+                )
+                if response.status == 200:
+                    body = json.loads(row["response_body_utf8"])
+                    if isinstance(body, dict) and "session" in body:
+                        current_session = body["session"]
                 if path == "/api/sessions" and response.request.method == "POST":
                     creations.append(json.loads(row["response_body_utf8"])["session"]["session_id"])
             except Exception as error:
-                errors["http_capture_errors"].append({"url": response.url, "type": type(error).__name__, "message": str(error)})
+                errors["http_capture_errors"].append(
+                    {"url": response.url, "type": type(error).__name__, "message": str(error)}
+                )
 
         page.on("response", record_response)
 
@@ -106,7 +126,12 @@ def test_browser_accept_replacement_then_add_candidate_and_preserve_lineage(tmp_
             return checkpoints[label]
 
         def same_render(actual, expected):
-            for field in ("active_plan_id", "active_plan_content_hash", "rendered_map_plan_id", "rendered_geometry_hash"):
+            for field in (
+                "active_plan_id",
+                "active_plan_content_hash",
+                "rendered_map_plan_id",
+                "rendered_geometry_hash",
+            ):
                 assert actual[field] == expected[field], (field, actual, expected)
             assert sorted(actual["rendered_marker_ids"]) == sorted(expected["rendered_marker_ids"])
 
@@ -127,8 +152,10 @@ def test_browser_accept_replacement_then_add_candidate_and_preserve_lineage(tmp_
                 expect(page.locator("#destination-day")).to_be_enabled()
                 page.locator("#destination-day").select_option("5")
             expect(page.locator(button)).to_be_enabled()
-            with page.expect_response(lambda response: response.url.endswith("/draft/operations")
-                    and response.request.method == "POST", timeout=30_000) as received:
+            with page.expect_response(
+                lambda response: response.url.endswith("/draft/operations") and response.request.method == "POST",
+                timeout=30_000,
+            ) as received:
                 page.locator(button).click()
             response = received.value
             assert response.status == 200, response.text()
@@ -150,16 +177,21 @@ def test_browser_accept_replacement_then_add_candidate_and_preserve_lineage(tmp_
             expect(panel).to_have_attribute("data-evaluation-id", proposal["certificate_id"])
             expect(panel).to_contain_text(proposal["diff_id"])
             expect(panel).to_contain_text(proposal["certificate_id"])
-            _write_json(evidence / f"{label}_evidence_dom.json", {
-                "attributes": panel.evaluate("element => ({...element.dataset})"), "visible_text": panel.inner_text(),
-            })
+            _write_json(
+                evidence / f"{label}_evidence_dom.json",
+                {
+                    "attributes": panel.evaluate("element => ({...element.dataset})"),
+                    "visible_text": panel.inner_text(),
+                },
+            )
             page.locator('.nav-item[data-route="/app/itinerary"]').click()
 
         def preview(parent_ack, label):
             expect(page.locator("#inline-preview")).to_be_enabled(timeout=30_000)
             started = datetime.now(UTC).isoformat()
-            with page.expect_response(lambda response: response.url.endswith("/preview")
-                    and response.request.method == "POST", timeout=90_000) as received:
+            with page.expect_response(
+                lambda response: response.url.endswith("/preview") and response.request.method == "POST", timeout=90_000
+            ) as received:
                 page.locator("#inline-preview").click()
             response = received.value
             assert response.status == 200, response.text()
@@ -167,24 +199,46 @@ def test_browser_accept_replacement_then_add_candidate_and_preserve_lineage(tmp_
             proposal = payload["proposal"]
             assert proposal == payload["session"]["proposal"]
             execution = proposal["runtime_execution"]
-            child, diff, certificate = execution["child_plan"], execution["plan_diff"], execution["evaluation_certificate"]
+            child, diff, certificate = (
+                execution["child_plan"],
+                execution["plan_diff"],
+                execution["evaluation_certificate"],
+            )
             assert execution["evaluation_executed"] is True
             assert execution["evaluator"] == "PlanEvaluator.evaluate_final_plan"
             assert started <= execution["started_at"] <= execution["completed_at"] <= datetime.now(UTC).isoformat()
             assert proposal["state"] == proposal["eligibility"] == certificate["comparison_eligibility"] == "eligible"
-            assert child["plan_id"] == proposal["child_plan_id"] == execution["child_plan_id"] == certificate["plan_id"] == diff["child_plan_id"]
-            assert child["content_hash"] == _artifact_hash(child) == proposal["child_plan_content_hash"] == certificate["plan_content_hash"]
+            assert (
+                child["plan_id"]
+                == proposal["child_plan_id"]
+                == execution["child_plan_id"]
+                == certificate["plan_id"]
+                == diff["child_plan_id"]
+            )
+            assert (
+                child["content_hash"]
+                == _artifact_hash(child)
+                == proposal["child_plan_content_hash"]
+                == certificate["plan_content_hash"]
+            )
             assert certificate["content_hash"] == _artifact_hash(certificate) == proposal["certificate_content_hash"]
             assert certificate["certificate_id"] == proposal["certificate_id"] == execution["evaluation_id"]
             assert diff["diff_id"] == proposal["diff_id"]
             assert _artifact_hash(diff) == proposal["diff_content_hash"]
-            assert child["parent_plan_id"] == proposal["parent_plan_id"] == diff["parent_plan_id"] == parent_ack["active_plan_id"]
+            assert (
+                child["parent_plan_id"]
+                == proposal["parent_plan_id"]
+                == diff["parent_plan_id"]
+                == parent_ack["active_plan_id"]
+            )
             assert proposal["parent_plan_content_hash"] == parent_ack["active_plan_content_hash"]
             assert certificate["route_validation"] == proposal["route_validation"]
             route = certificate["route_validation"]
             assert route["required_leg_count"] == route["road_validated_leg_count"] > 0
             assert route["missing_leg_count"] == route["fallback_leg_count"] == 0
-            expect(page.locator(".map-stage")).to_have_attribute("data-preview-state", "PREVIEW_RENDERED", timeout=30_000)
+            expect(page.locator(".map-stage")).to_have_attribute(
+                "data-preview-state", "PREVIEW_RENDERED", timeout=30_000
+            )
             expect(page.locator(".map-stage")).to_have_attribute("data-rendered-map-plan-id", child["plan_id"])
             ack = capture(f"{label}_preview")
             assert ack["active_plan_content_hash"] == child["content_hash"]
@@ -196,7 +250,13 @@ def test_browser_accept_replacement_then_add_candidate_and_preserve_lineage(tmp_
             expect(metrics).to_have_attribute("data-plan-id", child["plan_id"])
             expect(metrics).to_have_attribute("data-plan-content-hash", child["content_hash"])
             expect(metrics).to_have_attribute("data-evaluation-id", certificate["certificate_id"])
-            _write_json(evidence / f"{label}_metrics_dom.json", {"attributes": metrics.evaluate("element => ({...element.dataset})"), "visible_text": metrics.inner_text()})
+            _write_json(
+                evidence / f"{label}_metrics_dom.json",
+                {
+                    "attributes": metrics.evaluate("element => ({...element.dataset})"),
+                    "visible_text": metrics.inner_text(),
+                },
+            )
             _write_json(evidence / f"{label}_canonical_artifacts.json", {"proposal": proposal, "map_ack": ack})
             page.locator('.nav-item[data-route="/app/compare"]').click()
             expect(page.locator(f'[data-option-card="{child["plan_id"]}"]')).to_be_visible(timeout=30_000)
@@ -212,16 +272,18 @@ def test_browser_accept_replacement_then_add_candidate_and_preserve_lineage(tmp_
         def accept_and_reload(proposal, preview_ack, label):
             dialogs = []
 
-
             expect(page.locator("#accept-repair")).to_be_enabled(timeout=30_000)
-            before=json.loads(json.dumps(current_session))
-            event_start=page.evaluate('window.__decisionControlEvents.length')
-            with page.expect_response(lambda response: response.url.endswith("/accept")
-                    and response.request.method == "POST", timeout=60_000) as received:
+            before = json.loads(json.dumps(current_session))
+            event_start = page.evaluate("window.__decisionControlEvents.length")
+            with page.expect_response(
+                lambda response: response.url.endswith("/accept") and response.request.method == "POST", timeout=60_000
+            ) as received:
                 page.locator("#accept-repair").click()
                 expect(page.get_by_role("dialog", name="Confirm trip decision", exact=True)).to_be_visible()
                 dialogs.append(page.locator("#acceptance-message").inner_text())
-                page.get_by_role("dialog", name="Confirm trip decision", exact=True).get_by_role("button", name='Accept repair', exact=True).click()
+                page.get_by_role("dialog", name="Confirm trip decision", exact=True).get_by_role(
+                    "button", name="Accept repair", exact=True
+                ).click()
             response = received.value
             assert response.status == 200, response.text()
             payload = response.json()
@@ -239,15 +301,23 @@ def test_browser_accept_replacement_then_add_candidate_and_preserve_lineage(tmp_
             assert decision["certificate_content_hash"] == proposal["certificate_content_hash"]
             assert decision["diff_id"] == proposal["diff_id"]
             decision_payload = {key: value for key, value in decision.items() if key != "content_hash"}
-            assert hashlib.sha256(json.dumps(decision_payload, sort_keys=True, separators=(",", ":"), ensure_ascii=False, allow_nan=False).encode()).hexdigest() == decision["content_hash"]
+            assert (
+                hashlib.sha256(
+                    json.dumps(
+                        decision_payload, sort_keys=True, separators=(",", ":"), ensure_ascii=False, allow_nan=False
+                    ).encode()
+                ).hexdigest()
+                == decision["content_hash"]
+            )
             decisions.append(decision)
             _write_json(evidence / "acceptance_decisions.json", decisions)
             same_render(capture(f"{label}_accepted"), preview_ack)
-            clicked=page.evaluate('start=>window.__decisionControlEvents.slice(start)',event_start)
-            decision_events.extend(page.evaluate('window.__decisionControlEvents'))
+            clicked = page.evaluate("start=>window.__decisionControlEvents.slice(start)", event_start)
+            decision_events.extend(page.evaluate("window.__decisionControlEvents"))
             session_url = f"{BASE_URL}/api/sessions/{session['session_id']}"
-            with page.expect_response(lambda response: response.url == session_url
-                    and response.request.method == "GET", timeout=30_000) as reloaded:
+            with page.expect_response(
+                lambda response: response.url == session_url and response.request.method == "GET", timeout=30_000
+            ) as reloaded:
                 page.reload(wait_until="domcontentloaded")
             assert reloaded.value.status == 200, reloaded.value.text()
             restored = reloaded.value.json()
@@ -262,49 +332,79 @@ def test_browser_accept_replacement_then_add_candidate_and_preserve_lineage(tmp_
             same_render(capture(f"{label}_after_reload"), preview_ack)
             expect(page.locator("#metric-strip")).to_have_attribute("data-evaluation-id", proposal["certificate_id"])
             assert creations == [session["session_id"]]
-            decision_controls.append({'binding_id':'accept_repair','selector':'#accept-repair',
-                'context':'original' if label=='b' else 'accepted_child','phase':phase,'events':clicked,
-                'confirmation_messages':dialogs,'session_before':before,'request':response.request.post_data_json,
-                'response':payload,'restored':restored,'rendered_before':preview_ack,
-                'rendered_after':checkpoints[f'{label}_after_reload'],'assertions_passed':True})
+            decision_controls.append(
+                {
+                    "binding_id": "accept_repair",
+                    "selector": "#accept-repair",
+                    "context": "original" if label == "b" else "accepted_child",
+                    "phase": phase,
+                    "events": clicked,
+                    "confirmation_messages": dialogs,
+                    "session_before": before,
+                    "request": response.request.post_data_json,
+                    "response": payload,
+                    "restored": restored,
+                    "rendered_before": preview_ack,
+                    "rendered_after": checkpoints[f"{label}_after_reload"],
+                    "assertions_passed": True,
+                }
+            )
             return restored
 
         def keep_original(context_name, current):
             nonlocal phase
-            phase='keep_original_'+context_name
-            before=json.loads(json.dumps(current_session))
-            clicked_from=page.evaluate('window.__decisionControlEvents.length')
-            dialogs=[]
-            expect(page.locator('#keep-original')).to_be_visible()
-            expect(page.locator('#keep-original')).to_be_enabled()
-            with page.expect_response(lambda response:response.url.endswith('/keep-original')
-                    and response.request.method=='POST') as received:
-                page.locator('#keep-original').click()
+            phase = "keep_original_" + context_name
+            before = json.loads(json.dumps(current_session))
+            clicked_from = page.evaluate("window.__decisionControlEvents.length")
+            dialogs = []
+            expect(page.locator("#keep-original")).to_be_visible()
+            expect(page.locator("#keep-original")).to_be_enabled()
+            with page.expect_response(
+                lambda response: response.url.endswith("/keep-original") and response.request.method == "POST"
+            ) as received:
+                page.locator("#keep-original").click()
                 expect(page.get_by_role("dialog", name="Confirm trip decision", exact=True)).to_be_visible()
                 dialogs.append(page.locator("#acceptance-message").inner_text())
-                page.get_by_role("dialog", name="Confirm trip decision", exact=True).get_by_role("button", name='Keep original', exact=True).click()
-            response=received.value
-            assert response.status==200,response.text()
-            payload=response.json()
-            assert payload['result']['decision']['decision_type']=='keep_original'
-            assert payload['result']['decision']['previous_plan_id']==before['accepted_plan_id']
-            assert payload['session']['accepted_plan_id']==initial['active_plan_id']
-            assert payload['session']['draft']==[] and payload['session']['proposal'] is None
-            same_render(capture(phase+'_rendered'),initial)
-            clicked=page.evaluate('start=>window.__decisionControlEvents.slice(start)',clicked_from)
-            decision_events.extend(page.evaluate('window.__decisionControlEvents'))
-            session_url=f"{BASE_URL}/api/sessions/{before['session_id']}"
-            with page.expect_response(lambda response:response.url==session_url and response.request.method=='GET') as reloaded:
-                page.reload(wait_until='domcontentloaded')
-            assert reloaded.value.status==200
-            restored=reloaded.value.json()
-            assert restored['workspace']['accepted_plan_pointer']==payload['workspace']['accepted_plan_pointer']
-            assert restored['session']['accepted_plan_id']==initial['active_plan_id']
-            same_render(capture(phase+'_reloaded'),initial)
-            decision_controls.append({'binding_id':'keep_original','selector':'#keep-original','context':context_name,
-                'phase':phase,'events':clicked,'confirmation_messages':dialogs,'session_before':before,
-                'request':response.request.post_data_json,'response':payload,'restored':restored,
-                'rendered_before':current,'rendered_after':checkpoints[phase+'_reloaded'],'assertions_passed':True})
+                page.get_by_role("dialog", name="Confirm trip decision", exact=True).get_by_role(
+                    "button", name="Keep original", exact=True
+                ).click()
+            response = received.value
+            assert response.status == 200, response.text()
+            payload = response.json()
+            assert payload["result"]["decision"]["decision_type"] == "keep_original"
+            assert payload["result"]["decision"]["previous_plan_id"] == before["accepted_plan_id"]
+            assert payload["session"]["accepted_plan_id"] == initial["active_plan_id"]
+            assert payload["session"]["draft"] == [] and payload["session"]["proposal"] is None
+            same_render(capture(phase + "_rendered"), initial)
+            clicked = page.evaluate("start=>window.__decisionControlEvents.slice(start)", clicked_from)
+            decision_events.extend(page.evaluate("window.__decisionControlEvents"))
+            session_url = f"{BASE_URL}/api/sessions/{before['session_id']}"
+            with page.expect_response(
+                lambda response: response.url == session_url and response.request.method == "GET"
+            ) as reloaded:
+                page.reload(wait_until="domcontentloaded")
+            assert reloaded.value.status == 200
+            restored = reloaded.value.json()
+            assert restored["workspace"]["accepted_plan_pointer"] == payload["workspace"]["accepted_plan_pointer"]
+            assert restored["session"]["accepted_plan_id"] == initial["active_plan_id"]
+            same_render(capture(phase + "_reloaded"), initial)
+            decision_controls.append(
+                {
+                    "binding_id": "keep_original",
+                    "selector": "#keep-original",
+                    "context": context_name,
+                    "phase": phase,
+                    "events": clicked,
+                    "confirmation_messages": dialogs,
+                    "session_before": before,
+                    "request": response.request.post_data_json,
+                    "response": payload,
+                    "restored": restored,
+                    "rendered_before": current,
+                    "rendered_after": checkpoints[phase + "_reloaded"],
+                    "assertions_passed": True,
+                }
+            )
 
         with _preserve_browser_evidence(context, page, evidence, errors):
             try:
@@ -325,8 +425,12 @@ def test_browser_accept_replacement_then_add_candidate_and_preserve_lineage(tmp_
                 expect(page.locator('.day-card[data-day="5"]')).to_contain_text("Pfeiffer Big Sur State Park")
                 phase = "accept_b_and_reload"
                 restored_b = accept_and_reload(proposal_b, ack_b, "b")
-                readiness = restored_b["workspace"]["draft_capabilities"]["operations"]["add_candidate"]["candidate_day_readiness"]
-                assert [(row["candidate_id"], row["day"]) for row in readiness if row["preview_executable"]] == [(LOBOS, 5)]
+                readiness = restored_b["workspace"]["draft_capabilities"]["operations"]["add_candidate"][
+                    "candidate_day_readiness"
+                ]
+                assert [(row["candidate_id"], row["day"]) for row in readiness if row["preview_executable"]] == [
+                    (LOBOS, 5)
+                ]
                 phase = "stage_addition_c"
                 stage("add_candidate", LOBOS)
                 same_render(capture("c_staged_parent_unchanged"), ack_b)
@@ -347,19 +451,50 @@ def test_browser_accept_replacement_then_add_candidate_and_preserve_lineage(tmp_
                 phase = "accepted_c_visible_evidence"
                 visible_evidence(proposal_c, "c_accepted_after_reload")
                 same_render(capture("c_final_after_evidence"), ack_c)
-                keep_original('accepted_child',ack_c)
-                keep_original('original',initial)
+                keep_original("accepted_child", ack_c)
+                keep_original("original", initial)
                 assert all(not rows for rows in errors.values()), errors
-                _write_json(evidence / "browser_assertions.json", {"schema_version": "addition-continuation-browser-v1",
-                    "assertions_passed": True, "mocked_api_responses": False, "direct_api_setup_calls": 0,
-                    "copilot_submissions": 0, "session_creation_count": len(creations), "acceptance_count": len(decisions),
-                    "a": initial, "b": ack_b, "c": ack_c, "decisions": decisions, **errors})
-                _write_json(evidence / "llm_io.json", {"provider_call_count":0,"llm_input":None,"llm_output":None,
-                    "reason":"Actual UI replacement and addition with two explicit acceptances and reloads; no Copilot submission or provider call."})
+                _write_json(
+                    evidence / "browser_assertions.json",
+                    {
+                        "schema_version": "addition-continuation-browser-v1",
+                        "assertions_passed": True,
+                        "mocked_api_responses": False,
+                        "direct_api_setup_calls": 0,
+                        "copilot_submissions": 0,
+                        "session_creation_count": len(creations),
+                        "acceptance_count": len(decisions),
+                        "a": initial,
+                        "b": ack_b,
+                        "c": ack_c,
+                        "decisions": decisions,
+                        **errors,
+                    },
+                )
+                _write_json(
+                    evidence / "llm_io.json",
+                    {
+                        "provider_call_count": 0,
+                        "llm_input": None,
+                        "llm_output": None,
+                        "reason": "Actual UI replacement and addition with two explicit acceptances and reloads; no Copilot submission or provider call.",
+                    },
+                )
             finally:
-                _write_json(evidence/'decision_control_journeys.json',decision_controls)
-                _write_json(evidence/'decision_control_events.json',decision_events+page.evaluate('window.__decisionControlEvents || []'))
+                _write_json(evidence / "decision_control_journeys.json", decision_controls)
+                _write_json(
+                    evidence / "decision_control_events.json",
+                    decision_events + page.evaluate("window.__decisionControlEvents || []"),
+                )
                 _write_json(evidence / "http_index.json", http_index)
-                _write_json(evidence / "journey_trace.json", {"last_phase": phase, "checkpoints": checkpoints,
-                    "decisions": decisions, "session_creation_ids": creations, **errors})
+                _write_json(
+                    evidence / "journey_trace.json",
+                    {
+                        "last_phase": phase,
+                        "checkpoints": checkpoints,
+                        "decisions": decisions,
+                        "session_creation_ids": creations,
+                        **errors,
+                    },
+                )
         browser.close()

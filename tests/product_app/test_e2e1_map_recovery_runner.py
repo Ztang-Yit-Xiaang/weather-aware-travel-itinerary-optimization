@@ -35,8 +35,11 @@ def test_default_suite_remains_the_original_vertical_slice(monkeypatch) -> None:
 @pytest.mark.parametrize("flag", ["live_copilot_chat", "confirm_billed_synthetic_context"])
 def test_recovery_mode_cannot_dispatch_the_billed_runner(monkeypatch, flag: str) -> None:
     arguments = {
-        "browser_test": "map-recovery", "output_dir": None, "port": 8127,
-        "live_copilot_chat": False, "confirm_billed_synthetic_context": False,
+        "browser_test": "map-recovery",
+        "output_dir": None,
+        "port": 8127,
+        "live_copilot_chat": False,
+        "confirm_billed_synthetic_context": False,
     }
     arguments[flag] = True
     monkeypatch.setattr(runner, "parse_args", lambda: type("Args", (), arguments)())
@@ -63,9 +66,15 @@ def test_source_change_during_run_never_produces_passing_manifest(tmp_path: Path
     monkeypatch.setattr(runner, "ROOT", tmp_path)
     source.write_text("after!", encoding="utf-8")
     manifest = runner.build_manifest(
-        output, command=["python", "-m", "pytest"], pytest_exit_code=0,
-        health={}, base_url="http://127.0.0.1:8127", source_inputs=inputs,
-        run_id="unit-fixture", server_pid=123, scenarios=("map_initialization_recovery",),
+        output,
+        command=["python", "-m", "pytest"],
+        pytest_exit_code=0,
+        health={},
+        base_url="http://127.0.0.1:8127",
+        source_inputs=inputs,
+        run_id="unit-fixture",
+        server_pid=123,
+        scenarios=("map_initialization_recovery",),
     )
     assert manifest["assertions_passed"] is False
     assert manifest["source_inputs"] == inputs
@@ -76,10 +85,21 @@ def test_source_change_during_run_never_produces_passing_manifest(tmp_path: Path
 def test_recovery_spawn_is_disposable_and_deterministic(monkeypatch, tmp_path: Path) -> None:
     observed = {}
     output = tmp_path / "focused"
-    monkeypatch.setattr(runner, "parse_args", lambda: type("Args", (), {
-        "browser_test": "map-recovery", "output_dir": output, "port": 8127,
-        "live_copilot_chat": False, "confirm_billed_synthetic_context": False,
-    })())
+    monkeypatch.setattr(
+        runner,
+        "parse_args",
+        lambda: type(
+            "Args",
+            (),
+            {
+                "browser_test": "map-recovery",
+                "output_dir": output,
+                "port": 8127,
+                "live_copilot_chat": False,
+                "confirm_billed_synthetic_context": False,
+            },
+        )(),
+    )
     monkeypatch.setattr(runner, "_port_is_available", lambda port: True)
     monkeypatch.setattr(runner, "_source_rows", lambda *args: [])
     monkeypatch.setenv("PRODUCT_COPILOT_ADAPTER", "openai")
@@ -115,37 +135,79 @@ def test_recovery_requires_both_plan_contexts_and_tile_case(tmp_path, missing):
 def _retry_guard():
     # Execute only the actual Retry receipt guards, never full bundle validation.
     function = ast.parse(inspect.getsource(verifier._verify_map_recovery_case)).body[0]
-    first = next(index for index, node in enumerate(function.body) if isinstance(node, ast.Assign)
-        and isinstance(node.targets[0], ast.Name) and node.targets[0].id == "retry_inputs")
-    last = next(index for index, node in enumerate(function.body) if isinstance(node, ast.Expr)
-        and isinstance(node.value, ast.Call) and any(isinstance(value, ast.Constant)
-            and value.value == "e2e1_recovery_retry_input_unbound" for value in node.value.args))
-    return compile(ast.Module(body=function.body[first:last + 1], type_ignores=[]), str(Path(verifier.__file__)), "exec")
+    first = next(
+        index
+        for index, node in enumerate(function.body)
+        if isinstance(node, ast.Assign)
+        and isinstance(node.targets[0], ast.Name)
+        and node.targets[0].id == "retry_inputs"
+    )
+    last = next(
+        index
+        for index, node in enumerate(function.body)
+        if isinstance(node, ast.Expr)
+        and isinstance(node.value, ast.Call)
+        and any(
+            isinstance(value, ast.Constant) and value.value == "e2e1_recovery_retry_input_unbound"
+            for value in node.value.args
+        )
+    )
+    return compile(
+        ast.Module(body=function.body[first : last + 1], type_ignores=[]), str(Path(verifier.__file__)), "exec"
+    )
 
 
 def _retry_fixture(tmp_path):
     # Small synthetic unit contract: no browser events, process, or provider claimed.
     body = '{"status":"ready"}'
-    response = {"schema_version": "e2e1-product-http-io-v1", "url": "http://127.0.0.1:8127/api/map/config",
-        "method": "GET", "response_status_code": 200, "request_headers_persisted": False,
-        "response_headers_persisted": False, "authorization_persisted": False, "session_token_persisted": False,
-        "credential_redactions": {"request": [], "response": []}, "body_capture": "exact_utf8",
-        "request_body_utf8": "", "response_body_utf8": body}
+    response = {
+        "schema_version": "e2e1-product-http-io-v1",
+        "url": "http://127.0.0.1:8127/api/map/config",
+        "method": "GET",
+        "response_status_code": 200,
+        "request_headers_persisted": False,
+        "response_headers_persisted": False,
+        "authorization_persisted": False,
+        "session_token_persisted": False,
+        "credential_redactions": {"request": [], "response": []},
+        "body_capture": "exact_utf8",
+        "request_body_utf8": "",
+        "response_body_utf8": body,
+    }
     for name in ("request", "response"):
         digest = hashlib.sha256(response[name + "_body_utf8"].encode()).hexdigest()
         response[name + "_body_sha256"] = response[name + "_original_body_sha256"] = digest
-    inputs = [{"trusted": True, "selector": "#retry-map-runtime", "map_ready": "false",
-        "map_stage": {"activePlanId": "unit-plan", "activePlanContentHash": "unit-hash"},
-        "clicked_at": "2026-09-08T12:00:02Z"}]
+    inputs = [
+        {
+            "trusted": True,
+            "selector": "#retry-map-runtime",
+            "map_ready": "false",
+            "map_stage": {"activePlanId": "unit-plan", "activePlanContentHash": "unit-hash"},
+            "clicked_at": "2026-09-08T12:00:02Z",
+        }
+    ]
     record = {**response, "phase": "explicit_retry_after_fault_removed", "observed_at": "2026-09-08T12:00:03Z"}
-    return {"base": tmp_path, "base_url": "http://127.0.0.1:8127", "child_id": "unit-plan", "child_hash": "unit-hash",
-        "records": [record], "blocked": {"observed_at": "2026-09-08T12:00:01Z"}}, inputs, response
+    return (
+        {
+            "base": tmp_path,
+            "base_url": "http://127.0.0.1:8127",
+            "child_id": "unit-plan",
+            "child_hash": "unit-hash",
+            "records": [record],
+            "blocked": {"observed_at": "2026-09-08T12:00:01Z"},
+        },
+        inputs,
+        response,
+    )
 
 
 def _run_retry_guard(namespace, inputs, response):
     base = namespace["base"]
-    for name, value in (("retry_control_input.json", inputs), ("retry_response.json", response),
-        ("recovered_after_explicit_retry.readiness.json", {"screenshot_started_at": "2026-09-08T12:00:04Z"})):
+    for name, value in (
+        ("retry_control_input.json", inputs),
+        ("retry_response.json", response),
+        ("recovered_after_explicit_retry.readiness.json", {"screenshot_started_at": "2026-09-08T12:00:04Z"}),
+    ):
         (base / name).write_text(json.dumps(value), encoding="utf-8")
     exec(_retry_guard(), {**vars(verifier), **namespace})
 
@@ -155,8 +217,22 @@ def test_retry_receipt_guard_accepts_consistent_synthetic_unit_contract(tmp_path
     _run_retry_guard(namespace, inputs, response)
 
 
-@pytest.mark.parametrize("fault", ["untrusted", "wrong_control", "wrong_plan", "wrong_hash", "old_ack",
-    "false_ready", "early_click", "late_response", "duplicate_click", "duplicate_get", "failed_real_response"])
+@pytest.mark.parametrize(
+    "fault",
+    [
+        "untrusted",
+        "wrong_control",
+        "wrong_plan",
+        "wrong_hash",
+        "old_ack",
+        "false_ready",
+        "early_click",
+        "late_response",
+        "duplicate_click",
+        "duplicate_get",
+        "failed_real_response",
+    ],
+)
 def test_retry_receipt_counterexamples_reject(tmp_path, fault):
     namespace, inputs, response = _retry_fixture(tmp_path)
     if fault == "untrusted":
@@ -181,7 +257,9 @@ def test_retry_receipt_counterexamples_reject(tmp_path, fault):
         namespace["records"].append(deepcopy(namespace["records"][0]))
     else:
         response["response_body_utf8"] = '{"status":"failed"}'
-        response["response_body_sha256"] = response["response_original_body_sha256"] = hashlib.sha256(response["response_body_utf8"].encode()).hexdigest()
+        response["response_body_sha256"] = response["response_original_body_sha256"] = hashlib.sha256(
+            response["response_body_utf8"].encode()
+        ).hexdigest()
         namespace["records"][0].update(response)
     with pytest.raises(verifier.E2E1VerificationError, match="recovery_retry_(input|response)_unbound"):
         _run_retry_guard(namespace, inputs, response)

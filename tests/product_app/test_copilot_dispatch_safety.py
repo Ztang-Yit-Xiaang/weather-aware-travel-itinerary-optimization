@@ -52,7 +52,9 @@ class CountingAdapter:
         return await DeterministicCopilotAdapter().interpret(**kwargs)
 
 
-def send(service, session, token, client_message_id=None, *, message="Review the current itinerary without changing it."):
+def send(
+    service, session, token, client_message_id=None, *, message="Review the current itinerary without changing it."
+):
     return service.interpret_copilot_message(
         session_id=session.session_id,
         mutation_token=token,
@@ -67,10 +69,14 @@ def test_full_conversation_never_dispatches_provider(runtime) -> None:
     first = asyncio.run(send(service, session, token))["turn"]
     conversation = service.read_conversation(session)
     template = service.conversations._validate_turn(first)
-    turns = tuple(replace(
-        template, turn_id=f"copilot_turn_{uuid4().hex}",
-        client_message_id=f"client_message_{uuid4().hex}",
-    ) for _ in range(conversation_module.MAX_TURNS))
+    turns = tuple(
+        replace(
+            template,
+            turn_id=f"copilot_turn_{uuid4().hex}",
+            client_message_id=f"client_message_{uuid4().hex}",
+        )
+        for _ in range(conversation_module.MAX_TURNS)
+    )
     service.conversations._save(replace(conversation, turns=turns, revision=len(turns)))
     adapter = CountingAdapter()
     service.copilot = adapter
@@ -102,17 +108,29 @@ def test_near_one_mib_conversation_is_rejected_before_dispatch(runtime) -> None:
     first = asyncio.run(send(service, session, token))["turn"]
     conversation = service.read_conversation(session)
     template = replace(
-        service.conversations._validate_turn(first), user_message="u" * 2000,
-        assistant_message="a" * 4000, interpretation=None,
+        service.conversations._validate_turn(first),
+        user_message="u" * 2000,
+        assistant_message="a" * 4000,
+        interpretation=None,
     )
     turns = []
-    while service.conversations._encoded_size(replace(
-        conversation, turns=tuple(turns), revision=len(turns),
-    ).as_dict()) < conversation_module.MAX_FILE_BYTES - 64 * 1024:
-        turns.append(replace(
-            template, turn_id=f"copilot_turn_{uuid4().hex}",
-            client_message_id=f"client_message_{uuid4().hex}",
-        ))
+    while (
+        service.conversations._encoded_size(
+            replace(
+                conversation,
+                turns=tuple(turns),
+                revision=len(turns),
+            ).as_dict()
+        )
+        < conversation_module.MAX_FILE_BYTES - 64 * 1024
+    ):
+        turns.append(
+            replace(
+                template,
+                turn_id=f"copilot_turn_{uuid4().hex}",
+                client_message_id=f"client_message_{uuid4().hex}",
+            )
+        )
     assert len(turns) < conversation_module.MAX_TURNS
     full = replace(conversation, turns=tuple(turns), revision=len(turns))
     assert service.conversations._encoded_size(full.as_dict()) < conversation_module.MAX_FILE_BYTES
@@ -138,7 +156,9 @@ def test_completed_result_survives_transcript_write_failure_and_restart(runtime,
     conversation = service.read_conversation(session)
     assert conversation.turns == ()
     record = service.conversations.dispatch_record(
-        conversation.conversation_id, session.session_id, client_id,
+        conversation.conversation_id,
+        session.session_id,
+        client_id,
         "Review the current itinerary without changing it.",
     )
     assert record["outcome"] == "completed" and record["turn"] is not None
@@ -263,7 +283,9 @@ def test_actual_adapter_and_service_share_one_attempt_across_uncertain_retry(run
     assert len(client.responses.calls) == 1
     conversation = service.read_conversation(session)
     journal = service.conversations.dispatch_record(
-        conversation.conversation_id, session.session_id, client_id,
+        conversation.conversation_id,
+        session.session_id,
+        client_id,
         message,
     )
     assert journal["outcome"] == "unknown"
@@ -278,10 +300,16 @@ def test_dispatch_ledger_rejects_tampered_budget_input_and_outcome(runtime) -> N
     path = service.conversations._dispatch_path(conversation.conversation_id)
     original = json.loads(path.read_text(encoding="utf-8"))
     for field_name, value in (
-        ("attempt_budget", 2), ("attempt_budget", True), ("attempt_count", 0),
-        ("attempt_count", "1"), ("message_sha256", "0" * 64),
-        ("user_message", "different input"), ("context_sha256", "invalid"),
-        ("context_revision", True), ("outcome", "pending"), ("provider", "other"),
+        ("attempt_budget", 2),
+        ("attempt_budget", True),
+        ("attempt_count", 0),
+        ("attempt_count", "1"),
+        ("message_sha256", "0" * 64),
+        ("user_message", "different input"),
+        ("context_sha256", "invalid"),
+        ("context_revision", True),
+        ("outcome", "pending"),
+        ("provider", "other"),
         ("prompt_version", "different-prompt"),
     ):
         forged = copy.deepcopy(original)

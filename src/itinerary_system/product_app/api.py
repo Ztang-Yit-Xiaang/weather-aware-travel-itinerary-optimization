@@ -71,9 +71,7 @@ SNAP_PREVIEW_FIELDS = frozenset(
         "target_waypoint_id",
     }
 )
-SNAP_CONFIRM_FIELDS = frozenset(
-    {"expected_revision", "name", "role", "duration", "warning_acknowledged"}
-)
+SNAP_CONFIRM_FIELDS = frozenset({"expected_revision", "name", "role", "duration", "warning_acknowledged"})
 SNAP_CONFIRM_REQUIRED_FIELDS = frozenset({"expected_revision", "warning_acknowledged"})
 SNAP_PREVIEW_REQUIRED_FIELDS = frozenset(
     {
@@ -129,8 +127,7 @@ def create_product_app(
     # StaticFiles streams from disk after middleware checks. Freeze these small assets
     # at startup instead so a concurrent source edit cannot mix browser generations.
     static_assets = {
-        path.relative_to(static_dir).as_posix(): path.read_bytes()
-        for path in static_dir.rglob("*") if path.is_file()
+        path.relative_to(static_dir).as_posix(): path.read_bytes() for path in static_dir.rglob("*") if path.is_file()
     }
     static_assets["index.html"] = static_assets["index.html"].replace(
         b"__PRODUCT_BUILD_ID__", runtime.build_id.encode("ascii")
@@ -163,7 +160,7 @@ def create_product_app(
         try:
             security.validate_host(request)
             security.validate_origin(request)
-            if (request.url.path == "/app" or request.url.path.startswith(("/app/", "/static/", "/api/"))):
+            if request.url.path == "/app" or request.url.path.startswith(("/app/", "/static/", "/api/")):
                 await asyncio.to_thread(runtime.require_current_build)
             security.validate_browser_build(request, runtime.build_id)
         except HTTPException as exc:
@@ -202,9 +199,7 @@ def create_product_app(
         return JSONResponse({"detail": exc.code}, status_code=exc.status_code)
 
     @app.exception_handler(POICandidateDiscoveryError)
-    async def poi_candidate_discovery_error(
-        _: Request, exc: POICandidateDiscoveryError
-    ):
+    async def poi_candidate_discovery_error(_: Request, exc: POICandidateDiscoveryError):
         return JSONResponse({"detail": exc.code}, status_code=exc.status_code)
 
     @app.get("/api/health")
@@ -284,23 +279,47 @@ def create_product_app(
         if day is not None and day not in service.parent_order_by_day(session.run_id):
             proposal = session.proposal or {}
             compiler = service.compiler_for_session(session)
-            compiled = compiler.compile(session.draft, accepted_plan_id=session.accepted_plan_id, read_only=True) if compiler and proposal.get("execution_mode")=="trip_replan_independent_evaluation" and proposal.get("state")=="eligible" else None
+            compiled = (
+                compiler.compile(session.draft, accepted_plan_id=session.accepted_plan_id, read_only=True)
+                if compiler
+                and proposal.get("execution_mode") == "trip_replan_independent_evaluation"
+                and proposal.get("state") == "eligible"
+                else None
+            )
             child = compiled.child_plan or {} if compiled else {}
-            if not (compiled and compiled.state=="eligible" and child.get("plan_id")==proposal.get("child_plan_id") and child.get("content_hash")==proposal.get("child_plan_content_hash") and any(s.get("day")==day for s in child.get("selected_stops",()))):
+            if not (
+                compiled
+                and compiled.state == "eligible"
+                and child.get("plan_id") == proposal.get("child_plan_id")
+                and child.get("content_hash") == proposal.get("child_plan_content_hash")
+                and any(s.get("day") == day for s in child.get("selected_stops", ()))
+            ):
                 raise WorkspaceError("invalid_selected_day")
         stop_id = payload.get("selected_stop_id")
         if stop_id and stop_id not in service.valid_stops(session.run_id):
             proposal = session.proposal or {}
             preview_stop = False
-            if proposal.get("execution_mode") == "trip_replan_independent_evaluation" and proposal.get("state") == "eligible":
+            if (
+                proposal.get("execution_mode") == "trip_replan_independent_evaluation"
+                and proposal.get("state") == "eligible"
+            ):
                 compiler = service.compiler_for_session(session)
-                compiled = compiler.compile(session.draft, accepted_plan_id=session.accepted_plan_id, read_only=True) if compiler else None
+                compiled = (
+                    compiler.compile(session.draft, accepted_plan_id=session.accepted_plan_id, read_only=True)
+                    if compiler
+                    else None
+                )
                 child = compiled.child_plan or {} if compiled else {}
-                preview_stop = bool(compiled and compiled.state == "eligible"
+                preview_stop = bool(
+                    compiled
+                    and compiled.state == "eligible"
                     and child.get("plan_id") == proposal.get("child_plan_id")
                     and child.get("content_hash") == proposal.get("child_plan_content_hash")
-                    and any((row.get("poi_id") or row.get("stop_id")) == stop_id
-                        and (day is None or row.get("day") == day) for row in child.get("selected_stops", ())))
+                    and any(
+                        (row.get("poi_id") or row.get("stop_id")) == stop_id and (day is None or row.get("day") == day)
+                        for row in child.get("selected_stops", ())
+                    )
+                )
             if not preview_stop:
                 raise WorkspaceError("invalid_selected_stop")
         candidate_id = payload.get("selected_candidate_id")
@@ -314,23 +333,42 @@ def create_product_app(
             if candidate_id not in valid_candidates:
                 raise WorkspaceError("invalid_selected_candidate", 422)
         segment_id = payload.get("selected_segment_id")
-        if (segment_id and segment_id not in service.valid_segments(session.run_id)
-                and segment_id not in service.valid_segments_for_plan(session.run_id, session.accepted_plan_id)):
+        if (
+            segment_id
+            and segment_id not in service.valid_segments(session.run_id)
+            and segment_id not in service.valid_segments_for_plan(session.run_id, session.accepted_plan_id)
+        ):
             proposal = session.proposal or {}
             preview_segment = False
-            if proposal.get("execution_mode") == "trip_replan_independent_evaluation" and proposal.get("state") == "eligible":
+            if (
+                proposal.get("execution_mode") == "trip_replan_independent_evaluation"
+                and proposal.get("state") == "eligible"
+            ):
                 compiler = service.compiler_for_session(session)
-                compiled = compiler.compile(session.draft, accepted_plan_id=session.accepted_plan_id, read_only=True) if compiler else None
+                compiled = (
+                    compiler.compile(session.draft, accepted_plan_id=session.accepted_plan_id, read_only=True)
+                    if compiler
+                    else None
+                )
                 child = (compiled.child_plan or {}) if compiled else {}
-                if (compiled and compiled.state == "eligible"
+                if (
+                    compiled
+                    and compiled.state == "eligible"
                     and child.get("plan_id") == proposal.get("child_plan_id")
-                    and child.get("content_hash") == proposal.get("child_plan_content_hash")):
-                    edges = {(row["origin_id"], row["destination_id"]) for row in compiled.route_legs
-                             if day is None or row.get("day") == day}
-                    preview_segment = any(cell.get("route_leg_id") == segment_id
-                        and cell.get("road_validated") is True and cell.get("fallback_used") is False
+                    and child.get("content_hash") == proposal.get("child_plan_content_hash")
+                ):
+                    edges = {
+                        (row["origin_id"], row["destination_id"])
+                        for row in compiled.route_legs
+                        if day is None or row.get("day") == day
+                    }
+                    preview_segment = any(
+                        cell.get("route_leg_id") == segment_id
+                        and cell.get("road_validated") is True
+                        and cell.get("fallback_used") is False
                         and (cell.get("origin_id"), cell.get("destination_id")) in edges
-                        for cell in compiled.source_bundle.route_matrix.get("cells", ()))
+                        for cell in compiled.source_bundle.route_matrix.get("cells", ())
+                    )
             if not preview_segment:
                 raise WorkspaceError("invalid_selected_segment")
         alternative_id = payload.get("selected_alternative_id")
@@ -338,7 +376,9 @@ def create_product_app(
             raise WorkspaceError("invalid_selected_alternative")
         service.select(session, payload, x_session_token)
         if "mutation_id" in payload:
-            return _mutation_response(service, session, service.workspace.replay_mutation(session, "selection", payload), x_session_token)
+            return _mutation_response(
+                service, session, service.workspace.replay_mutation(session, "selection", payload), x_session_token
+            )
         return {"session": session.public_dict()}
 
     @app.post("/api/sessions/{session_id}/map/snap-preview")
@@ -463,9 +503,13 @@ def create_product_app(
     ) -> dict[str, Any]:
         raw = await security.read_bounded_json(request)
         batch = isinstance(raw, dict) and "operations" in raw
-        payload = validate_envelope(raw,
+        payload = validate_envelope(
+            raw,
             allowed=(frozenset({"expected_revision", "operations"}) if batch else OPERATION_FIELDS) | MUTATION_FIELDS,
-            required=frozenset({"expected_revision", "operations"}) if batch else frozenset({"expected_revision", "type", "target", "parameters"}))
+            required=frozenset({"expected_revision", "operations"})
+            if batch
+            else frozenset({"expected_revision", "type", "target", "parameters"}),
+        )
         _validate_revision(payload)
         _validate_mutation_id(payload)
         rows = payload["operations"] if batch else [payload]
@@ -473,14 +517,23 @@ def create_product_app(
             raise WorkspaceError("invalid_draft_operations", 422)
         for row in rows:
             if batch:
-                validate_envelope(row, allowed=OPERATION_FIELDS - {"expected_revision"}, required=frozenset({"type", "target", "parameters"}))
+                validate_envelope(
+                    row,
+                    allowed=OPERATION_FIELDS - {"expected_revision"},
+                    required=frozenset({"type", "target", "parameters"}),
+                )
             _validate_operation(row)
+
         def blocking_work():
             service = runtime.require_service()
             _validate_session_id(session_id)
-            authenticate = service.workspace.authenticate_readonly if "mutation_id" in payload else service.workspace.authenticate
+            authenticate = (
+                service.workspace.authenticate_readonly if "mutation_id" in payload else service.workspace.authenticate
+            )
             session = authenticate(session_id, x_session_token)
-            replay = service.workspace.replay_mutation(session, "operations", payload) if "mutation_id" in payload else None
+            replay = (
+                service.workspace.replay_mutation(session, "operations", payload) if "mutation_id" in payload else None
+            )
             if replay:
                 return _mutation_response(service, session, replay, x_session_token)
             service.ensure_editable_baseline(session)
@@ -509,18 +562,22 @@ def create_product_app(
                 parent_day_by_stop=service.parent_day_by_stop(session.run_id),
                 parent_order_by_day=service.parent_order_by_day(session.run_id),
                 parent_duration_by_stop=service.parent_duration_by_stop(session.run_id),
-                parent_time_window_by_stop=service.parent_time_window_by_stop(
-                    session.run_id
-                ),
+                parent_time_window_by_stop=service.parent_time_window_by_stop(session.run_id),
                 parent_role_by_stop=service.parent_role_by_stop(session.run_id),
-                role_constraints_by_stop=service.role_constraints_by_stop(
-                    session.run_id
-                ),
+                role_constraints_by_stop=service.role_constraints_by_stop(session.run_id),
             )
             if "mutation_id" in payload:
-                return _mutation_response(service, session, service.workspace.replay_mutation(session, "operations", payload), x_session_token)
-            return ({"operations": [item.as_dict() for item in session.draft[-len(rows):]], "session": session.public_dict()}
-                    if batch else {"operation": operation.as_dict(), "session": session.public_dict()})
+                return _mutation_response(
+                    service, session, service.workspace.replay_mutation(session, "operations", payload), x_session_token
+                )
+            return (
+                {
+                    "operations": [item.as_dict() for item in session.draft[-len(rows) :]],
+                    "session": session.public_dict(),
+                }
+                if batch
+                else {"operation": operation.as_dict(), "session": session.public_dict()}
+            )
 
         return await asyncio.to_thread(blocking_work)
 
@@ -531,6 +588,7 @@ def create_product_app(
         x_session_token: str | None = Header(default=None),
     ) -> dict[str, Any]:
         payload = await _revision_payload(request, security)
+
         def blocking_work():
             service = runtime.require_service()
             _validate_session_id(session_id)
@@ -545,49 +603,72 @@ def create_product_app(
         request: Request,
         x_session_token: str | None = Header(default=None),
     ) -> dict[str, Any]:
-        payload = validate_envelope(await security.read_bounded_json(request),
-                                    allowed=REVISION_FIELDS | MUTATION_FIELDS, required=REVISION_FIELDS)
+        payload = validate_envelope(
+            await security.read_bounded_json(request),
+            allowed=REVISION_FIELDS | MUTATION_FIELDS,
+            required=REVISION_FIELDS,
+        )
         _validate_revision(payload)
         _validate_mutation_id(payload)
         service = runtime.require_service()
         _validate_session_id(session_id)
-        authenticate = service.workspace.authenticate_readonly if "mutation_id" in payload else service.workspace.authenticate
+        authenticate = (
+            service.workspace.authenticate_readonly if "mutation_id" in payload else service.workspace.authenticate
+        )
         session = authenticate(session_id, x_session_token)
         replay = service.workspace.replay_mutation(session, "undo", payload) if "mutation_id" in payload else None
         if replay:
             return _mutation_response(service, session, replay, x_session_token)
-        operation = service.workspace.undo(session, payload["expected_revision"], mutation_id=payload.get("mutation_id"))
+        operation = service.workspace.undo(
+            session, payload["expected_revision"], mutation_id=payload.get("mutation_id")
+        )
         if "mutation_id" in payload:
-            return _mutation_response(service, session, service.workspace.replay_mutation(session, "undo", payload), x_session_token)
+            return _mutation_response(
+                service, session, service.workspace.replay_mutation(session, "undo", payload), x_session_token
+            )
         return {"undone": operation.as_dict(), "session": session.public_dict()}
 
     @app.get("/api/sessions/{session_id}/mutations/{mutation_id}")
-    async def mutation_status(session_id: str, mutation_id: str,
-                              x_session_token: str | None = Header(default=None)) -> dict[str, Any]:
+    async def mutation_status(
+        session_id: str, mutation_id: str, x_session_token: str | None = Header(default=None)
+    ) -> dict[str, Any]:
         _validate_session_id(session_id)
         WorkspaceStore.validate_mutation_id(mutation_id)
+
         def blocking_work():
             service = runtime.require_service()
             session = service.workspace.authenticate_readonly(session_id, x_session_token)
             receipt = next((row for row in session.mutation_receipts if row["mutation_id"] == mutation_id), None)
             # Unseen means no receipt at this read; an earlier request may still be in flight.
-            return {"schema_version": "product-mutation-status-v1", "state": "applied" if receipt else "unseen",
-                    "mutation_id": mutation_id,
-                    "mutation_receipt": {key: value for key, value in receipt.items() if key != "result"} if receipt else None,
-                    "result": receipt["result"] if receipt else None}
+            return {
+                "schema_version": "product-mutation-status-v1",
+                "state": "applied" if receipt else "unseen",
+                "mutation_id": mutation_id,
+                "mutation_receipt": {key: value for key, value in receipt.items() if key != "result"}
+                if receipt
+                else None,
+                "result": receipt["result"] if receipt else None,
+            }
 
         return await asyncio.to_thread(blocking_work)
 
     @app.post("/api/sessions/{session_id}/mutations/{mutation_id}/cancel")
     async def cancel_pending_mutation(
-        session_id: str, mutation_id: str, request: Request,
+        session_id: str,
+        mutation_id: str,
+        request: Request,
         x_session_token: str | None = Header(default=None),
     ) -> dict[str, Any]:
-        payload = validate_envelope(await security.read_bounded_json(request),
-                                    allowed={"action", "request"}, required={"action", "request"})
+        payload = validate_envelope(
+            await security.read_bounded_json(request), allowed={"action", "request"}, required={"action", "request"}
+        )
         action, original = payload["action"], payload["request"]
-        if (not isinstance(action, str) or action not in {"selection", "operations", "undo"}
-                or not isinstance(original, dict) or original.get("mutation_id") != mutation_id):
+        if (
+            not isinstance(action, str)
+            or action not in {"selection", "operations", "undo"}
+            or not isinstance(original, dict)
+            or original.get("mutation_id") != mutation_id
+        ):
             raise HTTPException(status_code=422, detail="request_validation_failed")
         _validate_session_id(session_id)
         WorkspaceStore.validate_mutation_id(mutation_id)
@@ -595,12 +676,16 @@ def create_product_app(
         service = runtime.require_service()
         session = service.workspace.authenticate_readonly(session_id, x_session_token)
         receipt = service.resolve_pending_mutation(session, action, original, x_session_token)
-        return {"schema_version": "product-mutation-resolution-v1",
-                "state": "applied" if receipt else "not_applied", "mutation_id": mutation_id,
-                "action": action, "expected_revision": original["expected_revision"],
-                "resolved_revision": session.revision,
-                "mutation_receipt": {key: value for key, value in receipt.items() if key != "result"} if receipt else None,
-                "result": receipt["result"] if receipt else None}
+        return {
+            "schema_version": "product-mutation-resolution-v1",
+            "state": "applied" if receipt else "not_applied",
+            "mutation_id": mutation_id,
+            "action": action,
+            "expected_revision": original["expected_revision"],
+            "resolved_revision": session.revision,
+            "mutation_receipt": {key: value for key, value in receipt.items() if key != "result"} if receipt else None,
+            "result": receipt["result"] if receipt else None,
+        }
 
     @app.post("/api/sessions/{session_id}/preview")
     async def preview(
@@ -623,11 +708,15 @@ def create_product_app(
         _, source_revision = await asyncio.to_thread(authenticated_context)
         if not preview_slots.acquire(blocking=False):
             raise HTTPException(status_code=503, detail="preview_capacity_reached", headers={"Retry-After": "1"})
+
         def submit_preview():
             try:
                 work = preview_executor.submit(
-                    service.preview, session_id, payload["expected_revision"],
-                    mutation_token=x_session_token, publish=False,
+                    service.preview,
+                    session_id,
+                    payload["expected_revision"],
+                    mutation_token=x_session_token,
+                    publish=False,
                 )
             except BaseException:
                 preview_slots.release()
@@ -880,7 +969,9 @@ def create_product_app(
 
     @app.get("/api/sessions/{session_id}/map/interest-regions")
     def interest_regions(
-        session_id: str, request: Request, x_session_token: str | None = Header(default=None),
+        session_id: str,
+        request: Request,
+        x_session_token: str | None = Header(default=None),
     ) -> JSONResponse:
         query = _poi_candidate_query(request, interest_regions=True)
         service = runtime.require_service()
@@ -972,6 +1063,7 @@ def create_product_app(
             confirmation=payload["confirmation"],
             idempotency_key=payload["idempotency_key"],
         )
+
     @app.get("/api/runs/{run_id}/evidence-bundle")
     def evidence_bundle(run_id: str, plan_id: str | None = None) -> StreamingResponse:
         validate_identifier(run_id)
@@ -998,8 +1090,9 @@ def create_product_app(
         if body is None:
             raise HTTPException(status_code=404, detail="Not Found")
         media_type = mimetypes.guess_type(asset_path)[0] or "application/octet-stream"
-        return Response(body if request.method != "HEAD" else b"", media_type=media_type,
-            headers={"Content-Length": str(len(body))})
+        return Response(
+            body if request.method != "HEAD" else b"", media_type=media_type, headers={"Content-Length": str(len(body))}
+        )
 
     if enable_legacy and runtime.registry is not None:
         legacy_dir = runtime.registry.run_dir(runtime.registry.default.run_id) / "dashboard_product"
@@ -1043,6 +1136,7 @@ async def _acceptance_payload(
         raise HTTPException(status_code=422, detail="request_validation_failed")
     return payload
 
+
 async def _copilot_message_payload(
     request: Request,
     security: ProductSecurityBoundary,
@@ -1054,9 +1148,7 @@ async def _copilot_message_payload(
     )
     _validate_revision(payload)
     client_message_id = payload.get("client_message_id")
-    if not isinstance(client_message_id, str) or not re.fullmatch(
-        r"client_message_[0-9a-f]{32}", client_message_id
-    ):
+    if not isinstance(client_message_id, str) or not re.fullmatch(r"client_message_[0-9a-f]{32}", client_message_id):
         raise HTTPException(status_code=422, detail="request_validation_failed")
     message = payload.get("message")
     if not isinstance(message, str) or not message.strip() or len(message) > 2_000:
@@ -1066,10 +1158,7 @@ async def _copilot_message_payload(
 
 def _accepts_event_stream(request: Request) -> bool:
     accepted = request.headers.get("accept", "")
-    return any(
-        media_type.split(";", 1)[0].strip().lower() == "text/event-stream"
-        for media_type in accepted.split(",")
-    )
+    return any(media_type.split(";", 1)[0].strip().lower() == "text/event-stream" for media_type in accepted.split(","))
 
 
 def _copilot_stream_event(payload: dict[str, Any]) -> str:
@@ -1092,9 +1181,14 @@ def _copilot_stream_error(
             "client_message_id": client_message_id,
             "code": code,
             "status": status_code,
-            "retryable": status_code in {408, 429, 502, 503, 504} and code not in {
-                "openai_timeout", "openai_provider_unavailable", "copilot_provider_unavailable",
-                "copilot_outcome_unknown", "copilot_dispatch_result_write_failed",
+            "retryable": status_code in {408, 429, 502, 503, 504}
+            and code
+            not in {
+                "openai_timeout",
+                "openai_provider_unavailable",
+                "copilot_provider_unavailable",
+                "copilot_outcome_unknown",
+                "copilot_dispatch_result_write_failed",
             },
         }
     )
@@ -1105,11 +1199,16 @@ def _validate_mutation_id(payload: dict[str, Any]) -> None:
         WorkspaceStore.validate_mutation_id(payload["mutation_id"])
 
 
-def _mutation_response(service: Any, session: Any, receipt: dict[str, Any], mutation_token: str | None) -> dict[str, Any]:
+def _mutation_response(
+    service: Any, session: Any, receipt: dict[str, Any], mutation_token: str | None
+) -> dict[str, Any]:
     service.validate_session_draft(session)
     service.validate_cached_role_proposal(session, mutation_token)
-    return {**receipt["result"], "session": session.public_dict(),
-            "mutation_receipt": {key: value for key, value in receipt.items() if key != "result"}}
+    return {
+        **receipt["result"],
+        "session": session.public_dict(),
+        "mutation_receipt": {key: value for key, value in receipt.items() if key != "result"},
+    }
 
 
 async def _revision_payload(request: Request, security: ProductSecurityBoundary) -> dict[str, Any]:
@@ -1138,11 +1237,7 @@ def _statewide_poi_query(request: Request) -> dict[str, Any]:
     query = values.get("q", "")
     if len(query) > 120:
         raise HTTPException(status_code=422, detail="poi_search_query_invalid")
-    limit = (
-        _query_integer(values["limit"], "poi_search_limit_invalid")
-        if "limit" in values
-        else 10
-    )
+    limit = _query_integer(values["limit"], "poi_search_limit_invalid") if "limit" in values else 10
     if not 1 <= limit <= 20:
         raise HTTPException(status_code=422, detail="poi_search_limit_invalid")
     return {"query": query, "limit": limit}
@@ -1309,8 +1404,7 @@ def _validate_snap_confirmation(payload: dict[str, Any]) -> None:
     role = payload.get("role")
     if role is not None and (
         not isinstance(role, str)
-        or role
-        not in {"attraction", "activity", "meal", "rest_stop", "scenic_stop", "route_waypoint"}
+        or role not in {"attraction", "activity", "meal", "rest_stop", "scenic_stop", "route_waypoint"}
     ):
         raise HTTPException(status_code=422, detail="request_validation_failed")
     duration = payload.get("duration")
@@ -1360,7 +1454,8 @@ def _conversation_error_status(code: str) -> int:
     if code == "conversation_capacity_reached":
         return 429
     if code.startswith("invalid_") or code in {
-        "conversation_turn_limit_reached", "conversation_size_limit_reached",
+        "conversation_turn_limit_reached",
+        "conversation_size_limit_reached",
     }:
         return 422
     return 503

@@ -45,14 +45,12 @@ def _build_profile_comparison(profile_day_plans):
     return "".join(rows)
 
 
-
 def _build_method_comparison(output_dir):
     output_dir = Path(output_dir)
     method_df = _load_csv(output_dir / "production_method_comparison.csv")
     if not method_df.empty and "method" in method_df.columns:
         return method_df
     return pd.DataFrame()
-
 
 
 def _build_method_comparison_html(method_comparison_df):
@@ -112,7 +110,6 @@ def _build_method_comparison_html(method_comparison_df):
     return '<div class="panel-section-title">Method Comparison</div><div class="summary-line">Method comparison not generated yet.</div>'
 
 
-
 def _build_trip_length_comparison_html(output_dir):
     comparison_df = _load_csv(Path(output_dir) / "production_trip_length_comparison.csv")
     if comparison_df.empty:
@@ -144,7 +141,6 @@ def _build_trip_length_comparison_html(output_dir):
     </table>
     <div class="summary-line muted-note">Saved to production_trip_length_comparison.csv with map-ready stops in production_trip_length_route_stops.csv.</div>
     """
-
 
 
 def _build_route_debug_summary_html(route_debug_df):
@@ -229,7 +225,6 @@ def _build_route_debug_summary_html(route_debug_df):
     """
 
 
-
 def _build_html_data_source_summary(output_dir):
     output_dir = Path(output_dir)
     enriched = _load_csv(output_dir / "production_enriched_poi_catalog.csv")
@@ -263,7 +258,6 @@ def _build_html_data_source_summary(output_dir):
     <div class="summary-line"><b>Roads:</b> production_intercity_legs.csv + OSRM/cache geometry ({_escape(route_source)}).</div>
     <div class="summary-line"><b>Bandit/Gurobi:</b> production_hybrid_bandit_optimization_summary.csv and production_bandit_stress_summary.csv.</div>
     """
-
 
 
 def _build_must_go_summary_html(output_dir):
@@ -300,7 +294,6 @@ def _build_must_go_summary_html(output_dir):
     """
 
 
-
 def _build_hotel_summary_html(output_dir):
     hotel_debug = _load_csv(Path(output_dir) / "production_hotel_selection_debug.csv")
     if hotel_debug.empty:
@@ -331,10 +324,8 @@ def _build_hotel_summary_html(output_dir):
     """
 
 
-
 def _add_route_debug_controls(map_object, route_registry, hidden_default_layers=None):
     add_route_debug_controls(map_object, route_registry, hidden_default_layers)
-
 
 
 def _add_blueprint_panel_behavior(map_object):
@@ -454,7 +445,6 @@ def _add_blueprint_panel_behavior(map_object):
     map_object.get_root().script.add_child(folium.Element(behavior_js))
 
 
-
 def _build_day_panel(day_plan_df):
     cards = []
     for day, group in day_plan_df.groupby("day", sort=True):
@@ -486,7 +476,6 @@ def _build_day_panel(day_plan_df):
             """
         )
     return "".join(cards)
-
 
 
 def _add_interest_bar_preview_panel(map_object, output_dir):
@@ -745,7 +734,6 @@ def _add_interest_bar_preview_panel(map_object, output_dir):
     map_object.get_root().script.add_child(folium.Element(panel_js))
 
 
-
 def _load_default_hierarchical_gurobi_day_plan(output_dir, fallback_df):
     route_stops = _load_csv(Path(output_dir) / "production_method_route_stops.csv")
     if route_stops.empty or "method" not in route_stops.columns:
@@ -759,8 +747,10 @@ def _load_default_hierarchical_gurobi_day_plan(output_dir, fallback_df):
     route_stops = route_stops.sort_values(["day", "stop_order", "attraction_name"]).reset_index(drop=True)
     total_days = int(route_stops["day"].max()) if not route_stops.empty else 0
     output = route_stops.copy()
+
     def scalar_series(default):
         return pd.Series(default, index=output.index)
+
     output["profile"] = "balanced"
     output["profile_label"] = "Balanced"
     output["hotel_source"] = output.get("hotel_source", "production_method_route_stops")

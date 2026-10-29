@@ -278,10 +278,7 @@ def build_package(output_dir: Path, *, routing_base_url: str) -> Path:
             **{role: _plan_route_sequences(plan) for role, plan in children.items()},
         }
         matrix, matrix_record = _build_route_matrix(sequences, routing_base_url=routing_base_url)
-        planner_runs = {
-            role: _planner_run(role, plan)
-            for role, plan in children.items()
-        }
+        planner_runs = {role: _planner_run(role, plan) for role, plan in children.items()}
         evaluator_config = PlanEvaluatorConfig(
             strict_routes=True,
             max_day_minutes=720.0,
@@ -339,10 +336,7 @@ def build_package(output_dir: Path, *, routing_base_url: str) -> Path:
         validate_product_demo_coherence(
             manifest=manifest,
             parent_plan=parent.to_record(),
-            alternatives={
-                role: (children[role].to_record(), diffs[role], explanations[role])
-                for role in REPLACEMENTS
-            },
+            alternatives={role: (children[role].to_record(), diffs[role], explanations[role]) for role in REPLACEMENTS},
             route_matrix=matrix_record,
         )
         manifest["artifacts_sha256"] = {
@@ -440,7 +434,9 @@ def _build_plan(role: str, *, parent: PlanArtifactV2 | None = None) -> PlanArtif
     plan_id = f"plan_{stable_content_hash(plan_seed)}"
     source_run_id = f"{RUN_ID}_{role}"
     route_ids = {
-        day["day"]: f"route_{stable_content_hash({'day': day['day'], 'sequence': [day['start_anchor_id'], *ordered_days[day['day'] - 1]['stop_ids'], day['end_anchor_id']]})}"
+        day[
+            "day"
+        ]: f"route_{stable_content_hash({'day': day['day'], 'sequence': [day['start_anchor_id'], *ordered_days[day['day'] - 1]['stop_ids'], day['end_anchor_id']]})}"
         for day in DAYS
     }
     return PlanArtifactV2(
@@ -484,10 +480,7 @@ def _planner_run(role: str, plan: PlanArtifactV2) -> PlannerRun:
 
 def _plan_route_sequences(plan: PlanArtifactV2) -> tuple[tuple[str, ...], ...]:
     by_day = {int(row["day"]): tuple(row["stop_ids"]) for row in plan.ordered_days}
-    return tuple(
-        (day["start_anchor_id"], *by_day[day["day"]], day["end_anchor_id"])
-        for day in DAYS
-    )
+    return tuple((day["start_anchor_id"], *by_day[day["day"]], day["end_anchor_id"]) for day in DAYS)
 
 
 def _build_route_matrix(
@@ -522,11 +515,7 @@ def _build_route_matrix(
     }
     source_content_sha256 = hashlib.sha256(_compact_json(source_seed).encode("utf-8")).hexdigest()
     entity_ids = sorted(
-        {
-            entity_id
-            for record in records
-            for entity_id in (record["origin_id"], record["destination_id"])
-        }
+        {entity_id for record in records for entity_id in (record["origin_id"], record["destination_id"])}
     )
     matrix_seed = {
         "context_snapshot_id": CONTEXT_ID,
@@ -567,10 +556,7 @@ def _build_route_matrix(
 def _route_cell(origin_id: str, destination_id: str, *, routing_base_url: str) -> dict[str, Any]:
     origin = PLACES[origin_id]
     destination = PLACES[destination_id]
-    coordinates = (
-        f"{origin['longitude']},{origin['latitude']};"
-        f"{destination['longitude']},{destination['latitude']}"
-    )
+    coordinates = f"{origin['longitude']},{origin['latitude']};{destination['longitude']},{destination['latitude']}"
     url = f"{routing_base_url.rstrip('/')}/route/v1/driving/{coordinates}"
     params = {"overview": "full", "geometries": "geojson", "steps": "false"}
     response = requests.get(url, params=params, timeout=60)
@@ -627,18 +613,13 @@ def _route_cell(origin_id: str, destination_id: str, *, routing_base_url: str) -
 
 
 def _request(role: str | None = None) -> dict[str, Any]:
-    candidate_stop_ids = (
-        tuple(REPLACEMENTS.values())
-        if role is None
-        else (REPLACEMENTS[role],)
-    )
+    candidate_stop_ids = tuple(REPLACEMENTS.values()) if role is None else (REPLACEMENTS[role],)
     return {
         "schema_version": "repair-request-v1",
         "request_id": REQUEST_ID,
         "user_intent": "Replace the weather-infeasible Day 5 Bixby stop while preserving the approved seven-day San Francisco-to-Los Angeles trip.",
         "baseline_route": [
-            {"day": day["day"], "label": day["label"], "stop_ids": list(day["parent_stop_ids"])}
-            for day in DAYS
+            {"day": day["day"], "label": day["label"], "stop_ids": list(day["parent_stop_ids"])} for day in DAYS
         ],
         "confirmed_constraints": {
             "affected_stop_id": "bixby_creek_bridge_viewpoint",
@@ -647,10 +628,7 @@ def _request(role: str | None = None) -> dict[str, Any]:
             "target_stop_ids": ["bixby_creek_bridge_viewpoint"],
             "require_road_validated_routes": True,
         },
-        "candidate_pois": [
-            {"stop_id": stop_id, **PLACES[stop_id]}
-            for stop_id in candidate_stop_ids
-        ],
+        "candidate_pois": [{"stop_id": stop_id, **PLACES[stop_id]} for stop_id in candidate_stop_ids],
         "evidence_records": [
             {
                 "ref_id": "weather_day_5_bixby",
@@ -743,8 +721,7 @@ def _write_artifacts(
     _write_json(root / paths["request"], request)
     _write_json(root / paths["route_matrix"], matrix_record)
     planner_text = "".join(
-        json.dumps(planner_runs[role].to_record(), sort_keys=True, ensure_ascii=False) + "\n"
-        for role in REPLACEMENTS
+        json.dumps(planner_runs[role].to_record(), sort_keys=True, ensure_ascii=False) + "\n" for role in REPLACEMENTS
     )
     (root / paths["planner_runs"]).write_text(planner_text, encoding="utf-8")
     for role, child in children.items():
@@ -873,8 +850,7 @@ def _route_legs(
 def _route_total_minutes(route_legs: list[dict[str, Any]], matrix: dict[str, Any]) -> float:
     cells = {(cell["origin_id"], cell["destination_id"]): cell for cell in matrix["cells"]}
     return round(
-        sum(cells[(leg["origin_id"], leg["destination_id"])]["duration_s"] for leg in route_legs)
-        / 60.0,
+        sum(cells[(leg["origin_id"], leg["destination_id"])]["duration_s"] for leg in route_legs) / 60.0,
         6,
     )
 

@@ -38,9 +38,7 @@ ALL_STOP_ROLES = frozenset(
     }
 )
 ROLE_SOURCE = "user_declared_itinerary_role"
-_ROLE_RELATIONS = frozenset(
-    {"role", "itinerary_role", "role_equals", "set_role", "attribute:role"}
-)
+_ROLE_RELATIONS = frozenset({"role", "itinerary_role", "role_equals", "set_role", "attribute:role"})
 
 
 def build_role_constraint_evidence(
@@ -59,9 +57,7 @@ def build_role_constraint_evidence(
         raw_constraints = tuple(parent.get("owned_constraints") or ())
         selected_stops = tuple(parent.get("selected_stops") or ())
     stop_ids = {
-        str(stop.get("stop_id") or stop.get("poi_id") or "")
-        for stop in selected_stops
-        if isinstance(stop, dict)
+        str(stop.get("stop_id") or stop.get("poi_id") or "") for stop in selected_stops if isinstance(stop, dict)
     }
     if not plan_id or not plan_content_hash or "" in stop_ids:
         raise WorkspaceError("draft_parent_role_constraint_invalid", 409)
@@ -79,9 +75,7 @@ def build_role_constraint_evidence(
         try:
             constraint = OwnedConstraint.from_record(raw)
         except Exception as exc:
-            raise WorkspaceError(
-                "draft_parent_role_constraint_invalid", 409
-            ) from exc
+            raise WorkspaceError("draft_parent_role_constraint_invalid", 409) from exc
         if not constraint.is_active:
             continue
         if (
@@ -184,11 +178,7 @@ class EvaluatedStopOrderCompiler:
             raise WorkspaceError("draft_is_empty")
         ordered_by_day = _ordered_stop_ids(self._parent)
         parent_ordered_by_day = {day: list(stop_ids) for day, stop_ids in ordered_by_day.items()}
-        day_by_stop = {
-            stop_id: day
-            for day, stop_ids in parent_ordered_by_day.items()
-            for stop_id in stop_ids
-        }
+        day_by_stop = {stop_id: day for day, stop_ids in parent_ordered_by_day.items() for stop_id in stop_ids}
         seen_targets: set[str] = set()
         requested_positions: dict[int, dict[int, str]] = {}
         for operation in operations:
@@ -202,11 +192,7 @@ class EvaluatedStopOrderCompiler:
             if day_by_stop.get(target) != day:
                 raise WorkspaceError("draft_order_day_mismatch", 409)
             day_stops = ordered_by_day[day]
-            if (
-                isinstance(index, bool)
-                or not isinstance(index, int)
-                or not 0 <= index < len(day_stops)
-            ):
+            if isinstance(index, bool) or not isinstance(index, int) or not 0 <= index < len(day_stops):
                 raise WorkspaceError("draft_order_index_invalid", 409)
             positions = requested_positions.setdefault(day, {})
             if index in positions:
@@ -218,8 +204,7 @@ class EvaluatedStopOrderCompiler:
         for day, positions in requested_positions.items():
             remaining = iter(stop for stop in ordered_by_day[day] if stop not in seen_targets)
             ordered_by_day[day] = [
-                positions[index] if index in positions else next(remaining)
-                for index in range(len(ordered_by_day[day]))
+                positions[index] if index in positions else next(remaining) for index in range(len(ordered_by_day[day]))
             ]
 
         if ordered_by_day == parent_ordered_by_day:
@@ -245,24 +230,15 @@ class EvaluatedStopOrderCompiler:
         source_run_id = f"w4r_order_run_{request_hash}"
         child_plan_id = f"plan_{stable_content_hash({**request_seed, 'source_run_id': source_run_id})}"
         route_ids = dict(self._parent.route_ids_by_day)
-        affected_days = {
-            day
-            for day in ordered_by_day
-            if ordered_by_day[day] != parent_ordered_by_day[day]
-        }
+        affected_days = {day for day in ordered_by_day if ordered_by_day[day] != parent_ordered_by_day[day]}
         for day in affected_days:
             route_ids[day] = self._route_id(day, ordered_by_day[day])
 
         selected_stops = _reordered_stop_records(self._parent, ordered_by_day, affected_days)
         ordered_days = tuple(
-            {"day": day, "stop_ids": tuple(stop_ids)}
-            for day, stop_ids in sorted(ordered_by_day.items())
+            {"day": day, "stop_ids": tuple(stop_ids)} for day, stop_ids in sorted(ordered_by_day.items())
         )
-        sequence = tuple(
-            stop_id
-            for _, stop_ids in sorted(ordered_by_day.items())
-            for stop_id in stop_ids
-        )
+        sequence = tuple(stop_id for _, stop_ids in sorted(ordered_by_day.items()) for stop_id in stop_ids)
         child = replace(
             self._parent,
             plan_id=child_plan_id,
@@ -270,11 +246,7 @@ class EvaluatedStopOrderCompiler:
             source_run_id=source_run_id,
             planning_request_id=source_request_id,
             selected_stops=selected_stops,
-            day_assignments={
-                stop_id: day
-                for day, stop_ids in ordered_by_day.items()
-                for stop_id in stop_ids
-            },
+            day_assignments={stop_id: day for day, stop_ids in ordered_by_day.items() for stop_id in stop_ids},
             sequence=sequence,
             ordered_days=ordered_days,
             route_ids_by_day=route_ids,
@@ -382,8 +354,7 @@ class EvaluatedStopDurationCompiler:
         if not operations:
             raise WorkspaceError("draft_is_empty")
         stop_lookup = {
-            str(stop.get("stop_id") or stop.get("poi_id") or ""): dict(stop)
-            for stop in self._parent.selected_stops
+            str(stop.get("stop_id") or stop.get("poi_id") or ""): dict(stop) for stop in self._parent.selected_stops
         }
         if not stop_lookup or any(not stop_id for stop_id in stop_lookup):
             raise WorkspaceError("draft_parent_duration_invalid", 409)
@@ -430,8 +401,7 @@ class EvaluatedStopDurationCompiler:
         source_run_id = f"w4r_duration_run_{request_hash}"
         child_plan_id = f"plan_{stable_content_hash({**request_seed, 'source_run_id': source_run_id})}"
         selected_stops = tuple(
-            changed_stops[str(stop.get("stop_id") or stop.get("poi_id") or "")]
-            for stop in self._parent.selected_stops
+            changed_stops[str(stop.get("stop_id") or stop.get("poi_id") or "")] for stop in self._parent.selected_stops
         )
         child = replace(
             self._parent,
@@ -492,9 +462,7 @@ class EvaluatedStopDurationCompiler:
             "configured_default_visit_minutes": self._default_visit_minutes,
             "duration_cost_policy": {
                 "base_change_cost": 0.25,
-                "formula": (
-                    "base_times_strength_weight_times_max_1_abs_delta_minutes_over_60"
-                ),
+                "formula": ("base_times_strength_weight_times_max_1_abs_delta_minutes_over_60"),
                 "constraint_strength_weights": {
                     "": 1.0,
                     "locked": 1000.0,
@@ -507,13 +475,7 @@ class EvaluatedStopDurationCompiler:
                     "test_only": 0.0,
                 },
             },
-            "affected_days": sorted(
-                {
-                    change.day
-                    for change in diff.duration_changes
-                    if change.day is not None
-                }
-            ),
+            "affected_days": sorted({change.day for change in diff.duration_changes if change.day is not None}),
             "target_stop_ids": sorted(change.stop_id for change in diff.duration_changes),
             "parent": parent_schedule,
             "child": child_schedule,
@@ -591,8 +553,7 @@ class EvaluatedStopRoleCompiler:
         if not operations:
             raise WorkspaceError("draft_is_empty")
         stop_lookup = {
-            str(stop.get("stop_id") or stop.get("poi_id") or ""): dict(stop)
-            for stop in self._parent.selected_stops
+            str(stop.get("stop_id") or stop.get("poi_id") or ""): dict(stop) for stop in self._parent.selected_stops
         }
         if not stop_lookup or any(not stop_id for stop_id in stop_lookup):
             raise WorkspaceError("draft_parent_role_invalid", 409)
@@ -645,12 +606,9 @@ class EvaluatedStopRoleCompiler:
         request_hash = stable_content_hash(request_seed)
         source_request_id = f"w4r_role_{request_hash}"
         source_run_id = f"w4r_role_run_{request_hash}"
-        child_plan_id = (
-            f"plan_{stable_content_hash({**request_seed, 'source_run_id': source_run_id})}"
-        )
+        child_plan_id = f"plan_{stable_content_hash({**request_seed, 'source_run_id': source_run_id})}"
         selected_stops = tuple(
-            changed_stops[str(stop.get("stop_id") or stop.get("poi_id") or "")]
-            for stop in self._parent.selected_stops
+            changed_stops[str(stop.get("stop_id") or stop.get("poi_id") or "")] for stop in self._parent.selected_stops
         )
         child = replace(
             self._parent,
@@ -704,9 +662,7 @@ class EvaluatedStopRoleCompiler:
             reference_plan=self._parent,
         )
         certificate = evaluator.evaluate_final_plan(child, planner_run=planner_run)
-        parent_schedule = evaluator.evaluate_time_window_schedule_accounting(
-            self._parent
-        )
+        parent_schedule = evaluator.evaluate_time_window_schedule_accounting(self._parent)
         child_schedule = evaluator.evaluate_time_window_schedule_accounting(child)
         parent_route_legs = _route_legs(
             self._parent,
@@ -726,9 +682,7 @@ class EvaluatedStopRoleCompiler:
         invariance = {
             "sequence_unchanged": child.sequence == self._parent.sequence,
             "ordered_days_unchanged": child.ordered_days == self._parent.ordered_days,
-            "route_ids_by_day_unchanged": (
-                child.route_ids_by_day == self._parent.route_ids_by_day
-            ),
+            "route_ids_by_day_unchanged": (child.route_ids_by_day == self._parent.route_ids_by_day),
             "route_legs_unchanged": child_route_legs == parent_route_legs,
             "schedule_accounting_unchanged": schedule_invariant,
         }
@@ -772,9 +726,7 @@ class EvaluatedStopRoleCompiler:
                 },
             },
             "target_stop_ids": sorted(change.stop_id for change in diff.role_changes),
-            "affected_days": sorted(
-                {change.day for change in diff.role_changes if change.day is not None}
-            ),
+            "affected_days": sorted({change.day for change in diff.role_changes if change.day is not None}),
             "parent_role_states": _role_states(self._parent),
             "child_role_states": _role_states(child),
             "parent_schedule": parent_schedule,
@@ -843,8 +795,7 @@ class EvaluatedStopTimeWindowCompiler:
         if not operations:
             raise WorkspaceError("draft_is_empty")
         stop_lookup = {
-            str(stop.get("stop_id") or stop.get("poi_id") or ""): dict(stop)
-            for stop in self._parent.selected_stops
+            str(stop.get("stop_id") or stop.get("poi_id") or ""): dict(stop) for stop in self._parent.selected_stops
         }
         if not stop_lookup or any(not stop_id for stop_id in stop_lookup):
             raise WorkspaceError("draft_parent_time_window_invalid", 409)
@@ -866,9 +817,7 @@ class EvaluatedStopTimeWindowCompiler:
             if target in seen_targets:
                 raise WorkspaceError("draft_conflicting_attribute_edits", 409)
             seen_targets.add(target)
-            constraint = _canonical_time_window_parameters(
-                operation.get("parameters")
-            )
+            constraint = _canonical_time_window_parameters(operation.get("parameters"))
             if stop_lookup[target].get("time_window_constraint") == constraint:
                 raise WorkspaceError("draft_no_effect", 409)
             changed_stops[target]["time_window_constraint"] = constraint
@@ -891,12 +840,9 @@ class EvaluatedStopTimeWindowCompiler:
         request_hash = stable_content_hash(request_seed)
         source_request_id = f"w4r_time_window_{request_hash}"
         source_run_id = f"w4r_time_window_run_{request_hash}"
-        child_plan_id = (
-            f"plan_{stable_content_hash({**request_seed, 'source_run_id': source_run_id})}"
-        )
+        child_plan_id = f"plan_{stable_content_hash({**request_seed, 'source_run_id': source_run_id})}"
         selected_stops = tuple(
-            changed_stops[str(stop.get("stop_id") or stop.get("poi_id") or "")]
-            for stop in self._parent.selected_stops
+            changed_stops[str(stop.get("stop_id") or stop.get("poi_id") or "")] for stop in self._parent.selected_stops
         )
         child = replace(
             self._parent,
@@ -949,9 +895,7 @@ class EvaluatedStopTimeWindowCompiler:
             reference_plan=self._parent,
         )
         certificate = evaluator.evaluate_final_plan(child, planner_run=planner_run)
-        parent_schedule = evaluator.evaluate_time_window_schedule_accounting(
-            self._parent
-        )
+        parent_schedule = evaluator.evaluate_time_window_schedule_accounting(self._parent)
         child_schedule = evaluator.evaluate_time_window_schedule_accounting(child)
         schedule_payload = {
             "schema_version": "evaluated-time-window-schedule-impact-v1",
@@ -980,16 +924,8 @@ class EvaluatedStopTimeWindowCompiler:
                     "test_only": 0.0,
                 },
             },
-            "affected_days": sorted(
-                {
-                    change.day
-                    for change in diff.time_window_changes
-                    if change.day is not None
-                }
-            ),
-            "target_stop_ids": sorted(
-                change.stop_id for change in diff.time_window_changes
-            ),
+            "affected_days": sorted({change.day for change in diff.time_window_changes if change.day is not None}),
+            "target_stop_ids": sorted(change.stop_id for change in diff.time_window_changes),
             "parent": parent_schedule,
             "child": child_schedule,
         }
@@ -1037,11 +973,7 @@ def _validate_parent_role_record(stop: dict[str, Any]) -> None:
         if source not in {None, "unavailable"}:
             raise WorkspaceError("draft_parent_role_invalid", 409)
         return
-    if (
-        not isinstance(role, str)
-        or role not in ALL_STOP_ROLES
-        or source != ROLE_SOURCE
-    ):
+    if not isinstance(role, str) or role not in ALL_STOP_ROLES or source != ROLE_SOURCE:
         raise WorkspaceError("draft_parent_role_invalid", 409)
 
 
@@ -1049,9 +981,7 @@ def _role_constraints_by_target(
     plan: PlanArtifactV2,
 ) -> dict[str, tuple[Any, ...]]:
     try:
-        constraints = active_owned_constraints(
-            tuple(dict(record) for record in plan.owned_constraints)
-        )
+        constraints = active_owned_constraints(tuple(dict(record) for record in plan.owned_constraints))
     except Exception as exc:
         raise WorkspaceError("draft_parent_role_constraint_invalid", 409) from exc
     result: dict[str, list[Any]] = {}
@@ -1061,10 +991,7 @@ def _role_constraints_by_target(
             or constraint.relation.strip().lower() not in _ROLE_RELATIONS
         ):
             continue
-        if (
-            not isinstance(constraint.value, str)
-            or constraint.value not in ALL_STOP_ROLES
-        ):
+        if not isinstance(constraint.value, str) or constraint.value not in ALL_STOP_ROLES:
             raise WorkspaceError("draft_parent_role_constraint_invalid", 409)
         result.setdefault(constraint.target_id, []).append(constraint)
     return {target: tuple(rows) for target, rows in result.items()}
@@ -1078,11 +1005,15 @@ def _enforce_role_constraints(
     for constraint in constraints:
         if constraint.value == role:
             continue
-        if constraint.strength in {
-            ConstraintStrength.LOCKED,
-            ConstraintStrength.BOOKED,
-            ConstraintStrength.HARD,
-        } or not constraint.can_relax():
+        if (
+            constraint.strength
+            in {
+                ConstraintStrength.LOCKED,
+                ConstraintStrength.BOOKED,
+                ConstraintStrength.HARD,
+            }
+            or not constraint.can_relax()
+        ):
             raise WorkspaceError("role_edit_permission_required", 409)
 
 
@@ -1096,20 +1027,14 @@ def _role_states(plan: PlanArtifactV2) -> list[dict[str, Any]]:
                 "stop_id": stop_id,
                 "day": stop.get("day"),
                 "itinerary_role": role,
-                "itinerary_role_source": (
-                    ROLE_SOURCE if role is not None else "unavailable"
-                ),
+                "itinerary_role_source": (ROLE_SOURCE if role is not None else "unavailable"),
             }
         )
     return states
 
 
 def _accounting_without_identity(value: dict[str, Any]) -> dict[str, Any]:
-    return {
-        key: item
-        for key, item in value.items()
-        if key not in {"plan_id", "plan_content_hash", "content_hash"}
-    }
+    return {key: item for key, item in value.items() if key not in {"plan_id", "plan_content_hash", "content_hash"}}
 
 
 def _canonical_time_window_parameters(parameters: Any) -> dict[str, Any]:
@@ -1124,11 +1049,7 @@ def _canonical_time_window_parameters(parameters: Any) -> dict[str, Any]:
         (earliest is None and latest is None)
         or not _valid_clock(earliest)
         or not _valid_clock(latest)
-        or (
-            earliest is not None
-            and latest is not None
-            and _clock_minutes(earliest) > _clock_minutes(latest)
-        )
+        or (earliest is not None and latest is not None and _clock_minutes(earliest) > _clock_minutes(latest))
     ):
         raise WorkspaceError("invalid_stop_time_window", 422)
     return {
@@ -1147,11 +1068,7 @@ def _configured_clock_minute(value: Any) -> float:
         if not _valid_clock(value):
             raise WorkspaceError("draft_evaluator_time_window_config_invalid", 409)
         return float(_clock_minutes(value))
-    if (
-        not isinstance(value, (int, float))
-        or not isfinite(value)
-        or not 0 <= float(value) < 1440
-    ):
+    if not isinstance(value, (int, float)) or not isfinite(value) or not 0 <= float(value) < 1440:
         raise WorkspaceError("draft_evaluator_time_window_config_invalid", 409)
     return float(value)
 
@@ -1203,8 +1120,7 @@ def _validate_parent_time_window_record(stop: dict[str, Any]) -> None:
 
 def _valid_clock(value: Any) -> bool:
     return value is None or (
-        isinstance(value, str)
-        and re.fullmatch(r"(?:[01][0-9]|2[0-3]):[0-5][0-9]", value) is not None
+        isinstance(value, str) and re.fullmatch(r"(?:[01][0-9]|2[0-3]):[0-5][0-9]", value) is not None
     )
 
 
@@ -1273,11 +1189,7 @@ def _validate_parent_duration_record(stop: dict[str, Any]) -> None:
         value = stop.get(key)
         if value is None:
             continue
-        if (
-            isinstance(value, bool)
-            or not isinstance(value, int)
-            or not 15 <= value <= 480
-        ):
+        if isinstance(value, bool) or not isinstance(value, int) or not 15 <= value <= 480:
             raise WorkspaceError("draft_parent_duration_invalid", 409)
         scalar_values.append(value)
     if len(set(scalar_values)) > 1:
@@ -1336,11 +1248,7 @@ def _ordered_stop_ids(plan: PlanArtifactV2) -> dict[int, list[str]]:
     for row in plan.ordered_days:
         day = row.get("day")
         stop_ids = row.get("stop_ids")
-        if (
-            isinstance(day, bool)
-            or not isinstance(day, int)
-            or not isinstance(stop_ids, (list, tuple))
-        ):
+        if isinstance(day, bool) or not isinstance(day, int) or not isinstance(stop_ids, (list, tuple)):
             raise WorkspaceError("draft_parent_order_invalid", 409)
         values = [str(stop_id) for stop_id in stop_ids]
         if not values or any(not stop_id or stop_id in seen for stop_id in values):
@@ -1359,10 +1267,7 @@ def _reordered_stop_records(
     ordered_by_day: dict[int, list[str]],
     affected_days: set[int],
 ) -> tuple[dict[str, Any], ...]:
-    lookup = {
-        str(stop.get("stop_id") or stop.get("poi_id") or ""): dict(stop)
-        for stop in parent.selected_stops
-    }
+    lookup = {str(stop.get("stop_id") or stop.get("poi_id") or ""): dict(stop) for stop in parent.selected_stops}
     if not lookup or any(not stop_id for stop_id in lookup):
         raise WorkspaceError("draft_parent_order_invalid", 409)
     result: list[dict[str, Any]] = []

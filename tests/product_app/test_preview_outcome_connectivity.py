@@ -46,13 +46,22 @@ const expected = {...row.before, parent_plan_content_hash:row.response.proposal.
 """
 
 
-@pytest.mark.parametrize("case,expected_state", [
-    ("missing_route", "blocked"), ("keep_only", "ineligible"), ("keep_replace", "eligible"),
-])
+@pytest.mark.parametrize(
+    "case,expected_state",
+    [
+        ("missing_route", "blocked"),
+        ("keep_only", "ineligible"),
+        ("keep_replace", "eligible"),
+    ],
+)
 def test_actual_api_outcome_passes_strict_website_contract(tmp_path, case, expected_state):
-    app = create_product_app(repository_root=ROOT, registry_path=ROOT / "configs/product_app_registry.json",
-                             state_root=tmp_path / "state", additional_allowed_authorities=("testserver",),
-                             copilot=DeterministicCopilotAdapter())
+    app = create_product_app(
+        repository_root=ROOT,
+        registry_path=ROOT / "configs/product_app_registry.json",
+        state_root=tmp_path / "state",
+        additional_allowed_authorities=("testserver",),
+        copilot=DeterministicCopilotAdapter(),
+    )
     with TestClient(app) as client:
         created = client.post("/api/sessions", json={"run_id": RUN})
         assert created.status_code == 200, created.text
@@ -85,8 +94,14 @@ def test_actual_api_outcome_passes_strict_website_contract(tmp_path, case, expec
         preview = client.post(f"{url}/preview", headers=headers, json=request)
         assert preview.status_code == 200, preview.text
         response = preview.json()
-        row = {"before": session, "workspace": data["workspace"], "draft_io": exact_requests, "preview_request": request,
-               "response": response, "expected_state": expected_state}
+        row = {
+            "before": session,
+            "workspace": data["workspace"],
+            "draft_io": exact_requests,
+            "preview_request": request,
+            "response": response,
+            "expected_state": expected_state,
+        }
         path = tmp_path / "exact_api_io.json"
         path.write_text(json.dumps(row, indent=2), encoding="utf-8")
         assert response["proposal"]["state"] == expected_state

@@ -23,9 +23,7 @@ assert SPEC and SPEC.loader
 live = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(live)
 VERIFY_SCRIPT = ROOT / "scripts" / "verify_e2e1_live_copilot_chat.py"
-VERIFY_SPEC = importlib.util.spec_from_file_location(
-    "verify_e2e1_live_copilot_chat", VERIFY_SCRIPT
-)
+VERIFY_SPEC = importlib.util.spec_from_file_location("verify_e2e1_live_copilot_chat", VERIFY_SCRIPT)
 assert VERIFY_SPEC and VERIFY_SPEC.loader
 verifier = importlib.util.module_from_spec(VERIFY_SPEC)
 VERIFY_SPEC.loader.exec_module(verifier)
@@ -55,7 +53,9 @@ def _current_service_context() -> dict[str, object]:
     with TemporaryDirectory(prefix="copilot-context-unit-") as directory:
         service = ProductService(registry, Path(directory), copilot=DeterministicCopilotAdapter())
         session, _, _ = service.create_session(registry.default.run_id)
-        service.workspace.select(session, {"expected_revision": 0, "selected_day": 5, "selected_stop_id": verifier.TARGET})
+        service.workspace.select(
+            session, {"expected_revision": 0, "selected_day": 5, "selected_stop_id": verifier.TARGET}
+        )
         context = json.loads(json.dumps(service.copilot_context(session).as_dict()))
     context["session_id"] = SESSION_ID
     return context
@@ -101,9 +101,7 @@ def _request(context: dict[str, object] | None = None) -> dict[str, object]:
 
 
 def _record(request: dict[str, object] | None = None) -> dict[str, object]:
-    request_text = json.dumps(
-        request or _request(), ensure_ascii=False, sort_keys=True, separators=(",", ":")
-    )
+    request_text = json.dumps(request or _request(), ensure_ascii=False, sort_keys=True, separators=(",", ":"))
     response_text = json.dumps(
         {
             "status": "completed",
@@ -220,9 +218,7 @@ def test_live_runner_requires_explicit_billed_confirmation(tmp_path: Path) -> No
         live.run_live(output_dir=tmp_path / "evidence", confirmed=False)
 
 
-def test_live_runner_refuses_an_occupied_explicit_port(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_live_runner_refuses_an_occupied_explicit_port(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(live, "_port_available", lambda port: False)
     with pytest.raises(live.LiveE2E1Error, match="e2e1_live_port_8127_occupied"):
         live.run_live(output_dir=tmp_path / "evidence", confirmed=True, port=8127)
@@ -233,12 +229,8 @@ def test_live_transport_binds_exact_authorized_request_and_one_attempt() -> None
     assert authorization["workspace_context"] == _context()
     assert authorization["request_body_sha256"] == _record()["request_body_sha256"]
     assert authorization["output_schema_current"] is True
-    assert authorization["text"]["format"]["schema"] == live.to_strict_json_schema(
-        live.OpenAIInterpretationSchemaV2
-    )
-    assert authorization["text"]["format"]["schema"] != (
-        live.OpenAIInterpretationSchemaV2.model_json_schema()
-    )
+    assert authorization["text"]["format"]["schema"] == live.to_strict_json_schema(live.OpenAIInterpretationSchemaV2)
+    assert authorization["text"]["format"]["schema"] != (live.OpenAIInterpretationSchemaV2.model_json_schema())
 
     forged_request = _request()
     forged_request["instructions"] = str(forged_request["instructions"]) + " extra"
@@ -249,9 +241,7 @@ def test_live_transport_binds_exact_authorized_request_and_one_attempt() -> None
 
 
 def test_live_transport_guard_authorizes_only_one_provider_attempt() -> None:
-    request_body = json.dumps(
-        _request(), ensure_ascii=False, sort_keys=True, separators=(",", ":")
-    ).encode("utf-8")
+    request_body = json.dumps(_request(), ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode("utf-8")
     validate = live._one_provider_attempt_validator()
     validate(request_body)
     with pytest.raises(live.LiveE2E1Error, match="e2e1_live_attempt_cap_exceeded"):
@@ -281,7 +271,12 @@ def test_combined_live_profile_is_exact_and_one_attempt_only() -> None:
 
 
 def test_combined_verifier_binds_every_clause_and_local_highlights(recorded_runtime_inputs) -> None:
-    interpretation = json.loads((recorded_runtime_inputs / "results/e2e/combined_chat_final_regression_20261007_v4/exact_io/combined_fake_complete.json").read_text())["validated_local_output"]
+    interpretation = json.loads(
+        (
+            recorded_runtime_inputs
+            / "results/e2e/combined_chat_final_regression_20261007_v4/exact_io/combined_fake_complete.json"
+        ).read_text()
+    )["validated_local_output"]
     raw = copy.deepcopy(interpretation)
     raw["highlights"] = {"day_ids": [], "stop_ids": [], "segment_ids": [], "candidate_ids": []}
     verifier._verify_approved_interpretation(raw, interpretation, prompt=live.COMBINED_PROMPT)
@@ -302,7 +297,12 @@ def test_combined_verifier_binds_every_clause_and_local_highlights(recorded_runt
 
 
 def test_combined_runtime_verifier_checks_final_evaluation_and_optimizer(recorded_runtime_inputs) -> None:
-    proposal = json.loads((recorded_runtime_inputs / "results/e2e/combined_chat_browser_20261007_v3/conversation/combined_chat/preview_response.json").read_text())["proposal"]
+    proposal = json.loads(
+        (
+            recorded_runtime_inputs
+            / "results/e2e/combined_chat_browser_20261007_v3/conversation/combined_chat/preview_response.json"
+        ).read_text()
+    )["proposal"]
     receipt = verifier._verify_runtime_execution(proposal)
     assert receipt["optimizer_execution"]["child_plan_id"] != receipt["child_plan_id"]
     for mutation in ("optimizer", "duration", "operations", "evaluation"):
@@ -311,7 +311,9 @@ def test_combined_runtime_verifier_checks_final_evaluation_and_optimizer(recorde
         if mutation == "optimizer":
             runtime["optimizer_execution"]["evaluation_executed"] = False
         elif mutation == "duration":
-            next(stop for stop in runtime["child_plan"]["selected_stops"] if stop["stop_id"] == "griffith_observatory")["visit_duration_minutes"] = 91
+            next(stop for stop in runtime["child_plan"]["selected_stops"] if stop["stop_id"] == "griffith_observatory")[
+                "visit_duration_minutes"
+            ] = 91
         elif mutation == "operations":
             runtime["operations"].pop()
         else:
@@ -325,8 +327,15 @@ def test_combined_paid_bundle_has_no_leftover_single_operation_assumption(record
     root = recorded_runtime_inputs / "results/e2e/combined_paid_website_20261007_v1"
     lifecycle = json.loads((root / "run_lifecycle.json").read_text())
     trace = json.loads((root / live.SCENARIO / "trace.json").read_text())
-    manifest = live.build_manifest(root, command=lifecycle["command"], pytest_exit_code=0,
-        health={}, trace=trace, base_url=lifecycle["base_url"], source_inputs=[])
+    manifest = live.build_manifest(
+        root,
+        command=lifecycle["command"],
+        pytest_exit_code=0,
+        health={},
+        trace=trace,
+        base_url=lifecycle["base_url"],
+        source_inputs=[],
+    )
     with pytest.raises(verifier.LiveE2E1VerificationError, match="e2e1_live_provider_controls_invalid"):
         verifier._verify_bundle(root, manifest)
     # Retain the old bytes and check semantics under their pinned old contract.
@@ -335,21 +344,28 @@ def test_combined_paid_bundle_has_no_leftover_single_operation_assumption(record
     recorded = json.loads(json.loads(original)["records"][0]["request_body_utf8"])
     assert _sha256_text(recorded["instructions"]) == "2b0d9433261534d0a21225f53110e77b1fac66f3af277cebaa2a20fcc1ba8041"
     monkeypatch.setattr(verifier, "DEVELOPER_INSTRUCTIONS", recorded["instructions"])
-    monkeypatch.setattr(verifier, "EXPECTED_NORMALIZED_CONTEXT_SHA256", "f350c66602a66de56de9539191602d506433dea56ae6e43496323a7bdd300e2a")
+    monkeypatch.setattr(
+        verifier,
+        "EXPECTED_NORMALIZED_CONTEXT_SHA256",
+        "f350c66602a66de56de9539191602d506433dea56ae6e43496323a7bdd300e2a",
+    )
     verifier._verify_bundle(root, manifest)
     assert provider_path.read_bytes() == original
 
 
 def test_live_cost_and_browser_failure_gate_are_exact() -> None:
-    assert live._cost(
-        {
-            "input_tokens": 4_238,
-            "cached_input_tokens": 3_800,
-            "uncached_input_tokens": 438,
-            "output_tokens": 266,
-            "total_tokens": 4_504,
-        }
-    ) == "0.0018105"
+    assert (
+        live._cost(
+            {
+                "input_tokens": 4_238,
+                "cached_input_tokens": 3_800,
+                "uncached_input_tokens": 438,
+                "output_tokens": 266,
+                "total_tokens": 4_504,
+            }
+        )
+        == "0.0018105"
+    )
     assert live._browser_transport_gate(3, []) == 3
     with pytest.raises(live.LiveE2E1Error, match="e2e1_live_attempt_cap_invalid"):
         live._browser_transport_gate(0, [])
@@ -542,9 +558,7 @@ def test_replay_requires_zero_current_calls_and_labeled_historical_usage() -> No
         ("session.txt", "X-SESSION-TOKEN: real-secret", "e2e1_live_session_token_persisted"),
     ],
 )
-def test_live_verifier_detects_text_secrets(
-    tmp_path: Path, name: str, text: str, code: str
-) -> None:
+def test_live_verifier_detects_text_secrets(tmp_path: Path, name: str, text: str, code: str) -> None:
     (tmp_path / name).write_text(text, encoding="utf-8")
     with pytest.raises(verifier.LiveE2E1VerificationError, match=code):
         verifier._verify_text_security(tmp_path)
@@ -585,22 +599,84 @@ def _runtime_proposal() -> dict[str, object]:
     def hashed(record):
         return {**record, "content_hash": verifier._artifact_hash(record)}
 
-    request = {"request_id": "request_current", "confirmed_constraints": {"must_delete": [verifier.TARGET], "must_include": [verifier.CANDIDATE]}}
-    child = hashed({"plan_id": "plan_child", "parent_plan_id": "plan_parent", "source_run_id": "run_current", "planning_request_id": "request_current", "context_snapshot_id": "context_current", "sequence": [verifier.CANDIDATE], "day_assignments": {verifier.CANDIDATE: 5}})
-    planner = hashed({"method_executed": "deterministic_context_aware_heuristic", "execution_status": "COMPLETED", "result_plan_id": child["plan_id"], "run_id": "run_current", "planning_request_id": "request_current", "context_snapshot_id": "context_current"})
-    certificate = hashed({"certificate_id": "cert_current", "plan_id": child["plan_id"], "plan_content_hash": child["content_hash"], "comparison_eligibility": "eligible", "evaluation_status": "PASSED", "source_run_id": "run_current", "evaluated_at": "2026-09-05T12:00:01+00:00", "route_validation": {"context_snapshot_id": "context_current"}})
+    request = {
+        "request_id": "request_current",
+        "confirmed_constraints": {"must_delete": [verifier.TARGET], "must_include": [verifier.CANDIDATE]},
+    }
+    child = hashed(
+        {
+            "plan_id": "plan_child",
+            "parent_plan_id": "plan_parent",
+            "source_run_id": "run_current",
+            "planning_request_id": "request_current",
+            "context_snapshot_id": "context_current",
+            "sequence": [verifier.CANDIDATE],
+            "day_assignments": {verifier.CANDIDATE: 5},
+        }
+    )
+    planner = hashed(
+        {
+            "method_executed": "deterministic_context_aware_heuristic",
+            "execution_status": "COMPLETED",
+            "result_plan_id": child["plan_id"],
+            "run_id": "run_current",
+            "planning_request_id": "request_current",
+            "context_snapshot_id": "context_current",
+        }
+    )
+    certificate = hashed(
+        {
+            "certificate_id": "cert_current",
+            "plan_id": child["plan_id"],
+            "plan_content_hash": child["content_hash"],
+            "comparison_eligibility": "eligible",
+            "evaluation_status": "PASSED",
+            "source_run_id": "run_current",
+            "evaluated_at": "2026-09-05T12:00:01+00:00",
+            "route_validation": {"context_snapshot_id": "context_current"},
+        }
+    )
     diff = {"diff_id": "diff_current", "parent_plan_id": "plan_parent", "child_plan_id": child["plan_id"]}
-    proposal = {"execution_mode": "deterministic_repair_pipeline", "compiled_request": {"source_request_id": "request_current"}, "parent_plan_id": "plan_parent", "child_plan_id": child["plan_id"], "child_plan_content_hash": child["content_hash"], "certificate_id": certificate["certificate_id"], "certificate_content_hash": certificate["content_hash"], "diff_id": diff["diff_id"], "diff_content_hash": verifier._artifact_hash(diff)}
+    proposal = {
+        "execution_mode": "deterministic_repair_pipeline",
+        "compiled_request": {"source_request_id": "request_current"},
+        "parent_plan_id": "plan_parent",
+        "child_plan_id": child["plan_id"],
+        "child_plan_content_hash": child["content_hash"],
+        "certificate_id": certificate["certificate_id"],
+        "certificate_content_hash": certificate["content_hash"],
+        "diff_id": diff["diff_id"],
+        "diff_content_hash": verifier._artifact_hash(diff),
+    }
     proposal["runtime_execution"] = {
-        "schema_version": "runtime-repair-execution-v1", "execution_id": "execution_" + "a" * 32,
-        "started_at": "2026-09-05T12:00:00+00:00", "completed_at": "2026-09-05T12:00:02+00:00",
-        "request_id": request["request_id"], "request_content_hash": verifier._artifact_hash(request),
-        "parent_plan_id": "plan_parent", "planner_run": planner, "repair_request": request,
-        "child_plan": child, "plan_diff": diff, "evaluation_certificate": certificate,
-        "child_plan_id": child["plan_id"], "child_plan_content_hash": child["content_hash"],
-        "evaluation_id": certificate["certificate_id"], "evaluation_content_hash": certificate["content_hash"],
-        "evaluation_executed": True, "evaluator": "PlanEvaluator.evaluate_final_plan",
-        "planner_trace": {"request_id": request["request_id"], "planner_run": planner, "child_plan_id": child["plan_id"], "diff_id": diff["diff_id"], "failure_reasons": [], "decision_records": [{"day": 5, "selected": True, "feasible": True, "stop_sequence": [verifier.CANDIDATE], "violations": []}]},
+        "schema_version": "runtime-repair-execution-v1",
+        "execution_id": "execution_" + "a" * 32,
+        "started_at": "2026-09-05T12:00:00+00:00",
+        "completed_at": "2026-09-05T12:00:02+00:00",
+        "request_id": request["request_id"],
+        "request_content_hash": verifier._artifact_hash(request),
+        "parent_plan_id": "plan_parent",
+        "planner_run": planner,
+        "repair_request": request,
+        "child_plan": child,
+        "plan_diff": diff,
+        "evaluation_certificate": certificate,
+        "child_plan_id": child["plan_id"],
+        "child_plan_content_hash": child["content_hash"],
+        "evaluation_id": certificate["certificate_id"],
+        "evaluation_content_hash": certificate["content_hash"],
+        "evaluation_executed": True,
+        "evaluator": "PlanEvaluator.evaluate_final_plan",
+        "planner_trace": {
+            "request_id": request["request_id"],
+            "planner_run": planner,
+            "child_plan_id": child["plan_id"],
+            "diff_id": diff["diff_id"],
+            "failure_reasons": [],
+            "decision_records": [
+                {"day": 5, "selected": True, "feasible": True, "stop_sequence": [verifier.CANDIDATE], "violations": []}
+            ],
+        },
     }
     return proposal
 
@@ -628,20 +704,36 @@ def test_live_gate_rejects_registered_plan_and_binds_actual_runtime_artifacts() 
 
 
 def test_live_metrics_use_evaluated_child_identity_and_exact_visible_values() -> None:
-    proposal = {"child_plan_id": "child", "child_plan_content_hash": "child_hash",
-        "certificate_id": "certificate", "eligibility": "eligible",
-        "geography_plan": {"validated_legs": {"features": [
-            {"properties": {"duration_s": 120}}, {"properties": {"duration_s": 30}}]}},
-        "repair": {"tradeoffs": {"preservation_rate": .875, "weather_risk_delta": None,
-                                   "weighted_edit_cost": 6}}}
+    proposal = {
+        "child_plan_id": "child",
+        "child_plan_content_hash": "child_hash",
+        "certificate_id": "certificate",
+        "eligibility": "eligible",
+        "geography_plan": {
+            "validated_legs": {"features": [{"properties": {"duration_s": 120}}, {"properties": {"duration_s": 30}}]}
+        },
+        "repair": {"tradeoffs": {"preservation_rate": 0.875, "weather_risk_delta": None, "weighted_edit_cost": 6}},
+    }
     identity = {"planId": "child", "planContentHash": "child_hash"}
-    snapshot = {"scope": {**identity, "evaluationId": "certificate"}, "metrics": [
-        {"scope": dict(identity), "label": label, "value": value} for label, value in (
-            ("Route time", "2.5 min"), ("Contextual risk", "Unavailable"),
-            ("Preservation", "88%"), ("Edit cost", "6"), ("Certificate", "eligible"))]}
+    snapshot = {
+        "scope": {**identity, "evaluationId": "certificate"},
+        "metrics": [
+            {"scope": dict(identity), "label": label, "value": value}
+            for label, value in (
+                ("Route time", "2.5 min"),
+                ("Contextual risk", "Unavailable"),
+                ("Preservation", "88%"),
+                ("Edit cost", "6"),
+                ("Certificate", "eligible"),
+            )
+        ],
+    }
     verifier._verify_visible_metrics(snapshot, proposal)
-    for field, value in (("planId", "parent"), ("planContentHash", "parent_hash"),
-                         ("evaluationId", "foreign_certificate")):
+    for field, value in (
+        ("planId", "parent"),
+        ("planContentHash", "parent_hash"),
+        ("evaluationId", "foreign_certificate"),
+    ):
         forged = copy.deepcopy(snapshot)
         forged["scope"][field] = value
         with pytest.raises(verifier.LiveE2E1VerificationError, match="metrics_identity_mismatch"):
@@ -658,7 +750,18 @@ def test_live_metrics_use_evaluated_child_identity_and_exact_visible_values() ->
 
 
 def test_independent_geometry_digest_ignores_key_order_but_preserves_coordinates() -> None:
-    first = {"validated_legs": {"type": "FeatureCollection", "features": [{"type": "Feature", "geometry": {"type": "LineString", "coordinates": [[-122.0, 37.0], [-121.1, 36.1]]}, "properties": {"plan_id": "child", "role": "draft_preview"}}]}}
+    first = {
+        "validated_legs": {
+            "type": "FeatureCollection",
+            "features": [
+                {
+                    "type": "Feature",
+                    "geometry": {"type": "LineString", "coordinates": [[-122.0, 37.0], [-121.1, 36.1]]},
+                    "properties": {"plan_id": "child", "role": "draft_preview"},
+                }
+            ],
+        }
+    }
     reordered = json.loads(json.dumps(first, sort_keys=True))
     reordered["validated_legs"]["features"][0]["properties"]["role"] = "active"
     digest = verifier._independent_geometry_hash(first)
@@ -673,7 +776,15 @@ def test_failed_browser_run_preserves_false_status_and_observed_exact_io(tmp_pat
     exact_io = {"request_body_utf8": "exact user input", "response_body_utf8": "observed response"}
     live._write_json(scenario / "product_copilot_http_io.json", exact_io)
     live._write_json(scenario / "browser_failure.json", {"assertions_passed": False, "message": "map mismatch"})
-    live._preserve_failed_run(tmp_path, exit_code=1, command=["pytest"], health={}, source_inputs=[], execution_mode="recorded_exact_output_replay", current_records=[])
+    live._preserve_failed_run(
+        tmp_path,
+        exit_code=1,
+        command=["pytest"],
+        health={},
+        source_inputs=[],
+        execution_mode="recorded_exact_output_replay",
+        current_records=[],
+    )
     trace = json.loads((tmp_path / "failure_trace.json").read_text(encoding="utf-8"))
     assert trace["assertions_passed"] is False
     assert trace["current_provider_transport_records"] == 0

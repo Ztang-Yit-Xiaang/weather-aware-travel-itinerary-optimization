@@ -70,10 +70,7 @@ def build_package(root: Path) -> Path:
                 "sources": {
                     "protomaps": {
                         "type": "vector",
-                        "url": (
-                            "pmtiles://http://127.0.0.1:8080/data/"
-                            "california-coast-v1.pmtiles"
-                        ),
+                        "url": ("pmtiles://http://127.0.0.1:8080/data/california-coast-v1.pmtiles"),
                         "attribution": (
                             'Protomaps | <a href="https://www.openstreetmap.org/copyright" '
                             'target="_blank" rel="noopener">'
@@ -134,18 +131,11 @@ def build_package(root: Path) -> Path:
         "maxzoom": 15,
         "generated_at": "2026-08-04T00:00:00Z",
         "extraction_command": (
-            "pmtiles extract SOURCE data/california-coast-v1.pmtiles "
-            "--bbox=-123.0,33.5,-117.5,38.5 --maxzoom=15"
+            "pmtiles extract SOURCE data/california-coast-v1.pmtiles --bbox=-123.0,33.5,-117.5,38.5 --maxzoom=15"
         ),
-        "header_json_sha256": pmtiles_evidence_sha256(
-            "header_json", PMTILES_EVIDENCE["header_json"]
-        ),
-        "metadata_json_sha256": pmtiles_evidence_sha256(
-            "metadata_json", PMTILES_EVIDENCE["metadata_json"]
-        ),
-        "verify_output_sha256": pmtiles_evidence_sha256(
-            "verify_output", PMTILES_EVIDENCE["verify_output"]
-        ),
+        "header_json_sha256": pmtiles_evidence_sha256("header_json", PMTILES_EVIDENCE["header_json"]),
+        "metadata_json_sha256": pmtiles_evidence_sha256("metadata_json", PMTILES_EVIDENCE["metadata_json"]),
+        "verify_output_sha256": pmtiles_evidence_sha256("verify_output", PMTILES_EVIDENCE["verify_output"]),
         "tool_versions": {
             "maplibre-gl": "5.24.0",
             "pmtiles-js": "4.4.1",
@@ -168,9 +158,7 @@ def build_package(root: Path) -> Path:
 
 
 def validate_package(validator: ModuleType, asset_root: Path) -> dict[str, object]:
-    def runner(
-        command: str, archive: Path, samples: list[tuple[int, int, int]]
-    ) -> dict[str, bytes]:
+    def runner(command: str, archive: Path, samples: list[tuple[int, int, int]]) -> dict[str, bytes]:
         assert command == "pmtiles"
         assert archive == asset_root / "data" / "california-coast-v1.pmtiles"
         assert samples
@@ -218,9 +206,7 @@ def test_preflight_rejects_archive_changed_after_provenance_was_written(tmp_path
         "license_notices",
     ],
 )
-def test_preflight_rejects_incomplete_source_and_license_provenance(
-    tmp_path: Path, missing_field: str
-) -> None:
+def test_preflight_rejects_incomplete_source_and_license_provenance(tmp_path: Path, missing_field: str) -> None:
     validator = load_validator()
     build_package(tmp_path)
     provenance_path = tmp_path / "provenance.json"
@@ -233,9 +219,7 @@ def test_preflight_rejects_incomplete_source_and_license_provenance(
 
 
 @pytest.mark.parametrize("field", ["upstream_blake3", "upstream_packages"])
-def test_preflight_rejects_unpinned_upstream_provenance(
-    tmp_path: Path, field: str
-) -> None:
+def test_preflight_rejects_unpinned_upstream_provenance(tmp_path: Path, field: str) -> None:
     validator = load_validator()
     build_package(tmp_path)
     provenance_path = tmp_path / "provenance.json"
@@ -287,9 +271,7 @@ def test_verify_evidence_hash_ignores_cli_timestamp_and_duration() -> None:
     first = b"2026/08/04 19:26:19 verify.go:169: Completed verify in 43.7175ms.\n"
     second = b"2026/08/04 20:40:01 verify.go:169: Completed verify in 91.2ms.\n"
 
-    assert pmtiles_evidence_sha256("verify_output", first) == pmtiles_evidence_sha256(
-        "verify_output", second
-    )
+    assert pmtiles_evidence_sha256("verify_output", first) == pmtiles_evidence_sha256("verify_output", second)
 
 
 def test_pmtiles_cli_failure_is_fail_closed(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
@@ -322,7 +304,8 @@ def test_pmtiles_cli_requires_exact_version(
 
 
 def test_workspace_coordinate_discovery_is_read_only_across_historical_trip_contexts(
-    monkeypatch: pytest.MonkeyPatch, tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
 ) -> None:
     from itinerary_system.product_app.registry import ProductRunRegistry
     from itinerary_system.product_app.service import ProductService
@@ -345,11 +328,11 @@ def test_workspace_coordinate_discovery_is_read_only_across_historical_trip_cont
         for name in ("parent", "child"):
             plan = workspace["map"][name]
             expected.extend((float(stop["longitude"]), float(stop["latitude"])) for stop in plan["stops"])
-            expected.extend((float(point[1]), float(point[0]))
-                            for segment in plan["segments"] for point in segment["coordinates"])
+            expected.extend(
+                (float(point[1]), float(point[0])) for segment in plan["segments"] for point in segment["coordinates"]
+            )
     assert expected
-    before = {path.relative_to(tmp_path).as_posix(): sha256(path)
-              for path in tmp_path.rglob("*") if path.is_file()}
+    before = {path.relative_to(tmp_path).as_posix(): sha256(path) for path in tmp_path.rglob("*") if path.is_file()}
     validator = load_validator()
 
     def supplied_registry(repository_root, config_path):
@@ -364,6 +347,5 @@ def test_workspace_coordinate_discovery_is_read_only_across_historical_trip_cont
     monkeypatch.setattr(validator, "ProductService", forbidden_mutable_service, raising=False)
     monkeypatch.setattr(ProductService, "__init__", forbidden_mutable_service)
     assert validator._workspace_coordinates(ROOT) == expected
-    after = {path.relative_to(tmp_path).as_posix(): sha256(path)
-             for path in tmp_path.rglob("*") if path.is_file()}
+    after = {path.relative_to(tmp_path).as_posix(): sha256(path) for path in tmp_path.rglob("*") if path.is_file()}
     assert after == before

@@ -61,9 +61,7 @@ def test_session_snapshot_never_persists_raw_token_and_restores_authenticated_st
     assert snapshot["schema_version"] == "product-session-snapshot-v1"
     assert snapshot["token_verifier"]["algorithm"] == "sha256-salted-v1"
     assert all(
-        token.encode() not in candidate.read_bytes()
-        for candidate in state_root.rglob("*")
-        if candidate.is_file()
+        token.encode() not in candidate.read_bytes() for candidate in state_root.rglob("*") if candidate.is_file()
     )
 
     restarted = WorkspaceStore(state_root)
@@ -80,18 +78,25 @@ def test_session_snapshot_never_persists_raw_token_and_restores_authenticated_st
         restarted.authenticate(session.session_id, "wrong-token")
 
 
-@pytest.mark.parametrize("proposal", [
-    {"state": "eligible", "certificate_id": "cert-a"},
-    {"state": "eligible", "child_plan_id": "", "geography_plan": {"plan_id": ""}},
-    {"state": "eligible", "child_plan_id": "child", "geography_plan": {}},
-    {"state": "eligible", "child_plan_id": "child", "geography_plan": {"plan_id": "foreign"}},
-    {"state": "ineligible", "child_plan_id": "child", "geography_plan": {"plan_id": "child"}},
-])
+@pytest.mark.parametrize(
+    "proposal",
+    [
+        {"state": "eligible", "certificate_id": "cert-a"},
+        {"state": "eligible", "child_plan_id": "", "geography_plan": {"plan_id": ""}},
+        {"state": "eligible", "child_plan_id": "child", "geography_plan": {}},
+        {"state": "eligible", "child_plan_id": "child", "geography_plan": {"plan_id": "foreign"}},
+        {"state": "ineligible", "child_plan_id": "child", "geography_plan": {"plan_id": "child"}},
+    ],
+)
 def test_partial_or_unbound_proposal_cannot_clear_shared_selection(tmp_path: Path, proposal) -> None:
     store = WorkspaceStore(tmp_path / "state")
     session, _ = store.create_session("run", "parent", 7)
-    selection = {"selected_day": 4, "selected_stop_id": "stop-a",
-                 "selected_segment_id": "leg-a", "selected_alternative_id": "option-a"}
+    selection = {
+        "selected_day": 4,
+        "selected_stop_id": "stop-a",
+        "selected_segment_id": "leg-a",
+        "selected_alternative_id": "option-a",
+    }
     store.select(session, {"expected_revision": 0, **selection})
     store.set_proposal(session, proposal, expected_revision=1)
     assert {key: getattr(session, key) for key in selection} == selection
@@ -188,9 +193,7 @@ def test_expired_snapshot_is_retained_without_authentication_or_active_capacity(
     expired, _ = store.create_session("run", "parent", 1)
     path = state_root / "sessions" / f"{expired.session_id}.json"
     payload = json.loads(path.read_text(encoding="utf-8"))
-    payload["session"]["last_accessed_at"] = (
-        datetime.now(UTC) - timedelta(hours=25)
-    ).isoformat()
+    payload["session"]["last_accessed_at"] = (datetime.now(UTC) - timedelta(hours=25)).isoformat()
     path.write_text(json.dumps(payload), encoding="utf-8")
 
     before = path.read_bytes()

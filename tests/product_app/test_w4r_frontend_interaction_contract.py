@@ -45,7 +45,7 @@ def test_select_and_edit_modes_have_keyboard_equivalent_controls() -> None:
     assert 'class="map-mode-switch"' not in source
     assert 'class="accessible-stop-list"' in source
     assert 'class="accessible-route-list"' in source
-    assert 'data-geo-route-leg=' in source
+    assert "data-geo-route-leg=" in source
     assert "function selectMapStop(selection)" in source
     assert "function selectRouteLeg(selection)" in source
     assert 'id="map-edit-button" type="button" aria-pressed="false"' in markup
@@ -53,7 +53,7 @@ def test_select_and_edit_modes_have_keyboard_equivalent_controls() -> None:
 
 def test_empty_map_click_is_exploratory_and_never_appends_a_draft() -> None:
     source = APP.read_text(encoding="utf-8")
-    create_pin = source[source.index("function createExploratoryPin"):]
+    create_pin = source[source.index("function createExploratoryPin") :]
     create_pin = create_pin[: create_pin.index("function cancelExploratoryPin")]
 
     assert 'validation_status: "raw_coordinate_only"' in create_pin
@@ -69,7 +69,7 @@ def test_empty_map_click_is_exploratory_and_never_appends_a_draft() -> None:
 
 def test_snap_preview_is_server_owned_non_persistent_and_confirmation_bounded() -> None:
     source = APP.read_text(encoding="utf-8")
-    snap = source[source.index("async function requestExploratorySnapPreview"):]
+    snap = source[source.index("async function requestExploratorySnapPreview") :]
     snap = snap[: snap.index("function refreshMapEditDialog")]
 
     assert "/map/snap-preview`" in snap

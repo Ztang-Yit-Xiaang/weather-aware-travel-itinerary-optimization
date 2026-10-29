@@ -150,9 +150,7 @@ def test_actual_api_duration_preview_passes_js_and_forged_variants_fail(
 
         ineligible_created = client.post("/api/sessions", json={}).json()
         ineligible_session = ineligible_created["session"]
-        ineligible_headers = {
-            "X-Session-Token": ineligible_created["mutation_token"]
-        }
+        ineligible_headers = {"X-Session-Token": ineligible_created["mutation_token"]}
         for target in ("sequoia_national_park", "kings_canyon_national_park"):
             ineligible_added = client.post(
                 f"/api/sessions/{ineligible_session['session_id']}/draft/operations",
@@ -232,13 +230,9 @@ def test_actual_api_duration_preview_passes_js_and_forged_variants_fail(
                         "run_id": ineligible_session["run_id"],
                         "revision": ineligible_session["revision"],
                         "accepted_plan_id": ineligible_session["accepted_plan_id"],
-                        "parent_plan_content_hash": ineligible_impact.json()[
-                            "parent_plan_content_hash"
-                        ],
+                        "parent_plan_content_hash": ineligible_impact.json()["parent_plan_content_hash"],
                         "draft": ineligible_session["draft"],
-                        "permission_decisions": ineligible_session[
-                            "permission_decisions"
-                        ],
+                        "permission_decisions": ineligible_session["permission_decisions"],
                         "conversation_id": ineligible_session["conversation_id"],
                     },
                 },
@@ -264,6 +258,6 @@ def test_actual_api_duration_preview_passes_js_and_forged_variants_fail(
 def test_assets_are_build_bound_for_evaluated_duration_contract() -> None:
     markup = INDEX.read_text(encoding="utf-8")
 
-    assert '/static/css/app.css?v=__PRODUCT_BUILD_ID__' in markup
-    assert '/static/js/app.js?v=__PRODUCT_BUILD_ID__' in markup
+    assert "/static/css/app.css?v=__PRODUCT_BUILD_ID__" in markup
+    assert "/static/js/app.js?v=__PRODUCT_BUILD_ID__" in markup
     assert '<meta name="product-build-id" content="__PRODUCT_BUILD_ID__">' in markup

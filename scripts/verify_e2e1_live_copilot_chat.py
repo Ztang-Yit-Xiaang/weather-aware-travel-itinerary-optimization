@@ -39,51 +39,87 @@ MANIFEST_NAME = "file_io_manifest.json"
 REPORT_NAME = "exact_io_report.md"
 SCENARIO = "live_copilot_chat"
 EXPECTED_PROMPT = (
-    "Replace Bixby Creek Bridge with Pfeiffer Big Sur State Park on Day 5, "
-    "preserving the rest of the seven-day trip."
+    "Replace Bixby Creek Bridge with Pfeiffer Big Sur State Park on Day 5, preserving the rest of the seven-day trip."
 )
 COMBINED_PROMPT = (
-    "Replace Bixby Creek Bridge with Pfeiffer Big Sur State Park; "
-    "set Griffith Observatory duration to 90 minutes."
+    "Replace Bixby Creek Bridge with Pfeiffer Big Sur State Park; set Griffith Observatory duration to 90 minutes."
 )
 TARGET = "bixby_creek_bridge_viewpoint"
 CANDIDATE = "pfeiffer_big_sur_state_park"
-SOURCE_INPUTS = (*live_source_inputs(
-    "tests/product_app/browser/test_e2e1_live_copilot_chat.py"
-), "scripts/e2e1_provider_isolation.py")
+SOURCE_INPUTS = (
+    *live_source_inputs("tests/product_app/browser/test_e2e1_live_copilot_chat.py"),
+    "scripts/e2e1_provider_isolation.py",
+)
 SOURCE_KEYS = {"path", "size_bytes", "sha256"}
 SESSION_ID = re.compile(r"session_[0-9a-f]{32}")
 CLIENT_MESSAGE_ID = re.compile(r"client_message_[0-9a-f]{32}")
 STREAM_REQUEST_ID = re.compile(r"copilot_request_[0-9a-f]{32}")
 PROVIDER_REQUEST_KEYS = {
-    "input", "instructions", "max_output_tokens", "model", "reasoning",
-    "store", "text", "tools",
+    "input",
+    "instructions",
+    "max_output_tokens",
+    "model",
+    "reasoning",
+    "store",
+    "text",
+    "tools",
 }
 PROVIDER_ATTEMPT_KEYS = {
-    "schema_version", "sequence", "effort", "case_id", "case_attempt",
-    "started_at", "completed_at", "latency_ms", "method", "url",
-    "request_body_utf8", "request_body_sha256", "response_status_code",
-    "response_body_utf8", "response_body_sha256", "transport_error_code",
-    "request_headers_persisted", "response_headers_persisted",
+    "schema_version",
+    "sequence",
+    "effort",
+    "case_id",
+    "case_attempt",
+    "started_at",
+    "completed_at",
+    "latency_ms",
+    "method",
+    "url",
+    "request_body_utf8",
+    "request_body_sha256",
+    "response_status_code",
+    "response_body_utf8",
+    "response_body_sha256",
+    "transport_error_code",
+    "request_headers_persisted",
+    "response_headers_persisted",
     "authorization_persisted",
 }
 PROVIDER_DOCUMENT_KEYS = {
-    "schema_version", "generated_at", "scope", "model", "reasoning_effort",
-    "request_headers_persisted", "response_headers_persisted",
-    "authorization_persisted", "records", "content_hash",
+    "schema_version",
+    "generated_at",
+    "scope",
+    "model",
+    "reasoning_effort",
+    "request_headers_persisted",
+    "response_headers_persisted",
+    "authorization_persisted",
+    "records",
+    "content_hash",
 }
 HISTORICAL_CONTEXT_KEYS = {
-    "schema_version", "session_id", "session_revision", "run_id", "trip_id",
-    "accepted_plan_id", "selected_day", "selected_stop_id",
-    "selected_segment_id", "selected_candidate_id", "selected_alternative_id",
-    "allowed_days", "allowed_stop_ids", "allowed_segment_ids",
-    "allowed_candidate_ids", "allowed_alternative_ids", "known_places",
-    "draft_operations", "evaluated_proposal",
+    "schema_version",
+    "session_id",
+    "session_revision",
+    "run_id",
+    "trip_id",
+    "accepted_plan_id",
+    "selected_day",
+    "selected_stop_id",
+    "selected_segment_id",
+    "selected_candidate_id",
+    "selected_alternative_id",
+    "allowed_days",
+    "allowed_stop_ids",
+    "allowed_segment_ids",
+    "allowed_candidate_ids",
+    "allowed_alternative_ids",
+    "known_places",
+    "draft_operations",
+    "evaluated_proposal",
 }
 CONTEXT_KEYS = HISTORICAL_CONTEXT_KEYS | {"accepted_plan_content_hash", "capabilities", "conversation_memory"}
-EXPECTED_NORMALIZED_CONTEXT_SHA256 = (
-    "c57e8c42023a8897323b22d0e51c9c97223b6063b497afb46f3885cc0a782995"
-)
+EXPECTED_NORMALIZED_CONTEXT_SHA256 = "c57e8c42023a8897323b22d0e51c9c97223b6063b497afb46f3885cc0a782995"
 AUTHORIZED_HISTORICAL_NORMALIZED_CONTEXT_SHA256 = {
     "9e11b56b6d6e61481f9f4cc55ef6210d7303fa25dd6ea124ae2579ad79f3eb62",
 }
@@ -104,29 +140,64 @@ ZERO_USAGE = {
     "total_tokens": 0,
 }
 TRACE_KEYS = {
-    "runtime_execution_id", "runtime_execution_sha256", "runtime_request_content_hash",
-    "executed_method", "evaluation_executed",
-    "schema_version", "execution_mode", "authorization_scope",
-    "browser_prompt_sha256", "session_id", "client_message_id",
-    "copilot_api_request_sha256", "copilot_api_response_sha256",
-    "draft_api_request_sha256", "draft_api_response_sha256",
-    "preview_api_request_sha256", "preview_api_response_sha256",
-    "provider", "model", "reasoning_effort", "provider_transport_attempts",
-    "provider_calls_current_run", "provider_request_body_sha256",
-    "provider_response_body_sha256", "provider_request_authorization",
-    "interpretation_sha256", "conversation_turn_id", "draft_operation_id",
-    "draft_content_hash", "preview_request_id", "parent_plan_id",
-    "child_plan_id", "child_plan_content_hash", "diff_id", "certificate_id",
-    "geography_hash", "rendered_map_plan_id", "rendered_geometry_hash",
-    "input_tokens", "cached_input_tokens", "uncached_input_tokens",
-    "output_tokens", "total_tokens", "billed_cost_usd",
-    "accept_or_keep_invoked", "assertions_passed",
+    "runtime_execution_id",
+    "runtime_execution_sha256",
+    "runtime_request_content_hash",
+    "executed_method",
+    "evaluation_executed",
+    "schema_version",
+    "execution_mode",
+    "authorization_scope",
+    "browser_prompt_sha256",
+    "session_id",
+    "client_message_id",
+    "copilot_api_request_sha256",
+    "copilot_api_response_sha256",
+    "draft_api_request_sha256",
+    "draft_api_response_sha256",
+    "preview_api_request_sha256",
+    "preview_api_response_sha256",
+    "provider",
+    "model",
+    "reasoning_effort",
+    "provider_transport_attempts",
+    "provider_calls_current_run",
+    "provider_request_body_sha256",
+    "provider_response_body_sha256",
+    "provider_request_authorization",
+    "interpretation_sha256",
+    "conversation_turn_id",
+    "draft_operation_id",
+    "draft_content_hash",
+    "preview_request_id",
+    "parent_plan_id",
+    "child_plan_id",
+    "child_plan_content_hash",
+    "diff_id",
+    "certificate_id",
+    "geography_hash",
+    "rendered_map_plan_id",
+    "rendered_geometry_hash",
+    "input_tokens",
+    "cached_input_tokens",
+    "uncached_input_tokens",
+    "output_tokens",
+    "total_tokens",
+    "billed_cost_usd",
+    "accept_or_keep_invoked",
+    "assertions_passed",
 }
 HISTORICAL_PROVIDER_KEYS = {
-    "schema_version", "provider_transport_attempts", "provider_io_source_path",
-    "provider_io_file_sha256", "replayed_provider_io_file_sha256",
-    "provider_io_content_hash", "provider_request_body_sha256",
-    "provider_response_body_sha256", "request_authorization", "usage",
+    "schema_version",
+    "provider_transport_attempts",
+    "provider_io_source_path",
+    "provider_io_file_sha256",
+    "replayed_provider_io_file_sha256",
+    "provider_io_content_hash",
+    "provider_request_body_sha256",
+    "provider_response_body_sha256",
+    "request_authorization",
+    "usage",
     "billed_cost_usd",
 }
 
@@ -166,18 +237,11 @@ def _canonical_sha256(value: Any) -> str:
 
 
 def _canonical_json(value: Any) -> str:
-    return json.dumps(
-        value, ensure_ascii=False, separators=(",", ":"), sort_keys=True
-    )
+    return json.dumps(value, ensure_ascii=False, separators=(",", ":"), sort_keys=True)
 
 
 def _canonical_prompt_json(value: Any) -> str:
-    return (
-        _canonical_json(value)
-        .replace("&", "\\u0026")
-        .replace("<", "\\u003c")
-        .replace(">", "\\u003e")
-    )
+    return _canonical_json(value).replace("&", "\\u0026").replace("<", "\\u003c").replace(">", "\\u003e")
 
 
 def _parse_timestamp(value: object, code: str) -> datetime:
@@ -229,9 +293,7 @@ def _provider_request_context(
     actual_text = request.get("text")
     actual_format = actual_text.get("format") if isinstance(actual_text, dict) else None
     actual_schema = actual_format.get("schema") if isinstance(actual_format, dict) else None
-    actual_schema_sha256 = (
-        _canonical_sha256(actual_schema) if isinstance(actual_schema, dict) else None
-    )
+    actual_schema_sha256 = _canonical_sha256(actual_schema) if isinstance(actual_schema, dict) else None
     historical_text_allowed = (
         allow_historical_schema
         and isinstance(actual_text, dict)
@@ -248,16 +310,17 @@ def _provider_request_context(
         request.get("model") == "gpt-5.4-mini"
         and request.get("store") is False
         and request.get("tools") == []
-        and (request.get("instructions") == DEVELOPER_INSTRUCTIONS or (
-            allow_historical_schema and isinstance(request.get("instructions"), str)
-            and _hash_text(request["instructions"]) in AUTHORIZED_HISTORICAL_INSTRUCTIONS_SHA256
-        ))
+        and (
+            request.get("instructions") == DEVELOPER_INSTRUCTIONS
+            or (
+                allow_historical_schema
+                and isinstance(request.get("instructions"), str)
+                and _hash_text(request["instructions"]) in AUTHORIZED_HISTORICAL_INSTRUCTIONS_SHA256
+            )
+        )
         and request.get("max_output_tokens") == 1_200
         and request.get("reasoning") == {"effort": "low", "context": "current_turn"}
-        and (
-            request.get("text") == {"verbosity": "low", "format": expected_format}
-            or historical_text_allowed
-        ),
+        and (request.get("text") == {"verbosity": "low", "format": expected_format} or historical_text_allowed),
         "e2e1_live_provider_controls_invalid",
     )
     prompt_input = request.get("input")
@@ -279,14 +342,23 @@ def _provider_request_context(
         raise LiveE2E1VerificationError("e2e1_live_provider_input_invalid") from error
     _require(
         isinstance(context, dict)
-        and ((context.get("schema_version") == "copilot-context-v2" and set(context) == CONTEXT_KEYS
-              and request.get("instructions") == DEVELOPER_INSTRUCTIONS
-              and request.get("text") == {"verbosity": "low", "format": expected_format})
-             or (allow_historical_schema and context.get("schema_version") == "copilot-context-v1"
-                 and set(context) == HISTORICAL_CONTEXT_KEYS
-                 and _hash_text(request["instructions"]) in AUTHORIZED_HISTORICAL_INSTRUCTIONS_SHA256))
+        and (
+            (
+                context.get("schema_version") == "copilot-context-v2"
+                and set(context) == CONTEXT_KEYS
+                and request.get("instructions") == DEVELOPER_INSTRUCTIONS
+                and request.get("text") == {"verbosity": "low", "format": expected_format}
+            )
+            or (
+                allow_historical_schema
+                and context.get("schema_version") == "copilot-context-v1"
+                and set(context) == HISTORICAL_CONTEXT_KEYS
+                and _hash_text(request["instructions"]) in AUTHORIZED_HISTORICAL_INSTRUCTIONS_SHA256
+            )
+        )
         and SESSION_ID.fullmatch(str(context.get("session_id"))) is not None
-        and type(context.get("session_revision")) is int and context.get("session_revision") == 1
+        and type(context.get("session_revision")) is int
+        and context.get("session_revision") == 1
         and context.get("run_id") == "california_coast_coherent_demo_v1"
         and context.get("trip_id") == "california_coast_approved_seven_day"
         and context.get("selected_day") == 5
@@ -318,16 +390,16 @@ def _provider_request_context(
     )
     normalized_context = dict(context)
     normalized_context["session_id"] = "<SESSION_ID>"
-    normalized_context_sha256 = hashlib.sha256(
-        _canonical_prompt_json(normalized_context).encode()
-    ).hexdigest()
+    normalized_context_sha256 = hashlib.sha256(_canonical_prompt_json(normalized_context).encode()).hexdigest()
     _require(
-        (context["schema_version"] == "copilot-context-v2" and normalized_context_sha256 == EXPECTED_NORMALIZED_CONTEXT_SHA256)
+        (
+            context["schema_version"] == "copilot-context-v2"
+            and normalized_context_sha256 == EXPECTED_NORMALIZED_CONTEXT_SHA256
+        )
         or (
             allow_historical_schema
             and context["schema_version"] == "copilot-context-v1"
-            and normalized_context_sha256
-            in AUTHORIZED_HISTORICAL_NORMALIZED_CONTEXT_SHA256
+            and normalized_context_sha256 in AUTHORIZED_HISTORICAL_NORMALIZED_CONTEXT_SHA256
         ),
         "e2e1_live_provider_context_hash_invalid",
     )
@@ -336,10 +408,7 @@ def _provider_request_context(
         "schema_version": "e2e1-live-provider-request-authorization-v1",
         "request_body_sha256": _hash_text(request_text),
         "request_body_size_bytes": len(request_text.encode("utf-8")),
-        "request_body_exact_location": (
-            "live_copilot_chat/provider_exact_llm_io.json"
-            "#records[0].request_body_utf8"
-        ),
+        "request_body_exact_location": ("live_copilot_chat/provider_exact_llm_io.json#records[0].request_body_utf8"),
         "request_fields": sorted(PROVIDER_REQUEST_KEYS),
         "instructions": request["instructions"],
         "instructions_sha256": _hash_text(request["instructions"]),
@@ -358,8 +427,7 @@ def _provider_request_context(
         "text": authorized_text,
         "text_sha256": _canonical_sha256(authorized_text),
         "output_schema_sha256": actual_schema_sha256,
-        "output_schema_current": actual_schema
-        == to_strict_json_schema(OpenAIInterpretationSchemaV2),
+        "output_schema_current": actual_schema == to_strict_json_schema(OpenAIInterpretationSchemaV2),
         "session_id": context["session_id"],
     }
     return context, authorization
@@ -370,39 +438,110 @@ def _verify_current_context_extensions(context: dict[str, Any]) -> None:
     code = "e2e1_live_provider_context_v2_invalid"
     plan_hash = context.get("accepted_plan_content_hash")
     _require(type(plan_hash) is str and re.fullmatch(r"[a-f0-9]{16,64}", plan_hash) is not None, code)
-    _require(context.get("conversation_memory") == {
-        "schema_version": "copilot-memory-v1", "plan_id": context["accepted_plan_id"], "plan_content_hash": plan_hash,
-        "pending_clarification": None, "resolved_ids": {"stop_ids": [], "candidate_ids": [], "day_ids": [], "segment_ids": []},
-        "proposed_preferences": [], "last_proposal": None,
-    }, code)
+    _require(
+        context.get("conversation_memory")
+        == {
+            "schema_version": "copilot-memory-v1",
+            "plan_id": context["accepted_plan_id"],
+            "plan_content_hash": plan_hash,
+            "pending_clarification": None,
+            "resolved_ids": {"stop_ids": [], "candidate_ids": [], "day_ids": [], "segment_ids": []},
+            "proposed_preferences": [],
+            "last_proposal": None,
+        },
+        code,
+    )
     caps = context.get("capabilities")
-    _require(type(caps) is dict and set(caps) == {"schema_version", "operations", "registered_repair_current", "candidate_replacements", "candidate_day_readiness", "stop_positions", "executable_combinations"}
-             and caps["schema_version"] == "copilot-capabilities-v2" and caps["registered_repair_current"] is True
-             and type(caps["operations"]) is dict and set(caps["operations"]) == {
-                 "keep_stop", "lock_stop", "mark_flexible", "move_day", "replace_nearby", "add_candidate", "route_feedback",
-                 "set_stop_duration", "set_stop_order", "set_stop_time_window", "set_stop_role", "replan_trip"}, code)
-    _require(caps["executable_combinations"] == [{"operations":["keep_stop", "replace_nearby", "set_stop_duration",
-        "set_stop_order", "set_stop_role", "set_stop_time_window"], "cardinality":32},
-        {"operations": ["replan_trip"], "cardinality": 1}], code)
-    _require(type(caps["executable_combinations"][-1]["cardinality"]) is int
-             and caps["operations"]["replan_trip"] == {"enabled": True, "preview_executable": True, "blocking_code": None}, code)
+    _require(
+        type(caps) is dict
+        and set(caps)
+        == {
+            "schema_version",
+            "operations",
+            "registered_repair_current",
+            "candidate_replacements",
+            "candidate_day_readiness",
+            "stop_positions",
+            "executable_combinations",
+        }
+        and caps["schema_version"] == "copilot-capabilities-v2"
+        and caps["registered_repair_current"] is True
+        and type(caps["operations"]) is dict
+        and set(caps["operations"])
+        == {
+            "keep_stop",
+            "lock_stop",
+            "mark_flexible",
+            "move_day",
+            "replace_nearby",
+            "add_candidate",
+            "route_feedback",
+            "set_stop_duration",
+            "set_stop_order",
+            "set_stop_time_window",
+            "set_stop_role",
+            "replan_trip",
+        },
+        code,
+    )
+    _require(
+        caps["executable_combinations"]
+        == [
+            {
+                "operations": [
+                    "keep_stop",
+                    "replace_nearby",
+                    "set_stop_duration",
+                    "set_stop_order",
+                    "set_stop_role",
+                    "set_stop_time_window",
+                ],
+                "cardinality": 32,
+            },
+            {"operations": ["replan_trip"], "cardinality": 1},
+        ],
+        code,
+    )
+    _require(
+        type(caps["executable_combinations"][-1]["cardinality"]) is int
+        and caps["operations"]["replan_trip"] == {"enabled": True, "preview_executable": True, "blocking_code": None},
+        code,
+    )
     for row in caps["operations"].values():
-        _require(type(row) is dict and set(row) == {"enabled", "preview_executable", "blocking_code"}
-                 and type(row["enabled"]) is bool and type(row["preview_executable"]) is bool
-                 and (not row["preview_executable"] or row["enabled"])
-                 and (row["blocking_code"] is None or type(row["blocking_code"]) is str and re.fullmatch(r"[A-Za-z0-9_:-]{1,128}", row["blocking_code"]) is not None), code)
+        _require(
+            type(row) is dict
+            and set(row) == {"enabled", "preview_executable", "blocking_code"}
+            and type(row["enabled"]) is bool
+            and type(row["preview_executable"]) is bool
+            and (not row["preview_executable"] or row["enabled"])
+            and (
+                row["blocking_code"] is None
+                or type(row["blocking_code"]) is str
+                and re.fullmatch(r"[A-Za-z0-9_:-]{1,128}", row["blocking_code"]) is not None
+            ),
+            code,
+        )
     positions = caps["stop_positions"]
     _require(type(positions) is list and 0 < len(positions) <= 64, code)
     days: dict[int, list[int]] = {}
     for row in positions:
-        _require(type(row) is dict and set(row) == {"stop_id", "day", "sequence_index"}
-                 and row["stop_id"] in context["allowed_stop_ids"]
-                 and type(row["day"]) is int and row["day"] in context["allowed_days"]
-                 and type(row["sequence_index"]) is int and row["sequence_index"] >= 0, code)
+        _require(
+            type(row) is dict
+            and set(row) == {"stop_id", "day", "sequence_index"}
+            and row["stop_id"] in context["allowed_stop_ids"]
+            and type(row["day"]) is int
+            and row["day"] in context["allowed_days"]
+            and type(row["sequence_index"]) is int
+            and row["sequence_index"] >= 0,
+            code,
+        )
         days.setdefault(row["day"], []).append(row["sequence_index"])
-    _require([row["stop_id"] for row in positions] == context["allowed_stop_ids"]
-             and len({row["stop_id"] for row in positions}) == len(positions)
-             and all(indices == list(range(len(indices))) for indices in days.values()), code)
+    _require(
+        [row["stop_id"] for row in positions] == context["allowed_stop_ids"]
+        and len({row["stop_id"] for row in positions}) == len(positions)
+        and all(indices == list(range(len(indices))) for indices in days.values()),
+        code,
+    )
     for name, maximum, fields in (
         ("candidate_replacements", 64, {"candidate_id", "replaces_stop_id"}),
         ("candidate_day_readiness", 128, {"candidate_id", "day", "preview_executable", "blocking_code"}),
@@ -411,41 +550,82 @@ def _verify_current_context_extensions(context: dict[str, Any]) -> None:
         _require(type(rows) is list and len(rows) <= maximum, code)
         identities = []
         for row in rows:
-            _require(type(row) is dict and set(row) == fields and row["candidate_id"] in context["allowed_candidate_ids"], code)
+            _require(
+                type(row) is dict and set(row) == fields and row["candidate_id"] in context["allowed_candidate_ids"],
+                code,
+            )
             if name == "candidate_replacements":
                 _require(row["replaces_stop_id"] in context["allowed_stop_ids"], code)
                 identities.append((row["candidate_id"], row["replaces_stop_id"]))
             else:
-                _require(type(row["day"]) is int and row["day"] in context["allowed_days"] and type(row["preview_executable"]) is bool
-                         and (row["blocking_code"] is None or type(row["blocking_code"]) is str and re.fullmatch(r"[A-Za-z0-9_:-]{1,128}", row["blocking_code"]) is not None), code)
+                _require(
+                    type(row["day"]) is int
+                    and row["day"] in context["allowed_days"]
+                    and type(row["preview_executable"]) is bool
+                    and (
+                        row["blocking_code"] is None
+                        or type(row["blocking_code"]) is str
+                        and re.fullmatch(r"[A-Za-z0-9_:-]{1,128}", row["blocking_code"]) is not None
+                    ),
+                    code,
+                )
                 identities.append((row["candidate_id"], row["day"]))
         _require(len(identities) == len(set(identities)), code)
 
 
-def _verify_approved_interpretation(provider_projection: dict[str, Any], interpretation: dict[str, Any],
-                                    *, prompt: str = EXPECTED_PROMPT) -> None:
+def _verify_approved_interpretation(
+    provider_projection: dict[str, Any], interpretation: dict[str, Any], *, prompt: str = EXPECTED_PROMPT
+) -> None:
     combined = prompt == COMBINED_PROMPT
     _require(prompt in (EXPECTED_PROMPT, COMBINED_PROMPT), "e2e1_live_intent_invalid")
     for field in ("schema_version", "state", "intents", "permission"):
         _require(provider_projection.get(field) == interpretation.get(field), "e2e1_live_provider_projection_mismatch")
-    _require(interpretation.get("schema_version") in {"copilot-interpretation-v1", "copilot-interpretation-v2"}, "e2e1_live_intent_invalid")
-    expected = {"type": "replace_nearby", "target_stop_id": TARGET, "destination_day": None,
-                "candidate_id": CANDIDATE, "preference": None, "clarification_question": None}
+    _require(
+        interpretation.get("schema_version") in {"copilot-interpretation-v1", "copilot-interpretation-v2"},
+        "e2e1_live_intent_invalid",
+    )
+    expected = {
+        "type": "replace_nearby",
+        "target_stop_id": TARGET,
+        "destination_day": None,
+        "candidate_id": CANDIDATE,
+        "preference": None,
+        "clarification_question": None,
+    }
     if interpretation["schema_version"] == "copilot-interpretation-v2":
         expected["parameters"] = None
     expected_intents = [expected]
     expected_highlights = {"day_ids": [5], "stop_ids": [TARGET], "segment_ids": [], "candidate_ids": [CANDIDATE]}
     if combined:
         _require(interpretation["schema_version"] == "copilot-interpretation-v2", "e2e1_live_intent_invalid")
-        expected_intents.append({"type": "set_stop_duration", "target_stop_id": "griffith_observatory",
-            "destination_day": None, "candidate_id": None, "preference": None, "clarification_question": None,
-            "parameters": {"duration": {"mode": "exact", "preferred_minutes": 90, "minimum_minutes": 90, "maximum_minutes": 90}}})
-        expected_highlights = {"day_ids": [5, 7], "stop_ids": [TARGET, "griffith_observatory"],
-            "segment_ids": [], "candidate_ids": [CANDIDATE]}
+        expected_intents.append(
+            {
+                "type": "set_stop_duration",
+                "target_stop_id": "griffith_observatory",
+                "destination_day": None,
+                "candidate_id": None,
+                "preference": None,
+                "clarification_question": None,
+                "parameters": {
+                    "duration": {"mode": "exact", "preferred_minutes": 90, "minimum_minutes": 90, "maximum_minutes": 90}
+                },
+            }
+        )
+        expected_highlights = {
+            "day_ids": [5, 7],
+            "stop_ids": [TARGET, "griffith_observatory"],
+            "segment_ids": [],
+            "candidate_ids": [CANDIDATE],
+        }
     # Current highlights are derived locally after exact intent comparison.
-    _require(interpretation.get("highlights") == expected_highlights,
-             "e2e1_live_combined_highlights_invalid" if combined else "e2e1_live_highlights_invalid")
-    _require(interpretation.get("state") == "proposal_ready" and interpretation.get("intents") == expected_intents, "e2e1_live_intent_invalid")
+    _require(
+        interpretation.get("highlights") == expected_highlights,
+        "e2e1_live_combined_highlights_invalid" if combined else "e2e1_live_highlights_invalid",
+    )
+    _require(
+        interpretation.get("state") == "proposal_ready" and interpretation.get("intents") == expected_intents,
+        "e2e1_live_intent_invalid",
+    )
 
 
 def _verify_provider_records(
@@ -495,8 +675,7 @@ def _verify_provider_records(
         )
         request_text = row.get("request_body_utf8")
         _require(
-            isinstance(request_text, str)
-            and row.get("request_body_sha256") == _hash_text(request_text),
+            isinstance(request_text, str) and row.get("request_body_sha256") == _hash_text(request_text),
             "e2e1_live_provider_request_hash_invalid",
         )
         try:
@@ -525,9 +704,7 @@ def _verify_provider_records(
         try:
             response = json.loads(response_text)
         except json.JSONDecodeError as error:
-            raise LiveE2E1VerificationError(
-                "e2e1_live_provider_response_invalid"
-            ) from error
+            raise LiveE2E1VerificationError("e2e1_live_provider_response_invalid") from error
         _require(
             isinstance(response, dict) and response.get("status") == "completed",
             "e2e1_live_provider_not_completed",
@@ -550,7 +727,11 @@ def _sse_events(raw: str) -> list[dict[str, Any]]:
         events.append(value)
     _require(len(events) == 3, "e2e1_live_copilot_stream_invalid")
     common = {
-        "schema_version", "type", "sequence", "request_id", "client_message_id",
+        "schema_version",
+        "type",
+        "sequence",
+        "request_id",
+        "client_message_id",
     }
     expected_keys = (
         common,
@@ -558,14 +739,10 @@ def _sse_events(raw: str) -> list[dict[str, Any]]:
         common | {"payload"},
     )
     _require(
-        [event.get("type") for event in events]
-        == ["message.accepted", "assistant.status", "turn.completed"]
+        [event.get("type") for event in events] == ["message.accepted", "assistant.status", "turn.completed"]
         and all(type(event.get("sequence")) is int for event in events)
         and [event.get("sequence") for event in events] == [1, 2, 3]
-        and all(
-            set(event) == keys
-            for event, keys in zip(events, expected_keys, strict=True)
-        )
+        and all(set(event) == keys for event, keys in zip(events, expected_keys, strict=True))
         and all(event.get("schema_version") == "copilot-stream-v1" for event in events)
         and all(type(event.get("type")) is str for event in events)
         and len({event.get("request_id") for event in events}) == 1
@@ -573,8 +750,7 @@ def _sse_events(raw: str) -> list[dict[str, Any]]:
         and len({event.get("client_message_id") for event in events}) == 1
         and CLIENT_MESSAGE_ID.fullmatch(str(events[0].get("client_message_id"))) is not None
         and events[1].get("state") == "interpreting"
-        and events[1].get("message")
-        == "Reading the current itinerary and validating a typed suggestion."
+        and events[1].get("message") == "Reading the current itinerary and validating a typed suggestion."
         and isinstance(events[2].get("payload"), dict),
         "e2e1_live_copilot_stream_invalid",
     )
@@ -590,11 +766,22 @@ def _verify_http_record(
     response_format: str = "json",
 ) -> tuple[dict[str, Any], dict[str, Any], str]:
     expected_keys = {
-        "schema_version", "method", "url", "request_body_utf8", "request_body_sha256",
-        "response_status_code", "response_body_utf8", "response_body_sha256",
-        "request_headers_persisted", "response_headers_persisted",
-        "authorization_persisted", "session_token_persisted",
-        "request_original_body_sha256", "response_original_body_sha256", "credential_redactions", "body_capture",
+        "schema_version",
+        "method",
+        "url",
+        "request_body_utf8",
+        "request_body_sha256",
+        "response_status_code",
+        "response_body_utf8",
+        "response_body_sha256",
+        "request_headers_persisted",
+        "response_headers_persisted",
+        "authorization_persisted",
+        "session_token_persisted",
+        "request_original_body_sha256",
+        "response_original_body_sha256",
+        "credential_redactions",
+        "body_capture",
     }
     _require(set(record) == expected_keys, f"{suffix}_fields_invalid")
     _require(record.get("schema_version") == "e2e1-product-http-io-v1", f"{suffix}_schema_invalid")
@@ -620,10 +807,13 @@ def _verify_http_record(
     _require(isinstance(request_text, str) and isinstance(response_text, str), f"{suffix}_body_invalid")
     _require(record.get("request_body_sha256") == _hash_text(request_text), f"{suffix}_request_hash")
     _require(record.get("response_body_sha256") == _hash_text(response_text), f"{suffix}_response_hash")
-    _require(record.get("body_capture") == "exact_utf8"
-             and record.get("credential_redactions") == {"request":[], "response":[]}
-             and record.get("request_original_body_sha256") == record["request_body_sha256"]
-             and record.get("response_original_body_sha256") == record["response_body_sha256"], f"{suffix}_exact_capture_invalid")
+    _require(
+        record.get("body_capture") == "exact_utf8"
+        and record.get("credential_redactions") == {"request": [], "response": []}
+        and record.get("request_original_body_sha256") == record["request_body_sha256"]
+        and record.get("response_original_body_sha256") == record["response_body_sha256"],
+        f"{suffix}_exact_capture_invalid",
+    )
     _require(record.get("response_status_code") == 200, f"{suffix}_status_invalid")
     _require(
         record.get("request_headers_persisted") is False
@@ -671,30 +861,24 @@ def _verify_replay_current_run_accounting(
         and trace.get("provider_request_authorization") is None
         and all(trace.get(key) == 0 for key in ZERO_USAGE)
         and trace.get("billed_cost_usd") == "0"
-        and trace.get("historical_provider_evidence")
-        == historical_provider_evidence
+        and trace.get("historical_provider_evidence") == historical_provider_evidence
         and manifest.get("provider_transport_attempts") == 0
         and manifest.get("usage") == ZERO_USAGE
         and isinstance(manifest.get("pricing"), dict)
         and manifest["pricing"].get("billed_cost_usd") == "0"
         and isinstance(authorization, dict)
         and authorization.get("confirmed") is False
-        and authorization.get("execution_mode")
-        == "recorded_exact_output_replay"
+        and authorization.get("execution_mode") == "recorded_exact_output_replay"
         and authorization.get("current_run_provider_calls") == 0
         and authorization.get("transport_attempt_cap") == 0
         and authorization.get("exact_provider_request") is None
-        and authorization.get("historical_provider_evidence")
-        == historical_provider_evidence
-        and usage_file.get("schema_version")
-        == "e2e1-live-replay-usage-and-cost-v1"
-        and usage_file.get("execution_mode")
-        == "recorded_exact_output_replay"
+        and authorization.get("historical_provider_evidence") == historical_provider_evidence
+        and usage_file.get("schema_version") == "e2e1-live-replay-usage-and-cost-v1"
+        and usage_file.get("execution_mode") == "recorded_exact_output_replay"
         and usage_file.get("current_run_provider_calls") == 0
         and usage_file.get("current_run_usage") == ZERO_USAGE
         and usage_file.get("current_run_billed_cost_usd") == "0"
-        and usage_file.get("historical_provider_evidence")
-        == historical_provider_evidence,
+        and usage_file.get("historical_provider_evidence") == historical_provider_evidence,
         "e2e1_live_replay_current_run_accounting_invalid",
     )
 
@@ -719,8 +903,12 @@ def _independent_geometry_hash(geography: dict[str, Any]) -> str:
       });
     """
     completed = subprocess.run(
-        ["node", "-e", code], input=json.dumps(geography),
-        text=True, capture_output=True, check=True, timeout=30,
+        ["node", "-e", code],
+        input=json.dumps(geography),
+        text=True,
+        capture_output=True,
+        check=True,
+        timeout=30,
     )
     _require(bool(re.fullmatch(r"[0-9a-f]{64}", completed.stdout)), "e2e1_live_geometry_digest_invalid")
     return completed.stdout
@@ -729,11 +917,15 @@ def _independent_geometry_hash(geography: dict[str, Any]) -> str:
 def _verify_visible_metrics(snapshot: dict[str, Any], proposal: dict[str, Any]) -> None:
     """Bind the visible metric values to the independently evaluated map plan."""
     identity = {"planId": proposal["child_plan_id"], "planContentHash": proposal["child_plan_content_hash"]}
-    _require(snapshot.get("scope") == {**identity, "evaluationId": proposal["certificate_id"]},
-             "e2e1_live_visible_metrics_identity_mismatch")
+    _require(
+        snapshot.get("scope") == {**identity, "evaluationId": proposal["certificate_id"]},
+        "e2e1_live_visible_metrics_identity_mismatch",
+    )
     rows = snapshot.get("metrics", [])
-    _require(len(rows) == 5 and all(row.get("scope") == identity for row in rows),
-             "e2e1_live_visible_metrics_identity_mismatch")
+    _require(
+        len(rows) == 5 and all(row.get("scope") == identity for row in rows),
+        "e2e1_live_visible_metrics_identity_mismatch",
+    )
     legs = proposal["geography_plan"]["validated_legs"]["features"]
     route_minutes = sum(leg["properties"]["duration_s"] / 60 for leg in legs)
     tradeoffs = proposal["repair"]["tradeoffs"]
@@ -745,21 +937,24 @@ def _verify_visible_metrics(snapshot: dict[str, Any], proposal: dict[str, Any]) 
     expected = {
         "Route time": display(route_minutes) + " min",
         "Contextual risk": display(tradeoffs["weather_risk_delta"]),
-        "Preservation": "Unavailable" if preservation is None else f"{int(preservation * 100 + .5)}%",
+        "Preservation": "Unavailable" if preservation is None else f"{int(preservation * 100 + 0.5)}%",
         "Edit cost": display(tradeoffs["weighted_edit_cost"]),
         "Certificate": proposal["eligibility"],
     }
-    _require({row.get("label"): row.get("value") for row in rows} == expected,
-             "e2e1_live_visible_metrics_values_mismatch")
+    _require(
+        {row.get("label"): row.get("value") for row in rows} == expected, "e2e1_live_visible_metrics_values_mismatch"
+    )
 
 
 def _verify_runtime_execution(proposal: dict[str, Any]) -> dict[str, Any]:
     receipt = proposal.get("runtime_execution")
     combined = proposal.get("execution_mode") == "atomic_combined_independent_evaluation"
     _require(
-        proposal.get("execution_mode") == ("atomic_combined_independent_evaluation" if combined else "deterministic_repair_pipeline")
+        proposal.get("execution_mode")
+        == ("atomic_combined_independent_evaluation" if combined else "deterministic_repair_pipeline")
         and isinstance(receipt, dict)
-        and receipt.get("schema_version") == ("atomic-combined-repair-execution-v1" if combined else "runtime-repair-execution-v1")
+        and receipt.get("schema_version")
+        == ("atomic-combined-repair-execution-v1" if combined else "runtime-repair-execution-v1")
         and re.fullmatch(r"execution_[0-9a-f]{32}", str(receipt.get("execution_id"))) is not None
         and receipt.get("evaluation_executed") is True
         and receipt.get("evaluator") == "PlanEvaluator.evaluate_final_plan",
@@ -777,32 +972,48 @@ def _verify_runtime_execution(proposal: dict[str, Any]) -> dict[str, Any]:
         <= _parse_timestamp(receipt["completed_at"], "e2e1_live_runtime_timestamp_invalid")
         and certificate["source_run_id"] == planner["run_id"]
         and certificate["route_validation"]["context_snapshot_id"]
-        == planner["context_snapshot_id"] == child["context_snapshot_id"],
+        == planner["context_snapshot_id"]
+        == child["context_snapshot_id"],
         "e2e1_live_runtime_evaluator_freshness_invalid",
     )
     _require(
         (combined or (TARGET in constraints["must_delete"] and CANDIDATE in constraints["must_include"]))
-        and receipt["request_id"] == request["request_id"]
+        and receipt["request_id"]
+        == request["request_id"]
         == proposal["compiled_request"]["source_request_id"]
-        == planner["planning_request_id"] == child["planning_request_id"]
+        == planner["planning_request_id"]
+        == child["planning_request_id"]
         and receipt["request_content_hash"] == _artifact_hash(request),
         "e2e1_live_runtime_request_binding_invalid",
     )
     _require(
-        planner["method_executed"] == ("atomic_combined_repair_v1" if combined else "deterministic_context_aware_heuristic")
+        planner["method_executed"]
+        == ("atomic_combined_repair_v1" if combined else "deterministic_context_aware_heuristic")
         and planner["execution_status"] == "COMPLETED"
-        and planner["result_plan_id"] == child["plan_id"] == receipt["child_plan_id"]
-        == proposal["child_plan_id"] == certificate["plan_id"] == diff["child_plan_id"]
+        and planner["result_plan_id"]
+        == child["plan_id"]
+        == receipt["child_plan_id"]
+        == proposal["child_plan_id"]
+        == certificate["plan_id"]
+        == diff["child_plan_id"]
         and planner["run_id"] == child["source_run_id"]
-        and receipt["parent_plan_id"] == child["parent_plan_id"] == proposal["parent_plan_id"]
+        and receipt["parent_plan_id"]
+        == child["parent_plan_id"]
+        == proposal["parent_plan_id"]
         == diff["parent_plan_id"],
         "e2e1_live_runtime_planner_binding_invalid",
     )
     for record in (planner, child, certificate):
-        _require(record["content_hash"] == _artifact_hash({key: value for key, value in record.items() if key != "content_hash"}), "e2e1_live_runtime_artifact_hash_invalid")
+        _require(
+            record["content_hash"]
+            == _artifact_hash({key: value for key, value in record.items() if key != "content_hash"}),
+            "e2e1_live_runtime_artifact_hash_invalid",
+        )
     _require(
-        child["content_hash"] == receipt["child_plan_content_hash"]
-        == proposal["child_plan_content_hash"] == certificate["plan_content_hash"]
+        child["content_hash"]
+        == receipt["child_plan_content_hash"]
+        == proposal["child_plan_content_hash"]
+        == certificate["plan_content_hash"]
         and certificate["certificate_id"] == receipt["evaluation_id"] == proposal["certificate_id"]
         and certificate["content_hash"] == receipt["evaluation_content_hash"] == proposal["certificate_content_hash"]
         and certificate["comparison_eligibility"] == "eligible"
@@ -812,35 +1023,53 @@ def _verify_runtime_execution(proposal: dict[str, Any]) -> dict[str, Any]:
         "e2e1_live_runtime_evaluation_diff_binding_invalid",
     )
     _require(
-        CANDIDATE in child["sequence"] and TARGET not in child["sequence"]
-        and child["day_assignments"][CANDIDATE] == 5,
+        CANDIDATE in child["sequence"] and TARGET not in child["sequence"] and child["day_assignments"][CANDIDATE] == 5,
         "e2e1_live_runtime_semantic_result_invalid",
     )
     if combined:
-        _require(request["schema_version"] == "atomic-combined-repair-request-v1"
+        _require(
+            request["schema_version"] == "atomic-combined-repair-request-v1"
             and request["request_family"] == "combined_typed_edit"
             and request["operations"] == receipt["operations"] == proposal["compiled_request"]["operations"],
-            "e2e1_live_combined_request_binding_invalid")
+            "e2e1_live_combined_request_binding_invalid",
+        )
         griffith = next((stop for stop in child["selected_stops"] if stop["stop_id"] == "griffith_observatory"), None)
-        _require(griffith is not None and griffith["visit_duration_minutes"] == 90
-            and griffith["duration_constraint"] == {"mode":"exact", "preferred_minutes":90, "minimum_minutes":90, "maximum_minutes":90},
-            "e2e1_live_combined_duration_invalid")
+        _require(
+            griffith is not None
+            and griffith["visit_duration_minutes"] == 90
+            and griffith["duration_constraint"]
+            == {"mode": "exact", "preferred_minutes": 90, "minimum_minutes": 90, "maximum_minutes": 90},
+            "e2e1_live_combined_duration_invalid",
+        )
         optimizer = receipt["optimizer_execution"]
-        _verify_runtime_execution({
-            "execution_mode": "deterministic_repair_pipeline", "runtime_execution": optimizer,
-            "compiled_request": {"source_request_id": optimizer["request_id"]},
-            "child_plan_id": optimizer["child_plan_id"], "child_plan_content_hash": optimizer["child_plan_content_hash"],
-            "parent_plan_id": optimizer["parent_plan_id"], "certificate_id": optimizer["evaluation_id"],
-            "certificate_content_hash": optimizer["evaluation_content_hash"], "diff_id": optimizer["plan_diff"]["diff_id"],
-            "diff_content_hash": _artifact_hash(optimizer["plan_diff"]),
-        })
+        _verify_runtime_execution(
+            {
+                "execution_mode": "deterministic_repair_pipeline",
+                "runtime_execution": optimizer,
+                "compiled_request": {"source_request_id": optimizer["request_id"]},
+                "child_plan_id": optimizer["child_plan_id"],
+                "child_plan_content_hash": optimizer["child_plan_content_hash"],
+                "parent_plan_id": optimizer["parent_plan_id"],
+                "certificate_id": optimizer["evaluation_id"],
+                "certificate_content_hash": optimizer["evaluation_content_hash"],
+                "diff_id": optimizer["plan_diff"]["diff_id"],
+                "diff_content_hash": _artifact_hash(optimizer["plan_diff"]),
+            }
+        )
         # Attribute edits intentionally form the optimizer's temporary baseline;
         # the final child is independently evaluated against the accepted parent.
-        _require(optimizer["parent_plan_id"] == optimizer["repair_request"]["parent_plan_id"]
-            and all(optimizer["child_plan"][key] == child[key]
-                for key in ("selected_stops", "sequence", "day_assignments", "ordered_days"))
-            and receipt["started_at"] <= optimizer["started_at"] <= optimizer["completed_at"] <= receipt["completed_at"],
-            "e2e1_live_combined_optimizer_lineage_invalid")
+        _require(
+            optimizer["parent_plan_id"] == optimizer["repair_request"]["parent_plan_id"]
+            and all(
+                optimizer["child_plan"][key] == child[key]
+                for key in ("selected_stops", "sequence", "day_assignments", "ordered_days")
+            )
+            and receipt["started_at"]
+            <= optimizer["started_at"]
+            <= optimizer["completed_at"]
+            <= receipt["completed_at"],
+            "e2e1_live_combined_optimizer_lineage_invalid",
+        )
         return receipt
     decisions = receipt["planner_trace"]
     _require(
@@ -849,10 +1078,15 @@ def _verify_runtime_execution(proposal: dict[str, Any]) -> dict[str, Any]:
         and decisions["child_plan_id"] == child["plan_id"]
         and decisions["diff_id"] == diff["diff_id"]
         and decisions["failure_reasons"] == []
-        and any(row.get("selected") is True and row.get("feasible") is True
-                and row.get("day") == 5 and CANDIDATE in row.get("stop_sequence", [])
-                and TARGET not in row.get("stop_sequence", []) and row.get("violations") == []
-                for row in decisions["decision_records"]),
+        and any(
+            row.get("selected") is True
+            and row.get("feasible") is True
+            and row.get("day") == 5
+            and CANDIDATE in row.get("stop_sequence", [])
+            and TARGET not in row.get("stop_sequence", [])
+            and row.get("violations") == []
+            for row in decisions["decision_records"]
+        ),
         "e2e1_live_runtime_decision_trace_invalid",
     )
     return receipt
@@ -867,8 +1101,11 @@ def _verify_bundle(root: Path, manifest: dict[str, Any]) -> None:
     _require(
         set(context)
         == {
-            "approved_prompt", "context_chips", "selected_day",
-            "selected_stop_id", "session_id",
+            "approved_prompt",
+            "context_chips",
+            "selected_day",
+            "selected_stop_id",
+            "session_id",
         },
         "e2e1_live_browser_context_schema_invalid",
     )
@@ -880,14 +1117,9 @@ def _verify_bundle(root: Path, manifest: dict[str, Any]) -> None:
         endpoint_suffix="/copilot/messages",
         response_format="sse",
     )
-    stream_events = json.loads(
-        (base / "copilot_stream_events.json").read_text(encoding="utf-8")
-    )
+    stream_events = json.loads((base / "copilot_stream_events.json").read_text(encoding="utf-8"))
     _require(
-        stream_events
-        == _sse_events(
-            _load(base / "product_copilot_http_io.json")["response_body_utf8"]
-        ),
+        stream_events == _sse_events(_load(base / "product_copilot_http_io.json")["response_body_utf8"]),
         "e2e1_live_copilot_stream_projection_mismatch",
     )
     draft_http = _load(base / "product_draft_http_io.json")
@@ -907,15 +1139,16 @@ def _verify_bundle(root: Path, manifest: dict[str, Any]) -> None:
     provider = _load(base / "provider_exact_llm_io.json")
     records, provider_context, provider_authorization = _verify_provider_records(
         provider,
-        allow_historical_schema=(
-            manifest["authorization"]["execution_mode"]
-            == "recorded_exact_output_replay"
-        ),
+        allow_historical_schema=(manifest["authorization"]["execution_mode"] == "recorded_exact_output_replay"),
     )
     provider_response = json.loads(records[-1]["response_body_utf8"])
     provider_projection = _provider_projection(provider_response)
     try:
-        schema = OpenAIInterpretationSchemaV2 if provider_context["schema_version"] == "copilot-context-v2" else OpenAIInterpretationSchemaV1
+        schema = (
+            OpenAIInterpretationSchemaV2
+            if provider_context["schema_version"] == "copilot-context-v2"
+            else OpenAIInterpretationSchemaV1
+        )
         schema.model_validate(provider_projection, strict=True)
     except Exception as error:
         raise LiveE2E1VerificationError("e2e1_live_provider_projection_invalid") from error
@@ -956,28 +1189,45 @@ def _verify_bundle(root: Path, manifest: dict[str, Any]) -> None:
         "e2e1_live_draft_binding_invalid",
     )
     if combined:
-        _require(set(draft_request) == {"expected_revision", "operations"}
+        _require(
+            set(draft_request) == {"expected_revision", "operations"}
             and len(draft_operations) == len(operations) == 2
             and draft_response["session"]["draft"] == operations
             and draft_response["session"]["revision"] == draft_request["expected_revision"] + 1,
-            "e2e1_live_combined_staging_invalid")
+            "e2e1_live_combined_staging_invalid",
+        )
         for requested, staged in zip(draft_operations, operations, strict=True):
-            _require(all(staged.get(key) == value for key, value in requested.items())
-                and requested["source"] == "copilot", "e2e1_live_combined_staging_invalid")
-        _require(draft_operations[1]["type"] == "set_stop_duration"
+            _require(
+                all(staged.get(key) == value for key, value in requested.items()) and requested["source"] == "copilot",
+                "e2e1_live_combined_staging_invalid",
+            )
+        _require(
+            draft_operations[1]["type"] == "set_stop_duration"
             and draft_operations[1]["target"] == "griffith_observatory"
             and draft_operations[1]["parameters"] == interpretation["intents"][1]["parameters"],
-            "e2e1_live_combined_staging_invalid")
+            "e2e1_live_combined_staging_invalid",
+        )
         staging = _load(base / "combined_staging_observation.json")
-        _require(staging["initial_map"] == staging["staged_map"]
+        _require(
+            staging["initial_map"] == staging["staged_map"]
             and staging["initial_map"]["active_plan_id"] == provider_context["accepted_plan_id"]
-            and staging["control_clicks"] == [{"text":"Add all to draft", "isTrusted":True},
-                {"text":"Preview combined repair", "isTrusted":True}], "e2e1_live_combined_controls_invalid")
-    _require(preview_request == {"expected_revision": draft_response["session"]["revision"]}, "e2e1_live_preview_request_invalid")
+            and staging["control_clicks"]
+            == [
+                {"text": "Add all to draft", "isTrusted": True},
+                {"text": "Preview combined repair", "isTrusted": True},
+            ],
+            "e2e1_live_combined_controls_invalid",
+        )
+    _require(
+        preview_request == {"expected_revision": draft_response["session"]["revision"]},
+        "e2e1_live_preview_request_invalid",
+    )
     proposal = preview_response["session"]["proposal"]
-    _require(proposal["compiled_request"]["operations"] == [
-        {key: value for key, value in row.items() if key != "created_at"} for row in operations],
-        "e2e1_live_compiled_operations_mismatch")
+    _require(
+        proposal["compiled_request"]["operations"]
+        == [{key: value for key, value in row.items() if key != "created_at"} for row in operations],
+        "e2e1_live_compiled_operations_mismatch",
+    )
     receipt = _verify_runtime_execution(proposal)
     _require(receipt == _load(base / "runtime_execution.json"), "e2e1_live_runtime_receipt_projection_mismatch")
     _verify_visible_metrics(_load(base / "visible_metrics.json"), proposal)
@@ -985,25 +1235,44 @@ def _verify_bundle(root: Path, manifest: dict[str, Any]) -> None:
     _require(
         set(browser)
         == {
-            "schema_version", "session_id", "client_message_id",
-            "copilot_stream_request_id", "context_revision",
-            "conversation_turn_id", "provider", "model", "intent",
-            "draft_operation", "parent_plan_id", "child_plan_id",
-            "child_plan_content_hash", "diff_id", "certificate_id",
-            "rendered_map_plan_id", "rendered_geometry_hash",
-            "rendered_marker_ids", "console_errors", "request_failures",
-            "http_errors", "accept_or_keep_invoked", "assertions_passed",
-        } | ({"intents", "draft_operations"} if combined else set())
-        and browser.get("schema_version")
-        == "e2e1-live-copilot-browser-assertions-v1"
+            "schema_version",
+            "session_id",
+            "client_message_id",
+            "copilot_stream_request_id",
+            "context_revision",
+            "conversation_turn_id",
+            "provider",
+            "model",
+            "intent",
+            "draft_operation",
+            "parent_plan_id",
+            "child_plan_id",
+            "child_plan_content_hash",
+            "diff_id",
+            "certificate_id",
+            "rendered_map_plan_id",
+            "rendered_geometry_hash",
+            "rendered_marker_ids",
+            "console_errors",
+            "request_failures",
+            "http_errors",
+            "accept_or_keep_invoked",
+            "assertions_passed",
+        }
+        | ({"intents", "draft_operations"} if combined else set())
+        and browser.get("schema_version") == "e2e1-live-copilot-browser-assertions-v1"
         and browser.get("assertions_passed") is True,
         "e2e1_live_browser_assertions_schema_invalid",
     )
-    _require(browser["intent"] == interpretation["intents"][0] and browser["draft_operation"] == operation,
-        "e2e1_live_browser_semantics_mismatch")
+    _require(
+        browser["intent"] == interpretation["intents"][0] and browser["draft_operation"] == operation,
+        "e2e1_live_browser_semantics_mismatch",
+    )
     if combined:
-        _require(browser["intents"] == interpretation["intents"] and browser["draft_operations"] == operations,
-            "e2e1_live_browser_semantics_mismatch")
+        _require(
+            browser["intents"] == interpretation["intents"] and browser["draft_operations"] == operations,
+            "e2e1_live_browser_semantics_mismatch",
+        )
     map_ack = _load(base / "map_render_ack.json")
     evaluation = _load(base / "evaluation_summary.json")
     plan_diff = _load(base / "plan_diff.json")
@@ -1011,8 +1280,10 @@ def _verify_bundle(root: Path, manifest: dict[str, Any]) -> None:
     started = _parse_timestamp(runtime_browser["preview_started_at"], "e2e1_live_runtime_timestamp_invalid")
     received = _parse_timestamp(runtime_browser["preview_received_at"], "e2e1_live_runtime_timestamp_invalid")
     _require(
-        started <= _parse_timestamp(receipt["started_at"], "e2e1_live_runtime_timestamp_invalid")
-        <= _parse_timestamp(receipt["completed_at"], "e2e1_live_runtime_timestamp_invalid") <= received,
+        started
+        <= _parse_timestamp(receipt["started_at"], "e2e1_live_runtime_timestamp_invalid")
+        <= _parse_timestamp(receipt["completed_at"], "e2e1_live_runtime_timestamp_invalid")
+        <= received,
         "e2e1_live_runtime_not_current_request",
     )
     geography = proposal["geography_plan"]
@@ -1027,9 +1298,8 @@ def _verify_bundle(root: Path, manifest: dict[str, Any]) -> None:
         plan_diff == receipt["plan_diff"]
         and evaluation["certificate_id"] == receipt["evaluation_id"]
         and evaluation["diff_id"] == receipt["plan_diff"]["diff_id"]
-        and sorted(map_ack["rendered_marker_ids"]) == sorted(
-            feature["properties"]["stop_id"] for feature in geography["stops"]["features"]
-        ),
+        and sorted(map_ack["rendered_marker_ids"])
+        == sorted(feature["properties"]["stop_id"] for feature in geography["stops"]["features"]),
         "e2e1_live_visible_artifact_projection_invalid",
     )
     reload_http = _load(base / "product_reload_http_io.json")
@@ -1050,10 +1320,18 @@ def _verify_bundle(root: Path, manifest: dict[str, Any]) -> None:
         and _independent_geometry_hash(restored["proposal"]["geography_plan"]) == digest,
         "e2e1_live_restore_binding_invalid",
     )
-    _verify_acceptance_observation(root, manifest, copilot_session_id, proposal, {
-        "after_chat":copilot_response["session"], "after_stage":draft_response["session"],
-        "after_preview":preview_response["session"], "after_reload":restored,
-    })
+    _verify_acceptance_observation(
+        root,
+        manifest,
+        copilot_session_id,
+        proposal,
+        {
+            "after_chat": copilot_response["session"],
+            "after_stage": draft_response["session"],
+            "after_preview": preview_response["session"],
+            "after_reload": restored,
+        },
+    )
     navigation = _load(base / "navigation_and_viewport_assertions.json")
     for dimensions in ((1440, 900), (1280, 800), (1024, 768), (390, 844)):
         width, height = dimensions
@@ -1063,7 +1341,8 @@ def _verify_bundle(root: Path, manifest: dict[str, Any]) -> None:
             and readiness["viewport"] == {"width": width, "height": height}
             and 0.95 <= readiness["visible_tile_area_coverage_ratio"] <= 1
             and readiness["coverage_method"] == "loaded_tile_projected_union_area_v1"
-            and readiness["container"]["width"] > 0 and readiness["container"]["height"] > 0
+            and readiness["container"]["width"] > 0
+            and readiness["container"]["height"] > 0
             and abs(readiness["canvas"]["width"] - readiness["container"]["width"]) <= 1
             and abs(readiness["canvas"]["height"] - readiness["container"]["height"]) <= 1
             and readiness["rendered_plan_id"] == receipt["child_plan_id"]
@@ -1082,7 +1361,8 @@ def _verify_bundle(root: Path, manifest: dict[str, Any]) -> None:
         "e2e1_live_compare_map_identity_mismatch",
     )
     _require(
-        navigation["assertions_passed"] is True and navigation["failures"] == {}
+        navigation["assertions_passed"] is True
+        and navigation["failures"] == {}
         and navigation["expected"] == map_ack
         and navigation["independent_geometry_hash"] == digest
         and {"after_copilot_restore", "after_module_switching", "after_reload"} <= set(navigation["checkpoints"])
@@ -1118,15 +1398,29 @@ def _verify_bundle(root: Path, manifest: dict[str, Any]) -> None:
     )
     if execution_mode == "live_openai":
         before_transport = _load(base / "provider_request_authorized.json")
-        _require(set(before_transport) == {"schema_version", "observed_at", "state", "request_body_utf8", "request_body_sha256", "provider_dispatch_or_completion_confirmed"}
-                 and before_transport["schema_version"] == "e2e1-live-before-transport-v1"
-                 and before_transport["state"] == "authorized_before_transport"
-                 and before_transport["provider_dispatch_or_completion_confirmed"] is False
-                 and before_transport["request_body_utf8"] == records[0]["request_body_utf8"]
-                 and before_transport["request_body_sha256"] == records[0]["request_body_sha256"], "e2e1_live_pre_dispatch_capture_invalid")
-        _require(_parse_timestamp(records[0]["started_at"], "e2e1_live_pre_dispatch_capture_invalid")
-                 <= _parse_timestamp(before_transport["observed_at"], "e2e1_live_pre_dispatch_capture_invalid")
-                 <= _parse_timestamp(records[0]["completed_at"], "e2e1_live_pre_dispatch_capture_invalid"), "e2e1_live_pre_dispatch_capture_invalid")
+        _require(
+            set(before_transport)
+            == {
+                "schema_version",
+                "observed_at",
+                "state",
+                "request_body_utf8",
+                "request_body_sha256",
+                "provider_dispatch_or_completion_confirmed",
+            }
+            and before_transport["schema_version"] == "e2e1-live-before-transport-v1"
+            and before_transport["state"] == "authorized_before_transport"
+            and before_transport["provider_dispatch_or_completion_confirmed"] is False
+            and before_transport["request_body_utf8"] == records[0]["request_body_utf8"]
+            and before_transport["request_body_sha256"] == records[0]["request_body_sha256"],
+            "e2e1_live_pre_dispatch_capture_invalid",
+        )
+        _require(
+            _parse_timestamp(records[0]["started_at"], "e2e1_live_pre_dispatch_capture_invalid")
+            <= _parse_timestamp(before_transport["observed_at"], "e2e1_live_pre_dispatch_capture_invalid")
+            <= _parse_timestamp(records[0]["completed_at"], "e2e1_live_pre_dispatch_capture_invalid"),
+            "e2e1_live_pre_dispatch_capture_invalid",
+        )
         _require(
             provider_context["session_id"] == copilot_session_id,
             "e2e1_live_provider_session_identity_mismatch",
@@ -1143,8 +1437,7 @@ def _verify_bundle(root: Path, manifest: dict[str, Any]) -> None:
         == browser["client_message_id"]
         == trace["client_message_id"]
         == stream_events[0]["client_message_id"]
-        and browser["copilot_stream_request_id"]
-        == stream_events[0]["request_id"],
+        and browser["copilot_stream_request_id"] == stream_events[0]["request_id"],
         "e2e1_live_stream_trace_identity_mismatch",
     )
     _require(
@@ -1159,12 +1452,9 @@ def _verify_bundle(root: Path, manifest: dict[str, Any]) -> None:
     )
     if execution_mode == "live_openai":
         _require(
-            trace.get("provider_request_body_sha256")
-            == records[0]["request_body_sha256"]
-            and trace.get("provider_response_body_sha256")
-            == records[0]["response_body_sha256"]
-            and trace.get("provider_request_authorization")
-            == provider_authorization,
+            trace.get("provider_request_body_sha256") == records[0]["request_body_sha256"]
+            and trace.get("provider_response_body_sha256") == records[0]["response_body_sha256"]
+            and trace.get("provider_request_authorization") == provider_authorization,
             "e2e1_live_provider_authorization_binding_invalid",
         )
     else:
@@ -1205,9 +1495,7 @@ def _verify_bundle(root: Path, manifest: dict[str, Any]) -> None:
     _require(
         CANDIDATE in map_ack["rendered_marker_ids"]
         and TARGET not in map_ack["rendered_marker_ids"]
-        and trace["geography_hash"]
-        == trace["rendered_geometry_hash"]
-        == map_ack["rendered_geometry_hash"],
+        and trace["geography_hash"] == trace["rendered_geometry_hash"] == map_ack["rendered_geometry_hash"],
         "e2e1_live_map_projection_invalid",
     )
     _require(
@@ -1226,8 +1514,7 @@ def _verify_bundle(root: Path, manifest: dict[str, Any]) -> None:
     cached_tokens = details.get("cached_tokens", 0)
     _require(
         all(
-            type(historical_raw_usage.get(key)) is int
-            and historical_raw_usage[key] > 0
+            type(historical_raw_usage.get(key)) is int and historical_raw_usage[key] > 0
             for key in ("input_tokens", "output_tokens", "total_tokens")
         )
         and type(cached_tokens) is int
@@ -1274,8 +1561,7 @@ def _verify_bundle(root: Path, manifest: dict[str, Any]) -> None:
         expected_cost_text = historical_cost_text
         expected_attempts = 1
         _require(
-            trace.get("provider_transport_attempts") == 1
-            and trace.get("provider_calls_current_run") == 1,
+            trace.get("provider_transport_attempts") == 1 and trace.get("provider_calls_current_run") == 1,
             "e2e1_live_live_call_count_invalid",
         )
         expected_usage_file = {
@@ -1291,8 +1577,7 @@ def _verify_bundle(root: Path, manifest: dict[str, Any]) -> None:
         _require(
             isinstance(historical_provider_evidence, dict)
             and set(historical_provider_evidence) == HISTORICAL_PROVIDER_KEYS
-            and historical_provider_evidence.get("schema_version")
-            == "e2e1-live-historical-provider-evidence-v1"
+            and historical_provider_evidence.get("schema_version") == "e2e1-live-historical-provider-evidence-v1"
             and historical_provider_evidence.get("provider_transport_attempts") == 1
             and isinstance(historical_provider_evidence.get("provider_io_source_path"), str)
             and bool(historical_provider_evidence["provider_io_source_path"])
@@ -1303,17 +1588,12 @@ def _verify_bundle(root: Path, manifest: dict[str, Any]) -> None:
             is not None
             and historical_provider_evidence.get("replayed_provider_io_file_sha256")
             == _sha256(base / "provider_exact_llm_io.json")
-            and historical_provider_evidence.get("provider_io_content_hash")
-            == provider["content_hash"]
-            and historical_provider_evidence.get("provider_request_body_sha256")
-            == records[0]["request_body_sha256"]
-            and historical_provider_evidence.get("provider_response_body_sha256")
-            == records[0]["response_body_sha256"]
-            and historical_provider_evidence.get("request_authorization")
-            == provider_authorization
+            and historical_provider_evidence.get("provider_io_content_hash") == provider["content_hash"]
+            and historical_provider_evidence.get("provider_request_body_sha256") == records[0]["request_body_sha256"]
+            and historical_provider_evidence.get("provider_response_body_sha256") == records[0]["response_body_sha256"]
+            and historical_provider_evidence.get("request_authorization") == provider_authorization
             and historical_provider_evidence.get("usage") == historical_usage
-            and historical_provider_evidence.get("billed_cost_usd")
-            == historical_cost_text
+            and historical_provider_evidence.get("billed_cost_usd") == historical_cost_text
             and trace.get("provider_transport_attempts") == 0
             and trace.get("provider_calls_current_run") == 0,
             "e2e1_live_replay_metadata_invalid",
@@ -1353,9 +1633,7 @@ def _verify_bundle(root: Path, manifest: dict[str, Any]) -> None:
         "logical_message_cap": 1,
         "transport_attempt_cap": expected_attempts,
         "accept_or_keep_allowed": False,
-        "exact_provider_request": (
-            provider_authorization if execution_mode == "live_openai" else None
-        ),
+        "exact_provider_request": (provider_authorization if execution_mode == "live_openai" else None),
         "historical_provider_evidence": historical_provider_evidence,
     }
     _require(
@@ -1377,9 +1655,15 @@ def _verify_command(command: object) -> None:
         isinstance(command, list)
         and len(command) == 11
         and Path(command[0]).resolve() == Path(sys.executable).resolve()
-        and command[1:8] == [
-            "-m", "pytest", "tests/product_app/browser/test_e2e1_live_copilot_chat.py",
-            "-q", "-p", "no:cacheprovider", "--basetemp",
+        and command[1:8]
+        == [
+            "-m",
+            "pytest",
+            "tests/product_app/browser/test_e2e1_live_copilot_chat.py",
+            "-q",
+            "-p",
+            "no:cacheprovider",
+            "--basetemp",
         ]
         and isinstance(command[8], str)
         and bool(command[8])
@@ -1396,24 +1680,57 @@ def _verify_runtime_environments(root: Path, manifest: dict[str, Any]) -> None:
 
     code = "e2e1_live_lifecycle_invalid"
     binding = manifest.get("run_lifecycle")
-    _require(type(binding) is dict and set(binding) == {"artifact", "record"}
-             and binding["artifact"] == "run_lifecycle.json", code)
+    _require(
+        type(binding) is dict
+        and set(binding) == {"artifact", "record"}
+        and binding["artifact"] == "run_lifecycle.json",
+        code,
+    )
     _require((root / "run_lifecycle.json").is_file(), code)
     receipt = _load(root / "run_lifecycle.json")
-    fields = {"schema_version", "run_id", "execution_mode", "base_url", "process_id", "observed_at",
-              "server_ready_at", "pytest_started_at", "pytest_completed_at", "server_stopped_at",
-              "finalized_at", "finalized", "pytest_exit_code", "command"}
-    _require(set(receipt) == fields and receipt == binding["record"]
-             and receipt["schema_version"] == "e2e1-live-run-lifecycle-v1"
-             and receipt["run_id"] == root.name and receipt["execution_mode"] == manifest["authorization"]["execution_mode"]
-             and receipt["base_url"] == manifest["base_url"]
-             and type(receipt["process_id"]) is int and receipt["process_id"] > 0
-             and receipt["finalized"] is True and type(receipt["pytest_exit_code"]) is int
-             and receipt["pytest_exit_code"] == manifest["pytest_exit_code"] == 0
-             and receipt["command"] == manifest["command"]
-             and Path(receipt["command"][-1]).resolve() == (root / "pytest_junit.xml").resolve(), code)
-    times = [_parse_timestamp(receipt[key], code) for key in (
-        "observed_at", "server_ready_at", "pytest_started_at", "pytest_completed_at", "server_stopped_at", "finalized_at")]
+    fields = {
+        "schema_version",
+        "run_id",
+        "execution_mode",
+        "base_url",
+        "process_id",
+        "observed_at",
+        "server_ready_at",
+        "pytest_started_at",
+        "pytest_completed_at",
+        "server_stopped_at",
+        "finalized_at",
+        "finalized",
+        "pytest_exit_code",
+        "command",
+    }
+    _require(
+        set(receipt) == fields
+        and receipt == binding["record"]
+        and receipt["schema_version"] == "e2e1-live-run-lifecycle-v1"
+        and receipt["run_id"] == root.name
+        and receipt["execution_mode"] == manifest["authorization"]["execution_mode"]
+        and receipt["base_url"] == manifest["base_url"]
+        and type(receipt["process_id"]) is int
+        and receipt["process_id"] > 0
+        and receipt["finalized"] is True
+        and type(receipt["pytest_exit_code"]) is int
+        and receipt["pytest_exit_code"] == manifest["pytest_exit_code"] == 0
+        and receipt["command"] == manifest["command"]
+        and Path(receipt["command"][-1]).resolve() == (root / "pytest_junit.xml").resolve(),
+        code,
+    )
+    times = [
+        _parse_timestamp(receipt[key], code)
+        for key in (
+            "observed_at",
+            "server_ready_at",
+            "pytest_started_at",
+            "pytest_completed_at",
+            "server_stopped_at",
+            "finalized_at",
+        )
+    ]
     _require(times == sorted(times) and times[-1] <= _parse_timestamp(manifest["generated_at"], code), code)
     try:
         junit = ET.parse(root / "pytest_junit.xml").getroot()
@@ -1423,16 +1740,25 @@ def _verify_runtime_environments(root: Path, manifest: dict[str, Any]) -> None:
     suites = list(junit.iter("testsuite"))
     expected_node = "tests/product_app/browser/test_e2e1_live_copilot_chat.py::test_live_website_copilot_stages_and_renders_exact_evaluated_child"
     nodes = {case.get("classname", "").replace(".", "/") + ".py::" + case.get("name", "") for case in cases}
-    _require(len(cases) == 1 and nodes == {expected_node} and len(suites) == 1
-             and suites[0].get("tests") == "1" and all(suites[0].get(key) == "0" for key in ("errors", "failures", "skipped"))
-             and not any(list(junit.iter(key)) for key in ("failure", "error", "skipped")), "e2e1_live_junit_invalid")
+    _require(
+        len(cases) == 1
+        and nodes == {expected_node}
+        and len(suites) == 1
+        and suites[0].get("tests") == "1"
+        and all(suites[0].get(key) == "0" for key in ("errors", "failures", "skipped"))
+        and not any(list(junit.iter(key)) for key in ("failure", "error", "skipped")),
+        "e2e1_live_junit_invalid",
+    )
     observed, referenced = set(), set()
     screenshots = list(root.rglob("*.readiness.json"))
     _require(bool(screenshots), "e2e1_live_runtime_environment_missing")
     for path in screenshots:
         ready = _load(path)
         bound = ready.get("runtime_environment")
-        _require(type(bound) is dict and set(bound) == {"artifact", "sha256", "test_nodeid", "browser"}, "e2e1_live_runtime_journey_binding_invalid")
+        _require(
+            type(bound) is dict and set(bound) == {"artifact", "sha256", "test_nodeid", "browser"},
+            "e2e1_live_runtime_journey_binding_invalid",
+        )
         node = bound["test_nodeid"]
         _require(type(node) is str and node in nodes, "e2e1_live_runtime_journey_binding_invalid")
         expected_name = "runtime_environment_" + _hash_text(node)[:16] + ".json"
@@ -1445,56 +1771,125 @@ def _verify_runtime_environments(root: Path, manifest: dict[str, Any]) -> None:
         except RuntimeEnvironmentError as error:
             raise LiveE2E1VerificationError("e2e1_live_runtime_environment_invalid") from error
         png = path.with_name(path.name.removesuffix(".readiness.json") + ".png")
-        _require(bound["sha256"] == _sha256(artifact) and bound["browser"] == record["browser"]
-                 and record["application_origin"] == manifest["base_url"]
-                 and times[2] <= _parse_timestamp(record["observed_at"], code)
-                 <= _parse_timestamp(record["completed_at"], code)
-                 <= _parse_timestamp(ready.get("screenshot_started_at"), code)
-                 <= _parse_timestamp(ready.get("screenshot_completed_at"), code) <= times[3]
-                 and png.is_file() and png.read_bytes().startswith(b"\x89PNG\r\n\x1a\n"), "e2e1_live_runtime_receipt_binding_invalid")
+        _require(
+            bound["sha256"] == _sha256(artifact)
+            and bound["browser"] == record["browser"]
+            and record["application_origin"] == manifest["base_url"]
+            and times[2]
+            <= _parse_timestamp(record["observed_at"], code)
+            <= _parse_timestamp(record["completed_at"], code)
+            <= _parse_timestamp(ready.get("screenshot_started_at"), code)
+            <= _parse_timestamp(ready.get("screenshot_completed_at"), code)
+            <= times[3]
+            and png.is_file()
+            and png.read_bytes().startswith(b"\x89PNG\r\n\x1a\n"),
+            "e2e1_live_runtime_receipt_binding_invalid",
+        )
         observed.add(node)
         referenced.add(artifact)
-    _require(observed == nodes and referenced == set(root.rglob("runtime_environment_*.json")), "e2e1_live_runtime_journey_universe_invalid")
+    _require(
+        observed == nodes and referenced == set(root.rglob("runtime_environment_*.json")),
+        "e2e1_live_runtime_journey_universe_invalid",
+    )
 
 
-def _verify_acceptance_observation(root: Path, manifest: dict[str, Any], session_id: str,
-                                   proposal: dict[str, Any], sessions: dict[str, Any]) -> None:
+def _verify_acceptance_observation(
+    root: Path, manifest: dict[str, Any], session_id: str, proposal: dict[str, Any], sessions: dict[str, Any]
+) -> None:
     base = root / SCENARIO
     code = "e2e1_live_acceptance_observation_invalid"
     observation = _load(base / "acceptance_observation.json")
     ledger = json.loads((base / "product_mutation_ledger.json").read_text(encoding="utf-8"))
     initial_http = _load(base / "product_initial_selection_http_io.json")
-    _, initial_payload, initial_session_id = _verify_http_record(initial_http, "e2e1_live_initial_selection",
-        base_url=manifest["base_url"], endpoint_suffix="/selection")
-    expected = {"before_chat":initial_payload["session"]["accepted_plan_id"],
-                **{name:session["accepted_plan_id"] for name, session in sessions.items()}}
-    _require(set(observation) == {"schema_version", "session_id", "initial_plan_id", "initial_content_hash",
-             "preview_parent_id", "preview_parent_content_hash", "accepted_plan_checkpoints", "acceptance_mutations", "accept_or_keep_invoked"}
-             and observation["schema_version"] == "e2e1-live-acceptance-observation-v1"
-             and observation["session_id"] == initial_session_id == session_id
-             and observation["accepted_plan_checkpoints"] == expected
-             and set(expected.values()) == {proposal["parent_plan_id"]}
-             and observation["initial_plan_id"] == observation["preview_parent_id"] == proposal["parent_plan_id"]
-             and observation["initial_content_hash"] == observation["preview_parent_content_hash"] == proposal["parent_plan_content_hash"], code)
+    _, initial_payload, initial_session_id = _verify_http_record(
+        initial_http, "e2e1_live_initial_selection", base_url=manifest["base_url"], endpoint_suffix="/selection"
+    )
+    expected = {
+        "before_chat": initial_payload["session"]["accepted_plan_id"],
+        **{name: session["accepted_plan_id"] for name, session in sessions.items()},
+    }
+    _require(
+        set(observation)
+        == {
+            "schema_version",
+            "session_id",
+            "initial_plan_id",
+            "initial_content_hash",
+            "preview_parent_id",
+            "preview_parent_content_hash",
+            "accepted_plan_checkpoints",
+            "acceptance_mutations",
+            "accept_or_keep_invoked",
+        }
+        and observation["schema_version"] == "e2e1-live-acceptance-observation-v1"
+        and observation["session_id"] == initial_session_id == session_id
+        and observation["accepted_plan_checkpoints"] == expected
+        and set(expected.values()) == {proposal["parent_plan_id"]}
+        and observation["initial_plan_id"] == observation["preview_parent_id"] == proposal["parent_plan_id"]
+        and observation["initial_content_hash"]
+        == observation["preview_parent_content_hash"]
+        == proposal["parent_plan_content_hash"],
+        code,
+    )
     _require(type(ledger) is list and bool(ledger), code)
     for index, row in enumerate(ledger, 1):
-        _require(type(row) is dict and set(row) == {"sequence", "method", "url", "observed_at", "request_body_utf8",
-                 "request_body_sha256", "request_original_body_sha256", "credential_redactions", "response_status_code", "response_observed_at"}
-                 and type(row["sequence"]) is int and row["sequence"] == index
-                 and row["method"] in {"POST", "PUT", "PATCH", "DELETE"}
-                 and type(row["url"]) is str and row["url"].startswith(manifest["base_url"] + "/api/")
-                 and row["request_body_sha256"] == _hash_text(row["request_body_utf8"])
-                 and row["credential_redactions"] == []
-                 and row["request_original_body_sha256"] == row["request_body_sha256"]
-                 and type(row["response_status_code"]) is int and 200 <= row["response_status_code"] < 300, code)
-        _require(_parse_timestamp(row["observed_at"], code) <= _parse_timestamp(row["response_observed_at"], code)
-                 <= _parse_timestamp(manifest["generated_at"], code), code)
-    actual = [row for row in ledger if re.fullmatch(r"/api/sessions/[^/]+/(accept|keep-original|acceptance-decisions/[^/]+/rollback)", urlparse(row["url"]).path)]
-    _require(observation["acceptance_mutations"] == actual == [] and observation["accept_or_keep_invoked"] is False, code)
-    for filename in ("product_initial_selection_http_io.json", "product_copilot_http_io.json", "product_draft_http_io.json", "product_preview_http_io.json"):
+        _require(
+            type(row) is dict
+            and set(row)
+            == {
+                "sequence",
+                "method",
+                "url",
+                "observed_at",
+                "request_body_utf8",
+                "request_body_sha256",
+                "request_original_body_sha256",
+                "credential_redactions",
+                "response_status_code",
+                "response_observed_at",
+            }
+            and type(row["sequence"]) is int
+            and row["sequence"] == index
+            and row["method"] in {"POST", "PUT", "PATCH", "DELETE"}
+            and type(row["url"]) is str
+            and row["url"].startswith(manifest["base_url"] + "/api/")
+            and row["request_body_sha256"] == _hash_text(row["request_body_utf8"])
+            and row["credential_redactions"] == []
+            and row["request_original_body_sha256"] == row["request_body_sha256"]
+            and type(row["response_status_code"]) is int
+            and 200 <= row["response_status_code"] < 300,
+            code,
+        )
+        _require(
+            _parse_timestamp(row["observed_at"], code)
+            <= _parse_timestamp(row["response_observed_at"], code)
+            <= _parse_timestamp(manifest["generated_at"], code),
+            code,
+        )
+    actual = [
+        row
+        for row in ledger
+        if re.fullmatch(
+            r"/api/sessions/[^/]+/(accept|keep-original|acceptance-decisions/[^/]+/rollback)", urlparse(row["url"]).path
+        )
+    ]
+    _require(
+        observation["acceptance_mutations"] == actual == [] and observation["accept_or_keep_invoked"] is False, code
+    )
+    for filename in (
+        "product_initial_selection_http_io.json",
+        "product_copilot_http_io.json",
+        "product_draft_http_io.json",
+        "product_preview_http_io.json",
+    ):
         http = _load(base / filename)
-        matches = [row for row in ledger if row["method"] == http["method"] and row["url"] == http["url"]
-                   and row["request_body_sha256"] == http["request_body_sha256"]]
+        matches = [
+            row
+            for row in ledger
+            if row["method"] == http["method"]
+            and row["url"] == http["url"]
+            and row["request_body_sha256"] == http["request_body_sha256"]
+        ]
         _require(len(matches) == 1 and matches[0]["response_status_code"] == http["response_status_code"], code)
 
 
@@ -1507,26 +1902,59 @@ def _verify_replay_isolation(root: Path, manifest: dict[str, Any]) -> None:
     path = root / "provider_isolation.json"
     _require(path.is_file(), code)
     record = _load(path)
-    fields = {"schema_version", "run_id", "process_id", "scope", "guard_boundaries", "installed_at",
-              "finalized_at", "finalized", "effective_adapter", "actual_adapter", "api_key_disabled",
-              "app_initialized", "server_started", "server_stopped", "blocked_attempts", "sent_provider_calls",
-              "allowed_local_connections", "failure_code"}
+    fields = {
+        "schema_version",
+        "run_id",
+        "process_id",
+        "scope",
+        "guard_boundaries",
+        "installed_at",
+        "finalized_at",
+        "finalized",
+        "effective_adapter",
+        "actual_adapter",
+        "api_key_disabled",
+        "app_initialized",
+        "server_started",
+        "server_stopped",
+        "blocked_attempts",
+        "sent_provider_calls",
+        "allowed_local_connections",
+        "failure_code",
+    }
     lifecycle = manifest["run_lifecycle"]["record"]
-    _require(set(record) == fields and record["schema_version"] == "e2e1-provider-isolation-v1"
-             and record["run_id"] == root.name and record["process_id"] == lifecycle["process_id"]
-             and type(record["process_id"]) is int and record["process_id"] > 0
-             and record["scope"] == "application_server" and record["guard_boundaries"] == BOUNDARIES
-             and record["effective_adapter"] == "recorded_exact_output_replay"
-             and record["actual_adapter"] == "RecordedCopilotAdapter"
-             and all(record[key] is True for key in ("finalized", "api_key_disabled", "app_initialized", "server_started", "server_stopped"))
-             and record["blocked_attempts"] == [] and type(record["sent_provider_calls"]) is int
-             and record["sent_provider_calls"] == 0 and type(record["allowed_local_connections"]) is int
-             and record["allowed_local_connections"] > 0 and record["failure_code"] is None, code)
-    _require(_parse_timestamp(lifecycle["observed_at"], code) <= _parse_timestamp(record["installed_at"], code)
-             <= _parse_timestamp(lifecycle["server_ready_at"], code)
-             <= _parse_timestamp(lifecycle["server_stopped_at"], code)
-             <= _parse_timestamp(record["finalized_at"], code)
-             <= _parse_timestamp(manifest["generated_at"], code), code)
+    _require(
+        set(record) == fields
+        and record["schema_version"] == "e2e1-provider-isolation-v1"
+        and record["run_id"] == root.name
+        and record["process_id"] == lifecycle["process_id"]
+        and type(record["process_id"]) is int
+        and record["process_id"] > 0
+        and record["scope"] == "application_server"
+        and record["guard_boundaries"] == BOUNDARIES
+        and record["effective_adapter"] == "recorded_exact_output_replay"
+        and record["actual_adapter"] == "RecordedCopilotAdapter"
+        and all(
+            record[key] is True
+            for key in ("finalized", "api_key_disabled", "app_initialized", "server_started", "server_stopped")
+        )
+        and record["blocked_attempts"] == []
+        and type(record["sent_provider_calls"]) is int
+        and record["sent_provider_calls"] == 0
+        and type(record["allowed_local_connections"]) is int
+        and record["allowed_local_connections"] > 0
+        and record["failure_code"] is None,
+        code,
+    )
+    _require(
+        _parse_timestamp(lifecycle["observed_at"], code)
+        <= _parse_timestamp(record["installed_at"], code)
+        <= _parse_timestamp(lifecycle["server_ready_at"], code)
+        <= _parse_timestamp(lifecycle["server_stopped_at"], code)
+        <= _parse_timestamp(record["finalized_at"], code)
+        <= _parse_timestamp(manifest["generated_at"], code),
+        code,
+    )
 
 
 def _verify_text_security(root: Path) -> None:
@@ -1565,8 +1993,14 @@ def _verify_structured_secrets(value: Any, *, path: tuple[str, ...] = ()) -> Non
             compact = re.sub(r"[^a-z0-9]", "", normalized)
             location = (*path, normalized)
             if compact in {
-                "apikey", "openaiapikey", "cookie", "setcookie",
-                "xsessiontoken", "sessiontoken", "mutationtoken", "authorizationheader",
+                "apikey",
+                "openaiapikey",
+                "cookie",
+                "setcookie",
+                "xsessiontoken",
+                "sessiontoken",
+                "mutationtoken",
+                "authorizationheader",
             }:
                 _require(item == "OMITTED_SECRET", "e2e1_live_structured_secret_persisted")
             elif compact == "authorization":
@@ -1576,11 +2010,18 @@ def _verify_structured_secrets(value: Any, *, path: tuple[str, ...] = ()) -> Non
                         isinstance(item, dict)
                         and set(item)
                         == {
-                            "confirmed", "scope", "execution_mode",
-                            "current_run_provider_calls", "prompt_sha256", "model",
-                            "reasoning_effort", "logical_message_cap",
-                            "transport_attempt_cap", "accept_or_keep_allowed",
-                            "exact_provider_request", "historical_provider_evidence",
+                            "confirmed",
+                            "scope",
+                            "execution_mode",
+                            "current_run_provider_calls",
+                            "prompt_sha256",
+                            "model",
+                            "reasoning_effort",
+                            "logical_message_cap",
+                            "transport_attempt_cap",
+                            "accept_or_keep_allowed",
+                            "exact_provider_request",
+                            "historical_provider_evidence",
                         }
                     ),
                     "e2e1_live_structured_secret_persisted",
@@ -1601,34 +2042,52 @@ def verify(output_dir: Path) -> dict[str, Any]:
     root = output_dir.resolve()
     manifest = _load(root / MANIFEST_NAME)
     expected_keys = {
-        "schema_version", "generated_at", "authorization", "base_url", "command",
-        "pytest_exit_code", "assertions_passed", "health", "logical_copilot_messages",
-        "provider_transport_attempts", "usage", "pricing", "files", "source_inputs",
-        "trace", "content_hash", "run_lifecycle",
+        "schema_version",
+        "generated_at",
+        "authorization",
+        "base_url",
+        "command",
+        "pytest_exit_code",
+        "assertions_passed",
+        "health",
+        "logical_copilot_messages",
+        "provider_transport_attempts",
+        "usage",
+        "pricing",
+        "files",
+        "source_inputs",
+        "trace",
+        "content_hash",
+        "run_lifecycle",
     }
     _require(set(manifest) == expected_keys, "e2e1_live_manifest_fields_invalid")
     seed = dict(manifest)
     content_hash = seed.pop("content_hash")
     _require(content_hash == _canonical_sha256(seed), "e2e1_live_manifest_hash_invalid")
-    generated_at = _parse_timestamp(
-        manifest.get("generated_at"), "e2e1_live_generated_at_invalid"
-    )
+    generated_at = _parse_timestamp(manifest.get("generated_at"), "e2e1_live_generated_at_invalid")
     base_url = re.fullmatch(
         r"http://127\.0\.0\.1:([1-9]\d{0,4})",
         str(manifest["base_url"]),
     )
     authorization = manifest.get("authorization")
     authorization_keys = {
-        "confirmed", "scope", "execution_mode", "current_run_provider_calls",
-        "prompt_sha256", "model", "reasoning_effort", "logical_message_cap",
-        "transport_attempt_cap", "accept_or_keep_allowed",
-        "exact_provider_request", "historical_provider_evidence",
+        "confirmed",
+        "scope",
+        "execution_mode",
+        "current_run_provider_calls",
+        "prompt_sha256",
+        "model",
+        "reasoning_effort",
+        "logical_message_cap",
+        "transport_attempt_cap",
+        "accept_or_keep_allowed",
+        "exact_provider_request",
+        "historical_provider_evidence",
     }
     _require(
         isinstance(authorization, dict)
         and set(authorization) == authorization_keys
-        and authorization.get("execution_mode")
-        in {"live_openai", "recorded_exact_output_replay"},
+        and authorization.get("execution_mode") in {"live_openai", "recorded_exact_output_replay"},
         "e2e1_live_manifest_authorization_schema_invalid",
     )
     live_provider = authorization["execution_mode"] == "live_openai"
@@ -1675,8 +2134,7 @@ def verify(output_dir: Path) -> dict[str, Any]:
     _require(actual == declared, "e2e1_live_file_inventory_invalid")
     source_rows = manifest["source_inputs"]
     _require(
-        isinstance(source_rows, list)
-        and [row.get("path") for row in source_rows] == list(SOURCE_INPUTS),
+        isinstance(source_rows, list) and [row.get("path") for row in source_rows] == list(SOURCE_INPUTS),
         "e2e1_live_source_universe_invalid",
     )
     for row in source_rows:

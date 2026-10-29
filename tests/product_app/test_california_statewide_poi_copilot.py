@@ -42,10 +42,7 @@ def test_statewide_catalog_is_deterministic_bounded_and_discovery_only() -> None
 
     catalog = ProductPOICatalogV1.load(CATALOG_ROOT / "manifest.json")
     assert catalog.catalog_id == "california_statewide_discovery_v1"
-    scenario_names = (
-        set(SCENARIOS["california_statewide_nature"].coordinate_fallbacks)
-        - {"Las Vegas"}
-    )
+    scenario_names = set(SCENARIOS["california_statewide_nature"].coordinate_fallbacks) - {"Las Vegas"}
     assert len(catalog.places) == 41
     assert {place.name for place in catalog.places} == scenario_names
     assert all(not place.has_road_validated_access for place in catalog.places)
@@ -99,13 +96,9 @@ def test_live_product_context_distinguishes_accepted_registered_and_discovery_pl
 
     places = {place["place_id"]: place for place in context.known_places}
     assert len(places) <= 64
-    assert places["ca_region_redwood"]["route_status"] == (
-        "discovery_only_route_validation_required"
-    )
+    assert places["ca_region_redwood"]["route_status"] == ("discovery_only_route_validation_required")
     assert places["yosemite_national_park"]["route_status"] == "accepted_stop"
-    assert places["pfeiffer_big_sur_state_park"]["route_status"] == (
-        "registered_route_candidate"
-    )
+    assert places["pfeiffer_big_sur_state_park"]["route_status"] == ("registered_route_candidate")
     assert "Yosemite" in places["yosemite_national_park"]["aliases"]
     assert "Bixby Creek Bridge" in places["bixby_creek_bridge_viewpoint"]["aliases"]
     bixby = known_place_clarification(context, "I want to go to Bixby Creek Bridge")
@@ -158,18 +151,15 @@ def test_deterministic_copilot_uses_specific_statewide_clarification() -> None:
         ),
     )
     result = asyncio.run(
-        DeterministicCopilotAdapter().interpret(
-            context=context, history=(), message="I want to visit red wood"
-        )
+        DeterministicCopilotAdapter().interpret(context=context, history=(), message="I want to visit red wood")
     )
     assert result.state == "clarification_required"
     assert "Redwood National and State Parks" in result.assistant_message
     assert "not validated for this trip" in result.assistant_message
     assert result.intents[0].type == "request_clarification"
 
-def test_authenticated_statewide_search_is_truthful_and_strict(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
+
+def test_authenticated_statewide_search_is_truthful_and_strict(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(
         ProductRuntime,
         "_probe_map",
@@ -186,17 +176,13 @@ def test_authenticated_statewide_search_is_truthful_and_strict(
         session = created["session"]
         path = f"/api/sessions/{session['session_id']}/poi/search?q=red%20wood&limit=5"
         assert client.get(path).status_code == 403
-        response = client.get(
-            path, headers={"X-Session-Token": created["mutation_token"]}
-        )
+        response = client.get(path, headers={"X-Session-Token": created["mutation_token"]})
         assert response.status_code == 200
         payload = response.json()
         assert payload["schema_version"] == "product-poi-statewide-discovery-v1"
         assert payload["session_revision"] == 0
         assert payload["catalog"]["scope"] == "bounded_california_statewide_discovery"
-        assert [place["place_id"] for place in payload["places"]] == [
-            "ca_region_redwood"
-        ]
+        assert [place["place_id"] for place in payload["places"]] == ["ca_region_redwood"]
         place = payload["places"][0]
         assert place["name"] == "Redwood National and State Parks"
         assert place["route_status"] == "route_validation_required"
@@ -206,4 +192,3 @@ def test_authenticated_statewide_search_is_truthful_and_strict(
             path + "&unknown=x",
             headers={"X-Session-Token": created["mutation_token"]},
         ).json() == {"detail": "poi_search_query_field_unknown"}
-

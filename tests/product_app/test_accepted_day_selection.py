@@ -19,8 +19,10 @@ ROOT = Path(__file__).resolve().parents[2]
 
 def test_selection_uses_current_accepted_days_without_preview(tmp_path: Path, monkeypatch) -> None:
     app = create_product_app(
-        repository_root=ROOT, state_root=tmp_path / "state",
-        additional_allowed_authorities=("testserver",), copilot=DeterministicCopilotAdapter(),
+        repository_root=ROOT,
+        state_root=tmp_path / "state",
+        additional_allowed_authorities=("testserver",),
+        copilot=DeterministicCopilotAdapter(),
     )
     exchanges = []
     failures = []
@@ -37,17 +39,28 @@ def test_selection_uses_current_accepted_days_without_preview(tmp_path: Path, mo
         assert owner.proposal is None and not owner.draft
         headers = {"X-Session-Token": data["mutation_token"]}
         for day, expected_status, expected_detail in (
-            (8, 200, None), (9, 200, None), (10, 200, None),
-            (11, 400, "invalid_selected_day"), (0, 400, "invalid_selected_day"),
-            (-1, 400, "invalid_selected_day"), (True, 422, "request_validation_failed"),
-            ("8", 422, "request_validation_failed"), (8.0, 422, "request_validation_failed"),
+            (8, 200, None),
+            (9, 200, None),
+            (10, 200, None),
+            (11, 400, "invalid_selected_day"),
+            (0, 400, "invalid_selected_day"),
+            (-1, 400, "invalid_selected_day"),
+            (True, 422, "request_validation_failed"),
+            ("8", 422, "request_validation_failed"),
+            (8.0, 422, "request_validation_failed"),
         ):
             before = owner.public_dict()
             body = {"expected_revision": owner.revision, "selected_day": day}
             response = client.post(f"/api/sessions/{owner.session_id}/selection", headers=headers, json=body)
             output = response.json()
-            exchanges.append({"request": body, "expected_status": expected_status,
-                              "status": response.status_code, "response": output})
+            exchanges.append(
+                {
+                    "request": body,
+                    "expected_status": expected_status,
+                    "status": response.status_code,
+                    "response": output,
+                }
+            )
             (tmp_path / "selection_io.json").write_text(json.dumps(exchanges, indent=2), encoding="utf-8")
             if response.status_code != expected_status:
                 failures.append(f"day={day!r}: expected {expected_status}, got {response.status_code} {output}")

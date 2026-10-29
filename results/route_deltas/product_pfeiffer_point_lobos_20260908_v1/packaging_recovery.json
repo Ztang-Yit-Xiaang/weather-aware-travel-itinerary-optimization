@@ -1,0 +1,13 @@
+{
+  "schema_version": "route-delta-packaging-recovery-v1",
+  "original_capture_command": "python scripts/build_product_route_delta.py --output-dir results/route_deltas/product_pfeiffer_point_lobos_20260908_v1 --container-id 797f2ec510d4 --provider-provenance tmp_test/research_pipeline_raw/e3-route-evidence-20260722-snap-v2/source-provenance.json",
+  "original_exit_code": 1,
+  "original_failure": "FileNotFoundError while hashing routing/route_matrix_4ab1413814efb681.json; the existing writer emits routing/production_validated_route_matrix.csv",
+  "capture_and_freeze_completed_before_failure": true,
+  "repair": "Use the existing matrix CSV and complete descriptor packaging from the captured frozen evidence without another provider request.",
+  "recovery_command": "python scripts/build_product_route_delta.py --output-dir results/route_deltas/product_pfeiffer_point_lobos_20260908_v1 --finalize-existing",
+  "recovery_descriptor_written": true,
+  "additional_provider_attempts": 0,
+  "total_provider_attempts": 1,
+  "original_raw_response_and_freeze_manifest_preserved": true
+}

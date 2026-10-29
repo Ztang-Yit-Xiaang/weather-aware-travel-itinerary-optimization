@@ -25,14 +25,16 @@ from itinerary_system.product_app.copilot import DeterministicCopilotAdapter
 
 ROOT = Path(__file__).resolve().parents[2]
 SPEC = importlib.util.spec_from_file_location(
-    "e2e1_provider_isolation", ROOT / "scripts" / "e2e1_provider_isolation.py",
+    "e2e1_provider_isolation",
+    ROOT / "scripts" / "e2e1_provider_isolation.py",
 )
 assert SPEC and SPEC.loader
 isolation = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(isolation)
 
 LAUNCHER_SPEC = importlib.util.spec_from_file_location(
-    "isolation_test_launcher", ROOT / "scripts" / "run_product_app.py",
+    "isolation_test_launcher",
+    ROOT / "scripts" / "run_product_app.py",
 )
 assert LAUNCHER_SPEC and LAUNCHER_SPEC.loader
 launcher = importlib.util.module_from_spec(LAUNCHER_SPEC)
@@ -63,7 +65,9 @@ def test_local_connection_counter_does_not_write_receipt_in_socket_hook(tmp_path
     with isolation.ProviderIsolation(tmp_path / "isolation.json", "local-counter") as guard:
         _complete(guard)
         with monkeypatch.context() as fault:
-            fault.setattr(guard, "_write", lambda: (_ for _ in ()).throw(PermissionError(13, "injected sharing violation")))
+            fault.setattr(
+                guard, "_write", lambda: (_ for _ in ()).throw(PermissionError(13, "injected sharing violation"))
+            )
             guard._audit_socket("socket.connect", (SimpleNamespace(family=socket.AF_INET), ("127.0.0.1", 8080)))
         assert guard.record["allowed_local_connections"] == 1
     record = json.loads((tmp_path / "isolation.json").read_text(encoding="utf-8"))
@@ -76,7 +80,11 @@ def test_failed_receipt_write_is_latched_even_if_later_flush_recovers(tmp_path, 
     with isolation.ProviderIsolation(output, "failed-receipt") as guard:
         _complete(guard)
         with monkeypatch.context() as fault:
-            fault.setattr(Path, "replace", lambda *args, **kwargs: (_ for _ in ()).throw(PermissionError(13, "injected sharing violation")))
+            fault.setattr(
+                Path,
+                "replace",
+                lambda *args, **kwargs: (_ for _ in ()).throw(PermissionError(13, "injected sharing violation")),
+            )
             with pytest.raises(isolation.ProviderIsolationError, match="e2e1_telemetry_write_failed"):
                 guard._write()
         assert guard.record["failure_code"] == "e2e1_telemetry_write_failed"
@@ -126,7 +134,9 @@ def test_environment_is_copied_and_poisoned_configuration_is_neutralized() -> No
     assert protected is not inherited
     assert inherited == original
     assert protected == {
-        **original, "PRODUCT_COPILOT_ADAPTER": "deterministic", "OPENAI_API_KEY": "",
+        **original,
+        "PRODUCT_COPILOT_ADAPTER": "deterministic",
+        "OPENAI_API_KEY": "",
         "PYTHONIOENCODING": "utf-8",
     }
 
@@ -212,12 +222,15 @@ def test_plain_http_loopback_remains_available(tmp_path: Path, host: str, asynch
     assert guard.record["finalized"] is True
 
 
-@pytest.mark.parametrize("url", [
-    "http://example.invalid/v1/responses",
-    "http://localhost.example.invalid/v1/responses",
-    "http://127.0.0.1.example.invalid/v1/responses",
-    "https://localhost/v1/responses",
-])
+@pytest.mark.parametrize(
+    "url",
+    [
+        "http://example.invalid/v1/responses",
+        "http://localhost.example.invalid/v1/responses",
+        "http://127.0.0.1.example.invalid/v1/responses",
+        "https://localhost/v1/responses",
+    ],
+)
 def test_local_lookalikes_and_non_http_schemes_are_not_allowed(tmp_path: Path, url: str) -> None:
     dispatched = []
 
@@ -260,7 +273,9 @@ def test_socket_hook_records_local_connections_without_opening_one(tmp_path: Pat
 
 @pytest.mark.parametrize("malformation", ["config", "object", "subclass", "name", "missing_service", "key"])
 def test_runtime_adapter_check_fails_closed(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, malformation: str,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    malformation: str,
 ) -> None:
     runtime = _runtime()
     if malformation == "config":
@@ -268,8 +283,10 @@ def test_runtime_adapter_check_fails_closed(
     elif malformation == "object":
         runtime.service.copilot = SimpleNamespace(provider_name="deterministic")
     elif malformation == "subclass":
+
         class PretendDeterministic(DeterministicCopilotAdapter):
             pass
+
         runtime.service.copilot = PretendDeterministic()
     elif malformation == "name":
         runtime.service.copilot.provider_name = "openai"
@@ -372,6 +389,7 @@ def test_repeated_guard_contexts_do_not_install_process_lifetime_hooks_per_conte
     def observed(hook):
         original(hook)
         installed.append(hook)
+
     monkeypatch.setattr(sys, "addaudithook", observed)
     for index in range(10):
         with isolation.ProviderIsolation(tmp_path / f"guard_{index}.json", f"guard-{index}") as guard:
@@ -391,6 +409,7 @@ def test_exited_guard_is_not_retained_by_the_process_audit_hook(tmp_path, failed
         except ValueError:
             pass
         return weakref.ref(guard)
+
     reference = exercise()
     gc.collect()
     assert reference() is None

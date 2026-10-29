@@ -1,4 +1,5 @@
 """Portable adversarial receipt tests; these do not certify a browser run."""
+
 from __future__ import annotations
 
 import json
@@ -14,26 +15,57 @@ from verify_e2e1_vertical_slice import E2E1VerificationError
 
 
 @pytest.mark.parametrize("family", ["duration", "time_window"])
-@pytest.mark.parametrize("fault", [None, "disabled", "hidden", "untrusted_submit", "untrusted_change",
-    "wrong_value", "wrong_target", "wrong_parameters", "missing_preview", "untrusted_preview",
-    "foreign_fields", "foreign_event_log", "foreign_request", "wrong_source"])
+@pytest.mark.parametrize(
+    "fault",
+    [
+        None,
+        "disabled",
+        "hidden",
+        "untrusted_submit",
+        "untrusted_change",
+        "wrong_value",
+        "wrong_target",
+        "wrong_parameters",
+        "missing_preview",
+        "untrusted_preview",
+        "foreign_fields",
+        "foreign_event_log",
+        "foreign_request",
+        "wrong_source",
+    ],
+)
 def test_editor_receipt_rejects_forged_or_disconnected_control_input(tmp_path, family, fault):
     operation = "set_stop_" + family
     name = "duration-preferred" if family == "duration" else "earliest_arrival"
     text = "90" if family == "duration" else "10:00"
     fields = {name: text}
     control = {"form_id": 1, "operation": operation, "fields": fields, "visible": True, "disabled": False}
-    request = {"type": operation, "source": "map", "target": "griffith_observatory" if family == "duration" else "golden_gate_bridge",
-        "parameters": {"duration": {"mode": "exact", "preferred_minutes": 90, "minimum_minutes": 90, "maximum_minutes": 90}}
-        if family == "duration" else {"earliest_arrival": "10:00", "latest_departure": None}}
+    request = {
+        "type": operation,
+        "source": "map",
+        "target": "griffith_observatory" if family == "duration" else "golden_gate_bridge",
+        "parameters": {
+            "duration": {"mode": "exact", "preferred_minutes": 90, "minimum_minutes": 90, "maximum_minutes": 90}
+        }
+        if family == "duration"
+        else {"earliest_arrival": "10:00", "latest_departure": None},
+    }
     events = [
         {"type": "change", "trusted": True, "operation": operation, "name": name, "value": text, "form_id": 1},
         {"type": "submit", "trusted": True, "operation": operation, "form_id": 1, "fields": fields},
         {"type": "click", "trusted": True, "id": "inline-preview", "form_id": None, "operation": None},
     ]
     stage = {"input": request, "output": {"synthetic_unit_response": True}}
-    value = {"control": control, "context": "accepted_child", "phase": "stage", "request": deepcopy(request),
-        "response": deepcopy(stage["output"]), "event_start": 1, "event_end": 2, "raw_events": deepcopy(events[:2])}
+    value = {
+        "control": control,
+        "context": "accepted_child",
+        "phase": "stage",
+        "request": deepcopy(request),
+        "response": deepcopy(stage["output"]),
+        "event_start": 1,
+        "event_end": 2,
+        "raw_events": deepcopy(events[:2]),
+    }
     if fault in {"disabled", "hidden"}:
         control["disabled" if fault == "disabled" else "visible"] = fault == "disabled"
     elif fault == "untrusted_submit":
@@ -60,8 +92,12 @@ def test_editor_receipt_rejects_forged_or_disconnected_control_input(tmp_path, f
         value["raw_events"] = deepcopy(events[:2])
     else:
         value["raw_events"] = []
-    result = {"scope": "synthetic_unit_only_not_browser_proof", "family": family, "fault": fault,
-        "input": {"receipt": value, "events": events, "stage": stage}}
+    result = {
+        "scope": "synthetic_unit_only_not_browser_proof",
+        "family": family,
+        "fault": fault,
+        "input": {"receipt": value, "events": events, "stage": stage},
+    }
     if fault is None:
         editor_contract(value, events, stage, family)
         result["output"] = {"accepted": True}

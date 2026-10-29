@@ -42,16 +42,10 @@ def test_geography_is_geojson_derived_from_distinct_validated_plans() -> None:
             for feature in plan["routes"]["features"]
         )
 
-    first_coordinate = geography["plans"][0]["routes"]["features"][0]["geometry"][
-        "coordinates"
-    ][0]
+    first_coordinate = geography["plans"][0]["routes"]["features"][0]["geometry"]["coordinates"][0]
     assert first_coordinate == [-118.326901, 34.101632]
-    original_destination = geography["plans"][0]["routes"]["features"][-1]["properties"][
-        "destination_id"
-    ]
-    repaired_destination = geography["plans"][1]["routes"]["features"][-1]["properties"][
-        "destination_id"
-    ]
+    original_destination = geography["plans"][0]["routes"]["features"][-1]["properties"]["destination_id"]
+    repaired_destination = geography["plans"][1]["routes"]["features"][-1]["properties"]["destination_id"]
     assert original_destination == "golden_gate_bridge"
     assert repaired_destination == "bixby_creek_bridge_viewpoint"
 
@@ -63,8 +57,7 @@ def test_geography_fails_closed_when_route_evidence_is_not_road_validated() -> N
     target = next(
         cell
         for cell in route_matrix["cells"]
-        if cell["origin_id"] == "hollywood_walk_of_fame"
-        and cell["destination_id"] == "tcl_chinese_theatre"
+        if cell["origin_id"] == "hollywood_walk_of_fame" and cell["destination_id"] == "tcl_chinese_theatre"
     )
     target["road_validated"] = False
 
@@ -104,20 +97,13 @@ def test_workspace_api_exposes_geography_and_registered_w3_candidate_drafts(tmp_
             assert plan["coverage"]["gap_count"] == 0
             assert plan["gaps"]["features"] == []
             assert all(
-                previous["properties"]["destination_id"]
-                == current["properties"]["origin_id"]
-                for previous, current in zip(
-                    route_features[:-1], route_features[1:], strict=False
-                )
+                previous["properties"]["destination_id"] == current["properties"]["origin_id"]
+                for previous, current in zip(route_features[:-1], route_features[1:], strict=False)
             )
-            day_four_first = next(
-                feature for feature in route_features if feature["properties"]["day"] == 4
-            )
+            day_four_first = next(feature for feature in route_features if feature["properties"]["day"] == 4)
             assert day_four_first["properties"]["origin_id"] == "the_line_la"
 
-        session_response = client.post(
-            "/api/sessions", json={"run_id": "california_coast_product_demo_v2"}
-        )
+        session_response = client.post("/api/sessions", json={"run_id": "california_coast_product_demo_v2"})
         assert session_response.status_code == 200
         payload = session_response.json()
         assert payload["workspace"]["geography"] == geography

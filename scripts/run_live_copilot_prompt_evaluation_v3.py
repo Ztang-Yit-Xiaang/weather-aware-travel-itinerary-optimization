@@ -14,9 +14,7 @@ from typing import Any
 
 import run_live_copilot_prompt_evaluation_v2 as v2
 
-SOURCE_INPUTS = tuple(
-    dict.fromkeys((*v2.SOURCE_INPUTS, "scripts/run_live_copilot_prompt_evaluation_v3.py"))
-)
+SOURCE_INPUTS = tuple(dict.fromkeys((*v2.SOURCE_INPUTS, "scripts/run_live_copilot_prompt_evaluation_v3.py")))
 
 
 def build_source_snapshot() -> dict[str, Any]:
@@ -50,4 +48,3 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-

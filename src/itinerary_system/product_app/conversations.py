@@ -333,7 +333,11 @@ class ConversationRepository:
         return tuple(conversations)
 
     def dispatch_record(
-        self, conversation_id: str, session_id: str, client_message_id: str, message: str,
+        self,
+        conversation_id: str,
+        session_id: str,
+        client_message_id: str,
+        message: str,
     ) -> dict[str, Any] | None:
         """Recover a durable outcome without granting another dispatch attempt."""
         try:
@@ -349,9 +353,18 @@ class ConversationRepository:
             raise ConversationError("copilot_dispatch_store_invalid") from None
 
     def reserve_dispatch(
-        self, conversation_id: str, session_id: str, *, client_message_id: str,
-        message: str, context_sha256: str, context_revision: int,
-        provider: str, model: str | None, prompt_sha256: str, prompt_version: str,
+        self,
+        conversation_id: str,
+        session_id: str,
+        *,
+        client_message_id: str,
+        message: str,
+        context_sha256: str,
+        context_revision: int,
+        provider: str,
+        model: str | None,
+        prompt_sha256: str,
+        prompt_version: str,
         context_binding: dict[str, Any] | None = None,
     ) -> tuple[dict[str, Any], bool]:
         """Atomically reserve capacity and a single attempt before provider work.
@@ -367,14 +380,12 @@ class ConversationRepository:
                 if existing is not None:
                     return existing, False
                 completed_ids = {turn.client_message_id for turn in conversation.turns}
-                outstanding = sum(
-                    row["client_message_id"] not in completed_ids for row in ledger["records"]
-                )
+                outstanding = sum(row["client_message_id"] not in completed_ids for row in ledger["records"])
                 if len(conversation.turns) + outstanding >= MAX_TURNS:
                     raise ConversationError("conversation_turn_limit_reached")
                 if (
-                    self._encoded_size(conversation.as_dict())
-                    + (outstanding + 1) * DISPATCH_HEADROOM_BYTES > MAX_FILE_BYTES
+                    self._encoded_size(conversation.as_dict()) + (outstanding + 1) * DISPATCH_HEADROOM_BYTES
+                    > MAX_FILE_BYTES
                     or self._encoded_size(ledger) + DISPATCH_HEADROOM_BYTES > MAX_FILE_BYTES
                 ):
                     raise ConversationError("conversation_size_limit_reached")
@@ -385,10 +396,15 @@ class ConversationRepository:
                     "message_sha256": self._message_hash(message),
                     "context_sha256": context_sha256,
                     "context_revision": context_revision,
-                    "provider": provider, "model": model, "prompt_sha256": prompt_sha256,
+                    "provider": provider,
+                    "model": model,
+                    "prompt_sha256": prompt_sha256,
                     "prompt_version": prompt_version,
-                    "attempt_budget": 1, "attempt_count": 1,
-                    "outcome": "pending", "created_at": now, "updated_at": now,
+                    "attempt_budget": 1,
+                    "attempt_count": 1,
+                    "outcome": "pending",
+                    "created_at": now,
+                    "updated_at": now,
                     "turn": None,
                 }
                 ledger["records"].append(record)
@@ -408,8 +424,14 @@ class ConversationRepository:
             raise ConversationError("copilot_dispatch_reservation_failed") from None
 
     def finish_dispatch(
-        self, conversation_id: str, session_id: str, client_message_id: str,
-        message: str, *, turn: CopilotTurnV1 | None, outcome: str,
+        self,
+        conversation_id: str,
+        session_id: str,
+        client_message_id: str,
+        message: str,
+        *,
+        turn: CopilotTurnV1 | None,
+        outcome: str,
     ) -> None:
         """Save the result before transcript append or current-revision validation."""
         try:
@@ -424,7 +446,8 @@ class ConversationRepository:
                         return
                     raise ConversationError("copilot_dispatch_result_conflict")
                 record.update(
-                    outcome=outcome, turn=turn.as_dict() if turn else None,
+                    outcome=outcome,
+                    turn=turn.as_dict() if turn else None,
                     updated_at=self._format_timestamp(self._now()),
                 )
                 self._save_dispatch_ledger(ledger)
@@ -446,8 +469,10 @@ class ConversationRepository:
                 conversation = self._load_owned_locked(conversation_id, session_id)
                 ledger = self._dispatch_ledger_locked(conversation)
                 bindings = ledger.get("context_bindings", {})
-                return tuple({**deepcopy(row), "context_binding": deepcopy(bindings.get(row["client_message_id"]))}
-                             for row in ledger["records"])
+                return tuple(
+                    {**deepcopy(row), "context_binding": deepcopy(bindings.get(row["client_message_id"]))}
+                    for row in ledger["records"]
+                )
         except StateLockTimeoutError:
             raise ConversationError("state_lock_timeout") from None
         except ConversationError:
@@ -477,26 +502,28 @@ class ConversationRepository:
             return {
                 "schema_version": "copilot-dispatch-ledger-v1",
                 "conversation_id": conversation.conversation_id,
-                "session_id": conversation.session_id, "records": [],
+                "session_id": conversation.session_id,
+                "records": [],
             }
         ledger = self._validate_dispatch_ledger(self._files.read(path))
-        if (
-            ledger["conversation_id"] != conversation.conversation_id
-            or ledger["session_id"] != conversation.session_id
-        ):
+        if ledger["conversation_id"] != conversation.conversation_id or ledger["session_id"] != conversation.session_id:
             raise ConversationError("copilot_dispatch_owner_mismatch")
         return ledger
 
     def _save_dispatch_ledger(self, ledger: dict[str, Any]) -> None:
         self._validate_dispatch_ledger(ledger)
         self._files.write(
-            self._dispatch_path(ledger["conversation_id"]), ledger,
+            self._dispatch_path(ledger["conversation_id"]),
+            ledger,
             validate=self._validate_dispatch_ledger,
         )
 
     @classmethod
     def _matching_dispatch(
-        cls, ledger: dict[str, Any], client_message_id: str, message: str,
+        cls,
+        ledger: dict[str, Any],
+        client_message_id: str,
+        message: str,
     ) -> dict[str, Any] | None:
         if not isinstance(client_message_id, str) or not _CLIENT_MESSAGE_ID.fullmatch(client_message_id):
             raise ConversationError("invalid_client_message_id")
@@ -528,9 +555,21 @@ class ConversationRepository:
         seen: set[str] = set()
         for record in records:
             if not isinstance(record, dict) or set(record) != {
-                "client_message_id", "user_message", "message_sha256", "context_sha256", "context_revision",
-                "provider", "model", "prompt_sha256", "prompt_version", "attempt_budget", "attempt_count",
-                "outcome", "created_at", "updated_at", "turn",
+                "client_message_id",
+                "user_message",
+                "message_sha256",
+                "context_sha256",
+                "context_revision",
+                "provider",
+                "model",
+                "prompt_sha256",
+                "prompt_version",
+                "attempt_budget",
+                "attempt_count",
+                "outcome",
+                "created_at",
+                "updated_at",
+                "turn",
             }:
                 raise ConversationError("copilot_dispatch_store_invalid")
             identifier = record["client_message_id"]
@@ -540,15 +579,25 @@ class ConversationRepository:
             if cls._message_hash(cls._text(record["user_message"], 2000)) != record["message_sha256"]:
                 raise ConversationError("copilot_dispatch_store_invalid")
             cls._text(record["prompt_version"], 128)
-            if any(not isinstance(record[key], str) or not _HEX_SHA256.fullmatch(record[key]) for key in (
-                "message_sha256", "context_sha256", "prompt_sha256",
-            )):
+            if any(
+                not isinstance(record[key], str) or not _HEX_SHA256.fullmatch(record[key])
+                for key in (
+                    "message_sha256",
+                    "context_sha256",
+                    "prompt_sha256",
+                )
+            ):
                 raise ConversationError("copilot_dispatch_store_invalid")
             if (
-                type(record["context_revision"]) is not int or record["context_revision"] < 0
-                or any(type(record[key]) is not int or record[key] != 1 for key in (
-                    "attempt_budget", "attempt_count",
-                ))
+                type(record["context_revision"]) is not int
+                or record["context_revision"] < 0
+                or any(
+                    type(record[key]) is not int or record[key] != 1
+                    for key in (
+                        "attempt_budget",
+                        "attempt_count",
+                    )
+                )
                 or record["provider"] not in {"openai", "deterministic"}
                 or record["outcome"] not in {"pending", "unknown", "completed", "failed"}
                 or cls._parse_timestamp(record["updated_at"]) < cls._parse_timestamp(record["created_at"])
@@ -565,7 +614,8 @@ class ConversationRepository:
                     turn.client_message_id != identifier
                     or cls._message_hash(turn.user_message) != record["message_sha256"]
                     or turn.context_revision != record["context_revision"]
-                    or turn.provider != record["provider"] or turn.model != record["model"]
+                    or turn.provider != record["provider"]
+                    or turn.model != record["model"]
                     or turn.prompt_sha256 != record["prompt_sha256"]
                     or turn.prompt_version != record["prompt_version"]
                     or record["outcome"] == "pending"
@@ -584,12 +634,19 @@ class ConversationRepository:
     @classmethod
     def _validate_context_binding(cls, binding: Any) -> None:
         if not isinstance(binding, dict) or set(binding) != {
-            "plan_id", "plan_content_hash", "selected_day", "selected_stop_id",
-            "selected_candidate_id", "selected_segment_id", "selected_alternative_id",
+            "plan_id",
+            "plan_content_hash",
+            "selected_day",
+            "selected_stop_id",
+            "selected_candidate_id",
+            "selected_segment_id",
+            "selected_alternative_id",
         }:
             raise ConversationError("copilot_dispatch_store_invalid")
         cls._text(binding["plan_id"], 128)
-        if not isinstance(binding["plan_content_hash"], str) or not re.fullmatch(r"[a-f0-9]{16,64}", binding["plan_content_hash"]):
+        if not isinstance(binding["plan_content_hash"], str) or not re.fullmatch(
+            r"[a-f0-9]{16,64}", binding["plan_content_hash"]
+        ):
             raise ConversationError("copilot_dispatch_store_invalid")
         if binding["selected_day"] is not None and (
             type(binding["selected_day"]) is not int or binding["selected_day"] < 1
@@ -610,9 +667,7 @@ class ConversationRepository:
         payload = conversation.as_dict()
         self._decode(payload, expected_id=conversation.conversation_id)
         encoded_size = len(
-            (json.dumps(payload, allow_nan=False, ensure_ascii=False, indent=2, sort_keys=True) + "\n").encode(
-                "utf-8"
-            )
+            (json.dumps(payload, allow_nan=False, ensure_ascii=False, indent=2, sort_keys=True) + "\n").encode("utf-8")
         )
         if encoded_size > MAX_FILE_BYTES:
             raise ConversationError("conversation_size_limit_reached")
@@ -699,7 +754,11 @@ class ConversationRepository:
             "created_at",
             "completed_at",
         }
-        if not isinstance(payload, dict) or set(payload) != fields or payload.get("schema_version") != TURN_SCHEMA_VERSION:
+        if (
+            not isinstance(payload, dict)
+            or set(payload) != fields
+            or payload.get("schema_version") != TURN_SCHEMA_VERSION
+        ):
             raise ConversationError("conversation_invalid")
         turn_id = payload.get("turn_id")
         client_message_id = payload.get("client_message_id")
@@ -728,7 +787,9 @@ class ConversationRepository:
         if not isinstance(assistant_message, str) or len(assistant_message) > 4000:
             raise ConversationError("conversation_invalid")
         interpretation_payload = payload.get("interpretation")
-        interpretation = None if interpretation_payload is None else cls._validate_interpretation(interpretation_payload)
+        interpretation = (
+            None if interpretation_payload is None else cls._validate_interpretation(interpretation_payload)
+        )
         error_code = payload.get("error_code")
         if error_code is not None:
             error_code = cls._text(error_code, 128)
@@ -784,6 +845,7 @@ class ConversationRepository:
     @classmethod
     def _validate_intent(cls, payload: Any, *, v2: bool = False) -> CopilotIntentV1:
         from .copilot_typed_edits import TYPED_CHAT_OPERATIONS, validate_parameters
+
         fields = {
             "type",
             "target_stop_id",
@@ -800,15 +862,27 @@ class ConversationRepository:
         if v2:
             if payload["type"] == "replan_trip":
                 from .trip_planning import validate_trip_parameters
-                if any(payload.get(key) is not None for key in ("target_stop_id", "destination_day", "candidate_id", "preference", "clarification_question")):
+
+                if any(
+                    payload.get(key) is not None
+                    for key in (
+                        "target_stop_id",
+                        "destination_day",
+                        "candidate_id",
+                        "preference",
+                        "clarification_question",
+                    )
+                ):
                     raise ConversationError("conversation_invalid")
                 try:
                     validate_trip_parameters(payload["parameters"])
                 except (ValueError, TypeError, KeyError):
                     raise ConversationError("conversation_invalid") from None
             elif payload["type"] in TYPED_CHAT_OPERATIONS:
-                if (not payload.get("target_stop_id") or any(payload.get(key) is not None for key in
-                        ("destination_day", "candidate_id", "preference", "clarification_question"))):
+                if not payload.get("target_stop_id") or any(
+                    payload.get(key) is not None
+                    for key in ("destination_day", "candidate_id", "preference", "clarification_question")
+                ):
                     raise ConversationError("conversation_invalid")
                 try:
                     validate_parameters(payload["type"], payload["parameters"])
@@ -842,8 +916,10 @@ class ConversationRepository:
         if not isinstance(payload, dict) or set(payload) != fields:
             raise ConversationError("conversation_invalid")
         day_ids = payload.get("day_ids")
-        if not isinstance(day_ids, (list, tuple)) or len(day_ids) > 128 or any(
-            not isinstance(day, int) or isinstance(day, bool) or day < 1 for day in day_ids
+        if (
+            not isinstance(day_ids, (list, tuple))
+            or len(day_ids) > 128
+            or any(not isinstance(day, int) or isinstance(day, bool) or day < 1 for day in day_ids)
         ):
             raise ConversationError("conversation_invalid")
         values: dict[str, tuple[str, ...]] = {}

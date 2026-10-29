@@ -34,15 +34,27 @@ def record_exact_evaluator_io(monkeypatch, request):
         matrix_record = asdict(matrix) if matrix is not None else None
         if matrix_record is not None:
             matrix_record["cells"] = [asdict(value) for _, value in sorted(matrix.cells.items())]
-        records.append({
-            "plan": plan.to_record(), "reference_plan": self.reference_plan.to_record() if self.reference_plan else None,
-            "config": asdict(self.config), "route_matrix": matrix_record,
-            "planner_runs": {key: value.to_record() if isinstance(value, PlannerRun) else value
-                for key, value in self.planner_runs.items()},
-            "explicit_inputs": {key: matrix_record if key == "route_matrix" else value.to_record() if hasattr(value, "to_record") else value
-                for key, value in kwargs.items()},
-            "output": certificate.to_record(),
-        })
+        records.append(
+            {
+                "plan": plan.to_record(),
+                "reference_plan": self.reference_plan.to_record() if self.reference_plan else None,
+                "config": asdict(self.config),
+                "route_matrix": matrix_record,
+                "planner_runs": {
+                    key: value.to_record() if isinstance(value, PlannerRun) else value
+                    for key, value in self.planner_runs.items()
+                },
+                "explicit_inputs": {
+                    key: matrix_record
+                    if key == "route_matrix"
+                    else value.to_record()
+                    if hasattr(value, "to_record")
+                    else value
+                    for key, value in kwargs.items()
+                },
+                "output": certificate.to_record(),
+            }
+        )
         path = Path(destination) / f"{stable_content_hash({'test': request.node.nodeid})}.json"
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(json.dumps({"test": request.node.nodeid, "exchanges": records}, indent=2), encoding="utf-8")
@@ -61,7 +73,9 @@ def owned_constraint(constraint_id: str, *, target_id: str, strength: Constraint
         relation="protect",
         value=True,
         confirmed=True,
-        relaxation_policy=RelaxationPolicy.NEVER if strength == ConstraintStrength.LOCKED else RelaxationPolicy.AUTO_WITH_PENALTY,
+        relaxation_policy=RelaxationPolicy.NEVER
+        if strength == ConstraintStrength.LOCKED
+        else RelaxationPolicy.AUTO_WITH_PENALTY,
     ).to_record()
 
 
@@ -85,7 +99,8 @@ def role_constraint(
         relaxation_policy=relaxation_policy
         or (
             RelaxationPolicy.NEVER
-            if strength in {
+            if strength
+            in {
                 ConstraintStrength.LOCKED,
                 ConstraintStrength.BOOKED,
                 ConstraintStrength.HARD,
@@ -155,7 +170,9 @@ def plan(*, sequence: tuple[str, ...] = ("poi_a", "poi_b"), certificate_id: str 
     )
 
 
-def cell(origin: str, destination: str, minutes: float, *, road_validated: bool = True, fallback: bool = False) -> RouteMatrixCell:
+def cell(
+    origin: str, destination: str, minutes: float, *, road_validated: bool = True, fallback: bool = False
+) -> RouteMatrixCell:
     return RouteMatrixCell(
         origin_id=origin,
         destination_id=destination,
@@ -173,9 +190,13 @@ def route_matrix(*, road_validated: bool = True) -> RouteMatrix:
         context_snapshot_id="context_verify",
         entity_ids=(),
         cells={
-            ("hotel_start", "poi_a"): cell("hotel_start", "poi_a", 10, road_validated=road_validated, fallback=not road_validated),
+            ("hotel_start", "poi_a"): cell(
+                "hotel_start", "poi_a", 10, road_validated=road_validated, fallback=not road_validated
+            ),
             ("poi_a", "poi_b"): cell("poi_a", "poi_b", 15, road_validated=road_validated, fallback=not road_validated),
-            ("poi_b", "hotel_end"): cell("poi_b", "hotel_end", 10, road_validated=road_validated, fallback=not road_validated),
+            ("poi_b", "hotel_end"): cell(
+                "poi_b", "hotel_end", 10, road_validated=road_validated, fallback=not road_validated
+            ),
         },
     )
 
@@ -195,44 +216,77 @@ def evaluator(*, matrix: RouteMatrix | None = None) -> PlanEvaluator:
 
 def _attribute_constraint(relation, value, *, strength=ConstraintStrength.LOCKED, policy=RelaxationPolicy.NEVER):
     return OwnedConstraint(
-        constraint_id="attribute_a", origin="user", strength=strength,
-        scope=ConstraintScope.STOP, target_id="poi_a", relation=relation,
-        value=value, confirmed=True, relaxation_policy=policy,
+        constraint_id="attribute_a",
+        origin="user",
+        strength=strength,
+        scope=ConstraintScope.STOP,
+        target_id="poi_a",
+        relation=relation,
+        value=value,
+        confirmed=True,
+        relaxation_policy=policy,
     ).to_record()
 
 
 _EXACT_30 = {"mode": "exact", "preferred_minutes": 30, "minimum_minutes": 30, "maximum_minutes": 30}
 _WINDOW = {
-    "schema_version": "stop-time-window-constraint-v1", "earliest_arrival": "09:00",
-    "latest_departure": "11:00", "early_arrival_policy": "wait_until_earliest_arrival",
+    "schema_version": "stop-time-window-constraint-v1",
+    "earliest_arrival": "09:00",
+    "latest_departure": "11:00",
+    "early_arrival_policy": "wait_until_earliest_arrival",
     "latest_departure_semantics": "departure_after_visit",
 }
 
 
-@pytest.mark.parametrize("families", [
-    ("duration", "time_window"), ("duration", "role"),
-    ("time_window", "role"), ("duration", "time_window", "role"),
-])
+@pytest.mark.parametrize(
+    "families",
+    [
+        ("duration", "time_window"),
+        ("duration", "role"),
+        ("time_window", "role"),
+        ("duration", "time_window", "role"),
+    ],
+)
 @pytest.mark.parametrize("protected", [True, False])
 def test_mixed_owned_cost_artifact_does_not_override_independent_eligibility(families, protected):
     values = {"duration": _EXACT_30, "time_window": _WINDOW, "role": "activity"}
-    rules = tuple(OwnedConstraint(
-        constraint_id=f"owned_{family}", origin="user", scope=ConstraintScope.STOP,
-        target_id="poi_a", relation=family, value=values[family], confirmed=True,
-        strength=ConstraintStrength.LOCKED if protected else ConstraintStrength.SOFT,
-        relaxation_policy=RelaxationPolicy.NEVER if protected else RelaxationPolicy.AUTO_WITH_PENALTY,
-    ).to_record() for family in families)
+    rules = tuple(
+        OwnedConstraint(
+            constraint_id=f"owned_{family}",
+            origin="user",
+            scope=ConstraintScope.STOP,
+            target_id="poi_a",
+            relation=family,
+            value=values[family],
+            confirmed=True,
+            strength=ConstraintStrength.LOCKED if protected else ConstraintStrength.SOFT,
+            relaxation_policy=RelaxationPolicy.NEVER if protected else RelaxationPolicy.AUTO_WITH_PENALTY,
+        ).to_record()
+        for family in families
+    )
     parent_stops = deepcopy(list(plan().selected_stops))
-    parent_stops[0].update({
-        "duration_constraint": _EXACT_30, "time_window_constraint": _WINDOW,
-        "itinerary_role": "activity", "itinerary_role_source": "user_declared_itinerary_role",
-    })
+    parent_stops[0].update(
+        {
+            "duration_constraint": _EXACT_30,
+            "time_window_constraint": _WINDOW,
+            "itinerary_role": "activity",
+            "itinerary_role_source": "user_declared_itinerary_role",
+        }
+    )
     parent = replace(plan(), plan_id="mixed_owned_parent", selected_stops=tuple(parent_stops), owned_constraints=rules)
     child_stops = deepcopy(parent_stops)
     if "duration" in families:
-        child_stops[0].update({"visit_duration_minutes": 45, "duration_constraint": {
-            "mode": "exact", "preferred_minutes": 45, "minimum_minutes": 45, "maximum_minutes": 45,
-        }})
+        child_stops[0].update(
+            {
+                "visit_duration_minutes": 45,
+                "duration_constraint": {
+                    "mode": "exact",
+                    "preferred_minutes": 45,
+                    "minimum_minutes": 45,
+                    "maximum_minutes": 45,
+                },
+            }
+        )
     if "time_window" in families:
         child_stops[0]["time_window_constraint"] = {**_WINDOW, "latest_departure": "11:30"}
     if "role" in families:
@@ -241,8 +295,12 @@ def test_mixed_owned_cost_artifact_does_not_override_independent_eligibility(fam
     diff = compute_plan_diff(parent, child, default_visit_minutes=45).to_record()
     assert diff["schema_version"] == "plan-diff-v7"
     assert diff["attribute_ownership_evidence"]["semantic_scope"]["feasibility_claim"] == "not_evaluated"
-    configured = PlanEvaluator(route_matrix=route_matrix(), planner_runs={"run_verify_001": planner_run()},
-                               config=evaluator().config, reference_plan=parent)
+    configured = PlanEvaluator(
+        route_matrix=route_matrix(),
+        planner_runs={"run_verify_001": planner_run()},
+        config=evaluator().config,
+        reference_plan=parent,
+    )
     certificate = configured.evaluate_final_plan(child)
     assert certificate.comparison_eligibility == ("ineligible" if protected else "eligible")
     findings = certificate.failures if protected else certificate.warnings
@@ -252,16 +310,26 @@ def test_mixed_owned_cost_artifact_does_not_override_independent_eligibility(fam
     assert child.owned_constraints == parent.owned_constraints
 
 
-@pytest.mark.parametrize("relation,value", [
-    ("day", 2), ("stop_order", 2), ("start_time", "10:00"), ("end_time", "10:00"),
-    ("duration", {**_EXACT_30, "preferred_minutes": 45, "minimum_minutes": 45, "maximum_minutes": 45}),
-    ("time_window", _WINDOW), ("existence", False),
-])
+@pytest.mark.parametrize(
+    "relation,value",
+    [
+        ("day", 2),
+        ("stop_order", 2),
+        ("start_time", "10:00"),
+        ("end_time", "10:00"),
+        ("duration", {**_EXACT_30, "preferred_minutes": 45, "minimum_minutes": 45, "maximum_minutes": 45}),
+        ("time_window", _WINDOW),
+        ("existence", False),
+    ],
+)
 @pytest.mark.parametrize("protected", [True, False])
 def test_owned_attribute_values_are_independently_checked(relation, value, protected):
-    constraint = _attribute_constraint(relation, value,
+    constraint = _attribute_constraint(
+        relation,
+        value,
         strength=ConstraintStrength.LOCKED if protected else ConstraintStrength.SOFT,
-        policy=RelaxationPolicy.NEVER if protected else RelaxationPolicy.AUTO_WITH_PENALTY)
+        policy=RelaxationPolicy.NEVER if protected else RelaxationPolicy.AUTO_WITH_PENALTY,
+    )
     child = replace(plan(), owned_constraints=(constraint,))
     certificate = evaluator().evaluate_final_plan(child)
     findings = certificate.failures if protected else certificate.warnings
@@ -269,11 +337,18 @@ def test_owned_attribute_values_are_independently_checked(relation, value, prote
     assert certificate.comparison_eligibility == ("ineligible" if protected else "eligible")
 
 
-@pytest.mark.parametrize("relation,value", [
-    ("attribute:day", 1), ("attribute:stop_order", 1), ("arrival_time", "09:10"),
-    ("departure_time", "09:40"), ("visit_duration", _EXACT_30),
-    ("required_time_window", _WINDOW), ("must_keep", True),
-])
+@pytest.mark.parametrize(
+    "relation,value",
+    [
+        ("attribute:day", 1),
+        ("attribute:stop_order", 1),
+        ("arrival_time", "09:10"),
+        ("departure_time", "09:40"),
+        ("visit_duration", _EXACT_30),
+        ("required_time_window", _WINDOW),
+        ("must_keep", True),
+    ],
+)
 def test_matching_owned_attributes_remain_eligible(relation, value):
     base = plan()
     stops = [dict(row) for row in base.selected_stops]
@@ -285,11 +360,17 @@ def test_matching_owned_attributes_remain_eligible(relation, value):
     assert not any(row.code.startswith("owned_attribute") for row in (*certificate.failures, *certificate.warnings))
 
 
-@pytest.mark.parametrize("relation,value", [
-    ("day", True), ("stop_order", 0), ("start_time", "9:10"),
-    ("duration", {**_EXACT_30, "maximum_minutes": 30.0}),
-    ("time_window", {**_WINDOW, "latest_departure": "08:00"}), ("existence", "true"),
-])
+@pytest.mark.parametrize(
+    "relation,value",
+    [
+        ("day", True),
+        ("stop_order", 0),
+        ("start_time", "9:10"),
+        ("duration", {**_EXACT_30, "maximum_minutes": 30.0}),
+        ("time_window", {**_WINDOW, "latest_departure": "08:00"}),
+        ("existence", "true"),
+    ],
+)
 def test_malformed_active_attribute_constraints_fail_closed(relation, value):
     child = replace(plan(), owned_constraints=(_attribute_constraint(relation, value),))
     certificate = evaluator().evaluate_final_plan(child)
@@ -322,28 +403,43 @@ def test_existence_lock_does_not_lock_unrelated_duration():
     base = plan()
     stops = [dict(row) for row in base.selected_stops]
     stops[0]["visit_duration_minutes"] = 45
-    child = replace(base, selected_stops=tuple(stops),
-        owned_constraints=(_attribute_constraint("must_keep", True),))
+    child = replace(base, selected_stops=tuple(stops), owned_constraints=(_attribute_constraint("must_keep", True),))
     assert evaluator().evaluate_final_plan(child).comparison_eligibility == "eligible"
 
 
 def test_explicit_exclusion_is_satisfied_when_the_stop_is_absent():
     base = plan()
-    child = replace(base, selected_stops=({**base.selected_stops[1], "stop_order": 1},), sequence=("poi_b",),
-        day_assignments={"poi_b": 1}, ordered_days=({"day": 1, "stop_ids": ("poi_b",)},),
-        owned_constraints=(_attribute_constraint("existence", False),))
+    child = replace(
+        base,
+        selected_stops=({**base.selected_stops[1], "stop_order": 1},),
+        sequence=("poi_b",),
+        day_assignments={"poi_b": 1},
+        ordered_days=({"day": 1, "stop_ids": ("poi_b",)},),
+        owned_constraints=(_attribute_constraint("existence", False),),
+    )
     matrix = route_matrix()
     matrix = replace(matrix, cells={**matrix.cells, ("hotel_start", "poi_b"): cell("hotel_start", "poi_b", 10)})
     assert evaluator(matrix=matrix).evaluate_final_plan(child).comparison_eligibility == "eligible"
 
 
-@pytest.mark.parametrize("strength,policy,origin", [
-    ("booked", "always", "user"), ("hard", "always", "user"),
-    ("soft", "never", "user"), ("soft", "explicit_only", "user"),
-    ("soft", "always", "booking"), ("soft", "always", "user_booking"),
-])
+@pytest.mark.parametrize(
+    "strength,policy,origin",
+    [
+        ("booked", "always", "user"),
+        ("hard", "always", "user"),
+        ("soft", "never", "user"),
+        ("soft", "explicit_only", "user"),
+        ("soft", "always", "booking"),
+        ("soft", "always", "user_booking"),
+    ],
+)
 def test_protected_attribute_cannot_be_bypassed_by_an_unrelated_edit(strength, policy, origin):
-    constraint = {**_attribute_constraint("day", 2), "strength": strength, "relaxation_policy": policy, "origin": origin}
+    constraint = {
+        **_attribute_constraint("day", 2),
+        "strength": strength,
+        "relaxation_policy": policy,
+        "origin": origin,
+    }
     stops = [dict(row) for row in plan().selected_stops]
     stops[1].update(itinerary_role="meal", itinerary_role_source="user_declared_itinerary_role")
     child = replace(plan(), selected_stops=tuple(stops), owned_constraints=(constraint,))
@@ -352,12 +448,19 @@ def test_protected_attribute_cannot_be_bypassed_by_an_unrelated_edit(strength, p
     assert "owned_attribute_constraint_unsatisfied" in {row.code for row in certificate.failures}
 
 
-@pytest.mark.parametrize("mutation", ["declared_duration", "scalar_alias", "scalar_string", "spoofed_day", "spoofed_order"])
+@pytest.mark.parametrize(
+    "mutation", ["declared_duration", "scalar_alias", "scalar_string", "spoofed_day", "spoofed_order"]
+)
 def test_owned_attribute_validation_rejects_conflicting_record_evidence(mutation):
     stops = [dict(row) for row in plan().selected_stops]
     relation, value = "duration", _EXACT_30
     if mutation == "declared_duration":
-        stops[0]["duration_constraint"] = {**_EXACT_30, "preferred_minutes": 45, "minimum_minutes": 45, "maximum_minutes": 45}
+        stops[0]["duration_constraint"] = {
+            **_EXACT_30,
+            "preferred_minutes": 45,
+            "minimum_minutes": 45,
+            "maximum_minutes": 45,
+        }
     elif mutation == "scalar_alias":
         stops[0]["duration_minutes"] = 45
     elif mutation == "scalar_string":
@@ -415,7 +518,12 @@ def test_optional_lodging_policy_accepts_plan_without_lodging_assignments():
 def test_certificate_content_hash_detects_post_solve_mutation():
     original = plan()
     certificate = evaluator().evaluate_final_plan(original)
-    mutated = replace(original, selected_stops=original.selected_stops[:-1], sequence=("poi_a",), certificate_id=certificate.certificate_id)
+    mutated = replace(
+        original,
+        selected_stops=original.selected_stops[:-1],
+        sequence=("poi_a",),
+        certificate_id=certificate.certificate_id,
+    )
 
     assert not certificate.valid_for_plan(mutated)
 
@@ -504,14 +612,12 @@ def test_weather_risk_delta_requires_complete_finite_reference_and_child_evidenc
     reference = replace(
         plan(),
         selected_stops=tuple(
-            {**stop, "weather_risk": 0.8 - (index * 0.2)}
-            for index, stop in enumerate(plan().selected_stops)
+            {**stop, "weather_risk": 0.8 - (index * 0.2)} for index, stop in enumerate(plan().selected_stops)
         ),
     )
     for invalid_value in (None, float("nan"), float("inf")):
         child_stops = [
-            {**stop, "weather_risk": 0.2 - (index * 0.1)}
-            for index, stop in enumerate(plan().selected_stops)
+            {**stop, "weather_risk": 0.2 - (index * 0.1)} for index, stop in enumerate(plan().selected_stops)
         ]
         if invalid_value is None:
             child_stops[1].pop("weather_risk")
@@ -576,27 +682,21 @@ def test_required_earliest_arrival_waits_before_service_without_mutating_plan():
 def test_itinerary_role_is_optional_but_explicit_role_requires_user_provenance():
     legacy = plan()
     legacy_certificate = evaluator().evaluate_final_plan(legacy)
-    assert "itinerary_stop_role_invalid" not in {
-        failure.code for failure in legacy_certificate.failures
-    }
+    assert "itinerary_stop_role_invalid" not in {failure.code for failure in legacy_certificate.failures}
 
     explicit_stops = [dict(stop) for stop in legacy.selected_stops]
     explicit_stops[0]["itinerary_role"] = "meal"
     explicit_stops[0]["itinerary_role_source"] = "user_declared_itinerary_role"
     explicit = replace(legacy, selected_stops=tuple(explicit_stops))
     explicit_certificate = evaluator().evaluate_final_plan(explicit)
-    assert "itinerary_stop_role_invalid" not in {
-        failure.code for failure in explicit_certificate.failures
-    }
+    assert "itinerary_stop_role_invalid" not in {failure.code for failure in explicit_certificate.failures}
 
     malformed_stops = [dict(stop) for stop in legacy.selected_stops]
     malformed_stops[0]["itinerary_role"] = "meal"
     malformed_stops[0]["itinerary_role_source"] = "place_category_inference"
     malformed = replace(legacy, selected_stops=tuple(malformed_stops))
     malformed_certificate = evaluator().evaluate_final_plan(malformed)
-    assert "itinerary_stop_role_invalid" in {
-        failure.code for failure in malformed_certificate.failures
-    }
+    assert "itinerary_stop_role_invalid" in {failure.code for failure in malformed_certificate.failures}
 
 
 def test_owned_role_constraints_are_value_aware_and_existence_lock_is_independent():
@@ -608,8 +708,7 @@ def test_owned_role_constraints_are_value_aware_and_existence_lock_is_independen
 
     existence_only = evaluator().evaluate_final_plan(explicit)
     assert "owned_role_constraint_unsatisfied" not in {
-        finding.code
-        for finding in (*existence_only.failures, *existence_only.warnings)
+        finding.code for finding in (*existence_only.failures, *existence_only.warnings)
     }
 
     matching = replace(
@@ -626,8 +725,7 @@ def test_owned_role_constraints_are_value_aware_and_existence_lock_is_independen
     )
     matching_certificate = evaluator().evaluate_final_plan(matching)
     assert "owned_role_constraint_unsatisfied" not in {
-        finding.code
-        for finding in (*matching_certificate.failures, *matching_certificate.warnings)
+        finding.code for finding in (*matching_certificate.failures, *matching_certificate.warnings)
     }
 
     hard_mismatch = replace(
@@ -643,9 +741,7 @@ def test_owned_role_constraints_are_value_aware_and_existence_lock_is_independen
         ),
     )
     hard_certificate = evaluator().evaluate_final_plan(hard_mismatch)
-    assert "owned_role_constraint_unsatisfied" in {
-        failure.code for failure in hard_certificate.failures
-    }
+    assert "owned_role_constraint_unsatisfied" in {failure.code for failure in hard_certificate.failures}
 
     soft_mismatch = replace(
         explicit,
@@ -660,12 +756,8 @@ def test_owned_role_constraints_are_value_aware_and_existence_lock_is_independen
         ),
     )
     soft_certificate = evaluator().evaluate_final_plan(soft_mismatch)
-    assert "owned_role_constraint_unsatisfied" in {
-        warning.code for warning in soft_certificate.warnings
-    }
-    assert "owned_role_constraint_unsatisfied" not in {
-        failure.code for failure in soft_certificate.failures
-    }
+    assert "owned_role_constraint_unsatisfied" in {warning.code for warning in soft_certificate.warnings}
+    assert "owned_role_constraint_unsatisfied" not in {failure.code for failure in soft_certificate.failures}
 
     nonrelaxable_mismatch = replace(
         explicit,
@@ -680,12 +772,8 @@ def test_owned_role_constraints_are_value_aware_and_existence_lock_is_independen
             ),
         ),
     )
-    nonrelaxable_certificate = evaluator().evaluate_final_plan(
-        nonrelaxable_mismatch
-    )
-    assert "owned_role_constraint_unsatisfied" in {
-        failure.code for failure in nonrelaxable_certificate.failures
-    }
+    nonrelaxable_certificate = evaluator().evaluate_final_plan(nonrelaxable_mismatch)
+    assert "owned_role_constraint_unsatisfied" in {failure.code for failure in nonrelaxable_certificate.failures}
 
 
 def test_required_latest_departure_is_checked_after_visit_with_exact_overrun():
@@ -719,12 +807,8 @@ def test_required_latest_departure_is_checked_after_visit_with_exact_overrun():
     assert trace["departure_minute"] == 580.0
     assert trace["latest_departure_status"] == "violated"
     assert trace["latest_departure_overrun_minutes"] == 5.0
-    assert trace["failure_codes"] == [
-        "stop_time_window_latest_departure_exceeded"
-    ]
-    assert [finding.code for finding in certificate.failures] == [
-        "stop_time_window_latest_departure_exceeded"
-    ]
+    assert trace["failure_codes"] == ["stop_time_window_latest_departure_exceeded"]
+    assert [finding.code for finding in certificate.failures] == ["stop_time_window_latest_departure_exceeded"]
 
 
 def test_malformed_required_time_window_is_an_artifact_failure():
@@ -743,9 +827,7 @@ def test_malformed_required_time_window_is_an_artifact_failure():
 
     assert certificate.artifact_grounding_status == "FAILED"
     assert certificate.comparison_eligibility == "ineligible"
-    assert "time_window_constraint_invalid" in {
-        finding.code for finding in certificate.failures
-    }
+    assert "time_window_constraint_invalid" in {finding.code for finding in certificate.failures}
 
 
 def test_zero_or_nonfinite_reference_utility_is_not_reported_as_perfect_retention():

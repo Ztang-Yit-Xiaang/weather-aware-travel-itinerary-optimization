@@ -74,9 +74,7 @@ def _typed_case(case: dict) -> tuple[list[dict], dict[str, list], str | None]:
 
 def _live_records(runner, corpus, *, effort: str) -> list[dict[str, object]]:
     source_snapshot = runner.build_source_snapshot()
-    controls = runner.build_request_controls(
-        model="gpt-5.6-terra", effort=effort, timeout_seconds=30
-    )
+    controls = runner.build_request_controls(model="gpt-5.6-terra", effort=effort, timeout_seconds=30)
     cases = {case["case_id"]: case for case in corpus["cases"]}
     records = []
     for case_id in runner.LIVE_SUBSET_CASE_IDS:
@@ -101,9 +99,7 @@ def _live_records(runner, corpus, *, effort: str) -> list[dict[str, object]]:
                 "output_tokens": 1 if effort == "low" else 2,
                 "attempt_count": 1,
                 "prompt_sha256": runner.prompt_sha256(),
-                "provider_response_id_sha256": hashlib.sha256(
-                    f"{effort}:{case_id}".encode()
-                ).hexdigest(),
+                "provider_response_id_sha256": hashlib.sha256(f"{effort}:{case_id}".encode()).hexdigest(),
                 "provider_created_at": time.time(),
                 "provider_model": "gpt-5.6-terra",
                 "request_controls_sha256": controls["content_hash"],
@@ -124,9 +120,7 @@ def _write_fake_evidence(tmp_path: Path):
     evidence_hashes = {}
     for effort in ("low", "medium"):
         records = _live_records(runner, corpus, effort=effort)
-        controls = runner.build_request_controls(
-            model="gpt-5.6-terra", effort=effort, timeout_seconds=30
-        )
+        controls = runner.build_request_controls(model="gpt-5.6-terra", effort=effort, timeout_seconds=30)
         evidence = runner._case_evidence_document(
             effort=effort,
             model="gpt-5.6-terra",
@@ -235,9 +229,7 @@ def test_recording_response_counts_attempt_and_hashes_metadata() -> None:
     assert recorder.attempt_count == 1
     assert recorder.input_tokens == 11
     assert recorder.output_tokens == 7
-    assert recorder.provider_response_id_sha256 == hashlib.sha256(
-        b"resp_private_identifier"
-    ).hexdigest()
+    assert recorder.provider_response_id_sha256 == hashlib.sha256(b"resp_private_identifier").hexdigest()
     assert recorder.automatic_action_observed is True
 
 
@@ -329,9 +321,7 @@ def test_independent_reducer_rejects_coherently_rehashed_provenance(
     elif mutation == "future_created_at":
         document["records"][0]["provider_created_at"] = 9_999_999_999
     elif mutation == "duplicate_response":
-        document["records"][1]["provider_response_id_sha256"] = document["records"][0][
-            "provider_response_id_sha256"
-        ]
+        document["records"][1]["provider_response_id_sha256"] = document["records"][0]["provider_response_id_sha256"]
     elif mutation == "provider_model":
         document["records"][0]["provider_model"] = "gpt-5.6-terra-forged"
     else:  # pragma: no cover - parametrization is closed above.

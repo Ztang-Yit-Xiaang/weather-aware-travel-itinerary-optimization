@@ -120,6 +120,7 @@ def _atomic_replace(path: Path, content: str) -> None:
     finally:
         temporary.unlink(missing_ok=True)
 
+
 def _plan_from_record(record: dict[str, Any]) -> PlanArtifactV2:
     route_ids_by_day = {
         int(day): str(route_id)
@@ -136,7 +137,9 @@ def _plan_from_record(record: dict[str, Any]) -> PlanArtifactV2:
         selected_stops=tuple(dict(stop) for stop in record.get("selected_stops", ())),
         day_assignments={str(key): int(value) for key, value in dict(record.get("day_assignments", {})).items()},
         sequence=tuple(str(stop_id) for stop_id in record.get("sequence", ())),
-        lodging_assignments={str(key): str(value) for key, value in dict(record.get("lodging_assignments", {})).items()},
+        lodging_assignments={
+            str(key): str(value) for key, value in dict(record.get("lodging_assignments", {})).items()
+        },
         ordered_days=tuple(dict(day) for day in record.get("ordered_days", ())),
         route_ids_by_day=route_ids_by_day,
         owned_constraints=tuple(dict(constraint) for constraint in record.get("owned_constraints", ())),

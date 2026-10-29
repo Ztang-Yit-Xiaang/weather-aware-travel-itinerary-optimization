@@ -136,10 +136,7 @@ class RepairModel:
 
     def export_components(self, solution: RepairSolution) -> dict[str, float]:
         values = self.variable_values(solution)
-        objective_values = {
-            component.name: component.evaluate(values)
-            for component in self.objective_components
-        }
+        objective_values = {component.name: component.evaluate(values) for component in self.objective_components}
         change_counts = _change_counts(self.variables.change_variables, values)
         violations = self.validate_solution(solution)
         weighted_edit_cost = float(
@@ -166,8 +163,14 @@ class RepairModel:
 
     def extract_plan(self, solution: RepairSolution, *, child_plan_id: str | None = None) -> PlanArtifactV2:
         selected = set(solution.selected_stop_ids)
-        parent_stops = {str(stop.get("stop_id") or stop.get("poi_id") or stop.get("name")): dict(stop) for stop in self.metadata["parent_selected_stops"]}
-        candidate_stops = {str(stop.get("stop_id") or stop.get("poi_id") or stop.get("name")): dict(stop) for stop in self.metadata.get("candidate_stops", ())}
+        parent_stops = {
+            str(stop.get("stop_id") or stop.get("poi_id") or stop.get("name")): dict(stop)
+            for stop in self.metadata["parent_selected_stops"]
+        }
+        candidate_stops = {
+            str(stop.get("stop_id") or stop.get("poi_id") or stop.get("name")): dict(stop)
+            for stop in self.metadata.get("candidate_stops", ())
+        }
         selected_records: list[dict[str, Any]] = []
         day_assignments: dict[str, int] = {}
         ordered_by_day: dict[int, list[str]] = {}
@@ -189,8 +192,13 @@ class RepairModel:
             selected_records.append(record)
         records_by_id = {record["stop_id"]: record for record in selected_records}
         selected_records = [records_by_id[stop_id] for day in sorted(ordered_by_day) for stop_id in ordered_by_day[day]]
-        ordered_days = tuple({"day": day, "stop_ids": tuple(stop_ids)} for day, stop_ids in sorted(ordered_by_day.items()))
-        child_id = child_plan_id or f"plan_{stable_content_hash({'parent': self.parent_plan_id, 'solution': solution.metadata})}"
+        ordered_days = tuple(
+            {"day": day, "stop_ids": tuple(stop_ids)} for day, stop_ids in sorted(ordered_by_day.items())
+        )
+        child_id = (
+            child_plan_id
+            or f"plan_{stable_content_hash({'parent': self.parent_plan_id, 'solution': solution.metadata})}"
+        )
         child = PlanArtifactV2(
             plan_id=child_id,
             parent_plan_id=self.parent_plan_id,
@@ -206,7 +214,9 @@ class RepairModel:
             route_ids_by_day={int(day): route_id for day, route_id in solution.route_ids_by_day.items()},
             owned_constraints=tuple(dict(record) for record in self.metadata.get("owned_constraints", ())),
         )
-        diff = compute_plan_diff(self.metadata["parent_plan"], child, OwnershipPolicy(**self.metadata["ownership_policy"]))
+        diff = compute_plan_diff(
+            self.metadata["parent_plan"], child, OwnershipPolicy(**self.metadata["ownership_policy"])
+        )
         change_components = dict(child.change_components)
         change_components["weighted_edit_cost"] = diff.weighted_edit_cost
         return PlanArtifactV2(
@@ -341,21 +351,28 @@ def build_repair_master_model(
         "context_required_stop_ids": selection_requirements.required_stop_ids,
         "context_excluded_stop_ids": selection_requirements.excluded_stop_ids,
         "context_conflict_stop_ids": selection_requirements.conflict_stop_ids,
-        "context_closed_route_ids": _context_values(request, "closed_route_ids") if context_mode == PlannerContextMode.AWARE else (),
+        "context_closed_route_ids": _context_values(request, "closed_route_ids")
+        if context_mode == PlannerContextMode.AWARE
+        else (),
         "context_unavailable_lodging_ids": _context_values(request, "unavailable_lodging_ids")
         if context_mode == PlannerContextMode.AWARE
         else (),
         "ordered_stop_ids": ordered_stop_ids,
         "locked_constraint_ids": tuple(
-            constraint.constraint_id for constraint in active_constraints if constraint.strength == ConstraintStrength.LOCKED
+            constraint.constraint_id
+            for constraint in active_constraints
+            if constraint.strength == ConstraintStrength.LOCKED
         ),
         "booked_constraint_ids": tuple(
-            constraint.constraint_id for constraint in active_constraints if constraint.strength == ConstraintStrength.BOOKED
+            constraint.constraint_id
+            for constraint in active_constraints
+            if constraint.strength == ConstraintStrength.BOOKED
         ),
         "locked_stop_ids": tuple(
             constraint.target_id
             for constraint in active_constraints
-            if constraint.strength == ConstraintStrength.LOCKED and constraint.scope in {ConstraintScope.STOP, ConstraintScope.POI}
+            if constraint.strength == ConstraintStrength.LOCKED
+            and constraint.scope in {ConstraintScope.STOP, ConstraintScope.POI}
         ),
         "parent_plan": parent,
     }
@@ -522,7 +539,9 @@ def _lodging_variables(
         str(stop.get("lodging_id") or stop.get("hotel_id") or stop.get("overnight_city") or "").strip()
         for stop in candidate_stops
     }
-    allowed_lodgings = tuple(sorted({*index.lodging_by_day.values(), *tuple(value for value in candidate_lodging_ids if value)}))
+    allowed_lodgings = tuple(
+        sorted({*index.lodging_by_day.values(), *tuple(value for value in candidate_lodging_ids if value)})
+    )
     variables: list[RepairDecisionVariable] = []
     editable_nights = set(neighborhood.editable_lodging_nights)
     for day in index.days:
@@ -553,7 +572,11 @@ def _relaxation_variables(
     variables: list[RepairDecisionVariable] = []
     frozen = set(neighborhood.frozen_constraint_ids)
     for constraint in constraints:
-        fixed = 0 if constraint.constraint_id in frozen or not constraint.can_relax(allow_booked_relaxation=allow_booked) else None
+        fixed = (
+            0
+            if constraint.constraint_id in frozen or not constraint.can_relax(allow_booked_relaxation=allow_booked)
+            else None
+        )
         variables.append(
             RepairDecisionVariable(
                 name=f"relax_constraint[{constraint.constraint_id}]",
@@ -790,9 +813,15 @@ def _objective_components(change_variables: list[TypedChangeVariable]) -> list[O
         if change.change_type in {ChangeVariableType.ADD_STOP, ChangeVariableType.DELETE_STOP}:
             utility_terms.append(term)
     return [
-        ObjectiveComponent(name="hard_and_booked_relaxation", stage="preserve_commitments", priority=0, terms=tuple(hard_terms)),
-        ObjectiveComponent(name="ownership_weighted_change", stage="preserve_parent", priority=1, terms=tuple(edit_terms)),
-        ObjectiveComponent(name="contextual_burden_proxy", stage="reduce_contextual_burden", priority=2, terms=tuple(context_terms)),
+        ObjectiveComponent(
+            name="hard_and_booked_relaxation", stage="preserve_commitments", priority=0, terms=tuple(hard_terms)
+        ),
+        ObjectiveComponent(
+            name="ownership_weighted_change", stage="preserve_parent", priority=1, terms=tuple(edit_terms)
+        ),
+        ObjectiveComponent(
+            name="contextual_burden_proxy", stage="reduce_contextual_burden", priority=2, terms=tuple(context_terms)
+        ),
         ObjectiveComponent(name="utility_proxy_change", stage="retain_utility", priority=3, terms=tuple(utility_terms)),
     ]
 
@@ -905,7 +934,8 @@ def _locked_stop_ids(constraints: tuple[OwnedConstraint, ...]) -> set[str]:
     return {
         constraint.target_id
         for constraint in constraints
-        if constraint.strength == ConstraintStrength.LOCKED and constraint.scope in {ConstraintScope.STOP, ConstraintScope.POI}
+        if constraint.strength == ConstraintStrength.LOCKED
+        and constraint.scope in {ConstraintScope.STOP, ConstraintScope.POI}
     }
 
 

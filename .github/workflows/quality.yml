@@ -32,7 +32,7 @@ jobs:
       - name: Tests
         env:
           COVERAGE_CORE: sysmon
-        run: coverage run -m pytest --basetemp=/tmp/itinerary-pytest
+        run: coverage run -m pytest --basetemp=tmp/p
 
       - name: Coverage report
         run: coverage report -m

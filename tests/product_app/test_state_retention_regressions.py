@@ -1,8 +1,7 @@
-"""State-loss regressions with isolated stores, no registered runs or provider calls."""
+"""State-loss regressions with isolated stores and synthetic evidence, no provider calls."""
 
 from __future__ import annotations
 
-import gzip
 import json
 import threading
 from concurrent.futures import ThreadPoolExecutor
@@ -19,10 +18,12 @@ from itinerary_system.product_app import workspace as workspace_module
 from itinerary_system.product_app.api import create_product_app
 from itinerary_system.product_app.conversations import ConversationError, ConversationRepository
 from itinerary_system.product_app.copilot import DeterministicCopilotAdapter
-from itinerary_system.product_app.draft_compiler import _operation_record
+from itinerary_system.product_app.draft_compiler import _operation_record, _route_matrix
 from itinerary_system.product_app.models import CopilotTurnV1
+from itinerary_system.product_app.official_travel import OFFICIAL_URLS
 from itinerary_system.product_app.service import ProductService, _draft_content_hash
-from itinerary_system.product_app.trip_replanner import _hash, validate_planning_bundle
+from itinerary_system.product_app.trip_planning import TripPlanParameters
+from itinerary_system.product_app.trip_replanner import _hash, _matrix_record, validate_planning_bundle
 from itinerary_system.product_app.workspace import WorkspaceError, WorkspaceStore
 from itinerary_system.research_artifacts import stable_content_hash
 
@@ -250,9 +251,7 @@ def test_conversation_delete_and_rollback_exclude_concurrent_read(tmp_path, monk
 def expired_planning_api(tmp_path, monkeypatch):
     """Replay retained route evidence in new state; intercept every refresh fetch."""
     root = Path(__file__).resolve().parents[2]
-    fixture = root / "results/repairs/coordinated_acceptance_20261022/real_preview_execution.json.gz"
-    with gzip.open(fixture, "rt", encoding="utf-8") as stream:
-        bundle = json.load(stream)["planning_bundle"]
+    parameters = TripPlanParameters().model_dump()
     official = Mock(side_effect=WorkspaceError("official_source_unavailable", 409))
     monkeypatch.setattr("itinerary_system.product_app.trip_replanner.read_official_sources", official)
     app = create_product_app(
@@ -273,12 +272,49 @@ def expired_planning_api(tmp_path, monkeypatch):
                 "expected_revision": owner.revision,
                 "type": "replan_trip",
                 "target": "trip",
-                "parameters": bundle["parameters"],
+                "parameters": parameters,
             },
             valid_stop_ids=set(),
             day_count=7,
         )
         compiler = service.compiler_for_session(owner)
+        source = compiler._base_bundle
+        plan = deepcopy(source.child_plan)
+        days = [
+            {**day, "stop_ids": next(row["stop_ids"] for row in plan["ordered_days"] if row["day"] == day["day"])}
+            for day in source.run_manifest["scenario"]["days"]
+        ]
+        retrieved_at = (datetime.now(UTC) - timedelta(hours=1)).isoformat()
+        bundle = {
+            "schema_version": "trip-planning-bundle-v1",
+            "parent_plan_id": compiler.parent_plan["plan_id"],
+            "parent_content_hash": compiler.parent_plan["content_hash"],
+            "parameters": parameters,
+            "plan": plan,
+            "planner_run": next(row for row in source.planner_runs if row["run_id"] == plan["source_run_id"]),
+            "route_matrix": _matrix_record(_route_matrix(source.route_matrix)),
+            "days": days,
+            "start_anchor_id": days[0]["start_anchor_id"],
+            "end_anchor_id": days[-1]["end_anchor_id"],
+            "required_stop_ids": [],
+            "excluded_stop_ids": [],
+            "official_sources": [
+                {
+                    "source_id": key,
+                    "url": OFFICIAL_URLS[key],
+                    "status": "retrieved",
+                    "retrieved_at": retrieved_at,
+                    "big_sur_highway_closure": False,
+                    "park_access": "open",
+                }
+                for key in ("big_sur_park", "highway_1", "hearst_castle")
+            ],
+            "enforced_avoid_big_sur": False,
+            "user_avoid_regions": [],
+            "solver": {"status": "synthetic_registered_plan_replay"},
+            "place_sources": source.run_manifest["scenario"]["place_sources"],
+            "notices": ["Synthetic registered fixture; no live official or routing requests."],
+        }
         identity = stable_content_hash(
             {
                 "parent": compiler.parent_plan["content_hash"],

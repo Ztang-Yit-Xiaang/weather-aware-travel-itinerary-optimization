@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import ast
 import json
+import re
 import shutil
 import subprocess
 from copy import deepcopy
@@ -139,10 +140,10 @@ def test_framing_does_not_replace_or_weaken_native_capture_and_bubble_assertions
     ]
     assert section.index("scroll_into_view_if_needed()") < section.index("page.mouse.down()")
     assert section.index("window.__e2eLastContextRelease=value") < section.index('assert gesture["start"]')
-    assert 'for phase in ("capture","bubble")' in section
+    assert 'for phase in ("capture", "bubble")' in section
     assert 'released[0]["target_is_canvas"] and released[0]["hit_is_context"]' in section
-    assert 'assert len(released)==1 and released[0]["trusted"]' in section
-    assert 'assert all(event in events for event in ("dragstart","dragend","moveend","idle"))' in section
+    assert 'assert len(released) == 1 and released[0]["trusted"]' in section
+    assert 'assert all(event in events for event in ("dragstart", "dragend", "moveend", "idle"))' in section
     assert "page.mouse.up()" in section and "finally:" in section
     for forbidden in (".flyTo(", ".easeTo(", ".jumpTo(", ".panTo(", ".panBy(", "dispatchEvent("):
         assert forbidden not in section
@@ -251,7 +252,7 @@ def test_undo_waits_for_exact_server_impact_revision_and_visible_draft_before_ma
     assert block.index("as impact:") < block.index('page.locator("#inline-undo").click()')
     assert 'payload["session"]["draft"] == ([remaining] if remaining else [])' in block
     assert 'impact.value.json()["session_revision"] == expected_revision' in block
-    assert block.index('to_have_text("1 draft change" if remaining else "0 draft changes"') < block.index(
-        "assert capture(label, remaining) == parent"
-    )
+    acknowledgement = re.search(r'to_have_text\(\s*"1 draft change" if remaining else "0 draft changes"', block)
+    assert acknowledgement is not None
+    assert acknowledgement.start() < block.index("assert capture(label, remaining) == parent")
     assert "wait_for_timeout" not in block

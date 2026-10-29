@@ -6,31 +6,47 @@ import hashlib
 import io
 import math
 import re
-import shutil
 from pathlib import Path
 
 import pandas as pd
+import pytest
 
 from itinerary_system import blueprint_render_panels as panels
 from itinerary_system import blueprint_render_primitives as primitives
 from itinerary_system import blueprint_renderer, map_renderer
 from itinerary_system import blueprint_renderer_sections as sections
 from itinerary_system import blueprint_route_selector as selector
+from itinerary_system.blueprint_day_plans import build_profile_day_plans
 
-REPO_ROOT = Path(__file__).resolve().parents[1]
-SOURCE_OUTPUTS = REPO_ROOT / "results" / "outputs"
-
-# E3.C4 reviewed baseline: the only change from E3.C3 is the mobile-only
-# selector containment rule. Data, route-debug, and Leaflet contracts stay frozen.
-EXPECTED_HTML_SHA256 = "a06583549a135688e62d663ff5c6197074e96f3a0bad57d5cb791f37273fc2bb"
-EXPECTED_DAY_PLAN_SHA256 = "6bb4a3a40d76a07ba62e02bf055fd40fece8853b09fa76be07cffe16b7f88e27"
-EXPECTED_ROUTE_DEBUG_SHA256 = "b723926ceb77887660a7730104e3e2ebc891ca668ab33f4b43fe9d8f9444ff7e"
-EXPECTED_LEAFLET_COUNTS = {
-    "polyline": 1105,
-    "circle_marker": 418,
-    "marker": 1173,
-    "feature_group": 162,
-    "geo_json": 0,
+# Synthetic regression baseline, not the unavailable E3.C4 production snapshot.
+# Captured by independently executing pre-format commit f0e294cb6; all eight
+# renderer modules are AST-identical and complete normalized HTML/CSV outputs
+# match the current renderer. Inputs use only the trip below and repository
+# curated catalogs. Hash project-owned assets and CSVs, not Folium's versioned
+# HTML wrapper; complete saved HTML still has layer, token and asset checks.
+EXPECTED_RENDER_SIGNATURES = {
+    False: {
+        "project_assets": {
+            "html": "76924511c0d0723cc2efe047da131621fb5b7121ce4a4db4e7915a591ee4e103",
+            "script": "b3e87f9539033d44eb668f5255ed4281f25a52fad27e0cf203c0acfb6c7baa1a",
+        },
+        "day_plan_rows": 5,
+        "day_plan_sha256": "fb3455f09612ba30ca2b57e841d0ecd845788f608a6b40575f6405785b4a4cb4",
+        "route_debug_rows": 22,
+        "route_debug_sha256": "3f4969fd684157fbfaf46712828b539eac652af8ccbf53b4d5908935faa004ba",
+        "leaflet_counts": {"polyline": 78, "circle_marker": 37, "marker": 90, "feature_group": 24, "geo_json": 0},
+    },
+    True: {
+        "project_assets": {
+            "html": "27894833d8885e72633b82470d179fa0fdc04b1ad309e880e48c34860363a094",
+            "script": "1f0924eaf86104d288d9f9965e862d31095572550673024962defdbeaf515111",
+        },
+        "day_plan_rows": 5,
+        "day_plan_sha256": "fb3455f09612ba30ca2b57e841d0ecd845788f608a6b40575f6405785b4a4cb4",
+        "route_debug_rows": 23,
+        "route_debug_sha256": "81fed0360c95093ece4904049ec2857b0ac058f2954e7ed745441c3dc6739931",
+        "leaflet_counts": {"polyline": 93, "circle_marker": 42, "marker": 85, "feature_group": 27, "geo_json": 0},
+    },
 }
 EXPECTED_TOKEN_PRESENCE = {
     "Route Selector": True,
@@ -54,21 +70,66 @@ def _sha256(text: str) -> str:
 
 
 def _baseline_trip() -> dict:
-    row = pd.read_csv(SOURCE_OUTPUTS / "production_hierarchical_gurobi_plan.csv").iloc[0]
     return {
-        "gateway_start": str(row["gateway_start"]),
-        "gateway_end": str(row["gateway_end"]),
-        "city_sequence": ast.literal_eval(str(row["city_sequence"])),
-        "days_by_city": ast.literal_eval(str(row["days_by_city"])),
-        "pass_through_cities": ast.literal_eval(str(row["pass_through_cities"])),
+        "gateway_start": "Santa Barbara",
+        "gateway_end": "Los Angeles",
+        "city_sequence": ["Santa Barbara", "Los Angeles"],
+        "days_by_city": {"Santa Barbara": 1, "Los Angeles": 1},
+        "pass_through_cities": [],
     }
 
 
-def _copy_renderer_inputs(output_dir: Path) -> None:
+def _write_renderer_inputs(output_dir: Path, *, route_matrix: bool) -> None:
     output_dir.mkdir()
-    for source in SOURCE_OUTPUTS.iterdir():
-        if source.is_file() and source.suffix.lower() in {".csv", ".json", ".jsonl"}:
-            shutil.copy2(source, output_dir / source.name)
+    # Build from checked-in curated catalogs, in an empty output directory.
+    # Fixed goldens below also lock the day-plan builder's complete output.
+    plans = build_profile_day_plans({"OUTPUT_DIR": output_dir, "best_hierarchical_trip": _baseline_trip()})
+    method = "hierarchical_gurobi_pipeline"
+    plans["balanced"].assign(
+        method=method, trip_days=2, comparison_type="method", comparison_label="Synthetic curated Gurobi"
+    ).to_csv(output_dir / "production_method_route_stops.csv", index=False)
+    if route_matrix:
+        pd.concat(
+            [
+                plan.assign(route_key=f"d2__gurobi__{profile}", trip_days=2, method=method)
+                for profile, plan in plans.items()
+            ],
+            ignore_index=True,
+        ).to_csv(output_dir / "production_route_matrix_route_stops.csv", index=False)
+
+
+def _render_signature(trip_map, day_plan, html, route_debug):
+    assets = {}
+    for name in ("html", "script"):
+        # Renderer-owned folium.Element children have automatic element_* keys;
+        # Folium's own templates use named map/plugin children. Preserve every
+        # project panel/script byte, allowing only random Folium IDs to differ.
+        children = [
+            child.render()
+            for key, child in getattr(trip_map.get_root(), name)._children.items()
+            if key.startswith("element_")
+        ]
+        assert len(children) == 3
+        assert all(child in html for child in children)
+        assets[name] = _sha256(_normalize_folium_ids("\n".join(children)))
+    return {
+        "project_assets": assets,
+        "day_plan_rows": len(day_plan),
+        # Nine decimal places retain sub-millimetre coordinate precision while
+        # avoiding last-bit NumPy/pandas float serialization differences.
+        "day_plan_sha256": _sha256(day_plan.to_csv(index=False, lineterminator="\n", float_format="%.9f")),
+        "route_debug_rows": len(route_debug),
+        "route_debug_sha256": _sha256(
+            _normalize_folium_ids(route_debug.to_csv(index=False, lineterminator="\n", float_format="%.9f"))
+        ),
+        "leaflet_counts": {
+            "polyline": html.count("L.polyline("),
+            "circle_marker": html.count("L.circleMarker("),
+            "marker": html.count("L.marker("),
+            "feature_group": html.count("L.featureGroup("),
+            "geo_json": html.count("L.geoJson("),
+        },
+    }
 
 
 def test_renderer_geometry_helpers_preserve_empty_duplicate_and_nonfinite_contracts():
@@ -272,14 +333,19 @@ def test_map_renderer_calls_package_renderer_without_legacy_import(monkeypatch, 
     assert fake_map.saved == output_path
 
 
-def test_package_renderer_matches_pre_migration_render_signature(tmp_path):
+@pytest.mark.parametrize("route_matrix", [False, True], ids=["regular", "route-matrix"])
+def test_package_renderer_matches_synthetic_render_signature(tmp_path, monkeypatch, route_matrix):
+    def fail_network(*_args, **_kwargs):
+        raise AssertionError("full offline renderer attempted a live request")
+
+    monkeypatch.setattr(primitives.requests.sessions.Session, "request", fail_network)
     output_dir = tmp_path / "outputs"
     figure_dir = tmp_path / "figures"
-    _copy_renderer_inputs(output_dir)
+    _write_renderer_inputs(output_dir, route_matrix=route_matrix)
     figure_dir.mkdir()
 
     context = {
-        "PROJECT_ROOT": REPO_ROOT,
+        "PROJECT_ROOT": tmp_path,
         "OUTPUT_DIR": output_dir,
         "FIGURE_DIR": figure_dir,
         "best_hierarchical_trip": _baseline_trip(),
@@ -294,29 +360,16 @@ def test_package_renderer_matches_pre_migration_render_signature(tmp_path):
     }
     capture = io.StringIO()
     with contextlib.redirect_stdout(capture):
-        _map, day_plan, html_path = blueprint_renderer.build_production_trip_map(
+        trip_map, day_plan, html_path = blueprint_renderer.build_production_trip_map(
             context,
             output_path=figure_dir / "package_renderer.html",
             run_live_routing=False,
         )
 
     html = Path(html_path).read_text(encoding="utf-8")
-    normalized_html = _normalize_folium_ids(html)
-    day_plan_csv = day_plan.to_csv(index=False, lineterminator="\n")
     route_debug = pd.read_csv(output_dir / "production_map_route_debug.csv")
-    route_debug_csv = _normalize_folium_ids(route_debug.to_csv(index=False, lineterminator="\n"))
 
-    assert _sha256(normalized_html) == EXPECTED_HTML_SHA256
-    assert len(html.encode()) == 8_976_620
-    assert len(day_plan) == 7
-    assert _sha256(day_plan_csv) == EXPECTED_DAY_PLAN_SHA256
-    assert len(route_debug) == 335
-    assert _sha256(route_debug_csv) == EXPECTED_ROUTE_DEBUG_SHA256
-    assert {
-        "polyline": html.count("L.polyline("),
-        "circle_marker": html.count("L.circleMarker("),
-        "marker": html.count("L.marker("),
-        "feature_group": html.count("L.featureGroup("),
-        "geo_json": html.count("L.geoJson("),
-    } == EXPECTED_LEAFLET_COUNTS
-    assert {token: token in html for token in EXPECTED_TOKEN_PRESENCE} == EXPECTED_TOKEN_PRESENCE
+    assert _render_signature(trip_map, day_plan, html, route_debug) == EXPECTED_RENDER_SIGNATURES[route_matrix]
+    tokens = {**EXPECTED_TOKEN_PRESENCE, "Selected hotel/base pins": not route_matrix}
+    assert {token: token in html for token in tokens} == tokens
+    assert not (tmp_path / "results" / "cache" / "production_road_route_cache.json").exists()

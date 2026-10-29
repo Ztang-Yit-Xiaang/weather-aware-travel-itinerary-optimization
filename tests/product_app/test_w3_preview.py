@@ -49,7 +49,6 @@ def operation(
 @pytest.mark.parametrize(
     ("candidate_id", "expected_plan_id"),
     [
-        ("bixby_creek_bridge_viewpoint", RECOMMENDED_ID),
         ("santa_barbara_museum_of_natural_history_sea_center", LOW_DRIVING_ID),
     ],
 )
@@ -69,6 +68,24 @@ def test_exact_registered_replacement_compiles_to_its_own_evaluated_child(
     assert compiled.certificate["comparison_eligibility"] == "eligible"
     assert compiled.certificate["route_validation"]["publication_ready"] is True
     assert compiled.diff["child_plan_id"] == expected_plan_id
+
+
+def test_inconsistent_historical_replacement_is_rejected_before_preview() -> None:
+    package, compiler = package_and_compiler()
+    frozen = package.evidence_bundles[RECOMMENDED_ID].child_plan
+    stop = next(
+        row
+        for row in frozen["selected_stops"]
+        if (row.get("poi_id") or row.get("stop_id")) == "bixby_creek_bridge_viewpoint"
+    )
+    day = next(row for row in frozen["ordered_days"] if row["day"] == stop["day"])
+    assert stop["stop_order"] == 2
+    assert day["stop_ids"].index("bixby_creek_bridge_viewpoint") + 1 == 1
+    with pytest.raises(WorkspaceError, match="^draft_pipeline_artifact_mismatch$"):
+        compiler.compile(
+            [operation("replace_nearby", "golden_gate_bridge", {"candidate_id": "bixby_creek_bridge_viewpoint"})],
+            accepted_plan_id=PARENT_ID,
+        )
 
 
 def test_capabilities_are_explicit_and_keep_parent_and_candidate_inventories_separate() -> None:
@@ -152,8 +169,8 @@ def test_semantically_identical_drafts_are_idempotent_across_session_metadata() 
         ([operation("route_feedback", "selected_route", {"preference": "reduce_driving"})], "eligible", None),
         (
             [operation("replace_nearby", "golden_gate_bridge", {"candidate_id": "bixby_creek_bridge_viewpoint"})],
-            "eligible",
-            None,
+            "rejected",
+            "draft_pipeline_artifact_mismatch",
         ),
         ([operation("add_candidate", "bixby_creek_bridge_viewpoint", {"day": 7})], "eligible", None),
     ],
@@ -165,6 +182,10 @@ def test_all_canonical_operations_run_the_real_pipeline_and_report_truthful_stat
 ) -> None:
     _, compiler = package_and_compiler()
 
+    if expected_state == "rejected":
+        with pytest.raises(WorkspaceError, match=f"^{expected_reason}$"):
+            compiler.compile(draft, accepted_plan_id=PARENT_ID)
+        return
     compiled = compiler.compile(draft, accepted_plan_id=PARENT_ID)
 
     assert compiled.state == expected_state

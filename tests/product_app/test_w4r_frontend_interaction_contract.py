@@ -89,7 +89,7 @@ def test_snap_preview_is_server_owned_non_persistent_and_confirmation_bounded() 
 def test_context_inspector_never_claims_freehand_or_automatic_execution() -> None:
     source = APP.read_text(encoding="utf-8")
 
-    assert "This is a trip stop, not a movable catalog place." in source
+    assert "Editing this stop creates a draft for review." in source
     assert "it does not make the polyline freely draggable" in source
     assert "This point cannot become an executable draft." in source
     assert "Open typed stop edits" in source

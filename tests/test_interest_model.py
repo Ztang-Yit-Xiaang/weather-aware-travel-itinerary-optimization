@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import numpy as np
 import pytest
+from scipy.integrate import trapezoid
 
 from itinerary_system.interest_model import BayesianInterestModel, interest_features
 
@@ -30,7 +31,7 @@ def test_laplace_posterior_tracks_independent_one_dimensional_integral():
     probability = 1 / (1 + np.exp(-beta))
     log_density = 56 * np.log(probability) + 24 * np.log1p(-probability) - 0.5 * (beta + 0.1) ** 2
     density = np.exp(log_density - log_density.max())
-    expected = np.trapz(probability * density, beta) / np.trapz(density, beta)
+    expected = trapezoid(probability * density, beta) / trapezoid(density, beta)
     assert abs(result["mean"][0] - expected) < 0.012
     assert posterior.covariance[0, 0] < BayesianInterestModel.prior().covariance[0, 0]
     assert result["interval"][0, 1] - result["interval"][0, 0] < 0.2

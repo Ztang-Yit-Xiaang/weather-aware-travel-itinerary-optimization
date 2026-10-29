@@ -115,9 +115,11 @@ class BayesianInterestModel:
                 break
             rate = 1.0
             current = objective(beta)
+            # Objective differences near convergence can fall below summation roundoff.
+            roundoff = 8 * np.finfo(float).eps * max(1.0, abs(current))
             while rate > 1e-10:
                 candidate = beta - rate * step
-                if objective(candidate) <= current - 1e-4 * rate * float(gradient @ step):
+                if objective(candidate) <= current - 1e-4 * rate * float(gradient @ step) + roundoff:
                     beta = candidate
                     break
                 rate *= 0.5

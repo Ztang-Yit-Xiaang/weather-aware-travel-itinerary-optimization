@@ -20,7 +20,7 @@ def test_critical_controls_and_disclosures_have_44px_targets() -> None:
         "min-height: 44px;" in css
     )
     assert ".toolbar-button { min-width: 44px; min-height: 44px;" in css
-    assert ".map-mode-switch button { min-width: 72px; min-height: 44px;" in css
+    assert ".map-context-card button { min-height: 44px;" in css
     assert ".alternative-card button { width: 100%; min-height: 44px;" in css
     assert ".download-link { display: inline-flex; align-items: center; min-height: 44px;" in css
     assert (
@@ -35,10 +35,11 @@ def test_mobile_map_uses_compact_scrollable_bottom_sheet_treatment() -> None:
     mobile = css[css.index("@media (max-width: 430px)") :]
 
     assert "#geographic-map.geographic-map { inset: 0; }" in mobile
-    assert "bottom: 112px" in mobile
+    assert ".map-context-card { left: 12px; right: 12px; top: auto; bottom: 195px;" in mobile
     assert "max-height: min(32dvh, 230px)" in mobile
-    assert "max-height: 104px" in mobile
-    assert "overflow-y: auto" in mobile
+    assert "min-height: 112px; max-height: 132px;" in mobile
+    assert ".draft-bar span { grid-column: 1 / -1; grid-row: 3; max-height: 2.8em; overflow-y: auto;" in mobile
+    assert ".draft-bar #inline-preview { grid-column: 2; grid-row: 2; }" in mobile
     assert ".map-legend span { flex: 0 0 auto; }" in mobile
 
 
@@ -71,3 +72,15 @@ def test_recovery_and_support_text_uses_readable_sizes() -> None:
     assert ".textual-map-alternative" in css and "font-size: 13px" in css
     assert ".evidence-card dl" in css and "font-size: 12px" in css
     assert ".truth-note" in css and "font-size: 12px" in css
+
+
+def test_desktop_copilot_reserves_resizable_workspace_space() -> None:
+    css = _css()
+    controller = (STATIC / "js" / "app.js").read_text(encoding="utf-8")
+    assert ".app-shell:has(#copilot-dock:not([hidden])) .desktop-shell" in css
+    assert "minmax(0, 1fr) var(--copilot-width, 440px)" in css
+    assert ".app-shell:has(#copilot-dock:not([hidden])) .repair-panel { display: none; }" in css
+    assert ".map-legend { top: 78px; bottom: auto; }" in css
+    assert ".map-context-card { top: 126px; max-height: max(120px, calc(100% - 370px)); }" in css
+    assert '.style.setProperty("--copilot-width", `${bounded}px`)' in controller
+    assert 'event.preventDefault();\n      const current = dock.getBoundingClientRect().width;' in controller

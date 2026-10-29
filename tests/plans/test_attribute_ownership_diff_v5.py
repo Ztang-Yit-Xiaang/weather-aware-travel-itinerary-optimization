@@ -1,7 +1,10 @@
 from __future__ import annotations
 
+import json
+import os
 from copy import deepcopy
-from dataclasses import replace
+from dataclasses import asdict, replace
+from pathlib import Path
 
 import pytest
 
@@ -19,6 +22,219 @@ from itinerary_system.plans import (
 from itinerary_system.product_app.draft_compiler import _verify_diff
 from itinerary_system.product_app.workspace import WorkspaceError
 from itinerary_system.research_artifacts import PlanArtifactV2, stable_content_hash
+
+
+@pytest.fixture(autouse=True)
+def record_exact_owned_diff_io(monkeypatch, request):
+    destination = os.environ.get("MIXED_OWNERSHIP_EVIDENCE_DIR")
+    if not destination:
+        return
+    original = compute_plan_diff
+    exchanges = []
+
+    def observed(parent, child, policy=None, **kwargs):
+        exchange = {"parent": parent.to_record(), "child": child.to_record(),
+                    "ownership_policy": asdict(policy or OwnershipPolicy()), "options": kwargs}
+        try:
+            result = original(parent, child, policy, **kwargs)
+            exchange["output"] = result.to_record()
+        except (ValueError, TypeError) as error:
+            exchange["error"] = {"type": type(error).__name__, "message": str(error)}
+            raise
+        finally:
+            exchanges.append(exchange)
+            path = Path(destination) / f"{stable_content_hash({'test': request.node.nodeid})}.json"
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text(json.dumps({"test": request.node.nodeid, "exchanges": exchanges}, indent=2), encoding="utf-8")
+        return result
+
+    monkeypatch.setitem(globals(), "compute_plan_diff", observed)
+
+
+@pytest.mark.parametrize("families", [
+    ("duration", "time_window"), ("duration", "role"),
+    ("time_window", "role"), ("duration", "time_window", "role"),
+])
+def test_mixed_owned_diff_carries_every_change_and_relation(families) -> None:
+    parent, child = _mixed_owned_pair(families)
+    record = compute_plan_diff(parent, child, default_visit_minutes=45).to_record()
+    assert record["schema_version"] == "plan-diff-v7"
+    evidence = record["attribute_ownership_evidence"]
+    assert evidence["schema_version"] == "plan-diff-attribute-ownership-evidence-v2"
+    assert evidence["parent_plan_content_hash"] == parent.content_hash
+    assert evidence["semantic_scope"]["permission_claim"] == "not_evaluated"
+    assert evidence["semantic_scope"]["feasibility_claim"] == "not_evaluated"
+    assert "role" in evidence["semantic_scope"]["relation_specific_attributes"]
+    assert {row["attribute"] for row in evidence["constraints"]} == set(families)
+    assert {row["change_kind"] for row in evidence["changes"]} == {
+        f"{family}_change" for family in families
+    }
+    assert record["weighted_edit_cost"] == 2.5 * len(families)
+    for family in families:
+        assert len(record[f"{family}_changes"]) == 1
+        assert record[f"{family}_changes"][0]["owner_strength"] == "soft"
+    assert all(row["constraint_satisfaction"][0]["satisfaction_after"] == "unsatisfied"
+               for row in evidence["changes"])
+    assert compute_plan_diff(parent, child, default_visit_minutes=45).to_record() == record
+    with pytest.raises(WorkspaceError, match="draft_pipeline_diff_invalid"):
+        _verify_diff(record)
+
+
+def _mixed_owned_pair(families=("duration", "time_window", "role")):
+    exact = {"mode": "exact", "preferred_minutes": 45, "minimum_minutes": 45, "maximum_minutes": 45}
+    window = {
+        "schema_version": "stop-time-window-constraint-v1", "earliest_arrival": "09:00",
+        "latest_departure": "12:00", "early_arrival_policy": "wait_until_earliest_arrival",
+        "latest_departure_semantics": "departure_after_visit",
+    }
+    values = {"duration": exact, "time_window": window, "role": "activity"}
+    parent = _plan(constraints=tuple(_constraint(
+        constraint_id=f"owned_{family}", target="a", relation=family, value=values[family],
+    ) for family in families))
+    stops = [dict(stop) for stop in parent.selected_stops]
+    stops[0].update({
+        "duration_constraint": exact, "visit_duration_minutes": 45,
+        "time_window_constraint": window, "itinerary_role": "activity",
+        "itinerary_role_source": "user_declared_itinerary_role",
+    })
+    parent = replace(parent, selected_stops=tuple(stops))
+    changed = deepcopy(stops)
+    if "duration" in families:
+        changed[0].update({
+            "duration_constraint": {**exact, "preferred_minutes": 60, "minimum_minutes": 60, "maximum_minutes": 60},
+            "visit_duration_minutes": 60,
+        })
+    if "time_window" in families:
+        changed[0]["time_window_constraint"] = {**window, "latest_departure": "11:30"}
+    if "role" in families:
+        changed[0]["itinerary_role"] = "meal"
+    return parent, _child(parent, stops=tuple(changed))
+
+
+@pytest.mark.parametrize("mutation", ["drop", "weaken", "retarget", "unconfirm", "value"])
+def test_mixed_owned_diff_cannot_rewrite_parent_protection(mutation) -> None:
+    parent, child = _mixed_owned_pair()
+    constraints = deepcopy(list(child.owned_constraints))
+    if mutation == "drop":
+        constraints.pop()
+    else:
+        field, value = {
+            "weaken": ("strength", "weak"), "retarget": ("target_id", "b"),
+            "unconfirm": ("confirmed", False), "value": ("value", "meal"),
+        }[mutation]
+        constraints[-1][field] = value
+    with pytest.raises(ValueError, match="exactly match accepted parent"):
+        compute_plan_diff(parent, replace(child, owned_constraints=tuple(constraints)))
+
+
+@pytest.mark.parametrize("mutation", ["role_value", "cost", "omit_role", "foreign_target", "foreign_hash"])
+def test_mixed_owned_dto_rejects_coherently_rehashed_evidence(mutation) -> None:
+    parent, child = _mixed_owned_pair()
+    diff = compute_plan_diff(parent, child)
+    evidence = deepcopy(diff.attribute_ownership_evidence)
+    role = next(row for row in evidence["changes"] if row["change_kind"] == "role_change")
+    if mutation == "role_value":
+        role["after_value"]["role"] = "made_up_role"
+    elif mutation == "cost":
+        role["cost"] = 0.25
+    elif mutation == "omit_role":
+        evidence["changes"].remove(role)
+    elif mutation == "foreign_target":
+        role["target_stop_id"] = "b"
+    else:
+        evidence["parent_plan_content_hash"] = "not-a-plan-hash"
+    evidence["content_hash"] = stable_content_hash({key: value for key, value in evidence.items() if key != "content_hash"})
+    with pytest.raises(ValueError, match="ownership .*evidence is invalid"):
+        replace(diff, attribute_ownership_evidence=evidence).to_record()
+
+
+def test_owned_day_move_plus_role_uses_complete_mixed_diff() -> None:
+    parent, child = _mixed_owned_pair(("role",))
+    rule = _constraint(constraint_id="day_a", target="a", relation="day", value=1)
+    parent = replace(parent, owned_constraints=(*parent.owned_constraints, rule))
+    changed = deepcopy(list(child.selected_stops))
+    changed[0]["day"] = 2
+    child = _child(parent, stops=tuple(changed))
+    record = compute_plan_diff(parent, child).to_record()
+    assert record["schema_version"] == "plan-diff-v7"
+    assert {row["change_kind"] for row in record["attribute_ownership_evidence"]["changes"]} == {"day_move", "role_change"}
+    assert record["weighted_edit_cost"] == 22.5
+
+
+@pytest.mark.parametrize("field,value", [("value", "invented_role"), ("scope", "day"), ("confirmed", "yes")])
+def test_mixed_owned_role_constraint_is_strict(field, value) -> None:
+    parent, _ = _mixed_owned_pair()
+    constraints = deepcopy(list(parent.owned_constraints))
+    constraints[-1][field] = value
+    parent = replace(parent, owned_constraints=tuple(constraints))
+    _, original_child = _mixed_owned_pair()
+    child = replace(original_child, owned_constraints=parent.owned_constraints)
+    with pytest.raises(ValueError):
+        compute_plan_diff(parent, child)
+
+
+def test_mixed_owned_dto_requires_mixed_changes_and_matching_version() -> None:
+    parent, child = _mixed_owned_pair()
+    diff = compute_plan_diff(parent, child)
+    with pytest.raises(ValueError, match="requires mixed changes and ownership evidence"):
+        replace(diff, duration_changes=(), time_window_changes=()).to_record()
+    with pytest.raises(ValueError, match="requires mixed changes and ownership evidence"):
+        replace(diff, attribute_ownership_evidence=None).to_record()
+    with pytest.raises(ValueError, match="excludes role changes"):
+        replace(diff, schema_version="plan-diff-v5").to_record()
+    evidence = deepcopy(diff.attribute_ownership_evidence)
+    evidence["schema_version"] = "plan-diff-attribute-ownership-evidence-v1"
+    evidence["content_hash"] = stable_content_hash({key: value for key, value in evidence.items() if key != "content_hash"})
+    with pytest.raises(ValueError, match="ownership evidence is invalid"):
+        replace(diff, attribute_ownership_evidence=evidence).to_record()
+
+
+@pytest.mark.parametrize("relation", ["role", "itinerary_role", "role_equals", "set_role", "attribute:role"])
+def test_mixed_owned_role_aliases_keep_identical_attribute_semantics(relation) -> None:
+    parent, child = _mixed_owned_pair(("duration", "role"))
+    constraints = deepcopy(list(parent.owned_constraints))
+    constraints[-1]["relation"] = relation
+    parent = replace(parent, owned_constraints=tuple(constraints))
+    child = replace(child, owned_constraints=parent.owned_constraints)
+    diff = compute_plan_diff(parent, child).to_record()
+    role = next(row for row in diff["attribute_ownership_evidence"]["constraints"] if row["attribute"] == "role")
+    assert role["relation"] == relation
+    assert role["canonical_value"] == "activity"
+    assert diff["role_changes"][0]["cost"] == 2.5
+
+
+@pytest.mark.parametrize("invalidity", ["duplicate_id", "contradictory_value"])
+def test_mixed_owned_role_evidence_rejects_ambiguous_constraints(invalidity) -> None:
+    parent, child = _mixed_owned_pair()
+    extra = deepcopy(parent.owned_constraints[-1])
+    if invalidity == "duplicate_id":
+        extra["constraint_id"] = parent.owned_constraints[0]["constraint_id"]
+    else:
+        extra.update({"constraint_id": "conflicting_role", "value": "meal"})
+    parent = replace(parent, owned_constraints=(*parent.owned_constraints, extra))
+    child = replace(child, owned_constraints=parent.owned_constraints)
+    with pytest.raises(ValueError):
+        compute_plan_diff(parent, child)
+
+
+def test_mixed_owned_strength_is_specific_to_attribute_and_uses_policy_weights() -> None:
+    parent, child = _mixed_owned_pair(("duration", "role"))
+    duration, role = deepcopy(parent.owned_constraints)
+    duration["strength"] = "locked"
+    role["strength"] = "weak"
+    extra = {**role, "constraint_id": "soft_role", "strength": "soft"}
+    parent = replace(parent, owned_constraints=(duration, role, extra))
+    child = replace(child, owned_constraints=parent.owned_constraints)
+    policy = OwnershipPolicy(constraint_strength_weights={
+        **OwnershipPolicy().constraint_strength_weights, "weak": 200.0,
+    })
+    record = compute_plan_diff(parent, child, policy).to_record()
+    assert record["duration_changes"][0]["owner_strength"] == "locked"
+    assert record["role_changes"][0]["owner_strength"] == "weak"
+    assert record["role_changes"][0]["cost"] == 50.0
+    role_change = next(row for row in record["attribute_ownership_evidence"]["changes"] if row["change_kind"] == "role_change")
+    assert role_change["selected_constraint_ids"] == ["owned_role"]
+    assert "owned_duration" not in role_change["applicable_constraint_ids"]
 
 
 def _constraint(

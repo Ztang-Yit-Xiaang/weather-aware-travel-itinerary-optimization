@@ -2,13 +2,21 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import threading
 import time
+import weakref
+from collections.abc import Callable
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from types import ModuleType
 
 import pytest
+from fastapi import HTTPException
+from fastapi.testclient import TestClient
 
+from itinerary_system.product_app.api import create_product_app
 from itinerary_system.product_app.config import ProductConfigError, ProductRuntimeConfig
+from itinerary_system.product_app.copilot import DeterministicCopilotAdapter
 from itinerary_system.product_app.map_asset_contract import (
     EXPECTED_SOURCE_BUILD,
     EXPECTED_SOURCE_URL,
@@ -16,7 +24,38 @@ from itinerary_system.product_app.map_asset_contract import (
     EXPECTED_UPSTREAM_PACKAGES,
 )
 from itinerary_system.product_app.models import ComponentHealthV1
-from itinerary_system.product_app.runtime import MAP_CACHE_SECONDS, ProductRuntime
+from itinerary_system.product_app.runtime import MAP_CACHE_SECONDS, ProductRuntime, product_build_id
+
+
+@pytest.mark.parametrize("relative_path", [
+    "evaluation/plan_evaluator.py", "pipeline_runner.py", "repair/day_route_solver.py",
+])
+def test_build_guard_tracks_imported_backend_source(tmp_path, monkeypatch, relative_path):
+    runtime = ProductRuntime(runtime_config(tmp_path, monkeypatch))
+    dependency = tmp_path / "src/itinerary_system" / relative_path
+    dependency.parent.mkdir(parents=True, exist_ok=True)
+    dependency.write_text("implementation = 1\n", encoding="utf-8")
+    assert product_build_id(tmp_path) != runtime.build_id
+    with pytest.raises(HTTPException) as error:
+        runtime.require_current_build()
+    assert error.value.status_code == 503
+    assert error.value.detail == "product_server_build_changed"
+
+
+def test_build_fingerprint_tracks_interest_model_and_spatial_algorithm(tmp_path):
+    initial = product_build_id(tmp_path)
+    source = tmp_path / "src/itinerary_system"
+    source.mkdir(parents=True)
+    model = source / "interest_model.py"
+    model.write_text("model = 1\n", encoding="utf-8")
+    first = product_build_id(tmp_path)
+    assert first != initial
+    surface = source / "interest_surface.py"
+    surface.write_text("surface = 1\n", encoding="utf-8")
+    second = product_build_id(tmp_path)
+    assert second != first
+    model.write_text("model = 2\n", encoding="utf-8")
+    assert product_build_id(tmp_path) != second
 
 ENVIRONMENT_KEYS = (
     "PRODUCT_APP_ORIGIN",
@@ -382,6 +421,47 @@ def test_maplibre_probe_fails_closed_with_stable_codes(
     assert runtime._probe_map().code == expected_code
 
 
+@pytest.mark.parametrize("length", [1_056_837, 4 * 1024 * 1024, 4 * 1024 * 1024 + 1])
+def test_map_fetch_reads_complete_bounded_asset(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, length: int) -> None:
+    runtime = ProductRuntime(runtime_config(tmp_path, monkeypatch))
+
+    class Response:
+        status = 200
+        headers = {}
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *args):
+            return None
+
+        def geturl(self):
+            return "http://127.0.0.1:8080/maplibre/maplibre-gl.js"
+
+        def read(self, limit):
+            return b"x" * min(length, limit)
+
+    monkeypatch.setattr("itinerary_system.product_app.runtime.urllib.request.urlopen", lambda *a, **kw: Response())
+    if length > 4 * 1024 * 1024:
+        with pytest.raises(ValueError, match="map_asset_size_limit_exceeded"):
+            runtime._fetch("/maplibre/maplibre-gl.js")
+    else:
+        assert len(runtime._fetch("/maplibre/maplibre-gl.js")[0]) == length
+
+
+def test_map_probe_transport_diagnostic_excludes_exception_text(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, caplog) -> None:
+    runtime = ProductRuntime(runtime_config(tmp_path, monkeypatch))
+
+    def denied(*args, **kwargs):
+        raise PermissionError(13, "secret-sensitive-path-and-token")
+
+    monkeypatch.setattr(runtime, "_fetch", denied)
+    assert runtime._probe_map().code == "maplibre_unavailable"
+    assert "errno=13" in caplog.text
+    assert "PermissionError" in caplog.text
+    assert "secret-sensitive" not in caplog.text
+
+
 def test_map_fetch_rejects_redirect_outside_configured_origin(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -404,7 +484,7 @@ def test_map_fetch_rejects_redirect_outside_configured_origin(
             return b"redirected"
 
     def redirected(request: object, timeout: float) -> RedirectedResponse:
-        assert timeout == 1.0
+        assert timeout == 3.0
         assert request.get_header("Origin") == "http://127.0.0.1:8127"
         return RedirectedResponse()
 
@@ -470,6 +550,57 @@ def test_map_probe_is_cached_for_two_seconds(
     runtime.health()
     runtime.health()
     assert calls == 1
+
+
+@pytest.mark.parametrize("core_failed,service_present", [(False, True), (True, True), (False, False)])
+def test_core_service_does_not_reprobe_optional_map(tmp_path, monkeypatch, core_failed, service_present):
+    runtime = ProductRuntime(runtime_config(tmp_path, monkeypatch))
+    runtime._initialized = True
+    runtime._components = {
+        "state_store": ComponentHealthV1("state_store", "failed" if core_failed else "ready", True, "state_test"),
+        "map": ComponentHealthV1("map", "degraded", False, "map_probe_timeout"),
+    }
+    service = object()
+    runtime.service = service if service_present else None
+
+    def unexpected_probe():
+        raise AssertionError("Optional map probing must not gate core service access")
+
+    monkeypatch.setattr(runtime, "_probe_map", unexpected_probe)
+    if core_failed or not service_present:
+        with pytest.raises(HTTPException) as error:
+            runtime.require_service()
+        assert error.value.status_code == 503
+        assert error.value.detail == "product_core_not_ready"
+    else:
+        assert runtime.require_service() is service
+
+
+def test_core_service_remains_available_during_optional_map_probe(tmp_path, monkeypatch):
+    runtime = ProductRuntime(runtime_config(tmp_path, monkeypatch))
+    runtime._initialized = True
+    runtime._components = {
+        "state_store": ComponentHealthV1("state_store", "ready", True, "state_ready"),
+        "map": ComponentHealthV1("map", "degraded", False, "map_probe_timeout"),
+    }
+    runtime.service = object()
+    entered, release = threading.Event(), threading.Event()
+
+    def slow_probe():
+        entered.set()
+        assert release.wait(5)
+        return ComponentHealthV1("map", "degraded", False, "map_probe_timeout")
+
+    monkeypatch.setattr(runtime, "_probe_map", slow_probe)
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        probing = pool.submit(runtime.health)
+        try:
+            assert entered.wait(2)
+            core = pool.submit(runtime.require_service)
+            assert core.result(timeout=1) is runtime.service
+        finally:
+            release.set()
+        assert probing.result(timeout=2).components["map"].status == "degraded"
 
 
 def test_atlas_is_explicit_opt_in_and_requires_runtime_license(
@@ -693,3 +824,63 @@ def test_local_environment_loader_rejects_resolved_escape(
     with pytest.raises(launcher.LocalEnvironmentError) as escaped:
         launcher.load_local_environment(tmp_path, environ={})
     assert escaped.value.code == "local_environment_outside_repository"
+
+
+def test_fastapi_cache_cleanup_releases_closed_app_runtime(
+    tmp_path: Path,
+    fastapi_dependency_cache_cleanup: Callable[[], None],
+) -> None:
+    root = Path(__file__).resolve().parents[2]
+
+    def close_app() -> tuple[weakref.ReferenceType, ...]:
+        app = create_product_app(
+            repository_root=root,
+            state_root=tmp_path / "state",
+            additional_allowed_authorities=("testserver",),
+            copilot=DeterministicCopilotAdapter(),
+        )
+        with TestClient(app) as client:
+            response = client.get("/api/runs/california_coast_coherent_demo_v1/workspace")
+            (tmp_path / "closed_app_workspace_response.json").write_bytes(response.content)
+            assert response.status_code == 200
+            references = tuple(weakref.ref(value) for value in (
+                app, app.state.product_runtime, app.state.product_service,
+            ))
+        return references
+
+    references = close_app()
+    fastapi_dependency_cache_cleanup()
+    assert all(reference() is None for reference in references), (
+        "closed app/runtime/service remains retained by a dependency classification cache"
+    )
+
+
+def test_fastapi_cache_cleanup_preserves_live_app_and_canonical_artifacts(
+    tmp_path: Path,
+    fastapi_dependency_cache_cleanup: Callable[[], None],
+) -> None:
+    root = Path(__file__).resolve().parents[2]
+    run_id = "california_coast_coherent_demo_v1"
+    app = create_product_app(
+        repository_root=root,
+        state_root=tmp_path / "state",
+        additional_allowed_authorities=("testserver",),
+        copilot=DeterministicCopilotAdapter(),
+    )
+    runtime = app.state.product_runtime
+    service = app.state.product_service
+    build_id = runtime.build_id
+    with TestClient(app) as client:
+        before = client.get(f"/api/runs/{run_id}/workspace")
+        (tmp_path / "live_app_workspace_before.json").write_bytes(before.content)
+        assert before.status_code == 200
+        bundle = service.load(run_id)[0]
+        fastapi_dependency_cache_cleanup()
+        after = client.get(f"/api/runs/{run_id}/workspace")
+        (tmp_path / "live_app_workspace_after.json").write_bytes(after.content)
+        assert after.status_code == 200
+        assert after.content == before.content
+        assert app.state.product_runtime is runtime
+        assert app.state.product_service is service
+        assert service.load(run_id)[0] is bundle
+        assert runtime.build_id == build_id

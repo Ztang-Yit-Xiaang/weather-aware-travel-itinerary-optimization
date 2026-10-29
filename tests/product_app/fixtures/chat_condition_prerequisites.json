@@ -1,0 +1,1898 @@
+[
+  {
+    "id": "assuming-duration-suffix",
+    "message": "Set Griffith Observatory duration to 90 minutes assuming parking is available.",
+    "conditional": true,
+    "provider_intents": [
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 90,
+            "minimum_minutes": 90,
+            "maximum_minutes": 90
+          }
+        }
+      }
+    ],
+    "expected_state": "clarification_required",
+    "expected_fake_calls": 0,
+    "selected_stop_id": null,
+    "reason": "The event prerequisite must not become an unconditional edit."
+  },
+  {
+    "id": "assuming-duration-prefix",
+    "message": "Assuming parking is available, set griffith observatory duration to 90 minutes.",
+    "conditional": true,
+    "provider_intents": [
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 90,
+            "minimum_minutes": 90,
+            "maximum_minutes": 90
+          }
+        }
+      }
+    ],
+    "expected_state": "clarification_required",
+    "expected_fake_calls": 0,
+    "selected_stop_id": null,
+    "reason": "The event prerequisite must not become an unconditional edit."
+  },
+  {
+    "id": "assuming-role-suffix",
+    "message": "Treat Stearns Wharf as a scenic stop assuming parking is available.",
+    "conditional": true,
+    "provider_intents": [
+      {
+        "type": "set_stop_role",
+        "target_stop_id": "stearns_wharf",
+        "parameters": {
+          "role": "scenic_stop"
+        }
+      }
+    ],
+    "expected_state": "clarification_required",
+    "expected_fake_calls": 0,
+    "selected_stop_id": null,
+    "reason": "The event prerequisite must not become an unconditional edit."
+  },
+  {
+    "id": "assuming-role-prefix",
+    "message": "Assuming parking is available, treat stearns wharf as a scenic stop.",
+    "conditional": true,
+    "provider_intents": [
+      {
+        "type": "set_stop_role",
+        "target_stop_id": "stearns_wharf",
+        "parameters": {
+          "role": "scenic_stop"
+        }
+      }
+    ],
+    "expected_state": "clarification_required",
+    "expected_fake_calls": 0,
+    "selected_stop_id": null,
+    "reason": "The event prerequisite must not become an unconditional edit."
+  },
+  {
+    "id": "assuming-duration-selected",
+    "message": "It gets 90 minutes assuming parking is available.",
+    "conditional": true,
+    "provider_intents": [
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 90,
+            "minimum_minutes": 90,
+            "maximum_minutes": 90
+          }
+        }
+      }
+    ],
+    "expected_state": "clarification_required",
+    "expected_fake_calls": 1,
+    "selected_stop_id": "griffith_observatory",
+    "reason": "The post-provider guard must retain the prerequisite with unfamiliar wording."
+  },
+  {
+    "id": "assuming-role-selected",
+    "message": "Let it count as a scenic stop assuming parking is available.",
+    "conditional": true,
+    "provider_intents": [
+      {
+        "type": "set_stop_role",
+        "target_stop_id": "stearns_wharf",
+        "parameters": {
+          "role": "scenic_stop"
+        }
+      }
+    ],
+    "expected_state": "clarification_required",
+    "expected_fake_calls": 1,
+    "selected_stop_id": "stearns_wharf",
+    "reason": "The post-provider guard must retain the prerequisite with unfamiliar wording."
+  },
+  {
+    "id": "subject-to-duration-suffix",
+    "message": "Set Griffith Observatory duration to 90 minutes subject to parking availability.",
+    "conditional": true,
+    "provider_intents": [
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 90,
+            "minimum_minutes": 90,
+            "maximum_minutes": 90
+          }
+        }
+      }
+    ],
+    "expected_state": "clarification_required",
+    "expected_fake_calls": 0,
+    "selected_stop_id": null,
+    "reason": "The event prerequisite must not become an unconditional edit."
+  },
+  {
+    "id": "subject-to-duration-prefix",
+    "message": "Subject to parking availability, set griffith observatory duration to 90 minutes.",
+    "conditional": true,
+    "provider_intents": [
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 90,
+            "minimum_minutes": 90,
+            "maximum_minutes": 90
+          }
+        }
+      }
+    ],
+    "expected_state": "clarification_required",
+    "expected_fake_calls": 0,
+    "selected_stop_id": null,
+    "reason": "The event prerequisite must not become an unconditional edit."
+  },
+  {
+    "id": "subject-to-role-suffix",
+    "message": "Treat Stearns Wharf as a scenic stop subject to parking availability.",
+    "conditional": true,
+    "provider_intents": [
+      {
+        "type": "set_stop_role",
+        "target_stop_id": "stearns_wharf",
+        "parameters": {
+          "role": "scenic_stop"
+        }
+      }
+    ],
+    "expected_state": "clarification_required",
+    "expected_fake_calls": 0,
+    "selected_stop_id": null,
+    "reason": "The event prerequisite must not become an unconditional edit."
+  },
+  {
+    "id": "subject-to-role-prefix",
+    "message": "Subject to parking availability, treat stearns wharf as a scenic stop.",
+    "conditional": true,
+    "provider_intents": [
+      {
+        "type": "set_stop_role",
+        "target_stop_id": "stearns_wharf",
+        "parameters": {
+          "role": "scenic_stop"
+        }
+      }
+    ],
+    "expected_state": "clarification_required",
+    "expected_fake_calls": 0,
+    "selected_stop_id": null,
+    "reason": "The event prerequisite must not become an unconditional edit."
+  },
+  {
+    "id": "subject-to-duration-selected",
+    "message": "It gets 90 minutes subject to parking availability.",
+    "conditional": true,
+    "provider_intents": [
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 90,
+            "minimum_minutes": 90,
+            "maximum_minutes": 90
+          }
+        }
+      }
+    ],
+    "expected_state": "clarification_required",
+    "expected_fake_calls": 1,
+    "selected_stop_id": "griffith_observatory",
+    "reason": "The post-provider guard must retain the prerequisite with unfamiliar wording."
+  },
+  {
+    "id": "subject-to-role-selected",
+    "message": "Let it count as a scenic stop subject to parking availability.",
+    "conditional": true,
+    "provider_intents": [
+      {
+        "type": "set_stop_role",
+        "target_stop_id": "stearns_wharf",
+        "parameters": {
+          "role": "scenic_stop"
+        }
+      }
+    ],
+    "expected_state": "clarification_required",
+    "expected_fake_calls": 1,
+    "selected_stop_id": "stearns_wharf",
+    "reason": "The post-provider guard must retain the prerequisite with unfamiliar wording."
+  },
+  {
+    "id": "once-duration-suffix",
+    "message": "Set Griffith Observatory duration to 90 minutes once parking opens.",
+    "conditional": true,
+    "provider_intents": [
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 90,
+            "minimum_minutes": 90,
+            "maximum_minutes": 90
+          }
+        }
+      }
+    ],
+    "expected_state": "clarification_required",
+    "expected_fake_calls": 0,
+    "selected_stop_id": null,
+    "reason": "The event prerequisite must not become an unconditional edit."
+  },
+  {
+    "id": "once-duration-prefix",
+    "message": "Once parking opens, set griffith observatory duration to 90 minutes.",
+    "conditional": true,
+    "provider_intents": [
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 90,
+            "minimum_minutes": 90,
+            "maximum_minutes": 90
+          }
+        }
+      }
+    ],
+    "expected_state": "clarification_required",
+    "expected_fake_calls": 0,
+    "selected_stop_id": null,
+    "reason": "The event prerequisite must not become an unconditional edit."
+  },
+  {
+    "id": "once-role-suffix",
+    "message": "Treat Stearns Wharf as a scenic stop once parking opens.",
+    "conditional": true,
+    "provider_intents": [
+      {
+        "type": "set_stop_role",
+        "target_stop_id": "stearns_wharf",
+        "parameters": {
+          "role": "scenic_stop"
+        }
+      }
+    ],
+    "expected_state": "clarification_required",
+    "expected_fake_calls": 0,
+    "selected_stop_id": null,
+    "reason": "The event prerequisite must not become an unconditional edit."
+  },
+  {
+    "id": "once-role-prefix",
+    "message": "Once parking opens, treat stearns wharf as a scenic stop.",
+    "conditional": true,
+    "provider_intents": [
+      {
+        "type": "set_stop_role",
+        "target_stop_id": "stearns_wharf",
+        "parameters": {
+          "role": "scenic_stop"
+        }
+      }
+    ],
+    "expected_state": "clarification_required",
+    "expected_fake_calls": 0,
+    "selected_stop_id": null,
+    "reason": "The event prerequisite must not become an unconditional edit."
+  },
+  {
+    "id": "once-duration-selected",
+    "message": "It gets 90 minutes once parking opens.",
+    "conditional": true,
+    "provider_intents": [
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 90,
+            "minimum_minutes": 90,
+            "maximum_minutes": 90
+          }
+        }
+      }
+    ],
+    "expected_state": "clarification_required",
+    "expected_fake_calls": 1,
+    "selected_stop_id": "griffith_observatory",
+    "reason": "The post-provider guard must retain the prerequisite with unfamiliar wording."
+  },
+  {
+    "id": "once-role-selected",
+    "message": "Let it count as a scenic stop once parking opens.",
+    "conditional": true,
+    "provider_intents": [
+      {
+        "type": "set_stop_role",
+        "target_stop_id": "stearns_wharf",
+        "parameters": {
+          "role": "scenic_stop"
+        }
+      }
+    ],
+    "expected_state": "clarification_required",
+    "expected_fake_calls": 1,
+    "selected_stop_id": "stearns_wharf",
+    "reason": "The post-provider guard must retain the prerequisite with unfamiliar wording."
+  },
+  {
+    "id": "as-soon-as-duration-suffix",
+    "message": "Set Griffith Observatory duration to 90 minutes as soon as parking opens.",
+    "conditional": true,
+    "provider_intents": [
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 90,
+            "minimum_minutes": 90,
+            "maximum_minutes": 90
+          }
+        }
+      }
+    ],
+    "expected_state": "clarification_required",
+    "expected_fake_calls": 0,
+    "selected_stop_id": null,
+    "reason": "The event prerequisite must not become an unconditional edit."
+  },
+  {
+    "id": "as-soon-as-duration-prefix",
+    "message": "As soon as parking opens, set griffith observatory duration to 90 minutes.",
+    "conditional": true,
+    "provider_intents": [
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 90,
+            "minimum_minutes": 90,
+            "maximum_minutes": 90
+          }
+        }
+      }
+    ],
+    "expected_state": "clarification_required",
+    "expected_fake_calls": 0,
+    "selected_stop_id": null,
+    "reason": "The event prerequisite must not become an unconditional edit."
+  },
+  {
+    "id": "as-soon-as-role-suffix",
+    "message": "Treat Stearns Wharf as a scenic stop as soon as parking opens.",
+    "conditional": true,
+    "provider_intents": [
+      {
+        "type": "set_stop_role",
+        "target_stop_id": "stearns_wharf",
+        "parameters": {
+          "role": "scenic_stop"
+        }
+      }
+    ],
+    "expected_state": "clarification_required",
+    "expected_fake_calls": 0,
+    "selected_stop_id": null,
+    "reason": "The event prerequisite must not become an unconditional edit."
+  },
+  {
+    "id": "as-soon-as-role-prefix",
+    "message": "As soon as parking opens, treat stearns wharf as a scenic stop.",
+    "conditional": true,
+    "provider_intents": [
+      {
+        "type": "set_stop_role",
+        "target_stop_id": "stearns_wharf",
+        "parameters": {
+          "role": "scenic_stop"
+        }
+      }
+    ],
+    "expected_state": "clarification_required",
+    "expected_fake_calls": 0,
+    "selected_stop_id": null,
+    "reason": "The event prerequisite must not become an unconditional edit."
+  },
+  {
+    "id": "as-soon-as-duration-selected",
+    "message": "It gets 90 minutes as soon as parking opens.",
+    "conditional": true,
+    "provider_intents": [
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 90,
+            "minimum_minutes": 90,
+            "maximum_minutes": 90
+          }
+        }
+      }
+    ],
+    "expected_state": "clarification_required",
+    "expected_fake_calls": 1,
+    "selected_stop_id": "griffith_observatory",
+    "reason": "The post-provider guard must retain the prerequisite with unfamiliar wording."
+  },
+  {
+    "id": "as-soon-as-role-selected",
+    "message": "Let it count as a scenic stop as soon as parking opens.",
+    "conditional": true,
+    "provider_intents": [
+      {
+        "type": "set_stop_role",
+        "target_stop_id": "stearns_wharf",
+        "parameters": {
+          "role": "scenic_stop"
+        }
+      }
+    ],
+    "expected_state": "clarification_required",
+    "expected_fake_calls": 1,
+    "selected_stop_id": "stearns_wharf",
+    "reason": "The post-provider guard must retain the prerequisite with unfamiliar wording."
+  },
+  {
+    "id": "contingent-on-duration-suffix",
+    "message": "Set Griffith Observatory duration to 90 minutes contingent on parking availability.",
+    "conditional": true,
+    "provider_intents": [
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 90,
+            "minimum_minutes": 90,
+            "maximum_minutes": 90
+          }
+        }
+      }
+    ],
+    "expected_state": "clarification_required",
+    "expected_fake_calls": 0,
+    "selected_stop_id": null,
+    "reason": "The event prerequisite must not become an unconditional edit."
+  },
+  {
+    "id": "contingent-on-duration-prefix",
+    "message": "Contingent on parking availability, set griffith observatory duration to 90 minutes.",
+    "conditional": true,
+    "provider_intents": [
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 90,
+            "minimum_minutes": 90,
+            "maximum_minutes": 90
+          }
+        }
+      }
+    ],
+    "expected_state": "clarification_required",
+    "expected_fake_calls": 0,
+    "selected_stop_id": null,
+    "reason": "The event prerequisite must not become an unconditional edit."
+  },
+  {
+    "id": "contingent-on-role-suffix",
+    "message": "Treat Stearns Wharf as a scenic stop contingent on parking availability.",
+    "conditional": true,
+    "provider_intents": [
+      {
+        "type": "set_stop_role",
+        "target_stop_id": "stearns_wharf",
+        "parameters": {
+          "role": "scenic_stop"
+        }
+      }
+    ],
+    "expected_state": "clarification_required",
+    "expected_fake_calls": 0,
+    "selected_stop_id": null,
+    "reason": "The event prerequisite must not become an unconditional edit."
+  },
+  {
+    "id": "contingent-on-role-prefix",
+    "message": "Contingent on parking availability, treat stearns wharf as a scenic stop.",
+    "conditional": true,
+    "provider_intents": [
+      {
+        "type": "set_stop_role",
+        "target_stop_id": "stearns_wharf",
+        "parameters": {
+          "role": "scenic_stop"
+        }
+      }
+    ],
+    "expected_state": "clarification_required",
+    "expected_fake_calls": 0,
+    "selected_stop_id": null,
+    "reason": "The event prerequisite must not become an unconditional edit."
+  },
+  {
+    "id": "contingent-on-duration-selected",
+    "message": "It gets 90 minutes contingent on parking availability.",
+    "conditional": true,
+    "provider_intents": [
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 90,
+            "minimum_minutes": 90,
+            "maximum_minutes": 90
+          }
+        }
+      }
+    ],
+    "expected_state": "clarification_required",
+    "expected_fake_calls": 1,
+    "selected_stop_id": "griffith_observatory",
+    "reason": "The post-provider guard must retain the prerequisite with unfamiliar wording."
+  },
+  {
+    "id": "contingent-on-role-selected",
+    "message": "Let it count as a scenic stop contingent on parking availability.",
+    "conditional": true,
+    "provider_intents": [
+      {
+        "type": "set_stop_role",
+        "target_stop_id": "stearns_wharf",
+        "parameters": {
+          "role": "scenic_stop"
+        }
+      }
+    ],
+    "expected_state": "clarification_required",
+    "expected_fake_calls": 1,
+    "selected_stop_id": "stearns_wharf",
+    "reason": "The post-provider guard must retain the prerequisite with unfamiliar wording."
+  },
+  {
+    "id": "in-the-event-duration-suffix",
+    "message": "Set Griffith Observatory duration to 90 minutes in the event that parking is available.",
+    "conditional": true,
+    "provider_intents": [
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 90,
+            "minimum_minutes": 90,
+            "maximum_minutes": 90
+          }
+        }
+      }
+    ],
+    "expected_state": "clarification_required",
+    "expected_fake_calls": 0,
+    "selected_stop_id": null,
+    "reason": "The event prerequisite must not become an unconditional edit."
+  },
+  {
+    "id": "in-the-event-duration-prefix",
+    "message": "In the event that parking is available, set griffith observatory duration to 90 minutes.",
+    "conditional": true,
+    "provider_intents": [
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 90,
+            "minimum_minutes": 90,
+            "maximum_minutes": 90
+          }
+        }
+      }
+    ],
+    "expected_state": "clarification_required",
+    "expected_fake_calls": 0,
+    "selected_stop_id": null,
+    "reason": "The event prerequisite must not become an unconditional edit."
+  },
+  {
+    "id": "in-the-event-role-suffix",
+    "message": "Treat Stearns Wharf as a scenic stop in the event that parking is available.",
+    "conditional": true,
+    "provider_intents": [
+      {
+        "type": "set_stop_role",
+        "target_stop_id": "stearns_wharf",
+        "parameters": {
+          "role": "scenic_stop"
+        }
+      }
+    ],
+    "expected_state": "clarification_required",
+    "expected_fake_calls": 0,
+    "selected_stop_id": null,
+    "reason": "The event prerequisite must not become an unconditional edit."
+  },
+  {
+    "id": "in-the-event-role-prefix",
+    "message": "In the event that parking is available, treat stearns wharf as a scenic stop.",
+    "conditional": true,
+    "provider_intents": [
+      {
+        "type": "set_stop_role",
+        "target_stop_id": "stearns_wharf",
+        "parameters": {
+          "role": "scenic_stop"
+        }
+      }
+    ],
+    "expected_state": "clarification_required",
+    "expected_fake_calls": 0,
+    "selected_stop_id": null,
+    "reason": "The event prerequisite must not become an unconditional edit."
+  },
+  {
+    "id": "in-the-event-duration-selected",
+    "message": "It gets 90 minutes in the event that parking is available.",
+    "conditional": true,
+    "provider_intents": [
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 90,
+            "minimum_minutes": 90,
+            "maximum_minutes": 90
+          }
+        }
+      }
+    ],
+    "expected_state": "clarification_required",
+    "expected_fake_calls": 1,
+    "selected_stop_id": "griffith_observatory",
+    "reason": "The post-provider guard must retain the prerequisite with unfamiliar wording."
+  },
+  {
+    "id": "in-the-event-role-selected",
+    "message": "Let it count as a scenic stop in the event that parking is available.",
+    "conditional": true,
+    "provider_intents": [
+      {
+        "type": "set_stop_role",
+        "target_stop_id": "stearns_wharf",
+        "parameters": {
+          "role": "scenic_stop"
+        }
+      }
+    ],
+    "expected_state": "clarification_required",
+    "expected_fake_calls": 1,
+    "selected_stop_id": "stearns_wharf",
+    "reason": "The post-provider guard must retain the prerequisite with unfamiliar wording."
+  },
+  {
+    "id": "so-long-as-duration-suffix",
+    "message": "Set Griffith Observatory duration to 90 minutes so long as parking is available.",
+    "conditional": true,
+    "provider_intents": [
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 90,
+            "minimum_minutes": 90,
+            "maximum_minutes": 90
+          }
+        }
+      }
+    ],
+    "expected_state": "clarification_required",
+    "expected_fake_calls": 0,
+    "selected_stop_id": null,
+    "reason": "The event prerequisite must not become an unconditional edit."
+  },
+  {
+    "id": "so-long-as-duration-prefix",
+    "message": "So long as parking is available, set griffith observatory duration to 90 minutes.",
+    "conditional": true,
+    "provider_intents": [
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 90,
+            "minimum_minutes": 90,
+            "maximum_minutes": 90
+          }
+        }
+      }
+    ],
+    "expected_state": "clarification_required",
+    "expected_fake_calls": 0,
+    "selected_stop_id": null,
+    "reason": "The event prerequisite must not become an unconditional edit."
+  },
+  {
+    "id": "so-long-as-role-suffix",
+    "message": "Treat Stearns Wharf as a scenic stop so long as parking is available.",
+    "conditional": true,
+    "provider_intents": [
+      {
+        "type": "set_stop_role",
+        "target_stop_id": "stearns_wharf",
+        "parameters": {
+          "role": "scenic_stop"
+        }
+      }
+    ],
+    "expected_state": "clarification_required",
+    "expected_fake_calls": 0,
+    "selected_stop_id": null,
+    "reason": "The event prerequisite must not become an unconditional edit."
+  },
+  {
+    "id": "so-long-as-role-prefix",
+    "message": "So long as parking is available, treat stearns wharf as a scenic stop.",
+    "conditional": true,
+    "provider_intents": [
+      {
+        "type": "set_stop_role",
+        "target_stop_id": "stearns_wharf",
+        "parameters": {
+          "role": "scenic_stop"
+        }
+      }
+    ],
+    "expected_state": "clarification_required",
+    "expected_fake_calls": 0,
+    "selected_stop_id": null,
+    "reason": "The event prerequisite must not become an unconditional edit."
+  },
+  {
+    "id": "so-long-as-duration-selected",
+    "message": "It gets 90 minutes so long as parking is available.",
+    "conditional": true,
+    "provider_intents": [
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 90,
+            "minimum_minutes": 90,
+            "maximum_minutes": 90
+          }
+        }
+      }
+    ],
+    "expected_state": "clarification_required",
+    "expected_fake_calls": 1,
+    "selected_stop_id": "griffith_observatory",
+    "reason": "The post-provider guard must retain the prerequisite with unfamiliar wording."
+  },
+  {
+    "id": "so-long-as-role-selected",
+    "message": "Let it count as a scenic stop so long as parking is available.",
+    "conditional": true,
+    "provider_intents": [
+      {
+        "type": "set_stop_role",
+        "target_stop_id": "stearns_wharf",
+        "parameters": {
+          "role": "scenic_stop"
+        }
+      }
+    ],
+    "expected_state": "clarification_required",
+    "expected_fake_calls": 1,
+    "selected_stop_id": "stearns_wharf",
+    "reason": "The post-provider guard must retain the prerequisite with unfamiliar wording."
+  },
+  {
+    "id": "only-with-duration-suffix",
+    "message": "Set Griffith Observatory duration to 90 minutes only with parking available.",
+    "conditional": true,
+    "provider_intents": [
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 90,
+            "minimum_minutes": 90,
+            "maximum_minutes": 90
+          }
+        }
+      }
+    ],
+    "expected_state": "clarification_required",
+    "expected_fake_calls": 0,
+    "selected_stop_id": null,
+    "reason": "The event prerequisite must not become an unconditional edit."
+  },
+  {
+    "id": "only-with-duration-prefix",
+    "message": "Only with parking available, set griffith observatory duration to 90 minutes.",
+    "conditional": true,
+    "provider_intents": [
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 90,
+            "minimum_minutes": 90,
+            "maximum_minutes": 90
+          }
+        }
+      }
+    ],
+    "expected_state": "clarification_required",
+    "expected_fake_calls": 0,
+    "selected_stop_id": null,
+    "reason": "The event prerequisite must not become an unconditional edit."
+  },
+  {
+    "id": "only-with-role-suffix",
+    "message": "Treat Stearns Wharf as a scenic stop only with parking available.",
+    "conditional": true,
+    "provider_intents": [
+      {
+        "type": "set_stop_role",
+        "target_stop_id": "stearns_wharf",
+        "parameters": {
+          "role": "scenic_stop"
+        }
+      }
+    ],
+    "expected_state": "clarification_required",
+    "expected_fake_calls": 0,
+    "selected_stop_id": null,
+    "reason": "The event prerequisite must not become an unconditional edit."
+  },
+  {
+    "id": "only-with-role-prefix",
+    "message": "Only with parking available, treat stearns wharf as a scenic stop.",
+    "conditional": true,
+    "provider_intents": [
+      {
+        "type": "set_stop_role",
+        "target_stop_id": "stearns_wharf",
+        "parameters": {
+          "role": "scenic_stop"
+        }
+      }
+    ],
+    "expected_state": "clarification_required",
+    "expected_fake_calls": 0,
+    "selected_stop_id": null,
+    "reason": "The event prerequisite must not become an unconditional edit."
+  },
+  {
+    "id": "only-with-duration-selected",
+    "message": "It gets 90 minutes only with parking available.",
+    "conditional": true,
+    "provider_intents": [
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 90,
+            "minimum_minutes": 90,
+            "maximum_minutes": 90
+          }
+        }
+      }
+    ],
+    "expected_state": "clarification_required",
+    "expected_fake_calls": 1,
+    "selected_stop_id": "griffith_observatory",
+    "reason": "The post-provider guard must retain the prerequisite with unfamiliar wording."
+  },
+  {
+    "id": "only-with-role-selected",
+    "message": "Let it count as a scenic stop only with parking available.",
+    "conditional": true,
+    "provider_intents": [
+      {
+        "type": "set_stop_role",
+        "target_stop_id": "stearns_wharf",
+        "parameters": {
+          "role": "scenic_stop"
+        }
+      }
+    ],
+    "expected_state": "clarification_required",
+    "expected_fake_calls": 1,
+    "selected_stop_id": "stearns_wharf",
+    "reason": "The post-provider guard must retain the prerequisite with unfamiliar wording."
+  },
+  {
+    "id": "control-plain-duration",
+    "message": "Set Griffith Observatory duration to 90 minutes.",
+    "conditional": false,
+    "provider_intents": [
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 90,
+            "minimum_minutes": 90,
+            "maximum_minutes": 90
+          }
+        }
+      }
+    ],
+    "expected_state": "proposal_ready",
+    "expected_fake_calls": 1,
+    "selected_stop_id": null,
+    "reason": "An unconditional request or courtesy should retain its exact typed edit."
+  },
+  {
+    "id": "control-please",
+    "message": "Please set Griffith Observatory duration to 90 minutes.",
+    "conditional": false,
+    "provider_intents": [
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 90,
+            "minimum_minutes": 90,
+            "maximum_minutes": 90
+          }
+        }
+      }
+    ],
+    "expected_state": "proposal_ready",
+    "expected_fake_calls": 1,
+    "selected_stop_id": null,
+    "reason": "An unconditional request or courtesy should retain its exact typed edit."
+  },
+  {
+    "id": "control-if-possible",
+    "message": "If possible, set Griffith Observatory duration to 90 minutes.",
+    "conditional": false,
+    "provider_intents": [
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 90,
+            "minimum_minutes": 90,
+            "maximum_minutes": 90
+          }
+        }
+      }
+    ],
+    "expected_state": "proposal_ready",
+    "expected_fake_calls": 1,
+    "selected_stop_id": null,
+    "reason": "An unconditional request or courtesy should retain its exact typed edit."
+  },
+  {
+    "id": "control-if-you-can",
+    "message": "If you can, set Griffith Observatory duration to 90 minutes.",
+    "conditional": false,
+    "provider_intents": [
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 90,
+            "minimum_minutes": 90,
+            "maximum_minutes": 90
+          }
+        }
+      }
+    ],
+    "expected_state": "proposal_ready",
+    "expected_fake_calls": 1,
+    "selected_stop_id": null,
+    "reason": "An unconditional request or courtesy should retain its exact typed edit."
+  },
+  {
+    "id": "control-at-once",
+    "message": "Set Griffith Observatory duration to 90 minutes at once.",
+    "conditional": false,
+    "provider_intents": [
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 90,
+            "minimum_minutes": 90,
+            "maximum_minutes": 90
+          }
+        }
+      }
+    ],
+    "expected_state": "proposal_ready",
+    "expected_fake_calls": 1,
+    "selected_stop_id": null,
+    "reason": "An unconditional request or courtesy should retain its exact typed edit."
+  },
+  {
+    "id": "control-for-once",
+    "message": "Set Griffith Observatory duration to 90 minutes for once.",
+    "conditional": false,
+    "provider_intents": [
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 90,
+            "minimum_minutes": 90,
+            "maximum_minutes": 90
+          }
+        }
+      }
+    ],
+    "expected_state": "proposal_ready",
+    "expected_fake_calls": 1,
+    "selected_stop_id": null,
+    "reason": "An unconditional request or courtesy should retain its exact typed edit."
+  },
+  {
+    "id": "control-once-only",
+    "message": "Set Griffith Observatory duration to 90 minutes once.",
+    "conditional": false,
+    "provider_intents": [
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 90,
+            "minimum_minutes": 90,
+            "maximum_minutes": 90
+          }
+        }
+      }
+    ],
+    "expected_state": "proposal_ready",
+    "expected_fake_calls": 1,
+    "selected_stop_id": null,
+    "reason": "An unconditional request or courtesy should retain its exact typed edit."
+  },
+  {
+    "id": "control-at-once-please",
+    "message": "Set Griffith Observatory duration to 90 minutes at once please.",
+    "conditional": false,
+    "provider_intents": [
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 90,
+            "minimum_minutes": 90,
+            "maximum_minutes": 90
+          }
+        }
+      }
+    ],
+    "expected_state": "proposal_ready",
+    "expected_fake_calls": 1,
+    "selected_stop_id": null,
+    "reason": "An unconditional request or courtesy should retain its exact typed edit."
+  },
+  {
+    "id": "control-rationale",
+    "message": "Set Griffith Observatory duration to 90 minutes because parking is available.",
+    "conditional": false,
+    "provider_intents": [
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 90,
+            "minimum_minutes": 90,
+            "maximum_minutes": 90
+          }
+        }
+      }
+    ],
+    "expected_state": "proposal_ready",
+    "expected_fake_calls": 1,
+    "selected_stop_id": null,
+    "reason": "An unconditional request or courtesy should retain its exact typed edit."
+  },
+  {
+    "id": "control-plain-role",
+    "message": "Treat Stearns Wharf as a scenic stop.",
+    "conditional": false,
+    "provider_intents": [
+      {
+        "type": "set_stop_role",
+        "target_stop_id": "stearns_wharf",
+        "parameters": {
+          "role": "scenic_stop"
+        }
+      }
+    ],
+    "expected_state": "proposal_ready",
+    "expected_fake_calls": 1,
+    "selected_stop_id": null,
+    "reason": "An unconditional request or courtesy should retain its exact typed edit."
+  },
+  {
+    "id": "control-only-as",
+    "message": "Treat Stearns Wharf only as a scenic stop.",
+    "conditional": false,
+    "provider_intents": [
+      {
+        "type": "set_stop_role",
+        "target_stop_id": "stearns_wharf",
+        "parameters": {
+          "role": "scenic_stop"
+        }
+      }
+    ],
+    "expected_state": "proposal_ready",
+    "expected_fake_calls": 1,
+    "selected_stop_id": null,
+    "reason": "An unconditional request or courtesy should retain its exact typed edit."
+  },
+  {
+    "id": "control-now-role",
+    "message": "Treat Stearns Wharf as a scenic stop now.",
+    "conditional": false,
+    "provider_intents": [
+      {
+        "type": "set_stop_role",
+        "target_stop_id": "stearns_wharf",
+        "parameters": {
+          "role": "scenic_stop"
+        }
+      }
+    ],
+    "expected_state": "proposal_ready",
+    "expected_fake_calls": 1,
+    "selected_stop_id": null,
+    "reason": "An unconditional request or courtesy should retain its exact typed edit."
+  },
+  {
+    "id": "control-role-please",
+    "message": "Treat Stearns Wharf as a scenic stop please.",
+    "conditional": false,
+    "provider_intents": [
+      {
+        "type": "set_stop_role",
+        "target_stop_id": "stearns_wharf",
+        "parameters": {
+          "role": "scenic_stop"
+        }
+      }
+    ],
+    "expected_state": "proposal_ready",
+    "expected_fake_calls": 1,
+    "selected_stop_id": null,
+    "reason": "An unconditional request or courtesy should retain its exact typed edit."
+  },
+  {
+    "id": "control-role-at-once",
+    "message": "Treat Stearns Wharf as a scenic stop at once.",
+    "conditional": false,
+    "provider_intents": [
+      {
+        "type": "set_stop_role",
+        "target_stop_id": "stearns_wharf",
+        "parameters": {
+          "role": "scenic_stop"
+        }
+      }
+    ],
+    "expected_state": "proposal_ready",
+    "expected_fake_calls": 1,
+    "selected_stop_id": null,
+    "reason": "An unconditional request or courtesy should retain its exact typed edit."
+  },
+  {
+    "id": "followup-depending-duration-prefix",
+    "message": "Depending on parking availability, set griffith observatory duration to 90 minutes.",
+    "conditional": true,
+    "provider_intents": [
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 90,
+            "minimum_minutes": 90,
+            "maximum_minutes": 90
+          }
+        }
+      }
+    ],
+    "expected_state": "clarification_required",
+    "expected_fake_calls": 0,
+    "selected_stop_id": null,
+    "reason": "An event prerequisite cannot become an unconditional edit."
+  },
+  {
+    "id": "followup-depending-duration-suffix",
+    "message": "Set Griffith Observatory duration to 90 minutes depending on parking availability.",
+    "conditional": true,
+    "provider_intents": [
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 90,
+            "minimum_minutes": 90,
+            "maximum_minutes": 90
+          }
+        }
+      }
+    ],
+    "expected_state": "clarification_required",
+    "expected_fake_calls": 0,
+    "selected_stop_id": null,
+    "reason": "An event prerequisite cannot become an unconditional edit."
+  },
+  {
+    "id": "followup-depending-duration-selected",
+    "message": "It gets 90 minutes depending on parking availability.",
+    "conditional": true,
+    "provider_intents": [
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 90,
+            "minimum_minutes": 90,
+            "maximum_minutes": 90
+          }
+        }
+      }
+    ],
+    "expected_state": "clarification_required",
+    "expected_fake_calls": 1,
+    "selected_stop_id": "griffith_observatory",
+    "reason": "An event prerequisite cannot become an unconditional edit."
+  },
+  {
+    "id": "followup-depending-role-prefix",
+    "message": "Depending on parking availability, treat stearns wharf as a scenic stop.",
+    "conditional": true,
+    "provider_intents": [
+      {
+        "type": "set_stop_role",
+        "target_stop_id": "stearns_wharf",
+        "parameters": {
+          "role": "scenic_stop"
+        }
+      }
+    ],
+    "expected_state": "clarification_required",
+    "expected_fake_calls": 0,
+    "selected_stop_id": null,
+    "reason": "An event prerequisite cannot become an unconditional edit."
+  },
+  {
+    "id": "followup-depending-role-suffix",
+    "message": "Treat Stearns Wharf as a scenic stop depending on parking availability.",
+    "conditional": true,
+    "provider_intents": [
+      {
+        "type": "set_stop_role",
+        "target_stop_id": "stearns_wharf",
+        "parameters": {
+          "role": "scenic_stop"
+        }
+      }
+    ],
+    "expected_state": "clarification_required",
+    "expected_fake_calls": 0,
+    "selected_stop_id": null,
+    "reason": "An event prerequisite cannot become an unconditional edit."
+  },
+  {
+    "id": "followup-depending-role-selected",
+    "message": "Let it count as a scenic stop depending on parking availability.",
+    "conditional": true,
+    "provider_intents": [
+      {
+        "type": "set_stop_role",
+        "target_stop_id": "stearns_wharf",
+        "parameters": {
+          "role": "scenic_stop"
+        }
+      }
+    ],
+    "expected_state": "clarification_required",
+    "expected_fake_calls": 1,
+    "selected_stop_id": "stearns_wharf",
+    "reason": "An event prerequisite cannot become an unconditional edit."
+  },
+  {
+    "id": "followup-conditional-duration-prefix",
+    "message": "Conditional on parking availability, set griffith observatory duration to 90 minutes.",
+    "conditional": true,
+    "provider_intents": [
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 90,
+            "minimum_minutes": 90,
+            "maximum_minutes": 90
+          }
+        }
+      }
+    ],
+    "expected_state": "clarification_required",
+    "expected_fake_calls": 0,
+    "selected_stop_id": null,
+    "reason": "An event prerequisite cannot become an unconditional edit."
+  },
+  {
+    "id": "followup-conditional-duration-suffix",
+    "message": "Set Griffith Observatory duration to 90 minutes conditional on parking availability.",
+    "conditional": true,
+    "provider_intents": [
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 90,
+            "minimum_minutes": 90,
+            "maximum_minutes": 90
+          }
+        }
+      }
+    ],
+    "expected_state": "clarification_required",
+    "expected_fake_calls": 0,
+    "selected_stop_id": null,
+    "reason": "An event prerequisite cannot become an unconditional edit."
+  },
+  {
+    "id": "followup-conditional-duration-selected",
+    "message": "It gets 90 minutes conditional on parking availability.",
+    "conditional": true,
+    "provider_intents": [
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 90,
+            "minimum_minutes": 90,
+            "maximum_minutes": 90
+          }
+        }
+      }
+    ],
+    "expected_state": "clarification_required",
+    "expected_fake_calls": 1,
+    "selected_stop_id": "griffith_observatory",
+    "reason": "An event prerequisite cannot become an unconditional edit."
+  },
+  {
+    "id": "followup-conditional-role-prefix",
+    "message": "Conditional on parking availability, treat stearns wharf as a scenic stop.",
+    "conditional": true,
+    "provider_intents": [
+      {
+        "type": "set_stop_role",
+        "target_stop_id": "stearns_wharf",
+        "parameters": {
+          "role": "scenic_stop"
+        }
+      }
+    ],
+    "expected_state": "clarification_required",
+    "expected_fake_calls": 0,
+    "selected_stop_id": null,
+    "reason": "An event prerequisite cannot become an unconditional edit."
+  },
+  {
+    "id": "followup-conditional-role-suffix",
+    "message": "Treat Stearns Wharf as a scenic stop conditional on parking availability.",
+    "conditional": true,
+    "provider_intents": [
+      {
+        "type": "set_stop_role",
+        "target_stop_id": "stearns_wharf",
+        "parameters": {
+          "role": "scenic_stop"
+        }
+      }
+    ],
+    "expected_state": "clarification_required",
+    "expected_fake_calls": 0,
+    "selected_stop_id": null,
+    "reason": "An event prerequisite cannot become an unconditional edit."
+  },
+  {
+    "id": "followup-conditional-role-selected",
+    "message": "Let it count as a scenic stop conditional on parking availability.",
+    "conditional": true,
+    "provider_intents": [
+      {
+        "type": "set_stop_role",
+        "target_stop_id": "stearns_wharf",
+        "parameters": {
+          "role": "scenic_stop"
+        }
+      }
+    ],
+    "expected_state": "clarification_required",
+    "expected_fake_calls": 1,
+    "selected_stop_id": "stearns_wharf",
+    "reason": "An event prerequisite cannot become an unconditional edit."
+  },
+  {
+    "id": "followup-presuming-duration-prefix",
+    "message": "Presuming parking is available, set griffith observatory duration to 90 minutes.",
+    "conditional": true,
+    "provider_intents": [
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 90,
+            "minimum_minutes": 90,
+            "maximum_minutes": 90
+          }
+        }
+      }
+    ],
+    "expected_state": "clarification_required",
+    "expected_fake_calls": 0,
+    "selected_stop_id": null,
+    "reason": "An event prerequisite cannot become an unconditional edit."
+  },
+  {
+    "id": "followup-presuming-duration-suffix",
+    "message": "Set Griffith Observatory duration to 90 minutes presuming parking is available.",
+    "conditional": true,
+    "provider_intents": [
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 90,
+            "minimum_minutes": 90,
+            "maximum_minutes": 90
+          }
+        }
+      }
+    ],
+    "expected_state": "clarification_required",
+    "expected_fake_calls": 0,
+    "selected_stop_id": null,
+    "reason": "An event prerequisite cannot become an unconditional edit."
+  },
+  {
+    "id": "followup-presuming-duration-selected",
+    "message": "It gets 90 minutes presuming parking is available.",
+    "conditional": true,
+    "provider_intents": [
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 90,
+            "minimum_minutes": 90,
+            "maximum_minutes": 90
+          }
+        }
+      }
+    ],
+    "expected_state": "clarification_required",
+    "expected_fake_calls": 1,
+    "selected_stop_id": "griffith_observatory",
+    "reason": "An event prerequisite cannot become an unconditional edit."
+  },
+  {
+    "id": "followup-presuming-role-prefix",
+    "message": "Presuming parking is available, treat stearns wharf as a scenic stop.",
+    "conditional": true,
+    "provider_intents": [
+      {
+        "type": "set_stop_role",
+        "target_stop_id": "stearns_wharf",
+        "parameters": {
+          "role": "scenic_stop"
+        }
+      }
+    ],
+    "expected_state": "clarification_required",
+    "expected_fake_calls": 0,
+    "selected_stop_id": null,
+    "reason": "An event prerequisite cannot become an unconditional edit."
+  },
+  {
+    "id": "followup-presuming-role-suffix",
+    "message": "Treat Stearns Wharf as a scenic stop presuming parking is available.",
+    "conditional": true,
+    "provider_intents": [
+      {
+        "type": "set_stop_role",
+        "target_stop_id": "stearns_wharf",
+        "parameters": {
+          "role": "scenic_stop"
+        }
+      }
+    ],
+    "expected_state": "clarification_required",
+    "expected_fake_calls": 0,
+    "selected_stop_id": null,
+    "reason": "An event prerequisite cannot become an unconditional edit."
+  },
+  {
+    "id": "followup-presuming-role-selected",
+    "message": "Let it count as a scenic stop presuming parking is available.",
+    "conditional": true,
+    "provider_intents": [
+      {
+        "type": "set_stop_role",
+        "target_stop_id": "stearns_wharf",
+        "parameters": {
+          "role": "scenic_stop"
+        }
+      }
+    ],
+    "expected_state": "clarification_required",
+    "expected_fake_calls": 1,
+    "selected_stop_id": "stearns_wharf",
+    "reason": "An event prerequisite cannot become an unconditional edit."
+  },
+  {
+    "id": "followup-supposing-duration-prefix",
+    "message": "Supposing parking is available, set griffith observatory duration to 90 minutes.",
+    "conditional": true,
+    "provider_intents": [
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 90,
+            "minimum_minutes": 90,
+            "maximum_minutes": 90
+          }
+        }
+      }
+    ],
+    "expected_state": "clarification_required",
+    "expected_fake_calls": 0,
+    "selected_stop_id": null,
+    "reason": "An event prerequisite cannot become an unconditional edit."
+  },
+  {
+    "id": "followup-supposing-duration-suffix",
+    "message": "Set Griffith Observatory duration to 90 minutes supposing parking is available.",
+    "conditional": true,
+    "provider_intents": [
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 90,
+            "minimum_minutes": 90,
+            "maximum_minutes": 90
+          }
+        }
+      }
+    ],
+    "expected_state": "clarification_required",
+    "expected_fake_calls": 0,
+    "selected_stop_id": null,
+    "reason": "An event prerequisite cannot become an unconditional edit."
+  },
+  {
+    "id": "followup-supposing-duration-selected",
+    "message": "It gets 90 minutes supposing parking is available.",
+    "conditional": true,
+    "provider_intents": [
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 90,
+            "minimum_minutes": 90,
+            "maximum_minutes": 90
+          }
+        }
+      }
+    ],
+    "expected_state": "clarification_required",
+    "expected_fake_calls": 1,
+    "selected_stop_id": "griffith_observatory",
+    "reason": "An event prerequisite cannot become an unconditional edit."
+  },
+  {
+    "id": "followup-supposing-role-prefix",
+    "message": "Supposing parking is available, treat stearns wharf as a scenic stop.",
+    "conditional": true,
+    "provider_intents": [
+      {
+        "type": "set_stop_role",
+        "target_stop_id": "stearns_wharf",
+        "parameters": {
+          "role": "scenic_stop"
+        }
+      }
+    ],
+    "expected_state": "clarification_required",
+    "expected_fake_calls": 0,
+    "selected_stop_id": null,
+    "reason": "An event prerequisite cannot become an unconditional edit."
+  },
+  {
+    "id": "followup-supposing-role-suffix",
+    "message": "Treat Stearns Wharf as a scenic stop supposing parking is available.",
+    "conditional": true,
+    "provider_intents": [
+      {
+        "type": "set_stop_role",
+        "target_stop_id": "stearns_wharf",
+        "parameters": {
+          "role": "scenic_stop"
+        }
+      }
+    ],
+    "expected_state": "clarification_required",
+    "expected_fake_calls": 0,
+    "selected_stop_id": null,
+    "reason": "An event prerequisite cannot become an unconditional edit."
+  },
+  {
+    "id": "followup-supposing-role-selected",
+    "message": "Let it count as a scenic stop supposing parking is available.",
+    "conditional": true,
+    "provider_intents": [
+      {
+        "type": "set_stop_role",
+        "target_stop_id": "stearns_wharf",
+        "parameters": {
+          "role": "scenic_stop"
+        }
+      }
+    ],
+    "expected_state": "clarification_required",
+    "expected_fake_calls": 1,
+    "selected_stop_id": "stearns_wharf",
+    "reason": "An event prerequisite cannot become an unconditional edit."
+  },
+  {
+    "id": "followup-permitting-duration-prefix",
+    "message": "Weather permitting, set griffith observatory duration to 90 minutes.",
+    "conditional": true,
+    "provider_intents": [
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 90,
+            "minimum_minutes": 90,
+            "maximum_minutes": 90
+          }
+        }
+      }
+    ],
+    "expected_state": "clarification_required",
+    "expected_fake_calls": 0,
+    "selected_stop_id": null,
+    "reason": "An event prerequisite cannot become an unconditional edit."
+  },
+  {
+    "id": "followup-permitting-duration-suffix",
+    "message": "Set Griffith Observatory duration to 90 minutes weather permitting.",
+    "conditional": true,
+    "provider_intents": [
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 90,
+            "minimum_minutes": 90,
+            "maximum_minutes": 90
+          }
+        }
+      }
+    ],
+    "expected_state": "clarification_required",
+    "expected_fake_calls": 0,
+    "selected_stop_id": null,
+    "reason": "An event prerequisite cannot become an unconditional edit."
+  },
+  {
+    "id": "followup-permitting-duration-selected",
+    "message": "It gets 90 minutes weather permitting.",
+    "conditional": true,
+    "provider_intents": [
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 90,
+            "minimum_minutes": 90,
+            "maximum_minutes": 90
+          }
+        }
+      }
+    ],
+    "expected_state": "clarification_required",
+    "expected_fake_calls": 1,
+    "selected_stop_id": "griffith_observatory",
+    "reason": "An event prerequisite cannot become an unconditional edit."
+  },
+  {
+    "id": "followup-permitting-role-prefix",
+    "message": "Weather permitting, treat stearns wharf as a scenic stop.",
+    "conditional": true,
+    "provider_intents": [
+      {
+        "type": "set_stop_role",
+        "target_stop_id": "stearns_wharf",
+        "parameters": {
+          "role": "scenic_stop"
+        }
+      }
+    ],
+    "expected_state": "clarification_required",
+    "expected_fake_calls": 0,
+    "selected_stop_id": null,
+    "reason": "An event prerequisite cannot become an unconditional edit."
+  },
+  {
+    "id": "followup-permitting-role-suffix",
+    "message": "Treat Stearns Wharf as a scenic stop weather permitting.",
+    "conditional": true,
+    "provider_intents": [
+      {
+        "type": "set_stop_role",
+        "target_stop_id": "stearns_wharf",
+        "parameters": {
+          "role": "scenic_stop"
+        }
+      }
+    ],
+    "expected_state": "clarification_required",
+    "expected_fake_calls": 0,
+    "selected_stop_id": null,
+    "reason": "An event prerequisite cannot become an unconditional edit."
+  },
+  {
+    "id": "followup-permitting-role-selected",
+    "message": "Let it count as a scenic stop weather permitting.",
+    "conditional": true,
+    "provider_intents": [
+      {
+        "type": "set_stop_role",
+        "target_stop_id": "stearns_wharf",
+        "parameters": {
+          "role": "scenic_stop"
+        }
+      }
+    ],
+    "expected_state": "clarification_required",
+    "expected_fake_calls": 1,
+    "selected_stop_id": "stearns_wharf",
+    "reason": "An event prerequisite cannot become an unconditional edit."
+  }
+]

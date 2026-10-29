@@ -1,0 +1,121 @@
+{
+  "catalog_id": "california_coast_approved_seven_day_candidates_v1",
+  "generated_at": "2026-08-11T00:00:00+00:00",
+  "places": [
+    {
+      "access_points": [
+        {
+          "access_confidence": "provider_access_point",
+          "access_point_id": "pfeiffer_big_sur_state_park_road_endpoint",
+          "access_type": "road_route_endpoint",
+          "coordinate": {
+            "latitude": 36.252418,
+            "longitude": -121.787339
+          },
+          "evidence_refs": [
+            "17940a60cd8a39fb",
+            "a37d676da3e6dbd8"
+          ],
+          "road_validated": true,
+          "source_ref": "route_matrix_b33928f302ba9055"
+        }
+      ],
+      "display_coordinate": {
+        "latitude": 36.2524,
+        "longitude": -121.7879
+      },
+      "name": "Pfeiffer Big Sur State Park",
+      "place_categories": [
+        "registered_candidate"
+      ],
+      "place_id": "pfeiffer_big_sur_state_park",
+      "recommended_visit_minutes": 45,
+      "source_refs": [
+        "pfeiffer_candidate_request_v1",
+        "registered_child_plan_8ae77712483a709e",
+        "registered_certificate_b541bb3b1e4e7223",
+        "route_matrix_b33928f302ba9055"
+      ]
+    },
+    {
+      "access_points": [
+        {
+          "access_confidence": "provider_access_point",
+          "access_point_id": "point_lobos_state_natural_reserve_road_endpoint",
+          "access_type": "road_route_endpoint",
+          "coordinate": {
+            "latitude": 36.517094,
+            "longitude": -121.941786
+          },
+          "evidence_refs": [
+            "75e694c0dee9f5e0",
+            "ff1d33802a9ba484"
+          ],
+          "road_validated": true,
+          "source_ref": "route_matrix_b33928f302ba9055"
+        }
+      ],
+      "display_coordinate": {
+        "latitude": 36.5159,
+        "longitude": -121.9425
+      },
+      "name": "Point Lobos State Natural Reserve",
+      "place_categories": [
+        "registered_candidate"
+      ],
+      "place_id": "point_lobos_state_natural_reserve",
+      "recommended_visit_minutes": 45,
+      "source_refs": [
+        "point_lobos_candidate_request_v1",
+        "registered_child_plan_2d2ac1f621d09d1d",
+        "registered_certificate_b2db18d0b3416dd3",
+        "route_matrix_b33928f302ba9055"
+      ]
+    }
+  ],
+  "schema_version": "product-poi-catalog-v1",
+  "sources": [
+    {
+      "retrieved_at": null,
+      "source_id": "pfeiffer_candidate_request_v1",
+      "source_type": "curated_dataset",
+      "source_url": null
+    },
+    {
+      "retrieved_at": null,
+      "source_id": "point_lobos_candidate_request_v1",
+      "source_type": "curated_dataset",
+      "source_url": null
+    },
+    {
+      "retrieved_at": null,
+      "source_id": "registered_certificate_b2db18d0b3416dd3",
+      "source_type": "curated_dataset",
+      "source_url": null
+    },
+    {
+      "retrieved_at": null,
+      "source_id": "registered_certificate_b541bb3b1e4e7223",
+      "source_type": "curated_dataset",
+      "source_url": null
+    },
+    {
+      "retrieved_at": null,
+      "source_id": "registered_child_plan_2d2ac1f621d09d1d",
+      "source_type": "curated_dataset",
+      "source_url": null
+    },
+    {
+      "retrieved_at": null,
+      "source_id": "registered_child_plan_8ae77712483a709e",
+      "source_type": "curated_dataset",
+      "source_url": null
+    },
+    {
+      "retrieved_at": null,
+      "source_id": "route_matrix_b33928f302ba9055",
+      "source_type": "provider",
+      "source_url": null
+    }
+  ]
+}

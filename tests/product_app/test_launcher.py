@@ -216,6 +216,7 @@ def test_launcher_passes_explicit_fixed_host_and_port_to_app_and_uvicorn(
             open=False,
             enable_legacy=True,
             state_root=tmp_path / "state",
+            registry=tmp_path / "registry.json",
         ),
     )
     monkeypatch.setattr(launcher, "health", lambda url, **kwargs: None)
@@ -235,6 +236,7 @@ def test_launcher_passes_explicit_fixed_host_and_port_to_app_and_uvicorn(
     assert captured["create"]["application_host"] == "127.0.0.1"
     assert captured["create"]["application_port"] == 9127
     assert captured["create"]["state_root"] == tmp_path / "state"
+    assert captured["create"]["registry_path"] == tmp_path / "registry.json"
     assert captured["run"] == (
         app,
         {"host": "127.0.0.1", "port": 9127, "log_level": "info"},

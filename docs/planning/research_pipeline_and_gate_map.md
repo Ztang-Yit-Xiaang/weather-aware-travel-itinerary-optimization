@@ -6,7 +6,16 @@
 **Implementation-status authority:** `docs/current/current_problem_manifest.md`  
 **Canonical technical contract:** `docs/planning/travel_itinerary_repair_technical_specification.md`
 
+October 7 standalone-owned corrective checkpoint: single duration/window chat edits now use the existing full-artifact path, with four new API/Node cases, 12 mixed cases and seven owned browser journeys independently rebuilt. Domain/product/standard-browser regressions and one bounded real GPT website test pass on the recorded source. Exact inputs/outputs and limits: `docs/reports/runtime_coherence_status_20261007.md`. Remaining variants, full frozen regression/aggregate, portability, native keyboard/overlays and phase audit remain open. R12/R20/CP-010/E2E-1 stay in progress; G5/W6-W8/research statuses unchanged. Older checkpoints remain source-bound.
+
 ## Objective
+
+Latest local-product increment: eleven actual owned-rule chat/editor journeys
+pass, and corrected post-run readback matches canonical artifacts. The original
+formal manifest remains rejected for a setup-capture reader error; a new frozen
+68-case/22-suite aggregate and full regression are required. One separate fresh
+GPT website attempt passes. Exact I/O and remaining boundaries are in the current
+runtime report. No R12/R20/CP-010/E2E-1, G5/W6-W8 or research status promotion.
 
 Produce two evidence-bounded research slices without allowing the longer-term
 LLM and agent architecture to outrun the technical foundation:
@@ -243,13 +252,33 @@ experimental enablement.
 
 Corrective local-product branch (non-publication):
 
-W4 implemented offline -> W4R in-progress -> G4R planned -> G4 blocked
-                       -> W5 planned -> G5 -> W6 -> W7 -> W8
+W4 implemented offline -> W4R implemented -> G4R verified -> G4 v6 verified
+                       -> W5 implemented -> E2E-1 current runtime repair in progress -> G5 blocked -> W6 -> W7 -> W8
 
-W4R addresses direct interaction, required route-leg display or explicit gaps,
-and exact Compare/Evidence selection. G4R requires independent interaction
-verification. G4 remains the separate live-provider gate. W5 remains closed
-until G4 passes.
+Historical August checkpoint: W4R and G4R are complete: direct interaction, required route-leg display or
+explicit gaps, exact Compare/Evidence selection, and independent interaction
+verification passed. G4 v5 separately verified its frozen source snapshot. The
+authorized 2026-08-13 current-source `gpt-5.4-mini` v6 run passed all 48 fixed-corpus
+cases with exact file/LLM input and output plus matching 48-attempt SDK and HTTP
+transport accounting. Three independent read-only reviews pass after audit-binding remediation; G4 v6 is verified. W5 is implemented. E2E-1 is in progress: six deterministic production-like browser journeys pass, and a bounded billed `gpt-5.4-mini` actual website-chat extension is owner-authorized but pending; that live slice and the independent audit block G5.
+
+Current September 8 checkpoint: E2E-1 is `in-progress` under the 24-concern
+runtime-coherence repair. Earlier six-journey and paid-call results are retained
+source-bound historical evidence, not current-source closure. The expanded
+browser matrix, regression closure, bounded current-schema website-provider
+journey and independent audit are still required. See
+[`runtime_coherence_repair_progress_20260908.md`](../reports/runtime_coherence_repair_progress_20260908.md).
+
+The current October 7 checkpoint and exact file/API/LLM input and output are in
+[`runtime_coherence_status_20261007.md`](../reports/runtime_coherence_status_20261007.md).
+E2E-1 remains `in-progress` and G5 remains blocked. The September checkpoint
+above and its evidence are historical; no scoped success advances research gates.
+The latest continuation gate independently verifies 14 zero-provider browser journeys,
+all four combined entry paths, A → B → C acceptance/reload, 965 artifacts / 197 sources.
+A separate fresh paid combined website journey verifies twice with one GPT attempt,
+real optimizer/final evaluation, exact child/map, reload and four viewports; no acceptance.
+Rejected and historical runs remain intact. Complete frozen project regression/aggregate,
+mixed ownership/conflicting grouped variants, native keyboard and phase audit remain open.
 
 L1 closest-work review may proceed in parallel, but its verified matrix is
 required before either publication slice promotes a novelty hypothesis to a
@@ -292,10 +321,12 @@ contribution claim.
 | Node | Objective | Status | Exit boundary |
 |---|---|---|---|
 | W4 | Provider, prompt, transcript, and deterministic evaluation implementation. | `implemented` offline | Preserve the implementation evidence; this status is not a G4 provider-verification verdict. |
-| W4R | Correct direct map interaction, required-leg display, and exact Compare/Evidence behavior. | `in-progress` | Typed server-owned edits, validated geometry or explicit gaps, exact option resolution, deterministic checks, and no placeholder decision behavior. |
-| G4R | Independently verify W4R user journeys and integrity. | `planned`, not verified | Map journey, route artifact, accessibility, UI/UX, content, visual, security/privacy, phase/status, and black-box audits all pass. |
-| G4 | Verify the live provider after G4R. | `blocked` | Newly authorized post-fix smoke, fixed-24 evaluation, prescribed reasoning comparison, sanitized evidence, deterministic checks, and independent provider audits pass. |
-| W5 | Implement Compare/Evidence decision integrity and durable Accept/Keep transactions. | `planned` | Entry requires verified G4; repository, journal, pointer CAS, restart, concurrency, and exact-evidence gates pass. |
+| W4R | Correct direct map interaction, required-leg display, and exact Compare/Evidence behavior. | `implemented` | Typed server-owned edits, validated geometry or explicit gaps, exact option resolution, deterministic checks, and no placeholder decision behavior. |
+| G4R | Independently verify W4R user journeys and integrity. | `verified / passed` | Map journey, route artifact, accessibility, UI/UX, content, visual, security/privacy, phase/status, and black-box audits passed after remediation. |
+| G4 | Verify the live provider after G4R. | current-source v6 `verified / passed` | Preserve the v6 exact-I/O evidence, five-file audit binding, and three independent PASS verdicts; no additional provider call is required. |
+| W5 | Implement Compare/Evidence decision integrity and durable Accept/Keep transactions. | `implemented` | Immutable repository, append-only ledger, pointer CAS, recovery, concurrency/idempotency, exact proposal revalidation, confirmed Accept/Keep/rollback, and browser restore are implemented. |
+| E2E-1 | Prove vertical-slice runtime truth and map synchronization. | `in-progress`; September 24-concern runtime integration repair | Preserve historical and failed evidence; pass the current-source expanded browser matrix, regression closure, bounded real chatbox -> OpenAI -> typed proposal -> draft -> evaluated child/map journey with exact I/O, then obtain an independent PASS. |
+| G5 | Independently verify the complete runtime slice and durable decision boundary. | `blocked` behind E2E-1 | E2E-1 and independent artifact/persistence/security/content/browser audits pass before W6. |
 
 The independent research sequence remains `D1 -> E3.1 -> E3.3 -> E4` with
 its current statuses unchanged.
@@ -336,7 +367,7 @@ off the technical critical path.
 The separate corrective local-product path is:
 
 ```text
-W4 implemented -> W4R -> G4R -> G4 -> W5 -> G5 -> W6 -> W7 -> W8
+W4 implemented -> W4R -> G4R -> G4 -> W5 -> E2E-1 -> G5 -> W6 -> W7 -> W8
 ```
 
 It may progress alongside D1, but it cannot change E3.1, E3.3, E4, E3.UX5, or
@@ -450,7 +481,7 @@ evidence. Mutable application state remains outside the research run.
 
 ```text
 AUD-0 -> W0/G0 -> W1 -> W1M/G1 -> W2/G2 -> W3/G3 -> W4/G4
-       -> W5/G5 -> W6/G6 -> W7/G7 -> W8/G8 + user sign-off
+       -> W5 -> E2E-1 -> G5 -> W6/G6 -> W7/G7 -> W8/G8 + user sign-off
 ```
 
 Current product state: AUD-0, W0/G0, W1M/G1, corrected-v2 W2/G2, and
@@ -459,11 +490,11 @@ local MapLibre/PMTiles package, continuous three-plan v2 workspace, recalculated
 metrics/certificates, persistent typed previews, live desktop/mobile journeys,
 security/state, accessibility/content, and status truth passed independent
 revalidation. Historical v1 reports remain historical evidence only. Atlas remains
-a deferred explicit backup. W4 is `implemented`; G4 is `blocked` on authorized live provider evidence, and W5-W8 remain `planned`. CP-010
+a deferred explicit backup. W4 and W4R are `implemented`; G4R is `verified / passed`; G4 v5 is verified for its frozen source, and current-source G4 v6 is `verified / passed` after three independent read-only reviews. W5 is `implemented`; E2E-1 is `in-progress` with its billed website-chat extension and independent audit pending, so G5 remains blocked; W6-W8 remain `planned`. CP-010
 remains `in-progress` until G8. Audit and implementation agents are independent,
 and a blocking specialist finding stops the relevant product gate.
 
 There is no status-propagation edge from any product gate to E3.1, E3.3, E4,
-E3.UX5, or E5. The next research action remains D1 for E3.1; the next product
-product action is the credential-gated G4 smoke and fixed-24 evaluation.
+E3.UX5, or E5. The next research action remains D1 for E3.1; the next product action is to
+preserve the verified current-source v6 G4 bundle, implement and independently verify E2E-1, and only then run G5; W6 remains closed until both pass.
 Each track requires its own evidence and named external dependencies.

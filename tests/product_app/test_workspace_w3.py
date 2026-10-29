@@ -80,6 +80,23 @@ def test_session_snapshot_never_persists_raw_token_and_restores_authenticated_st
         restarted.authenticate(session.session_id, "wrong-token")
 
 
+@pytest.mark.parametrize("proposal", [
+    {"state": "eligible", "certificate_id": "cert-a"},
+    {"state": "eligible", "child_plan_id": "", "geography_plan": {"plan_id": ""}},
+    {"state": "eligible", "child_plan_id": "child", "geography_plan": {}},
+    {"state": "eligible", "child_plan_id": "child", "geography_plan": {"plan_id": "foreign"}},
+    {"state": "ineligible", "child_plan_id": "child", "geography_plan": {"plan_id": "child"}},
+])
+def test_partial_or_unbound_proposal_cannot_clear_shared_selection(tmp_path: Path, proposal) -> None:
+    store = WorkspaceStore(tmp_path / "state")
+    session, _ = store.create_session("run", "parent", 7)
+    selection = {"selected_day": 4, "selected_stop_id": "stop-a",
+                 "selected_segment_id": "leg-a", "selected_alternative_id": "option-a"}
+    store.select(session, {"expected_revision": 0, **selection})
+    store.set_proposal(session, proposal, expected_revision=1)
+    assert {key: getattr(session, key) for key in selection} == selection
+
+
 def test_undo_and_new_draft_atomically_invalidate_persisted_proposal(tmp_path: Path) -> None:
     state_root = tmp_path / "state"
     store = WorkspaceStore(state_root)
@@ -165,7 +182,7 @@ def test_corrupt_or_unsupported_snapshot_fails_closed_without_rewrite(
     assert path.read_bytes() == before
 
 
-def test_expired_snapshot_is_not_restored_or_counted_toward_capacity(tmp_path: Path) -> None:
+def test_expired_snapshot_is_retained_without_authentication_or_active_capacity(tmp_path: Path) -> None:
     state_root = tmp_path / "state"
     store = WorkspaceStore(state_root)
     expired, _ = store.create_session("run", "parent", 1)
@@ -176,14 +193,16 @@ def test_expired_snapshot_is_not_restored_or_counted_toward_capacity(tmp_path: P
     ).isoformat()
     path.write_text(json.dumps(payload), encoding="utf-8")
 
+    before = path.read_bytes()
     restarted = WorkspaceStore(state_root)
-    assert not path.exists()
-    with pytest.raises(WorkspaceError, match="unknown_session"):
+    assert path.read_bytes() == before
+    with pytest.raises(WorkspaceError, match="session_expired"):
         restarted.get(expired.session_id)
     for _ in range(restarted.MAX_SESSIONS):
         restarted.create_session("run", "parent", 1)
     with pytest.raises(WorkspaceError, match="session_capacity_reached"):
         restarted.create_session("run", "parent", 1)
+    assert path.read_bytes() == before
 
 
 def test_non_finite_nested_values_are_rejected_on_write_and_restore(tmp_path: Path) -> None:

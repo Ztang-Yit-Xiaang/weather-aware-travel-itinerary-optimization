@@ -1,0 +1,18 @@
+{
+  "schema_version": "interest-exploration-manifest-v1",
+  "file": "exploration_catalog.json",
+  "sha256": "30fd28ce6668fead92b47b313c3c8925ebf2f34523baf3d62c0d0a0ff2c5c56e",
+  "source_file": "results\\outputs\\production_enriched_poi_catalog.csv",
+  "source_sha256": "2cd06b29103a04fb7d52cadbad5786c9eed87b0953764fded6893e407608fb3d",
+  "count": 134,
+  "data_role": "existing_POI_metadata_not_user_feedback",
+  "routing_status": "not_evaluated",
+  "supplemental_source": {
+    "file": "monterey_park_entries.geojson",
+    "sha256": "f5e45a3bdeaa401d8bc03e0452196e4dd6e20951265c25603f5a8e8ca1c4c259",
+    "service_url": "https://services2.arcgis.com/AhxrK3F6WM8ECvDi/arcgis/rest/services/ParkEntryPoints/FeatureServer/2",
+    "count": 17,
+    "attribution": "California State Parks",
+    "license_url": "https://www.parks.ca.gov/?page_id=29682"
+  }
+}

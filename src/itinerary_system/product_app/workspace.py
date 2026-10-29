@@ -3,10 +3,13 @@
 from __future__ import annotations
 
 import hashlib
+import json
 import math
 import re
 import secrets
 import threading
+from collections.abc import Callable
+from copy import deepcopy
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
@@ -40,6 +43,7 @@ class WorkspaceStore:
         "relocate_custom_waypoint",
     }
     KNOWN_OPERATIONS = {
+        "replan_trip",
         "keep_stop",
         "lock_stop",
         "mark_flexible",
@@ -59,11 +63,21 @@ class WorkspaceStore:
     MAX_SESSIONS = 128
     MAX_DRAFT_OPERATIONS = 32
     MAX_PERMISSION_DECISIONS = 32
+    MAX_MUTATION_RECEIPTS = 256
     SESSION_TTL = timedelta(hours=24)
+    SESSION_RETENTION = timedelta(days=30)
     _CONVERSATION_ID = re.compile(r"conversation_[0-9a-f]{32}\Z")
 
-    def __init__(self, state_root: Path) -> None:
+    def __init__(
+        self,
+        state_root: Path,
+        *,
+        accepted_plan_resolver: Callable[[str], dict[str, Any]] | None = None,
+        accepted_selection_resolver: Callable[[str], dict[str, Any]] | None = None,
+    ) -> None:
         self.state_root = state_root
+        self._accepted_plan_resolver = accepted_plan_resolver
+        self._accepted_selection_resolver = accepted_selection_resolver
         self._sessions: dict[str, ProductSession] = {}
         self._lock = threading.RLock()
         self._snapshots = SessionSnapshotStore(state_root)
@@ -86,7 +100,7 @@ class WorkspaceStore:
                 with self._snapshots.locked():
                     self._refresh_locked()
                     self._purge_expired_locked()
-                    if len(self._sessions) >= self.MAX_SESSIONS:
+                    if sum(not self._is_expired(session) for session in self._sessions.values()) >= self.MAX_SESSIONS:
                         raise WorkspaceError("session_capacity_reached", 429)
                     raw_token = secrets.token_urlsafe(24)
                     salt = secrets.token_hex(16)
@@ -121,8 +135,6 @@ class WorkspaceStore:
                     with self._snapshots.locked():
                         current = self._load_current_locked(session_id)
                         if self._is_expired(current):
-                            self._snapshots.delete(session_id)
-                            self._sessions.pop(session_id, None)
                             raise WorkspaceError("session_expired", 404)
                         return self._install_locked(current)
                 except StateLockTimeoutError:
@@ -139,13 +151,12 @@ class WorkspaceStore:
             try:
                 with self._snapshots.locked():
                     session = self._load_current_locked(session_id)
-                    if self._is_expired(session):
-                        self._snapshots.delete(session_id)
-                        self._sessions.pop(session_id, None)
-                        raise WorkspaceError("session_expired", 404)
                     candidate = self._token_digest(token, session.mutation_token_salt)
                     if not secrets.compare_digest(session.mutation_token_verifier, candidate):
                         raise WorkspaceError("invalid_session_token", 403)
+                    if self._is_expired(session):
+                        raise WorkspaceError("session_expired", 404)
+                    self._reconcile_accepted_plan_locked(session)
                     session.last_accessed_at = utc_now()
                     self._snapshots.save(session)
                     return self._install_locked(session)
@@ -167,10 +178,6 @@ class WorkspaceStore:
             try:
                 with self._snapshots.locked():
                     session = self._load_current_locked(session_id)
-                    if self._is_expired(session):
-                        self._snapshots.delete(session_id)
-                        self._sessions.pop(session_id, None)
-                        raise WorkspaceError("session_expired", 404)
                     candidate = self._token_digest(
                         token,
                         session.mutation_token_salt,
@@ -180,6 +187,8 @@ class WorkspaceStore:
                         candidate,
                     ):
                         raise WorkspaceError("invalid_session_token", 403)
+                    if self._is_expired(session):
+                        raise WorkspaceError("session_expired", 404)
                     return self._install_locked(session)
             except StateLockTimeoutError:
                 raise WorkspaceError("state_lock_timeout", 503) from None
@@ -239,17 +248,25 @@ class WorkspaceStore:
         if not isinstance(expected, int) or expected != session.revision:
             raise WorkspaceError("stale_session_revision", 409)
 
-    def select(self, session: ProductSession, payload: dict[str, Any]) -> ProductSession:
+    def select(
+        self, session: ProductSession, payload: dict[str, Any],
+        *, role_proposal: dict[str, Any] | None = None,
+    ) -> ProductSession:
         expected = payload.get("expected_revision")
 
         def mutate(current: ProductSession) -> None:
+            if role_proposal is not None:
+                if current.proposal != session.proposal:
+                    raise WorkspaceError("draft_role_proposal_invalid", 409)
+                current.proposal = role_proposal
             current.selected_day = self._optional_int(payload.get("selected_day"))
             current.selected_stop_id = self._optional_text(payload.get("selected_stop_id"))
             current.selected_segment_id = self._optional_text(payload.get("selected_segment_id"))
             current.selected_candidate_id = self._optional_text(payload.get("selected_candidate_id"))
             current.selected_alternative_id = self._optional_text(payload.get("selected_alternative_id"))
 
-        self._mutate(session, expected, mutate)
+        self._mutate(session, expected, mutate, mutation_action="selection",
+                     mutation_request=payload if "mutation_id" in payload else None)
         return session
 
     def add_operation(
@@ -270,44 +287,30 @@ class WorkspaceStore:
         parent_time_window_by_stop: dict[str, dict[str, Any] | None] | None = None,
         parent_role_by_stop: dict[str, dict[str, Any]] | None = None,
         role_constraints_by_stop: dict[str, tuple[dict[str, Any], ...]] | None = None,
+        additional_operations: tuple[dict[str, Any], ...] = (),
+        mutation_request: dict[str, Any] | None = None,
     ) -> DraftOperationV1:
-        operation_type = str(payload.get("type") or "")
-        target = str(payload.get("target") or "")
-        parameters = payload.get("parameters")
-        if operation_type not in self.KNOWN_OPERATIONS:
-            raise WorkspaceError("unsupported_draft_operation", 422)
-        if operation_type in self.CONFIRMED_MAP_OPERATIONS:
-            raise WorkspaceError("map_operation_confirmation_required", 409)
-        if not isinstance(parameters, dict):
-            raise WorkspaceError("invalid_draft_parameters", 422)
+        mutation_request = mutation_request or (payload if "mutation_id" in payload else None)
         parent_targets = parent_stop_ids if parent_stop_ids is not None else valid_stop_ids
         candidates = candidate_ids if candidate_ids is not None else valid_stop_ids
-        self._validate_operation_domain(
-            operation_type,
-            target,
-            parameters,
-            parent_targets=parent_targets,
-            candidate_ids=candidates,
-            candidate_replacements=candidate_replacements,
-            day_count=day_count,
-            route_leg_ids=route_leg_ids or set(),
-            protected_stop_ids=protected_stop_ids or set(),
-            parent_day_by_stop=parent_day_by_stop or {},
-            parent_order_by_day=parent_order_by_day or {},
-            parent_duration_by_stop=parent_duration_by_stop or {},
-            parent_time_window_by_stop=parent_time_window_by_stop or {},
-            parent_role_by_stop=parent_role_by_stop or {},
-            role_constraints_by_stop=role_constraints_by_stop or {},
-        )
-        evidence_refs = self._evidence_refs(payload.get("evidence_refs"))
-        operation: DraftOperationV1 | None = None
+        operations = []
+        for item in (payload, *additional_operations):
+            operation_type = str(item.get("type") or "")
+            if operation_type not in self.KNOWN_OPERATIONS:
+                raise WorkspaceError("unsupported_draft_operation", 422)
+            if operation_type in self.CONFIRMED_MAP_OPERATIONS:
+                raise WorkspaceError("map_operation_confirmation_required", 409)
+            operations.append(DraftOperationV1(
+                operation_id=f"operation_{uuid4().hex}", type=operation_type,
+                target=str(item.get("target") or ""), parameters=item.get("parameters"),
+                source=str(item.get("source") or "map"), evidence_refs=self._evidence_refs(item.get("evidence_refs")),
+            ))
 
-        def mutate(current: ProductSession) -> None:
-            nonlocal operation
-            if len(current.draft) >= self.MAX_DRAFT_OPERATIONS:
+        def mutate(current: ProductSession) -> dict[str, Any]:
+            if len(current.draft) + len(operations) > self.MAX_DRAFT_OPERATIONS:
                 raise WorkspaceError("draft_operation_limit_reached", 409)
             self.validate_draft_domain(
-                current.draft,
+                (*current.draft, *operations),
                 parent_targets=parent_targets,
                 candidate_ids=candidates,
                 candidate_replacements=candidate_replacements,
@@ -321,21 +324,24 @@ class WorkspaceStore:
                 parent_role_by_stop=parent_role_by_stop or {},
                 role_constraints_by_stop=role_constraints_by_stop or {},
             )
-            operation = DraftOperationV1(
-                operation_id=f"operation_{uuid4().hex}",
-                type=operation_type,
-                target=target,
-                parameters=parameters,
-                source=str(payload.get("source") or "map"),
-                evidence_refs=evidence_refs,
-            )
-            self._validate_draft_conflicts((*current.draft, operation))
-            current.draft.append(operation)
-            current.proposal = None
+            combined = (*current.draft, *operations)
+            if combined and all(row.type == DraftOperationTypeV2.SET_STOP_ORDER.value for row in combined) and all(
+                (parent_order_by_day or {})[row.parameters["day"]].index(row.target) == row.parameters["sequence_index"]
+                for row in combined
+            ):
+                raise WorkspaceError("draft_no_effect", 409)
+            current.draft.extend(operations)
+            self._invalidate_proposal(current)
+            return ({"operations": [item.as_dict() for item in operations]}
+                    if mutation_request and "operations" in mutation_request
+                    else {"operation": operations[0].as_dict()})
 
-        self._mutate(session, payload.get("expected_revision"), mutate)
-        assert operation is not None
-        return operation
+        receipt = self._mutate(session, payload.get("expected_revision"), mutate,
+                               mutation_action="operations", mutation_request=mutation_request)
+        if receipt:
+            result = receipt["result"]
+            return self._snapshots._decode_operation(result.get("operation") or result["operations"][0])
+        return operations[0]
 
     def append_confirmed_map_operation(
         self,
@@ -368,7 +374,7 @@ class WorkspaceStore:
             )
             current.draft.append(operation)
             self.reduce_confirmed_map_draft(current.draft)
-            current.proposal = None
+            self._invalidate_proposal(current)
 
         self._mutate(session, expected_revision, mutate)
         assert operation is not None
@@ -394,6 +400,8 @@ class WorkspaceStore:
     ) -> None:
         """Revalidate persisted operations against the current artifact universe."""
 
+        if any(row.type == "replan_trip" for row in operations) and len(operations) != 1:
+            raise WorkspaceError("trip_planning_requires_separate_draft", 409)
         cls.reduce_confirmed_map_draft(operations)
         for operation in operations:
             if operation.type in cls.CONFIRMED_MAP_OPERATIONS:
@@ -748,6 +756,15 @@ class WorkspaceStore:
         parent_role_by_stop: dict[str, dict[str, Any]],
         role_constraints_by_stop: dict[str, tuple[dict[str, Any], ...]],
     ) -> None:
+        if operation_type == "replan_trip":
+            from .trip_planning import validate_trip_parameters
+            if target != "trip":
+                raise WorkspaceError("invalid_draft_target", 422)
+            try:
+                validate_trip_parameters(parameters)
+            except (ValueError, TypeError, KeyError):
+                raise WorkspaceError("invalid_trip_planning_parameters", 422) from None
+            return
         parent_operations = {"keep_stop", "lock_stop", "mark_flexible", "move_day", "replace_nearby"}
         if operation_type in parent_operations and target not in parent_targets:
             raise WorkspaceError("invalid_draft_target", 422)
@@ -913,8 +930,9 @@ class WorkspaceStore:
                 or not 0 <= sequence_index < len(day_stops)
             ):
                 raise WorkspaceError("draft_order_index_invalid", 409)
-            if day_stops.index(target) == sequence_index:
-                raise WorkspaceError("draft_no_effect", 409)
+            # A redundant order row can accompany a meaningful batch edit, or
+            # remain after Undo. Append rejects a wholly unchanged order draft;
+            # domain validation still checks every target, day and position.
             return
         if operation_type == DraftOperationTypeV2.SET_STOP_DURATION.value:
             if set(parameters) != {"duration"}:
@@ -1186,6 +1204,8 @@ class WorkspaceStore:
             raise WorkspaceError("draft_conflicting_stop_policy", 409)
         if any(target in replacements and values & {"keep_stop", "lock_stop"} for target, values in policies.items()):
             raise WorkspaceError("draft_conflicts_with_replacement", 409)
+        if any(row.target in replacements and row.type in TYPED_EDIT_OPERATION_NAMES for row in operations):
+            raise WorkspaceError("draft_conflicts_with_replacement", 409)
         if any(len(values) > 1 for values in moves.values()):
             raise WorkspaceError("draft_conflicting_day_moves", 409)
         if any(len(values) > 1 for values in replacements.values()):
@@ -1210,29 +1230,104 @@ class WorkspaceStore:
             if target in day_edits and {day for day, _ in orders} != day_edits[target]:
                 raise WorkspaceError("draft_conflicting_day_order", 409)
 
-    def undo(self, session: ProductSession, expected_revision: Any) -> DraftOperationV1:
+    def undo(self, session: ProductSession, expected_revision: Any, *, mutation_id: str | None = None) -> DraftOperationV1:
         operation: DraftOperationV1 | None = None
 
-        def mutate(current: ProductSession) -> None:
+        def mutate(current: ProductSession) -> dict[str, Any]:
             nonlocal operation
             if not current.draft:
                 raise WorkspaceError("draft_is_empty")
             operation = current.draft.pop()
-            current.proposal = None
+            self._invalidate_proposal(current)
+            return {"undone": operation.as_dict()}
 
-        self._mutate(session, expected_revision, mutate)
+        receipt = self._mutate(session, expected_revision, mutate, mutation_action="undo",
+                               mutation_request={"expected_revision": expected_revision, "mutation_id": mutation_id}
+                               if mutation_id is not None else None)
+        if receipt:
+            return self._snapshots._decode_operation(receipt["result"]["undone"])
         assert operation is not None
         return operation
 
     def set_proposal(self, session: ProductSession, proposal: dict[str, Any], expected_revision: Any) -> None:
-        self._mutate(session, expected_revision, lambda current: setattr(current, "proposal", proposal))
+        def mutate(current: ProductSession) -> None:
+            current.proposal = proposal
+            geography = proposal.get("geography_plan") or {}
+            child_plan_id = proposal.get("child_plan_id")
+            if (
+                proposal.get("state") != "eligible"
+                or not isinstance(child_plan_id, str)
+                or not child_plan_id.strip()
+                or geography.get("plan_id") != child_plan_id
+            ):
+                return
+            stops = {
+                feature["properties"]["stop_id"]: feature["properties"]
+                for feature in (geography.get("stops") or {}).get("features", [])
+            }
+            if current.selected_stop_id and current.selected_stop_id not in stops:
+                replacement = next((
+                    operation.parameters.get("candidate_id")
+                    for operation in current.draft
+                    if operation.type == "replace_nearby"
+                    and operation.target == current.selected_stop_id
+                    and operation.parameters.get("candidate_id") in stops
+                ), None)
+                current.selected_stop_id = replacement
+            if current.selected_stop_id in stops:
+                current.selected_day = stops[current.selected_stop_id].get("day", current.selected_day)
+            # A preview changes the selected plan, so parent-only segment and option
+            # selections must not survive as an apparently current child selection.
+            current.selected_segment_id = None
+            current.selected_alternative_id = None
+            current.selected_candidate_id = None
+
+        self._mutate(session, expected_revision, mutate)
 
     def clear_draft(self, session: ProductSession) -> None:
         def mutate(current: ProductSession) -> None:
             current.draft.clear()
-            current.proposal = None
+            self._invalidate_proposal(current)
 
         self._mutate(session, session.revision, mutate)
+
+    def _invalidate_proposal(self, session: ProductSession) -> None:
+        """Return selection to the accepted artifact, not to any remaining draft."""
+
+        proposal = session.proposal or {}
+        session.proposal = None
+        child_id = proposal.get("child_plan_id")
+        if (
+            self._accepted_selection_resolver is None
+            or proposal.get("state") != "eligible"
+            or not isinstance(child_id, str)
+            or not child_id.strip()
+            or (proposal.get("geography_plan") or {}).get("plan_id") != child_id
+            or not (session.selected_stop_id or session.selected_segment_id)
+        ):
+            return
+        pointer = self._accepted_selection_resolver(session.trip_id)
+        geography = pointer.get("selection_geography") or {}
+        if (
+            pointer.get("accepted_plan_id") != session.accepted_plan_id
+            or geography.get("plan_id") != session.accepted_plan_id
+            or geography.get("content_hash") != pointer.get("accepted_plan_content_hash")
+        ):
+            raise WorkspaceError("accepted_selection_context_unavailable", 409)
+        stops = {
+            feature["properties"]["stop_id"]: feature["properties"]
+            for feature in geography.get("stops", {}).get("features", [])
+        }
+        if session.selected_stop_id in stops:
+            session.selected_day = stops[session.selected_stop_id].get("day", session.selected_day)
+        else:
+            session.selected_stop_id = None
+        segments = {
+            feature["properties"]["route_leg_id"]
+            for feature in geography.get("validated_legs", {}).get("features", [])
+        }
+        if session.selected_segment_id not in segments:
+            session.selected_segment_id = None
 
     def append_permission(self, session: ProductSession, payload: dict[str, Any]) -> dict[str, Any]:
         decision = {
@@ -1271,6 +1366,49 @@ class WorkspaceStore:
         self.expect_revision(session, expected_revision)
         raise WorkspaceError("acceptance_not_enabled_until_w5", 409)
 
+    def apply_acceptance(
+        self,
+        session: ProductSession,
+        *,
+        expected_revision: Any,
+        accepted_plan_id: str,
+    ) -> ProductSession:
+        """CAS the authenticated session to a server-committed accepted pointer."""
+
+        if not isinstance(accepted_plan_id, str) or not accepted_plan_id:
+            raise WorkspaceError("acceptance_plan_invalid", 422)
+
+        def mutate(current: ProductSession) -> None:
+            current.accepted_plan_id = accepted_plan_id
+            current.draft.clear()
+            current.proposal = None
+            current.permission_decisions.clear()
+            current.selected_alternative_id = None
+
+        self._mutate(session, expected_revision, mutate)
+        return session
+
+    def _reconcile_accepted_plan_locked(self, session: ProductSession) -> bool:
+        if self._accepted_plan_resolver is None:
+            return False
+        try:
+            pointer = self._accepted_plan_resolver(session.trip_id)
+        except Exception as exc:
+            code = getattr(exc, "code", "acceptance_pointer_unavailable")
+            status_code = getattr(exc, "status_code", 503)
+            raise WorkspaceError(str(code), int(status_code)) from None
+        accepted_plan_id = pointer.get("accepted_plan_id") if isinstance(pointer, dict) else None
+        if not isinstance(accepted_plan_id, str) or not accepted_plan_id:
+            raise WorkspaceError("acceptance_pointer_invalid", 409)
+        if accepted_plan_id == session.accepted_plan_id:
+            return False
+        session.accepted_plan_id = accepted_plan_id
+        session.draft.clear()
+        session.proposal = None
+        session.permission_decisions.clear()
+        session.selected_alternative_id = None
+        session.revision += 1
+        return True
     @staticmethod
     def _optional_int(value: Any) -> int | None:
         return value if isinstance(value, int) else None
@@ -1281,18 +1419,31 @@ class WorkspaceStore:
         return text or None
 
     @staticmethod
-    def _is_expired(session: ProductSession) -> bool:
+    def _is_expired(session: ProductSession, *, lifetime: timedelta | None = None) -> bool:
         try:
             last_accessed = datetime.fromisoformat(session.last_accessed_at)
         except ValueError:
             return True
-        return datetime.now(UTC) - last_accessed > WorkspaceStore.SESSION_TTL
+        return datetime.now(UTC) - last_accessed > (
+            WorkspaceStore.SESSION_TTL if lifetime is None else lifetime
+        )
 
     def _purge_expired_locked(self) -> None:
-        expired = [session_id for session_id, session in self._sessions.items() if self._is_expired(session)]
-        for session_id in expired:
-            self._snapshots.delete(session_id)
-            self._sessions.pop(session_id, None)
+        # The caller holds the shared layout lock. Another store may have
+        # refreshed activity since this process last cached the session.
+        for session_id in tuple(self._sessions):
+            try:
+                current = self._load_current_locked(session_id)
+            except WorkspaceError as exc:
+                if exc.code != "unknown_session":
+                    raise
+                self._sessions.pop(session_id, None)
+                continue
+            if self._is_expired(current, lifetime=self.SESSION_RETENTION):
+                self._snapshots.delete(session_id)
+                self._sessions.pop(session_id, None)
+            else:
+                self._install_locked(current)
 
     def _restore(self) -> None:
         try:
@@ -1331,27 +1482,130 @@ class WorkspaceStore:
         self.reduce_confirmed_map_draft(current.draft)
         return current
 
-    def _mutate(
-        self,
-        session: ProductSession,
-        expected_revision: Any,
-        mutation: Any,
-    ) -> None:
+    @staticmethod
+    def validate_mutation_id(value: Any) -> str:
+        if not isinstance(value, str) or re.fullmatch(r"mutation_[0-9a-f]{32}", value) is None:
+            raise WorkspaceError("invalid_mutation_id", 422)
+        return value
+
+    @classmethod
+    def _mutation_identity(cls, action: str, payload: dict[str, Any]) -> tuple[str, str]:
+        identity = cls.validate_mutation_id(payload.get("mutation_id"))
+        revision = payload.get("expected_revision")
+        if (action not in {"selection", "operations", "undo"} or isinstance(revision, bool)
+            or not isinstance(revision, int) or revision < 0):
+            raise WorkspaceError("invalid_mutation_request", 422)
+        try:
+            encoded = json.dumps({"action": action, "payload": payload}, sort_keys=True,
+                                 separators=(",", ":"), ensure_ascii=False, allow_nan=False).encode("utf-8")
+        except (TypeError, ValueError):
+            raise WorkspaceError("invalid_mutation_request", 422) from None
+        return identity, hashlib.sha256(encoded).hexdigest()
+
+    @classmethod
+    def _find_mutation_receipt(cls, current: ProductSession, action: str, payload: dict[str, Any]) -> dict[str, Any] | None:
+        identity, digest = cls._mutation_identity(action, payload)
+        receipt = next((row for row in current.mutation_receipts if row["mutation_id"] == identity), None)
+        if receipt and (receipt["action"] != action or receipt["request_sha256"] != digest):
+            raise WorkspaceError("mutation_id_conflict", 409)
+        return receipt
+
+    def replay_mutation(self, session: ProductSession, action: str, payload: dict[str, Any]) -> dict[str, Any] | None:
+        if "mutation_id" not in payload:
+            return None
         with self._lock:
             try:
                 with self._snapshots.locked():
                     current = self._load_current_locked(session.session_id)
                     if self._is_expired(current):
-                        self._snapshots.delete(current.session_id)
-                        self._sessions.pop(current.session_id, None)
                         raise WorkspaceError("session_expired", 404)
+                    receipt = self._find_mutation_receipt(current, action, payload)
+                    if receipt and self._reconcile_accepted_plan_locked(current):
+                        raise WorkspaceError("mutation_workspace_changed", 409)
+                    self._sync_session(session, current)
+                    self._sessions[current.session_id] = session
+                    return deepcopy(receipt)
+            except StateLockTimeoutError:
+                raise WorkspaceError("state_lock_timeout", 503) from None
+            except SessionSnapshotError as exc:
+                raise self._snapshot_workspace_error(exc) from None
+
+    def resolve_pending_mutation(
+        self, session: ProductSession, action: str, payload: dict[str, Any],
+        *, role_proposal: dict[str, Any] | None = None,
+    ) -> dict[str, Any] | None:
+        """Fence an unseen original revision, or return its already committed receipt."""
+        if not isinstance(action, str) or action not in {"selection", "operations", "undo"}:
+            raise WorkspaceError("invalid_mutation_request", 422)
+        self._mutation_identity(action, payload)
+        expected = payload["expected_revision"]
+        with self._lock:
+            try:
+                with self._snapshots.locked():
+                    current = self._load_current_locked(session.session_id)
+                    if self._is_expired(current):
+                        raise WorkspaceError("session_expired", 404)
+                    receipt = self._find_mutation_receipt(current, action, payload)
+                    if self._reconcile_accepted_plan_locked(current):
+                        raise WorkspaceError("mutation_workspace_changed", 409)
+                    if current.revision < expected:
+                        raise WorkspaceError("invalid_mutation_request", 422)
+                    if not receipt and current.revision == expected:
+                        if role_proposal is not None:
+                            if current.proposal != session.proposal:
+                                raise WorkspaceError("draft_role_proposal_invalid", 409)
+                            current.proposal = role_proposal
+                        current.revision += 1
+                        current.last_accessed_at = utc_now()
+                        self._snapshots.save(current)
+                    self._sync_session(session, current)
+                    self._sessions[current.session_id] = session
+                    return deepcopy(receipt)
+            except StateLockTimeoutError:
+                raise WorkspaceError("state_lock_timeout", 503) from None
+            except SessionSnapshotError as exc:
+                raise self._snapshot_workspace_error(exc) from None
+
+    def _mutate(
+        self,
+        session: ProductSession,
+        expected_revision: Any,
+        mutation: Any,
+        *, mutation_action: str | None = None, mutation_request: dict[str, Any] | None = None,
+    ) -> dict[str, Any] | None:
+        with self._lock:
+            try:
+                with self._snapshots.locked():
+                    current = self._load_current_locked(session.session_id)
+                    if self._is_expired(current):
+                        raise WorkspaceError("session_expired", 404)
+                    receipt = None
+                    if mutation_request is not None:
+                        if mutation_request.get("expected_revision") != expected_revision:
+                            raise WorkspaceError("invalid_mutation_request", 422)
+                        receipt = self._find_mutation_receipt(current, mutation_action, mutation_request)
+                        if self._reconcile_accepted_plan_locked(current):
+                            raise WorkspaceError("mutation_workspace_changed", 409)
+                        if receipt:
+                            self._sync_session(session, current)
+                            self._sessions[current.session_id] = session
+                            return deepcopy(receipt)
+                        if len(current.mutation_receipts) >= self.MAX_MUTATION_RECEIPTS:
+                            raise WorkspaceError("mutation_receipt_limit_reached", 409)
                     self.expect_revision(current, expected_revision)
-                    mutation(current)
+                    result = mutation(current)
                     current.revision += 1
                     current.last_accessed_at = utc_now()
+                    if mutation_request is not None:
+                        identity, digest = self._mutation_identity(mutation_action, mutation_request)
+                        receipt = {"mutation_id": identity, "action": mutation_action, "request_sha256": digest,
+                                   "expected_revision": expected_revision, "committed_revision": current.revision,
+                                   "result": deepcopy(result or {})}
+                        current.mutation_receipts.append(receipt)
                     self._snapshots.save(current)
                     self._sync_session(session, current)
                     self._sessions[current.session_id] = session
+                    return deepcopy(receipt)
             except StateLockTimeoutError:
                 raise WorkspaceError("state_lock_timeout", 503) from None
             except SessionSnapshotError as exc:

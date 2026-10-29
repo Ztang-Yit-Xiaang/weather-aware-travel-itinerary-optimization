@@ -1,3 +1,5 @@
+import { addInterestAreaLayers, addInterestPointLayers } from "./interest-regions.js";
+
 const EXPECTED_GEOGRAPHY_SCHEMA = "product-geography-v2";
 const EXPECTED_MAP_SCHEMA = "product-map-configuration-v2";
 const READY_GEOGRAPHY_STATES = new Set(["ready", "ready_with_gaps"]);
@@ -72,7 +74,7 @@ function validateCoverage(coverage) {
 function validatePlan(plan) {
   if (!plan || typeof plan.plan_id !== "string" || !plan.plan_id
       || typeof plan.content_hash !== "string" || !plan.content_hash
-      || !["original", "registered_repair", "alternative", "draft_preview"].includes(plan.role)
+      || !["original", "registered_repair", "alternative", "draft_preview", "accepted"].includes(plan.role)
       || !READY_PLAN_STATES.has(plan.status)
       || !validateCoverage(plan.coverage)
       || !isPointFeatureCollection(plan.stops)
@@ -80,6 +82,26 @@ function validatePlan(plan) {
       || !isLineFeatureCollection(plan.validated_legs)
       || !isPointFeatureCollection(plan.gaps, { nullable: true })) {
     throw new Error("geography_plan_invalid");
+  }
+  const marine = plan.marine_routes;
+  const islands = plan.offshore_stops;
+  if (marine || islands) {
+    const port = plan.stops.features.find(f => f.properties.stop_id === "channel_islands");
+    if (!isLineFeatureCollection(marine) || !isPointFeatureCollection(islands)
+        || marine.features.length !== 1 || islands.features.length !== 1 || !port
+        || ![marine.features[0], islands.features[0]].every(f =>
+          f.properties.plan_id === plan.plan_id && f.properties.content_hash === plan.content_hash
+          && f.properties.source_stop_id === "channel_islands" && f.properties.day === port.properties.day
+          && f.properties.travel_mode === "passenger_ferry" && f.properties.road_validated === false
+          && f.properties.geometry_source === "schematic_port_to_island" && f.properties.round_trip === true
+          && f.properties.schedule_verified === false && f.properties.reservation_verified === false)
+        || JSON.stringify(marine.features[0].geometry.coordinates)
+          !== JSON.stringify([port.geometry.coordinates, [-119.5562112, 34.0493266]])
+        || JSON.stringify(islands.features[0].geometry.coordinates) !== JSON.stringify([-119.5562112, 34.0493266])) {
+      throw new Error("geography_island_excursion_invalid");
+    }
+  } else if (plan.stops.features.some(f => f.properties.stop_id === "channel_islands")) {
+    throw new Error("geography_island_excursion_missing");
   }
   plan.stops.features.forEach((feature) => {
     if (feature.properties.plan_id !== plan.plan_id
@@ -283,6 +305,53 @@ async function loadMapRuntime(config) {
   return style;
 }
 
+// An extract retains complete tiles at its boundary. Outside detailed coverage,
+// use only a coarse zoom whose retained tile rectangles contain the whole view.
+// Road/stop layers keep their original geometry and the readiness check is unchanged.
+export function retainedOverview(bounds, header) {
+  if (!validateBounds(bounds)) throw new Error("basemap_bounds_invalid");
+  const native = [header.minLon, header.minLat, header.maxLon, header.maxLat];
+  if (!native.every(Number.isFinite) || !Number.isInteger(header.maxZoom)) throw new Error("basemap_header_invalid");
+  const dx = Math.max(0.1, bounds[2] - bounds[0]);
+  const dy = Math.max(0.1, bounds[3] - bounds[1]);
+  const padded = [bounds[0]-dx, bounds[1]-dy, bounds[2]+dx, bounds[3]+dy];
+  // A fitted viewport extends beyond the route itself, including at archive edges.
+  if (padded[0] >= native[0] && padded[1] >= native[1]
+      && padded[2] <= native[2] && padded[3] <= native[3]) return null;
+  const tileY = (lat, n) => (1 - Math.asinh(Math.tan(lat * Math.PI / 180)) / Math.PI) / 2 * n;
+  const latitude = (y, n) => Math.atan(Math.sinh(Math.PI * (1 - 2*y/n))) * 180 / Math.PI;
+  for (let zoom = header.maxZoom; zoom >= 0; zoom -= 1) {
+    const n = 2 ** zoom;
+    const west = Math.floor((native[0]+180)/360*n)/n*360-180;
+    const east = (Math.floor((native[2]+180)/360*n)+1)/n*360-180;
+    const north = latitude(Math.floor(tileY(native[3],n)),n);
+    const south = latitude(Math.floor(tileY(native[1],n))+1,n);
+    if (padded[0] >= west && padded[1] >= south && padded[2] <= east && padded[3] <= north) {
+      return {maxzoom:zoom,bounds:[west,south,east,north]};
+    }
+  }
+  throw new Error("basemap_overview_unavailable");
+}
+
+async function styleForRetainedCoverage(styleUrl, baseUrl, bounds) {
+  const response = await fetch(styleUrl, {credentials:"omit"});
+  if (!response.ok) throw new Error("basemap_style_unavailable");
+  const style = await response.json();
+  let overview = false;
+  for (const source of Object.values(style.sources || {})) {
+    if (source.type !== "vector" || !source.url?.startsWith("pmtiles://")) continue;
+    const archiveUrl = localAssetUrl(source.url.slice("pmtiles://".length), baseUrl);
+    const header = await new window.pmtiles.PMTiles(archiveUrl).getHeader();
+    const retained = retainedOverview(bounds, header);
+    if (retained) {
+      source.maxzoom = retained.maxzoom;
+      source.bounds = retained.bounds;
+      overview = true;
+    }
+  }
+  return {style, overview};
+}
+
 function withDisplayRole(feature, displayRole) {
   return {
     ...feature,
@@ -402,7 +471,7 @@ function hideVisualCanvas(map) {
   canvas.setAttribute("tabindex", "-1");
 }
 
-function renderedCanvasCoverage(container, map) {
+function canvasViewportCoverage(container, map) {
   const containerRect = container.getBoundingClientRect();
   const canvasRect = map.getCanvas().getBoundingClientRect();
   if (containerRect.width <= 0 || containerRect.height <= 0) return 0;
@@ -411,6 +480,112 @@ function renderedCanvasCoverage(container, map) {
   const height = Math.max(0, Math.min(containerRect.bottom, canvasRect.bottom)
     - Math.max(containerRect.top, canvasRect.top));
   return (width * height) / (containerRect.width * containerRect.height);
+}
+
+export function invalidateMapReadiness(container) {
+  container.dataset.mapReady = "false";
+  delete container.dataset.mapReadyAt;
+  delete container.dataset.mapTileCoverage;
+  delete container.dataset.mapCoverageMethod;
+  delete container.dataset.renderedMapPlanId;
+  delete container.dataset.renderedPlanContentHash;
+  delete container.dataset.renderedGeometryHash;
+  delete container.dataset.renderedMarkerIds;
+}
+
+function clippedPolygonArea(points, width, height) {
+  let polygon = points;
+  for (const [axis, limit, direction] of [["x", 0, 1], ["x", width, -1], ["y", 0, 1], ["y", height, -1]]) {
+    const output = [];
+    for (let index = 0; index < polygon.length; index += 1) {
+      const from = polygon[index];
+      const to = polygon[(index + 1) % polygon.length];
+      const fromInside = direction * (from[axis] - limit) >= 0;
+      const toInside = direction * (to[axis] - limit) >= 0;
+      if (fromInside) output.push(from);
+      if (fromInside !== toInside) {
+        const fraction = (limit - from[axis]) / (to[axis] - from[axis]);
+        output.push({ x: from.x + fraction * (to.x - from.x), y: from.y + fraction * (to.y - from.y) });
+      }
+    }
+    polygon = output;
+  }
+  return Math.abs(polygon.reduce((area, point, index) => {
+    const next = polygon[(index + 1) % polygon.length];
+    return area + point.x * next.y - next.x * point.y;
+  }, 0)) / 2;
+}
+
+function loadedTileViewportCoverage(map, sourceId) {
+  // This adapter intentionally targets the locally pinned MapLibre tile manager.
+  // Aggregate isSourceLoaded/areTilesLoaded may also be true for failed tiles.
+  // Unknown renderer internals fail closed; they are not a coverage fallback.
+  const manager = map.style?.tileManagers?.[sourceId];
+  if (typeof manager?.getVisibleCoordinates !== "function" || typeof manager?.getTile !== "function"
+      || typeof map.getContainer !== "function" || typeof map.project !== "function"
+      || (map.getProjection?.()?.type || "mercator") !== "mercator") return 0;
+  const { width, height } = map.getContainer().getBoundingClientRect();
+  if (!Number.isFinite(width) || !Number.isFinite(height) || width <= 0 || height <= 0) return 0;
+  const boxes = [];
+  for (const id of manager.getVisibleCoordinates()) {
+    const tile = manager.getTile(id);
+    if (tile?.state !== "loaded" || tile.isRenderable?.() !== true) continue;
+    const { x, y, z } = id.canonical || {};
+    const wrap = id.wrap;
+    const size = 2 ** z;
+    if (![x, y, z, wrap].every(Number.isInteger) || z < 0 || z > 24
+        || x < 0 || y < 0 || x >= size || y >= size) return 0;
+    boxes.push({ left: x / size + wrap, right: (x + 1) / size + wrap, top: y / size, bottom: (y + 1) / size });
+  }
+  // Union the quadtree rectangles in Mercator space first, avoiding double-counted
+  // parent/child fallback tiles. Project disjoint strips, clip, then sum screen area.
+  const edges = [...new Set(boxes.flatMap(box => [box.left, box.right]))].sort((a, b) => a - b);
+  let area = 0;
+  const project = (x, y) => {
+    const point = map.project([x * 360 - 180, Math.atan(Math.sinh(Math.PI * (1 - 2 * y))) * 180 / Math.PI]);
+    if (!Number.isFinite(point.x) || !Number.isFinite(point.y)) throw new Error("map_tile_projection_invalid");
+    return point;
+  };
+  for (let index = 0; index < edges.length - 1; index += 1) {
+    const left = edges[index];
+    const right = edges[index + 1];
+    const intervals = boxes.filter(box => box.left <= left && box.right >= right)
+      .map(box => [box.top, box.bottom]).sort((a, b) => a[0] - b[0]);
+    const merged = [];
+    for (const interval of intervals) {
+      const previous = merged.at(-1);
+      if (previous && interval[0] <= previous[1]) previous[1] = Math.max(previous[1], interval[1]);
+      else merged.push([...interval]);
+    }
+    for (const [top, bottom] of merged) {
+      area += clippedPolygonArea([project(left, top), project(right, top), project(right, bottom), project(left, bottom)], width, height);
+    }
+  }
+  return Math.max(0, Math.min(1, area / (width * height)));
+}
+
+export function mapTileReadiness(map) {
+  if (typeof map?.areTilesLoaded !== "function"
+      || typeof map?.getStyle !== "function"
+      || typeof map?.isSourceLoaded !== "function") {
+    return Object.freeze({ tilesLoaded: false, tileCoverageRatio: 0, tileSourceCount: 0 });
+  }
+  try {
+    const sources = Object.entries(map.getStyle()?.sources || {})
+      .filter(([, source]) => ["vector", "raster", "raster-dem"].includes(source?.type));
+    if (sources.length === 0) {
+      return Object.freeze({ tilesLoaded: false, tileCoverageRatio: 0, tileSourceCount: 0 });
+    }
+    const loadedSourceCount = sources.filter(([sourceId]) => map.isSourceLoaded(sourceId) === true).length;
+    const tileCoverageRatio = Math.min(...sources.map(([sourceId]) => loadedTileViewportCoverage(map, sourceId)));
+    return Object.freeze({
+      tilesLoaded: map.areTilesLoaded() === true && loadedSourceCount === sources.length && tileCoverageRatio >= 0.95,
+      tileCoverageRatio,
+      tileSourceCount: sources.length,
+    });
+  } catch {
+    return Object.freeze({ tilesLoaded: false, tileCoverageRatio: 0, tileSourceCount: 0 });
+  }
 }
 
 function validateDraftWaypoint(waypoint) {
@@ -523,7 +698,7 @@ function addDraftWaypointMarkers({
   });
 }
 
-function addRouteLayers(map, routes, selectedRouteLegId, selectedDay) {
+function addRouteLayers(map, routes, selectedRouteLegId, selectedDay, activePlanId) {
   map.addSource("v2-routes", { type: "geojson", data: routes });
   map.addLayer({
     id: "v2-route-original",
@@ -560,7 +735,7 @@ function addRouteLayers(map, routes, selectedRouteLegId, selectedDay) {
     type: "line",
     source: "v2-routes",
     filter: Number.isInteger(selectedDay)
-      ? ["==", ["get", "day"], selectedDay]
+      ? ["all", ["==", ["get", "day"], selectedDay], ["==", ["get", "plan_id"], activePlanId]]
       : ["==", ["get", "day"], -1],
     layout: { "line-cap": "round", "line-join": "round" },
     paint: { "line-color": "#eb6a27", "line-width": 7, "line-opacity": 0.72 },
@@ -666,23 +841,6 @@ function addPoiCandidateLayers(map, candidates, selectedCandidateId) {
       "circle-opacity": 0.96,
     },
   });
-  map.addLayer({
-    id: "v2-poi-candidate-labels",
-    type: "symbol",
-    source: "v2-poi-candidates",
-    layout: {
-      "text-field": ["get", "name"],
-      "text-size": 11,
-      "text-offset": [0, 1.45],
-      "text-anchor": "top",
-      "text-optional": true,
-    },
-    paint: {
-      "text-color": "#2f285f",
-      "text-halo-color": "#ffffff",
-      "text-halo-width": 1.5,
-    },
-  });
   map.addSource("v2-poi-access-points", { type: "geojson", data: candidates.access });
   map.addLayer({
     id: "v2-poi-access-points",
@@ -771,7 +929,7 @@ function addPointLayers(map, stops, anchors, gaps, exploratoryPin, selectedDay) 
     id: "v2-route-gap-labels",
     type: "symbol",
     source: "v2-route-gaps",
-    layout: { "text-field": "!", "text-size": 13 },
+    layout: { "text-field": "!", "text-font": ["Noto Sans Regular"], "text-size": 13 },
     paint: { "text-color": "#9f2f00" },
   });
   map.addSource("v2-exploratory-pin", { type: "geojson", data: exploratoryPin });
@@ -842,17 +1000,54 @@ function textFallbackFor(plans, gaps) {
   });
 }
 
-function diagnosticsFor(plans, gaps) {
+function canonicalGeometryJson(value) {
+  if (value === null || typeof value !== "object") return JSON.stringify(value);
+  if (Array.isArray(value)) return `[${value.map(canonicalGeometryJson).join(",")}]`;
+  return `{${Object.keys(value).sort().map(
+    (key) => `${JSON.stringify(key)}:${canonicalGeometryJson(value[key])}`,
+  ).join(",")}}`;
+}
+
+export async function routeGeometrySha256(plan) {
+  if (!plan) return null;
+  const semanticLegs = {
+    ...plan.validated_legs,
+    features: plan.validated_legs.features.map((feature) => ({
+      ...feature,
+      properties: Object.fromEntries(
+        Object.entries(feature.properties).filter(([key]) => key !== "role"),
+      ),
+    })),
+  };
+  const geometryPayload = plan.marine_routes?.features.length
+    ? {road: semanticLegs, marine: plan.marine_routes, offshore: plan.offshore_stops} : semanticLegs;
+  const bytes = new TextEncoder().encode(canonicalGeometryJson(geometryPayload));
+  const digest = await crypto.subtle.digest("SHA-256", bytes);
+  return [...new Uint8Array(digest)]
+    .map((value) => value.toString(16).padStart(2, "0"))
+    .join("");
+}
+
+async function diagnosticsFor(plans, gaps, activePlanId) {
   const routes = plans.flatMap((plan) => plan.validated_legs.features);
   const routePath = plans.flatMap((plan) => plan.route_path.features);
+  const activePlan = plans.find((plan) => plan.plan_id === activePlanId);
   return Object.freeze({
+    activePlanId: activePlan?.plan_id || null,
+    activePlanContentHash: activePlan?.content_hash || null,
+    activeGeometryHash: await routeGeometrySha256(activePlan),
+    activeMarkerIds: Object.freeze((activePlan?.stops?.features || [])
+      .map((feature) => feature.properties?.stop_id)
+      .filter(Boolean)
+      .sort()),
     visiblePlanCount: plans.length,
-    stopCount: plans.reduce((count, plan) => count + plan.stops.features.length, 0),
+    stopCount: activePlan?.stops?.features.length || 0,
     routeAnchorCount: routePath.filter(
       (feature) => feature.properties.route_anchor === true && feature.geometry !== null,
     ).length,
     routeLegCount: routes.length,
     roadValidatedLegCount: routes.length,
+    marineSchematicLegCount: activePlan?.marine_routes?.features.length || 0,
     gapCount: gaps.length,
     unresolvedGapCount: gaps.filter((gap) => !gap.marker_available).length,
   });
@@ -861,7 +1056,7 @@ function diagnosticsFor(plans, gaps) {
 function boundsForPlans(plans, fallbackBounds, draftWaypoints = [], draftRoutes = null) {
   const positions = [];
   plans.forEach((plan) => {
-    [plan.route_path, plan.stops, plan.validated_legs].forEach((collection) => {
+    [plan.route_path, plan.stops, plan.validated_legs, plan.marine_routes, plan.offshore_stops].filter(Boolean).forEach((collection) => {
       collection.features.forEach((feature) => {
         const coordinates = feature.geometry?.coordinates;
         if (isPosition(coordinates)) positions.push(coordinates);
@@ -895,7 +1090,7 @@ function boundsForDay(plans, selectedDay) {
   if (!Number.isInteger(selectedDay)) return null;
   const positions = [];
   plans.forEach((plan) => {
-    [plan.route_path, plan.stops, plan.validated_legs].forEach((collection) => {
+    [plan.route_path, plan.stops, plan.validated_legs, plan.marine_routes, plan.offshore_stops].filter(Boolean).forEach((collection) => {
       collection.features
         .filter((feature) => Number(feature.properties?.day) === selectedDay)
         .forEach((feature) => {
@@ -931,6 +1126,7 @@ export function createGeographicMapController({
   onRouteLegSelect = () => {},
   onStopSelect = () => {},
   onCandidateSelect = () => {},
+  onInterestSelect = () => {},
   onGapSelect = () => {},
   onEmptyMapClick = () => {},
   onCustomWaypointSelect = () => {},
@@ -977,15 +1173,42 @@ export function createGeographicMapController({
     });
   }
 
-  function observeMapSize(nextMap, renderGeneration) {
+  function observeMapSize(nextMap, renderGeneration, validateReady) {
+    let revalidationPending = false;
+    let resizeSequence = 0;
+    let observedWidth = null;
+    let observedHeight = null;
     const resize = () => {
       if (renderGeneration !== generation || map !== nextMap || !container.isConnected) return;
+      const rect = container.getBoundingClientRect();
+      const sizeChanged = observedWidth === null || observedHeight === null
+        || Math.abs(rect.width - observedWidth) >= 0.5
+        || Math.abs(rect.height - observedHeight) >= 0.5;
+      observedWidth = rect.width;
+      observedHeight = rect.height;
+      if (!sizeChanged) return;
+      const wasReady = container.dataset.mapReady === "true";
+      revalidationPending = revalidationPending || wasReady;
+      if (wasReady) {
+        invalidateMapReadiness(container);
+        emitStatus({ state: "loading", code: "map_resize_revalidation_pending" });
+      }
+      resizeSequence += 1;
+      const scheduledSequence = resizeSequence;
       if (resizeFrame !== null) cancelAnimationFrame(resizeFrame);
       resizeFrame = requestAnimationFrame(() => {
         resizeFrame = null;
-        if (renderGeneration === generation && map === nextMap && container.isConnected) {
-          nextMap.resize();
+        if (renderGeneration !== generation || map !== nextMap || !container.isConnected) return;
+        if (revalidationPending) {
+          nextMap.once("idle", () => {
+            if (renderGeneration !== generation || map !== nextMap
+                || scheduledSequence !== resizeSequence) return;
+            revalidationPending = false;
+            validateReady();
+          });
         }
+        nextMap.resize();
+        nextMap.triggerRepaint?.();
       });
     };
     resizeObserver = new ResizeObserver(resize);
@@ -1007,19 +1230,33 @@ export function createGeographicMapController({
     poiCandidates = [],
     selectedCandidateId = null,
     showPoiCandidates = false,
+    interestRegions = null,
+    interestMassLevel = 0.8,
+    selectedInterestId = null,
+    initialCamera = null,
   }) {
     disposeMap();
     const renderGeneration = generation;
     try {
+      emitStatus({ state: "loading", code: "map_render_revalidation_pending" });
       if (!["select", "edit"].includes(interactionMode)) {
         throw new Error("map_interaction_mode_invalid");
+      }
+      if (initialCamera !== null && (!isPosition(initialCamera.center)
+          || ![initialCamera.zoom, initialCamera.bearing, initialCamera.pitch].every(isFiniteNumber))) {
+        throw new Error("map_camera_invalid");
       }
       const selected = selectVisiblePlans(geography, activePlanId);
       const originalPlanId = selected.original.plan_id;
       const routes = collectFeatureCollection(
         selected.plans, "validated_legs", originalPlanId, activePlanId,
       );
-      const stops = collectFeatureCollection(selected.plans, "stops", originalPlanId, activePlanId);
+      const stops = collectFeatureCollection(
+        selected.plans.filter(plan => plan.plan_id === activePlanId), "stops", originalPlanId, activePlanId,
+      );
+      const activePlan = selected.plans.find(p => p.plan_id === activePlanId);
+      const marineRoutes = activePlan?.marine_routes || {type:"FeatureCollection",features:[]};
+      const offshoreStops = activePlan?.offshore_stops || {type:"FeatureCollection",features:[]};
       const anchors = deriveRouteAnchors(selected.plans, originalPlanId, activePlanId);
       const resolvedGaps = resolveGapMarkers(selected.plans, originalPlanId, activePlanId);
       const provisionalPin = exploratoryPinFeature(exploratoryPin);
@@ -1027,35 +1264,129 @@ export function createGeographicMapController({
       const candidatePoints = poiCandidateFeatureCollections(poiCandidates, showPoiCandidates);
       draftWaypoints.forEach(validateDraftWaypoint);
       const textualFallback = textFallbackFor(selected.plans, resolvedGaps.descriptions);
-      lastDiagnostics = diagnosticsFor(selected.plans, resolvedGaps.descriptions);
+      const renderDiagnostics = await diagnosticsFor(selected.plans, resolvedGaps.descriptions, activePlanId);
+      if (renderGeneration !== generation || !container.isConnected) return null;
+      lastDiagnostics = renderDiagnostics;
       onTextFallback({ pane_id: paneId, ...textualFallback });
 
       const style = await loadMapRuntime(mapConfig);
       if (renderGeneration !== generation || !container.isConnected
           || !(await waitForVisibleContainer(renderGeneration))) return null;
-      const fittedBounds = boundsForDay(selected.plans, selectedDay) || boundsForPlans(
+      const currentInterest = interestRegions?.exploration_plan_id === activePlanId
+        && interestRegions.exploration_plan_content_hash === activePlan?.content_hash
+        && interestRegions.context?.day === selectedDay ? interestRegions : null;
+      const interestPositions = currentInterest ? [
+        ...currentInterest.poi_predictions.map(point => [point.display_coordinate.longitude, point.display_coordinate.latitude]),
+        ...currentInterest.required_points.filter(point => point.coordinate).map(point => point.coordinate),
+        ...currentInterest.surface.regions_geojson.features.flatMap(feature => feature.geometry.coordinates.flat(2)),
+      ] : [];
+      const interestBounds = interestPositions.length ? [
+        Math.min(...interestPositions.map(point => point[0])), Math.min(...interestPositions.map(point => point[1])),
+        Math.max(...interestPositions.map(point => point[0])), Math.max(...interestPositions.map(point => point[1])),
+      ] : null;
+      const focusedInterest = currentInterest?.poi_predictions.find(point => point.place_id === selectedInterestId);
+      const focusCoordinate = focusedInterest
+        ? [focusedInterest.display_coordinate.longitude, focusedInterest.display_coordinate.latitude]
+        : currentInterest?.required_points.find(point => point.place_id === selectedInterestId)?.coordinate;
+      const focusBounds = focusCoordinate ? [focusCoordinate[0] - 0.015, focusCoordinate[1] - 0.01,
+        focusCoordinate[0] + 0.015, focusCoordinate[1] + 0.01] : null;
+      const fittedBounds = focusBounds || (validateBounds(interestBounds) ? interestBounds : null)
+        || boundsForDay(selected.plans, selectedDay) || boundsForPlans(
         selected.plans, selected.fallbackBounds, draftWaypoints, checkedDraftRoutes,
       );
-      container.dataset.mapReady = "false";
+      const basemap = await styleForRetainedCoverage(style, mapConfig.base_url, fittedBounds);
+      if (renderGeneration !== generation || !container.isConnected) return null;
+      container.dataset.basemapDetail = basemap.overview ? "overview" : "detailed";
+      // A fixed 54px margin consumes over half a narrow Compare pane and can
+      // zoom beyond the local archive. Keep useful margins proportional to it.
+      const fitBoundsOptions = {
+        padding: Math.min(54, Math.min(container.clientWidth, container.clientHeight) / 8),
+        maxZoom: 13,
+        duration: 0,
+      };
+      invalidateMapReadiness(container);
       const nextMap = new window.maplibregl.Map({
         container,
-        style,
-        bounds: fittedBounds,
-        fitBoundsOptions: { padding: 54, maxZoom: 13, duration: 0 },
+        style: basemap.style,
+        ...(initialCamera || { bounds: fittedBounds, fitBoundsOptions }),
         attributionControl: false,
         cooperativeGestures: true,
+        maxPitch: 0,
       });
       map = nextMap;
-      const removeWindowResize = observeMapSize(nextMap, renderGeneration);
+      nextMap.getCanvasContainer().addEventListener("pointerdown", (event) => {
+        if (event.pointerType === "mouse" && event.button === 0
+            && event.target instanceof Element
+            && event.target.closest(".maplibregl-canvas, .draft-waypoint-marker")) {
+          event.target.setPointerCapture(event.pointerId);
+        }
+      });
+      let webglContextLost = false;
+      const validateReady = () => {
+        if (renderGeneration !== generation || map !== nextMap || webglContextLost) return false;
+        const canvasViewportRatio = canvasViewportCoverage(container, nextMap);
+        const readiness = mapTileReadiness(nextMap);
+        if (!readiness.tilesLoaded || readiness.tileCoverageRatio < 0.95
+            || canvasViewportRatio < 0.95) {
+          invalidateMapReadiness(container);
+          emitStatus({
+            state: "failed",
+            code: "map_tile_coverage_incomplete",
+            textual_fallback: true,
+            canvasViewportRatio,
+            ...readiness,
+          });
+          return false;
+        }
+        if (container.dataset.mapReady === "true"
+            && container.dataset.renderedMapPlanId === renderDiagnostics.activePlanId
+            && container.dataset.renderedGeometryHash === renderDiagnostics.activeGeometryHash
+            && Number(container.dataset.mapTileCoverage) === readiness.tileCoverageRatio) return true;
+        const mapReadyAt = new Date().toISOString();
+        container.dataset.mapReady = "true";
+        container.dataset.mapReadyAt = mapReadyAt;
+        container.dataset.mapTileCoverage = String(readiness.tileCoverageRatio);
+        container.dataset.mapCoverageMethod = "loaded_tile_projected_union_area_v1";
+        container.dataset.renderedMapPlanId = renderDiagnostics.activePlanId;
+        container.dataset.renderedPlanContentHash = renderDiagnostics.activePlanContentHash;
+        container.dataset.renderedGeometryHash = renderDiagnostics.activeGeometryHash;
+        container.dataset.renderedMarkerIds = JSON.stringify(renderDiagnostics.activeMarkerIds);
+        emitStatus({
+          state: renderDiagnostics.gapCount > 0 ? "ready_with_gaps" : "ready",
+          code: renderDiagnostics.gapCount > 0
+            ? "geographic_map_v2_has_route_gaps"
+            : "geographic_map_v2_ready",
+          gaps: resolvedGaps.descriptions,
+          basemapOverviewOnly: basemap.overview,
+          canvasViewportRatio,
+          mapReadyAt,
+          coverageMethod: "loaded_tile_projected_union_area_v1",
+          ...readiness,
+          ...renderDiagnostics,
+        });
+        return true;
+      };
+      const removeWindowResize = observeMapSize(nextMap, renderGeneration, validateReady);
       hideVisualCanvas(nextMap);
       nextMap.once("load", () => {
         if (renderGeneration !== generation || map !== nextMap) return;
-        addRouteLayers(nextMap, routes, selectedRouteLegId, selectedDay);
+        addInterestAreaLayers(nextMap, currentInterest, interestMassLevel);
+        addRouteLayers(nextMap, routes, selectedRouteLegId, selectedDay, activePlanId);
         addDraftRouteLayers(nextMap, checkedDraftRoutes);
         addPointLayers(
           nextMap, stops, anchors, resolvedGaps.markers, provisionalPin, selectedDay,
         );
+        nextMap.addSource("v2-marine-routes", {type:"geojson",data:marineRoutes});
+        nextMap.addLayer({id:"v2-marine-routes",type:"line",source:"v2-marine-routes",
+          paint:{"line-color":"#7445b0","line-width":4,"line-dasharray":[2,2]}});
+        nextMap.addSource("v2-offshore-stops", {type:"geojson",data:offshoreStops});
+        nextMap.addLayer({id:"v2-offshore-stops",type:"circle",source:"v2-offshore-stops",
+          paint:{"circle-radius":8,"circle-color":"#ffffff","circle-stroke-color":"#7445b0","circle-stroke-width":3}});
+        nextMap.addLayer({id:"v2-offshore-labels",type:"symbol",source:"v2-offshore-stops",
+          layout:{"text-field":"Scorpion Anchorage · Channel Islands","text-font":["Noto Sans Regular"],"text-size":12,"text-anchor":"top","text-offset":[0,1],"text-max-width":18},
+          paint:{"text-color":"#553078","text-halo-color":"#ffffff","text-halo-width":2}});
         addPoiCandidateLayers(nextMap, candidatePoints, selectedCandidateId);
+        addInterestPointLayers(nextMap, currentInterest, selectedInterestId, onInterestSelect);
         customMarkers = addDraftWaypointMarkers({
           map: nextMap,
           waypoints: draftWaypoints,
@@ -1064,16 +1395,21 @@ export function createGeographicMapController({
           onCustomWaypointSelect,
           onCustomWaypointDrag,
         });
+        const interestHitLayers = currentInterest ? ["interest-pois", "interest-required", "interest-poi-labels", "interest-selected-label"]
+          .filter(id => nextMap.getLayer(id)) : [];
+        const hitsInterestPoint = event => currentInterest && nextMap.queryRenderedFeatures(event.point, {
+          layers: interestHitLayers,
+        }).length > 0;
         ["v2-route-active", "v2-route-original"].forEach((layerId) => {
-          nextMap.on("click", layerId, (event) => exactRouteLegSelection(event, onRouteLegSelect));
+          nextMap.on("click", layerId, (event) => { if (!hitsInterestPoint(event)) exactRouteLegSelection(event, onRouteLegSelect); });
         });
         ["v2-stops-active", "v2-stops-original"].forEach((layerId) => {
-          nextMap.on("click", layerId, (event) => exactStopSelection(event, onStopSelect));
+          nextMap.on("click", layerId, (event) => { if (!hitsInterestPoint(event)) exactStopSelection(event, onStopSelect); });
         });
-        nextMap.on("click", "v2-route-gap-markers", (event) => exactGapSelection(event, onGapSelect));
-        ["v2-poi-candidates", "v2-poi-candidate-labels", "v2-poi-access-points"]
+        nextMap.on("click", "v2-route-gap-markers", (event) => { if (!hitsInterestPoint(event)) exactGapSelection(event, onGapSelect); });
+        ["v2-poi-candidates", "v2-poi-access-points"]
           .forEach((layerId) => nextMap.on(
-            "click", layerId, (event) => exactCandidateSelection(event, onCandidateSelect),
+            "click", layerId, (event) => { if (!hitsInterestPoint(event)) exactCandidateSelection(event, onCandidateSelect); },
           ));
         nextMap.on("click", (event) => {
           if (interactionMode !== "edit") return;
@@ -1091,8 +1427,8 @@ export function createGeographicMapController({
               "v2-route-gap-markers",
               "v2-exploratory-pin",
               "v2-poi-candidates",
-              "v2-poi-candidate-labels",
               "v2-poi-access-points",
+              ...interestHitLayers,
             ],
           });
           if (occupied.length > 0) return;
@@ -1107,48 +1443,37 @@ export function createGeographicMapController({
             suppressNextCameraEvent = false;
             return;
           }
-          const center = nextMap.getCenter();
-          const camera = {
-            center: [center.lng, center.lat],
-            zoom: nextMap.getZoom(),
-            bearing: nextMap.getBearing(),
-            pitch: nextMap.getPitch(),
-          };
-          cameraListeners.forEach((listener) => listener(camera));
+          const view = camera();
+          cameraListeners.forEach((listener) => listener(view));
         });
         hideVisualCanvas(nextMap);
-        nextMap.once("idle", () => {
+        nextMap.on("movestart", () => {
           if (renderGeneration !== generation || map !== nextMap) return;
-          nextMap.resize();
-          const tileCoverageRatio = renderedCanvasCoverage(container, nextMap);
-          const tilesLoaded = typeof nextMap.areTilesLoaded !== "function"
-            || nextMap.areTilesLoaded();
-          if (!tilesLoaded || tileCoverageRatio < 0.95) {
-            emitStatus({
-              state: "failed",
-              code: "map_tile_coverage_incomplete",
-              textual_fallback: true,
-              tileCoverageRatio,
-              tilesLoaded,
-            });
-            return;
-          }
-          container.dataset.mapReady = "true";
-          emitStatus({
-            state: lastDiagnostics.gapCount > 0 ? "ready_with_gaps" : "ready",
-            code: lastDiagnostics.gapCount > 0
-              ? "geographic_map_v2_has_route_gaps"
-              : "geographic_map_v2_ready",
-            gaps: resolvedGaps.descriptions,
-            tileCoverageRatio,
-            tilesLoaded,
-            ...lastDiagnostics,
-          });
+          invalidateMapReadiness(container);
+          emitStatus({ state: "loading", code: "map_camera_revalidation_pending" });
+        });
+        nextMap.on("idle", () => {
+          if (renderGeneration !== generation || map !== nextMap) return;
+          validateReady();
         });
         nextMap.resize();
-        nextMap.fitBounds(fittedBounds, { padding: 54, maxZoom: 13, duration: 0 });
+        if (!initialCamera) nextMap.fitBounds(fittedBounds, fitBoundsOptions);
+      });
+      nextMap.on("webglcontextlost", () => {
+        if (renderGeneration !== generation || map !== nextMap) return;
+        webglContextLost = true;
+        invalidateMapReadiness(container);
+        emitStatus({ state: "failed", code: "map_webgl_context_lost", textual_fallback: true });
+      });
+      nextMap.on("webglcontextrestored", () => {
+        if (renderGeneration !== generation || map !== nextMap) return;
+        webglContextLost = false;
+        invalidateMapReadiness(container);
+        emitStatus({ state: "loading", code: "map_webgl_context_restoring" });
       });
       nextMap.on("error", () => {
+        if (renderGeneration !== generation || map !== nextMap) return;
+        invalidateMapReadiness(container);
         emitStatus({ state: "failed", code: "map_render_failed", textual_fallback: true });
       });
       nextMap.once("remove", removeWindowResize);
@@ -1167,6 +1492,13 @@ export function createGeographicMapController({
 
   function diagnostics() {
     return lastDiagnostics;
+  }
+
+  function camera() {
+    if (!map) return null;
+    const center = map.getCenter();
+    return { center: [center.lng, center.lat], zoom: map.getZoom(),
+      bearing: map.getBearing(), pitch: map.getPitch() };
   }
 
   function subscribeCamera(listener) {
@@ -1201,7 +1533,7 @@ export function createGeographicMapController({
     resizeObserver = null;
     if (resizeFrame !== null) cancelAnimationFrame(resizeFrame);
     resizeFrame = null;
-    delete container.dataset.mapReady;
+    invalidateMapReadiness(container);
     customMarkers.forEach((marker) => marker.remove());
     customMarkers = [];
     if (map) {
@@ -1219,6 +1551,7 @@ export function createGeographicMapController({
   return Object.freeze({
     render,
     diagnostics,
+    camera,
     subscribeCamera,
     applySynchronizedCamera,
     dispose,

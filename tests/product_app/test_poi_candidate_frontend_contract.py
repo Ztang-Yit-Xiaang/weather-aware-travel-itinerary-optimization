@@ -201,9 +201,9 @@ def test_actual_api_payload_normalizer_rejects_cross_field_forgery(tmp_path: Pat
             headers=headers,
             params={
                 "expected_revision": session["revision"],
-                "day": 7,
-                "route_leg_id": "leg_hotel_milo_santa_barbara_golden_gate_bridge",
-                "replacement_target_id": "golden_gate_bridge",
+                "day": 5,
+                "route_leg_id": "leg_comfort_inn_sequoia_kings_canyon_bixby_creek_bridge_viewpoint",
+                "replacement_target_id": "bixby_creek_bridge_viewpoint",
                 "limit": 10,
             },
         )

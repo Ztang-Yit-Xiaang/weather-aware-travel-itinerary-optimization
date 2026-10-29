@@ -34,7 +34,7 @@ def test_reorder_editor_is_same_day_human_position_and_truthful_scope() -> None:
     assert 'capability.latest_departure_semantics !== "departure_after_visit"' in source
     assert "Evaluated edit evidence" in source
     assert "stop-by-stop schedule accounting is Unavailable" in source
-    assert "The accepted parent is unchanged; acceptance remains disabled until W5" in source
+    assert "Accepting it requires explicit confirmation and a fresh server-side revalidation" in source
     assert "draft_evaluated_operation_combination_unsupported" in source
     assert "Preview blocked:" in source
     assert "blockingCodes.length === 0" in source
@@ -45,7 +45,7 @@ def test_reorder_editor_is_same_day_human_position_and_truthful_scope() -> None:
 
 def test_preview_response_is_normalized_before_session_state_changes() -> None:
     source = APP.read_text(encoding="utf-8")
-    preview = source[source.index("async function previewDraft()") :]
+    preview = source[source.index("async function previewDraft(") :]
 
     assert "await normalizeEvaluatedPreviewResponse(payload, expected)" in preview
     assert "if (!normalized)" in preview
@@ -188,6 +188,7 @@ def test_actual_api_reorder_preview_passes_js_and_forged_variants_fail(
                 "draft_capabilities": workspace["draft_capabilities"],
                 "map_edit_capabilities": workspace["map_edit_capabilities"],
                 "timeline": workspace["timeline"],
+                "geography": workspace["geography"],
                 "before_session": before_session,
                 "impact": impact,
                 "preview": preview_response.json(),
@@ -239,8 +240,9 @@ def test_actual_api_reorder_preview_passes_js_and_forged_variants_fail(
     assert "evaluated reorder frontend contract and forgeries passed" in completed.stdout
 
 
-def test_asset_token_is_bumped_for_evaluated_reorder_contract() -> None:
+def test_assets_are_build_bound_for_evaluated_reorder_contract() -> None:
     markup = INDEX.read_text(encoding="utf-8")
 
-    assert "/static/css/app.css?v=20260810-stability5" in markup
-    assert "/static/js/app.js?v=20260810-stability5" in markup
+    assert '/static/css/app.css?v=__PRODUCT_BUILD_ID__' in markup
+    assert '/static/js/app.js?v=__PRODUCT_BUILD_ID__' in markup
+    assert '<meta name="product-build-id" content="__PRODUCT_BUILD_ID__">' in markup

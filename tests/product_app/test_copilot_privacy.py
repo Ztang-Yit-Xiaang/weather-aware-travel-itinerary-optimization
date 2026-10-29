@@ -26,7 +26,9 @@ from itinerary_system.product_app.openai_copilot import (
     OpenAICopilotAdapter,
     OpenAIHighlightsSchemaV1,
     OpenAIIntentSchemaV1,
+    OpenAIIntentSchemaV2,
     OpenAIInterpretationSchemaV1,
+    OpenAIInterpretationSchemaV2,
 )
 from itinerary_system.product_app.runtime import ProductRuntime
 
@@ -53,6 +55,18 @@ CONTEXT_FIELDS = {
     "allowed_days",
     "allowed_segment_ids",
     "allowed_alternative_ids",
+    "known_places",
+    "accepted_plan_content_hash",
+    "capabilities",
+    "conversation_memory",
+}
+KNOWN_PLACE_FIELDS = {
+    "place_id",
+    "name",
+    "aliases",
+    "categories",
+    "region_id",
+    "route_status",
 }
 
 
@@ -107,26 +121,29 @@ def _section(prompt_input: str, name: str) -> Any:
 
 
 class _FakeResponses:
-    def __init__(self) -> None:
+    def __init__(self, *, legacy_schema: bool = False) -> None:
         self.calls: list[dict[str, Any]] = []
+        self.outputs: list[dict[str, Any]] = []
+        self.legacy_schema = legacy_schema
 
     async def parse(self, **kwargs: Any) -> Any:
         self.calls.append(kwargs)
-        return SimpleNamespace(
-            output_parsed=OpenAIInterpretationSchemaV1(
-                schema_version="copilot-interpretation-v1",
-                state="proposal_ready",
-                assistant_message="Review this typed request before adding it to the draft.",
-                intents=[OpenAIIntentSchemaV1(type="review_registered_repair")],
-                highlights=OpenAIHighlightsSchemaV1(),
-            ),
-            output=[],
+        schema = OpenAIInterpretationSchemaV1 if self.legacy_schema else OpenAIInterpretationSchemaV2
+        intent_schema = OpenAIIntentSchemaV1 if self.legacy_schema else OpenAIIntentSchemaV2
+        parsed = schema(
+            schema_version="copilot-interpretation-v1" if self.legacy_schema else "copilot-interpretation-v2",
+            state="proposal_ready",
+            assistant_message="Review this typed request before adding it to the draft.",
+            intents=[intent_schema(type="review_registered_repair")],
+            highlights=OpenAIHighlightsSchemaV1(),
         )
+        self.outputs.append(parsed.model_dump(mode="json"))
+        return SimpleNamespace(output_parsed=parsed, output=[])
 
 
 class _FakeOpenAIClient:
-    def __init__(self) -> None:
-        self.responses = _FakeResponses()
+    def __init__(self, *, legacy_schema: bool = False) -> None:
+        self.responses = _FakeResponses(legacy_schema=legacy_schema)
 
 
 class _ProviderFailure(RuntimeError):
@@ -192,14 +209,15 @@ def test_deterministic_adapter_never_constructs_openai_or_uses_network(
     assert response.json()["turn"]["provider"] == "deterministic"
 
 
-def test_openai_outbound_payload_uses_only_public_context_and_bounded_history(api) -> None:
+@pytest.mark.parametrize("legacy_schema", [False, True], ids=["current_schema_accepted", "legacy_schema_rejected"])
+def test_openai_outbound_payload_uses_only_public_context_and_bounded_history(api, tmp_path: Path, legacy_schema: bool) -> None:
     client, service, state_root = api
     session, headers = _session(client)
     for index in range(7):
         response = _send(client, session, headers, f"Review repair option {index}")
         assert response.status_code == 200
 
-    fake_client = _FakeOpenAIClient()
+    fake_client = _FakeOpenAIClient(legacy_schema=legacy_schema)
     service.copilot = OpenAICopilotAdapter(
         model="gpt-5.6-terra",
         api_key="OUTBOUND_API_KEY_SENTINEL",
@@ -207,12 +225,31 @@ def test_openai_outbound_payload_uses_only_public_context_and_bounded_history(ap
     )
     response = _send(client, session, headers, "Review the registered repair")
 
-    assert response.status_code == 200
+    (tmp_path / "privacy_exact_io.json").write_text(json.dumps({
+        "scope": "test_fake_sdk_only_no_actual_openai_calls",
+        "actual_provider_calls": 0,
+        "fake_sdk_calls": fake_client.responses.calls,
+        "fake_sdk_outputs": fake_client.responses.outputs,
+        "api_output_status": response.status_code,
+        "api_output_body": response.json(),
+    }, default=str, indent=2), encoding="utf-8")
+    assert response.status_code == (502 if legacy_schema else 200), response.text
     assert len(fake_client.responses.calls) == 1
     outbound = fake_client.responses.calls[0]
+    assert outbound["text_format"] is OpenAIInterpretationSchemaV2
+    if legacy_schema:
+        assert response.json() == {"detail": "openai_invalid_structured_output"}
+    else:
+        assert response.json()["turn"]["interpretation"]["schema_version"] == "copilot-interpretation-v2"
     context = _section(outbound["input"], "workspace_context")
     history = _section(outbound["input"], "recent_conversation")
     assert set(context) == CONTEXT_FIELDS
+    assert 1 <= len(context["known_places"]) <= 64
+    assert all(set(place) == KNOWN_PLACE_FIELDS for place in context["known_places"])
+    assert all(
+        "coordinate" not in place and "source_refs" not in place and "url" not in place
+        for place in context["known_places"]
+    )
     assert len(history) == 12
     assert sum(len(item["content"]) for item in history) <= 12_000
     assert all(set(item) == {"content", "role"} for item in history)
@@ -297,7 +334,7 @@ def test_failed_provider_turn_persists_only_stable_safe_failure(api) -> None:
     assert "provider-payload.json" not in json.dumps(turn)
 
 
-def test_stale_post_provider_revision_appends_no_turn(api) -> None:
+def test_stale_post_provider_revision_preserves_completed_turn_without_activation(api) -> None:
     client, service, _ = api
     session, headers = _session(client)
     service.copilot = _RevisionChangingAdapter(service)
@@ -311,7 +348,13 @@ def test_stale_post_provider_revision_appends_no_turn(api) -> None:
     assert response.status_code == 409
     assert response.json() == {"detail": "stale_session_revision"}
     assert conversation.status_code == 200
-    assert conversation.json()["conversation"]["turns"] == []
+    turns = conversation.json()["conversation"]["turns"]
+    assert len(turns) == 1
+    assert turns[0]["state"] == "completed"
+    assert turns[0]["context_revision"] == 0
+    assert turns[0]["user_message"] == "Review the current repair"
+    assert turns[0]["interpretation"] is not None
+    assert service.workspace.get(session["session_id"]).draft == []
 
 
 def test_w5_decisions_remain_fail_closed_and_do_not_change_workspace(api) -> None:
@@ -325,10 +368,14 @@ def test_w5_decisions_remain_fail_closed_and_do_not_change_workspace(api) -> Non
         response = client.post(
             f"/api/sessions/{session['session_id']}/{action}",
             headers=headers,
-            json={"expected_revision": session["revision"]},
+            json={
+                "expected_revision": session["revision"],
+                "confirmation": "",
+                "idempotency_key": f"{action}-guard-0001",
+            },
         )
-        assert response.status_code == 409
-        assert response.json() == {"detail": "acceptance_not_enabled_until_w5"}
+        assert response.status_code == 422
+        assert response.json() == {"detail": "acceptance_confirmation_required"}
         assert response.headers["cache-control"] == "no-store"
 
     after = client.get(f"/api/sessions/{session['session_id']}", headers=headers).json()[

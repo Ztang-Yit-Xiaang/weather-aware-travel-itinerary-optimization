@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import subprocess
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -15,7 +16,7 @@ APP_CSS = STATIC / "css" / "app.css"
 def test_app_delegates_to_the_focused_geographic_renderer() -> None:
     source = APP_JS.read_text(encoding="utf-8")
 
-    assert '} from "./map.js?v=20260810-stability5";' in source
+    assert '} from "./map.js?v=20260817-e2e3";' in source
     assert "renderGeographicMap" in source
     assert "workspace.geography" in source
     assert 'id="geographic-map"' in source
@@ -100,14 +101,16 @@ def test_renderer_rejects_non_loopback_assets_and_preserves_text_fallback() -> N
     assert 'throw new Error("map_asset_url_not_loopback")' in renderer
     assert 'canvas.setAttribute("tabindex", "-1")' in renderer
     assert "Text route description" in app
-    assert "state.workspace.map_alternative" in app
+    assert 'class="text-route-summary" data-plan-id=' in app
+    assert "const dayRouteDescription = routeSummaryForPlan(displayed);" in app
 
 
 def test_compare_selection_preserves_context_and_drives_alternative_evidence() -> None:
     source = APP_JS.read_text(encoding="utf-8")
     compare = COMPARE_JS.read_text(encoding="utf-8")
 
-    assert "onSelectAlternative: (planId) => selectContext({ selected_alternative_id: planId })" in source
+    assert "onSelectAlternative: context" in source
+    assert ": (planId) => selectContext({ selected_alternative_id: planId })" in source
     assert 'Object.hasOwn(patch, "selected_stop_id")' in source
     assert 'Object.hasOwn(patch, "selected_alternative_id")' in source
     assert "workspace?.alternative_evidence?.[selectedId]" in compare
@@ -123,7 +126,7 @@ def test_w3_exposes_every_stop_and_enables_typed_draft_controls() -> None:
     index = INDEX.read_text(encoding="utf-8")
 
     assert "Original only; removed by" in app
-    assert 'selectedAlternative ? "selected alternative" : "registered repair"' in app
+    assert 'selectedAlternative ? "selected preview" : "active itinerary"' in app
     assert 'id="map-edit-button" type="button"' in index
     assert 'id="map-edit-button" type="button" disabled' not in index
     assert '<fieldset class="w3-controls">' in index
@@ -138,7 +141,9 @@ def test_w3_exposes_every_stop_and_enables_typed_draft_controls() -> None:
     assert "The selected marker belongs to a repair preview" in app
     assert "Drafts edit the accepted plan" in index
     assert "pendingSelection = request" in app
-    assert "if (pendingSelection) await pendingSelection" in app
+    assert "if (pendingSelection && !(await pendingSelection))" in app
+    assert "Selection could not be updated. No draft was added." in app
+    assert "Selection could not be updated. No preview was sent." in app
     assert "selectedCandidate.replaces_stop_id !== selectedStopId" in app
     assert "selectedCandidateId = null" in app
     copilot = (STATIC / "js" / "copilot.js").read_text(encoding="utf-8")
@@ -160,6 +165,18 @@ def test_map_candidate_and_full_selection_context_are_synchronized_to_copilot() 
     assert "Alternative:" in copilot
 
 
+def test_custom_waypoint_exposes_safe_latest_draft_removal() -> None:
+    source = APP_JS.read_text(encoding="utf-8")
+
+    assert 'id="remove-custom-waypoint"' in source
+    assert "Remove this draft waypoint" in source
+    assert "Undo newer draft changes before removing this waypoint" in source
+    assert 'latestDraft?.target === waypoint.waypoint_id' in source
+    assert 'window.confirm("Remove this latest staged waypoint?' in source
+    assert "void undoDraft();" in source
+    assert ">Undo latest draft</button>" in source
+
+
 def test_mobile_toolbar_keeps_visible_labels_and_baseline_is_non_mutating() -> None:
     css = APP_CSS.read_text(encoding="utf-8")
     compare = (STATIC / "js" / "compare.js").read_text(encoding="utf-8")
@@ -167,7 +184,7 @@ def test_mobile_toolbar_keeps_visible_labels_and_baseline_is_non_mutating() -> N
     assert ".toolbar-button span { display: none; }" not in css
     assert "html::-webkit-scrollbar { display: none; }" in css
     assert ".topbar { gap: 8px; }" in css
-    assert ".textual-map-alternative[open] { bottom: 112px; max-height: min(42dvh, 300px); overflow: auto; }" in css
+    assert ".textual-map-alternative[open] { max-height: min(42dvh, 300px); overflow: auto; }" in css
     assert 'status-pill">Current trip' in compare
     assert "Baseline map shown" in compare
     assert "accept-repair" not in compare
@@ -181,17 +198,35 @@ def test_control_layout_preserves_comfort_and_map_clearance_across_breakpoints()
     assert ".toolbar-button { min-width: 44px; min-height: 44px; flex: 0 0 auto;" in css
     assert ".main-workspace { min-width: 0; min-height: 0; overflow: hidden;" in css
     assert ".draft-bar { position: absolute; z-index: 6; left: 16px; right: 16px;" in css
+    assert ".poi-candidate-drawer { position: absolute; z-index: 9;" in css
     assert "#geographic-map.geographic-map { position: absolute; inset: 0; width: 100%; height: 100%;" in css
-    assert ".map-context-card { left: 12px; right: 12px; top: auto; bottom: 112px;" in css
-    assert ".map-legend { left: 10px; right: 10px; bottom: 108px;" in css
+    assert "gap: 8px; pointer-events: none; }" in css
+    assert ".map-accessibility-panel > * { pointer-events: auto; }" in css
+    source = APP_JS.read_text(encoding="utf-8")
+    interaction_mode = source.split("function setMapInteractionMode", 1)[1].split(
+        "function selectMapStop", 1
+    )[0]
+    route_leg = source.split("function selectRouteLeg", 1)[1].split(
+        "function selectCustomWaypoint", 1
+    )[0]
+    assert 'if (mode === "edit") {' in interaction_mode
+    assert 'if (textRoute) textRoute.open = false;' in interaction_mode
+    assert 'if (textRoute) textRoute.open = false;' in route_leg
+    custom_waypoint = source.split("function selectCustomWaypoint", 1)[1].split(
+        "function beginCustomWaypointRelocation", 1
+    )[0]
+    assert 'if (textRoute) textRoute.open = false;' in custom_waypoint
+    assert ".map-context-card { left: 12px; right: 12px; top: auto; bottom: 195px;" in css
+    assert ".map-legend { left: 10px; right: 10px; bottom: 152px;" in css
     assert ".action-stack .primary:disabled { opacity: 1;" in css
     assert ".itinerary-rail { display: none; }" in css
     assert ".repair-panel { position: static; width: auto; transform: none;" in css
     assert ".workspace-toolbar { justify-content: flex-start; scroll-snap-type: inline proximity; }" in css
     assert ".workspace-toolbar::-webkit-scrollbar { display: block; height: 4px; }" in css
     assert ".map-stage { min-height: max(430px, calc(100dvh - 250px));" in css
-    assert ".textual-map-alternative[open] { bottom: 112px;" in css
-    assert ".draft-bar #inline-preview { grid-column: 3; grid-row: 1; }" in css
+    assert ".map-accessibility-panel { left: 12px; right: 12px; top: 66px;" in css
+    assert ".draft-bar #inline-preview { grid-column: 2; grid-row: 2; }" in css
+    assert ".draft-bar #inline-undo { grid-column: 1; grid-row: 2; }" in css
     assert ".evidence-grid > .evidence-card:nth-child(3)" in css
     assert "max-height: calc(100dvh - 24px)" in css
 
@@ -213,8 +248,9 @@ def test_selected_alternative_drives_its_own_markers_and_text_route() -> None:
 
     assert "requestedPlanId" in renderer
     assert "activePlanId: planId" in renderer
-    assert "const displayed = proposalEligible ? selectedAlternative : selectedAlternative || repaired || original;" in app
-    assert "routeSummaryForPlan(selectedAlternative)" in app
+    assert "const displayed = selectedAlternative || accepted || original;" in app
+    assert "const dayRouteDescription = routeSummaryForPlan(displayed);" in app
+    assert 'data-plan-content-hash="${escapeHtml(plan?.content_hash || "")}"' in app
 
 
 def test_compare_and_evidence_preserve_nulls_and_selected_plan_ownership() -> None:
@@ -226,15 +262,16 @@ def test_compare_and_evidence_preserve_nulls_and_selected_plan_ownership() -> No
     assert 'return "Unavailable";' in compare
     assert "Select one available repair above to preview its route" in compare
     assert "alternatives[0]" not in app
-    assert '"Unevaluated reference"' in app
+    assert '"Not evaluated for this plan"' in app
+    assert 'const selectedPlan = resolution.plan;' in app
     assert "const methods = selectedEvidence?.methods || {};" in app
     assert "const sourceHashCount = Object.keys(selectedEvidence?.source_hashes || {}).length;" in app
     assert "routeSummaryForPlan(selectedPlan)" in app
     assert "evidence-bundle?plan_id=${encodeURIComponent(selectedAlternative.plan_id)}" in app
     assert "2 · Policy and modeled-feasibility checks" in app
     assert app.index("3 · Route and source evidence") < app.index("5 · Technical lineage")
-    assert "W3 persists typed drafts" in index
-    assert "acceptance remains disabled until the W5" in index
+    assert "Typed drafts can produce independently evaluated children" in index
+    assert "explicit confirmation through the durable W5 decision transaction" in index
 
 
 def test_w3_restores_session_without_putting_the_mutation_token_in_a_url() -> None:
@@ -257,17 +294,64 @@ def test_w3_renders_evaluated_preview_state_and_metrics_without_registered_fallb
     assert 'registered ? "Registered fixture proposal"' in app
     assert 'evaluated ? "No eligible draft repair"' in app
     assert 'proposal?.reason || "Unavailable"' in app
-    assert 'const r = evaluated ? proposal.repair : state.workspace.repair;' in app
-    assert 'evaluated ? proposal.evaluation_status || proposal.eligibility' in app
-    assert 'registered ? proposal.certificate_id || "Registered fixture"' in app
+    metrics = app.split("function renderMetrics()", 1)[1].split("function evaluatedProposalCompareContext", 1)[0]
+    assert "const plan = activeRenderPlan();" in metrics
+    assert "const facts = planPresentationEvidence(plan);" in metrics
+    assert "state.workspace.repair" not in metrics
+    assert "strip.dataset.planId = plan?.plan_id" in metrics
+    assert "strip.dataset.planContentHash = plan?.content_hash" in metrics
+    assert "strip.dataset.evaluationId = facts.certificateId" in metrics
     assert "function activeProposalPlan()" in app
     assert "function activeGeography()" in app
     assert 'proposal?.schema_version === "draft-preview-v1"' in app
     assert 'state.session.proposal?.schema_version === "draft-preview-v1"' in app
-    assert 'const displayed = proposalEligible ? selectedAlternative : selectedAlternative || repaired || original;' in app
+    assert 'const displayed = selectedAlternative || accepted || original;' in app
     assert 'code: "evaluated_preview_geography_unavailable"' in app
-    assert "proposalMatches ? activeProposalPlan()" in app
-    assert "Preview evidence is session-local" in app
+    assert 'const proposalMatches = context?.scope === "preview";' in app
+    assert "This is evaluated preview evidence, not an accepted change." in app
     assert 'aria-labelledby="map-edit-title"' in index
     assert 'aria-labelledby="info-dialog-title"' in index
     assert ".edit-actions button, .prototype-tools button, .dialog-card footer button { min-height: 44px;" in css
+
+
+def test_e2e1_active_plan_and_map_acknowledgement_contract() -> None:
+    app = APP_JS.read_text(encoding="utf-8")
+    renderer = MAP_JS.read_text(encoding="utf-8")
+    controller = MAP_CONTROLLER_JS.read_text(encoding="utf-8")
+
+    assert "function activeRenderPlan(" in app
+    assert "|| acceptedPlan(geography)" in app
+    assert "const timeline = timelineForPlan(renderedPlan);" in app
+    assert "const displayed = selectedAlternative || accepted || original;" in app
+    assert 'state.tripPreviewPlanId = option.plan_id;' in app
+    assert 'registered_independent_evaluation' in app
+    assert 'state.previewRuntime.status = "PREVIEW_RENDERED"' in app
+    assert '"PREVIEW_RUNNING", "PREVIEW_FAILED", "PREVIEW_INELIGIBLE"' in app
+    assert "stage.dataset.previewState = state.previewRuntime.status;" in app
+    assert "stage.dataset.previewRequestEpoch" in app
+    assert "stage.dataset.previewRequestId" in app
+    assert "status.activePlanId === renderedPlan.plan_id" in app
+    assert "status.activePlanContentHash === renderedPlan.content_hash" in app
+    assert 'plan.role === "original"' in renderer
+    assert 'plan.role === "registered_repair"' not in renderer.split(
+        "function activePlanId", 1
+    )[1].split("export function disposeGeographicMap", 1)[0]
+    assert "activeMarkerIds" in controller
+    assert "container.dataset.renderedMapPlanId" in controller
+    assert "container.dataset.renderedPlanContentHash" in controller
+    assert "container.dataset.renderedGeometryHash" in controller
+    assert "activeGeometryHash: await routeGeometrySha256(activePlan)" in controller
+    assert "stage.dataset.renderedGeometryHash = status.activeGeometryHash" in app
+    assert "container.dataset.renderedMarkerIds" in controller
+
+
+def test_restored_preview_identity_executable_contract() -> None:
+    completed = subprocess.run(
+        ["node", str(Path(__file__).with_name("active_proposal_identity_contract.test.mjs"))],
+        cwd=ROOT,
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    assert completed.returncode == 0, completed.stderr
+    assert "active proposal identity contract passed" in completed.stdout

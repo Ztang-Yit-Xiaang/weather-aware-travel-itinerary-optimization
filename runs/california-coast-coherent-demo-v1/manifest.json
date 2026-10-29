@@ -1,0 +1,553 @@
+{
+  "alternatives": [
+    {
+      "certificate_id": "cert_b541bb3b1e4e7223",
+      "certificate_relative_path": "evaluations/cert_b541bb3b1e4e7223.json",
+      "diff_id": "diff_389154fa22f977e9",
+      "diff_relative_path": "diffs/diff_389154fa22f977e9.json",
+      "explanation_relative_path": "explanations/explanation_3e2bf3863a34e775.json",
+      "metrics_relative_path": "metrics/recommended.json",
+      "plan_content_hash": "766ba8b7c9b2b564",
+      "plan_id": "plan_8ae77712483a709e",
+      "plan_relative_path": "plans/plan_8ae77712483a709e.json",
+      "replacement_stop_id": "pfeiffer_big_sur_state_park",
+      "request_relative_path": "requests/weather_repair_bixby_day_5_v1_recommended.json",
+      "role": "recommended",
+      "route_legs": [
+        {
+          "day": 1,
+          "destination_id": "golden_gate_bridge",
+          "evidence_scope": "certified_daily_route_leg",
+          "origin_id": "san_francisco_international_airport"
+        },
+        {
+          "day": 1,
+          "destination_id": "hotel_zephyr_san_francisco",
+          "evidence_scope": "certified_daily_route_leg",
+          "origin_id": "golden_gate_bridge"
+        },
+        {
+          "day": 2,
+          "destination_id": "stanford_university_main_quad",
+          "evidence_scope": "certified_daily_route_leg",
+          "origin_id": "hotel_zephyr_san_francisco"
+        },
+        {
+          "day": 2,
+          "destination_id": "best_western_yosemite_way_station",
+          "evidence_scope": "certified_daily_route_leg",
+          "origin_id": "stanford_university_main_quad"
+        },
+        {
+          "day": 3,
+          "destination_id": "yosemite_national_park",
+          "evidence_scope": "certified_daily_route_leg",
+          "origin_id": "best_western_yosemite_way_station"
+        },
+        {
+          "day": 3,
+          "destination_id": "yosemite_southgate_hotel",
+          "evidence_scope": "certified_daily_route_leg",
+          "origin_id": "yosemite_national_park"
+        },
+        {
+          "day": 4,
+          "destination_id": "sequoia_national_park",
+          "evidence_scope": "certified_daily_route_leg",
+          "origin_id": "yosemite_southgate_hotel"
+        },
+        {
+          "day": 4,
+          "destination_id": "kings_canyon_national_park",
+          "evidence_scope": "certified_daily_route_leg",
+          "origin_id": "sequoia_national_park"
+        },
+        {
+          "day": 4,
+          "destination_id": "comfort_inn_sequoia_kings_canyon",
+          "evidence_scope": "certified_daily_route_leg",
+          "origin_id": "kings_canyon_national_park"
+        },
+        {
+          "day": 5,
+          "destination_id": "pfeiffer_big_sur_state_park",
+          "evidence_scope": "certified_daily_route_leg",
+          "origin_id": "comfort_inn_sequoia_kings_canyon"
+        },
+        {
+          "day": 5,
+          "destination_id": "portola_hotel_monterey",
+          "evidence_scope": "certified_daily_route_leg",
+          "origin_id": "pfeiffer_big_sur_state_park"
+        },
+        {
+          "day": 6,
+          "destination_id": "stearns_wharf",
+          "evidence_scope": "certified_daily_route_leg",
+          "origin_id": "portola_hotel_monterey"
+        },
+        {
+          "day": 6,
+          "destination_id": "hotel_milo_santa_barbara",
+          "evidence_scope": "certified_daily_route_leg",
+          "origin_id": "stearns_wharf"
+        },
+        {
+          "day": 7,
+          "destination_id": "griffith_observatory",
+          "evidence_scope": "certified_daily_route_leg",
+          "origin_id": "hotel_milo_santa_barbara"
+        },
+        {
+          "day": 7,
+          "destination_id": "los_angeles_international_airport",
+          "evidence_scope": "certified_daily_route_leg",
+          "origin_id": "griffith_observatory"
+        }
+      ],
+      "route_total_minutes": 1992.623333
+    },
+    {
+      "certificate_id": "cert_b2db18d0b3416dd3",
+      "certificate_relative_path": "evaluations/cert_b2db18d0b3416dd3.json",
+      "diff_id": "diff_0c04940fca6d733c",
+      "diff_relative_path": "diffs/diff_0c04940fca6d733c.json",
+      "explanation_relative_path": "explanations/explanation_d9448436f22f3941.json",
+      "metrics_relative_path": "metrics/low_driving.json",
+      "plan_content_hash": "7ad200a5e4dcbc86",
+      "plan_id": "plan_2d2ac1f621d09d1d",
+      "plan_relative_path": "plans/plan_2d2ac1f621d09d1d.json",
+      "replacement_stop_id": "point_lobos_state_natural_reserve",
+      "request_relative_path": "requests/weather_repair_bixby_day_5_v1_low_driving.json",
+      "role": "low_driving",
+      "route_legs": [
+        {
+          "day": 1,
+          "destination_id": "golden_gate_bridge",
+          "evidence_scope": "certified_daily_route_leg",
+          "origin_id": "san_francisco_international_airport"
+        },
+        {
+          "day": 1,
+          "destination_id": "hotel_zephyr_san_francisco",
+          "evidence_scope": "certified_daily_route_leg",
+          "origin_id": "golden_gate_bridge"
+        },
+        {
+          "day": 2,
+          "destination_id": "stanford_university_main_quad",
+          "evidence_scope": "certified_daily_route_leg",
+          "origin_id": "hotel_zephyr_san_francisco"
+        },
+        {
+          "day": 2,
+          "destination_id": "best_western_yosemite_way_station",
+          "evidence_scope": "certified_daily_route_leg",
+          "origin_id": "stanford_university_main_quad"
+        },
+        {
+          "day": 3,
+          "destination_id": "yosemite_national_park",
+          "evidence_scope": "certified_daily_route_leg",
+          "origin_id": "best_western_yosemite_way_station"
+        },
+        {
+          "day": 3,
+          "destination_id": "yosemite_southgate_hotel",
+          "evidence_scope": "certified_daily_route_leg",
+          "origin_id": "yosemite_national_park"
+        },
+        {
+          "day": 4,
+          "destination_id": "sequoia_national_park",
+          "evidence_scope": "certified_daily_route_leg",
+          "origin_id": "yosemite_southgate_hotel"
+        },
+        {
+          "day": 4,
+          "destination_id": "kings_canyon_national_park",
+          "evidence_scope": "certified_daily_route_leg",
+          "origin_id": "sequoia_national_park"
+        },
+        {
+          "day": 4,
+          "destination_id": "comfort_inn_sequoia_kings_canyon",
+          "evidence_scope": "certified_daily_route_leg",
+          "origin_id": "kings_canyon_national_park"
+        },
+        {
+          "day": 5,
+          "destination_id": "point_lobos_state_natural_reserve",
+          "evidence_scope": "certified_daily_route_leg",
+          "origin_id": "comfort_inn_sequoia_kings_canyon"
+        },
+        {
+          "day": 5,
+          "destination_id": "portola_hotel_monterey",
+          "evidence_scope": "certified_daily_route_leg",
+          "origin_id": "point_lobos_state_natural_reserve"
+        },
+        {
+          "day": 6,
+          "destination_id": "stearns_wharf",
+          "evidence_scope": "certified_daily_route_leg",
+          "origin_id": "portola_hotel_monterey"
+        },
+        {
+          "day": 6,
+          "destination_id": "hotel_milo_santa_barbara",
+          "evidence_scope": "certified_daily_route_leg",
+          "origin_id": "stearns_wharf"
+        },
+        {
+          "day": 7,
+          "destination_id": "griffith_observatory",
+          "evidence_scope": "certified_daily_route_leg",
+          "origin_id": "hotel_milo_santa_barbara"
+        },
+        {
+          "day": 7,
+          "destination_id": "los_angeles_international_airport",
+          "evidence_scope": "certified_daily_route_leg",
+          "origin_id": "griffith_observatory"
+        }
+      ],
+      "route_total_minutes": 1922.648333
+    }
+  ],
+  "artifacts_sha256": {
+    "diffs/diff_0c04940fca6d733c.json": "eca484865705003ce750a6a80de6ad291e4601add8b4691ba74eac1f53eba80f",
+    "diffs/diff_389154fa22f977e9.json": "413dd5841a7fa897289d1e826375b089949bc5aa99ca026237d3a9fd8fa95db9",
+    "evaluations/cert_b2db18d0b3416dd3.json": "0105a61125238223b8deb01f70939b05d74b3592495452cf0a07fa31638d423f",
+    "evaluations/cert_b541bb3b1e4e7223.json": "c68a400821e61ca88816dfb1fa73a4986681a2380f2b2a3a19ffac64f3f2a6de",
+    "explanations/explanation_3e2bf3863a34e775.json": "8a1c142ef4410b60777c9ddefb281774480ed077136d3d3413b684db1008ae43",
+    "explanations/explanation_d9448436f22f3941.json": "42d0a3ae92dfb022fdec0f989c32a3ce3f5f72cbe0d40816b3522921455b59c3",
+    "metrics/low_driving.json": "d07a547c389f11ee5f3c66a7f0a4dbf17ce55cdec0451b54c733b5b3247ee66a",
+    "metrics/recommended.json": "66da50340060b9503b5fd1338a933f04f05f8f21cee8577e436a29cc195f082e",
+    "planner_runs.jsonl": "8035adf0d405465f4f3e9a85de953abb68fddd294fd47c1b8948ff27ecf31769",
+    "plans/plan_2d2ac1f621d09d1d.json": "6c45bdac62d956b59a2c35fbc4ab7033496b73a1ee60b65dc18f295cf211c3be",
+    "plans/plan_359968d255ff9288.json": "8c239775b7eb9606e719f350355487681309f69c188bf8e0fa61924d1567a209",
+    "plans/plan_8ae77712483a709e.json": "6a3114c333cd2fa37bcd2637005064173057054ac20b54a2e6cd0d50a2930358",
+    "requests/weather_repair_bixby_day_5_v1.json": "996ee315b52177e2b02dd37b0a028e4e587aa465e0777baf35ae92263575914f",
+    "requests/weather_repair_bixby_day_5_v1_low_driving.json": "bf9cac71e27d913677223def67d2bda9543253ce9748aaa5310edc284e419bd8",
+    "requests/weather_repair_bixby_day_5_v1_recommended.json": "a9fca2f9701a490823638a7c7592d472774d47ececb78dc03c0a40843418a6f0",
+    "routing/route_matrix_b33928f302ba9055.json": "fcb37e3aedbcd5c91d09f3851a6d751a74eff4d91874769abc96722395c1b041"
+  },
+  "created_at": "2026-08-11T00:00:00+00:00",
+  "package_id": "california_coast_coherent_demo_v1",
+  "parent": {
+    "content_hash": "750dae617fc4c1e3",
+    "plan_id": "plan_359968d255ff9288",
+    "plan_relative_path": "plans/plan_359968d255ff9288.json",
+    "route_legs": [
+      {
+        "day": 1,
+        "destination_id": "golden_gate_bridge",
+        "evidence_scope": "road_validated_daily_route_leg",
+        "origin_id": "san_francisco_international_airport"
+      },
+      {
+        "day": 1,
+        "destination_id": "hotel_zephyr_san_francisco",
+        "evidence_scope": "road_validated_daily_route_leg",
+        "origin_id": "golden_gate_bridge"
+      },
+      {
+        "day": 2,
+        "destination_id": "stanford_university_main_quad",
+        "evidence_scope": "road_validated_daily_route_leg",
+        "origin_id": "hotel_zephyr_san_francisco"
+      },
+      {
+        "day": 2,
+        "destination_id": "best_western_yosemite_way_station",
+        "evidence_scope": "road_validated_daily_route_leg",
+        "origin_id": "stanford_university_main_quad"
+      },
+      {
+        "day": 3,
+        "destination_id": "yosemite_national_park",
+        "evidence_scope": "road_validated_daily_route_leg",
+        "origin_id": "best_western_yosemite_way_station"
+      },
+      {
+        "day": 3,
+        "destination_id": "yosemite_southgate_hotel",
+        "evidence_scope": "road_validated_daily_route_leg",
+        "origin_id": "yosemite_national_park"
+      },
+      {
+        "day": 4,
+        "destination_id": "sequoia_national_park",
+        "evidence_scope": "road_validated_daily_route_leg",
+        "origin_id": "yosemite_southgate_hotel"
+      },
+      {
+        "day": 4,
+        "destination_id": "kings_canyon_national_park",
+        "evidence_scope": "road_validated_daily_route_leg",
+        "origin_id": "sequoia_national_park"
+      },
+      {
+        "day": 4,
+        "destination_id": "comfort_inn_sequoia_kings_canyon",
+        "evidence_scope": "road_validated_daily_route_leg",
+        "origin_id": "kings_canyon_national_park"
+      },
+      {
+        "day": 5,
+        "destination_id": "bixby_creek_bridge_viewpoint",
+        "evidence_scope": "road_validated_daily_route_leg",
+        "origin_id": "comfort_inn_sequoia_kings_canyon"
+      },
+      {
+        "day": 5,
+        "destination_id": "portola_hotel_monterey",
+        "evidence_scope": "road_validated_daily_route_leg",
+        "origin_id": "bixby_creek_bridge_viewpoint"
+      },
+      {
+        "day": 6,
+        "destination_id": "stearns_wharf",
+        "evidence_scope": "road_validated_daily_route_leg",
+        "origin_id": "portola_hotel_monterey"
+      },
+      {
+        "day": 6,
+        "destination_id": "hotel_milo_santa_barbara",
+        "evidence_scope": "road_validated_daily_route_leg",
+        "origin_id": "stearns_wharf"
+      },
+      {
+        "day": 7,
+        "destination_id": "griffith_observatory",
+        "evidence_scope": "road_validated_daily_route_leg",
+        "origin_id": "hotel_milo_santa_barbara"
+      },
+      {
+        "day": 7,
+        "destination_id": "los_angeles_international_airport",
+        "evidence_scope": "road_validated_daily_route_leg",
+        "origin_id": "griffith_observatory"
+      }
+    ]
+  },
+  "planner_runs_relative_path": "planner_runs.jsonl",
+  "request_relative_path": "requests/weather_repair_bixby_day_5_v1.json",
+  "route_evidence": {
+    "matrix_file_sha256": "fcb37e3aedbcd5c91d09f3851a6d751a74eff4d91874769abc96722395c1b041",
+    "matrix_id": "route_matrix_b33928f302ba9055",
+    "relative_path": "routing/route_matrix_b33928f302ba9055.json",
+    "source_bundle_id": "route_bundle_e5b6cdc2ed2fff30",
+    "source_content_sha256": "e5b6cdc2ed2fff301c5416e29f4e6f0d9a3df4f7b3661311ce24e28cef108d99"
+  },
+  "run_id": "california_coast_coherent_demo_v1",
+  "scenario": {
+    "affected_stop_id": "bixby_creek_bridge_viewpoint",
+    "days": [
+      {
+        "day": 1,
+        "end_anchor_id": "hotel_zephyr_san_francisco",
+        "label": "San Francisco",
+        "parent_stop_ids": [
+          "golden_gate_bridge"
+        ],
+        "start_anchor_id": "san_francisco_international_airport"
+      },
+      {
+        "day": 2,
+        "end_anchor_id": "best_western_yosemite_way_station",
+        "label": "Stanford & Silicon Valley",
+        "parent_stop_ids": [
+          "stanford_university_main_quad"
+        ],
+        "start_anchor_id": "hotel_zephyr_san_francisco"
+      },
+      {
+        "day": 3,
+        "end_anchor_id": "yosemite_southgate_hotel",
+        "label": "Yosemite National Park",
+        "parent_stop_ids": [
+          "yosemite_national_park"
+        ],
+        "start_anchor_id": "best_western_yosemite_way_station"
+      },
+      {
+        "day": 4,
+        "end_anchor_id": "comfort_inn_sequoia_kings_canyon",
+        "label": "Sequoia & Kings Canyon",
+        "parent_stop_ids": [
+          "sequoia_national_park",
+          "kings_canyon_national_park"
+        ],
+        "start_anchor_id": "yosemite_southgate_hotel"
+      },
+      {
+        "day": 5,
+        "end_anchor_id": "portola_hotel_monterey",
+        "label": "Central Coast",
+        "parent_stop_ids": [
+          "bixby_creek_bridge_viewpoint"
+        ],
+        "start_anchor_id": "comfort_inn_sequoia_kings_canyon"
+      },
+      {
+        "day": 6,
+        "end_anchor_id": "hotel_milo_santa_barbara",
+        "label": "Santa Barbara",
+        "parent_stop_ids": [
+          "stearns_wharf"
+        ],
+        "start_anchor_id": "portola_hotel_monterey"
+      },
+      {
+        "day": 7,
+        "end_anchor_id": "los_angeles_international_airport",
+        "label": "Los Angeles",
+        "parent_stop_ids": [
+          "griffith_observatory"
+        ],
+        "start_anchor_id": "hotel_milo_santa_barbara"
+      }
+    ],
+    "direction": "san_francisco_to_los_angeles",
+    "place_sources": [
+      {
+        "entity_id": "best_western_yosemite_way_station",
+        "latitude": 37.4895,
+        "longitude": -119.9662,
+        "name": "Best Western Plus Yosemite Way Station Motel",
+        "source_ref": "src/itinerary_system/data_enrichment.py:CURATED_FALLBACK_HOTELS"
+      },
+      {
+        "entity_id": "bixby_creek_bridge_viewpoint",
+        "latitude": 36.371479,
+        "longitude": -121.901894,
+        "name": "Bixby Creek Bridge Viewpoint",
+        "source_ref": "configs/product_poi_catalogs/california_coast_demo/catalog.json"
+      },
+      {
+        "entity_id": "comfort_inn_sequoia_kings_canyon",
+        "latitude": 36.4488,
+        "longitude": -118.9018,
+        "name": "Comfort Inn & Suites Sequoia Kings Canyon",
+        "source_ref": "src/itinerary_system/data_enrichment.py:CURATED_FALLBACK_HOTELS"
+      },
+      {
+        "entity_id": "golden_gate_bridge",
+        "latitude": 37.8199,
+        "longitude": -122.4783,
+        "name": "Golden Gate Bridge",
+        "source_ref": "src/itinerary_system/data_enrichment.py:CURATED_PLACE_DETAIL_FALLBACKS"
+      },
+      {
+        "entity_id": "griffith_observatory",
+        "latitude": 34.1184,
+        "longitude": -118.3004,
+        "name": "Griffith Observatory",
+        "source_ref": "src/itinerary_system/data_enrichment.py:CURATED_PLACE_DETAIL_FALLBACKS"
+      },
+      {
+        "entity_id": "hotel_milo_santa_barbara",
+        "latitude": 34.4106,
+        "longitude": -119.6918,
+        "name": "Hotel Milo Santa Barbara",
+        "source_ref": "src/itinerary_system/data_enrichment.py:CURATED_FALLBACK_HOTELS"
+      },
+      {
+        "entity_id": "hotel_zephyr_san_francisco",
+        "latitude": 37.807,
+        "longitude": -122.4141,
+        "name": "Hotel Zephyr San Francisco",
+        "source_ref": "src/itinerary_system/data_enrichment.py:CURATED_FALLBACK_HOTELS"
+      },
+      {
+        "entity_id": "kings_canyon_national_park",
+        "latitude": 36.8879,
+        "longitude": -118.5551,
+        "name": "Kings Canyon National Park",
+        "source_ref": "src/itinerary_system/region_scenarios.py:CALIFORNIA_STATEWIDE_NATURE_REGIONS"
+      },
+      {
+        "entity_id": "los_angeles_international_airport",
+        "latitude": 33.9416,
+        "longitude": -118.4085,
+        "name": "Los Angeles International Airport",
+        "source_ref": "existing_product_route_anchor:los_angeles_international_airport"
+      },
+      {
+        "entity_id": "pfeiffer_big_sur_state_park",
+        "latitude": 36.2524,
+        "longitude": -121.7879,
+        "name": "Pfeiffer Big Sur State Park",
+        "source_ref": "src/itinerary_system/region_scenarios.py:california_coast.curated_seed_pois"
+      },
+      {
+        "entity_id": "point_lobos_state_natural_reserve",
+        "latitude": 36.5159,
+        "longitude": -121.9425,
+        "name": "Point Lobos State Natural Reserve",
+        "source_ref": "src/itinerary_system/region_scenarios.py:california_coast.curated_seed_pois"
+      },
+      {
+        "entity_id": "portola_hotel_monterey",
+        "latitude": 36.6022,
+        "longitude": -121.8947,
+        "name": "Portola Hotel & Spa at Monterey Bay",
+        "source_ref": "src/itinerary_system/data_enrichment.py:CURATED_FALLBACK_HOTELS"
+      },
+      {
+        "entity_id": "san_francisco_international_airport",
+        "latitude": 37.6213,
+        "longitude": -122.379,
+        "name": "San Francisco International Airport",
+        "source_ref": "existing_product_route_anchor:san_francisco_international_airport"
+      },
+      {
+        "entity_id": "sequoia_national_park",
+        "latitude": 36.4864,
+        "longitude": -118.5658,
+        "name": "Sequoia National Park",
+        "source_ref": "src/itinerary_system/region_scenarios.py:CALIFORNIA_STATEWIDE_NATURE_REGIONS"
+      },
+      {
+        "entity_id": "stanford_university_main_quad",
+        "latitude": 37.4275,
+        "longitude": -122.1697,
+        "name": "Stanford University Main Quad",
+        "source_ref": "src/itinerary_system/data_enrichment.py:CURATED_PLACE_DETAIL_FALLBACKS"
+      },
+      {
+        "entity_id": "stearns_wharf",
+        "latitude": 34.4100137734,
+        "longitude": -119.6855497819,
+        "name": "Stearns Wharf",
+        "source_ref": "runs/e3ux-weather-repair-demo-v6/plans/plan_e1c4f803691e3188.json"
+      },
+      {
+        "entity_id": "the_line_la",
+        "latitude": 34.0628,
+        "longitude": -118.3009,
+        "name": "The LINE LA",
+        "source_ref": "src/itinerary_system/data_enrichment.py:CURATED_FALLBACK_HOTELS"
+      },
+      {
+        "entity_id": "yosemite_national_park",
+        "latitude": 37.8651,
+        "longitude": -119.5383,
+        "name": "Yosemite National Park",
+        "source_ref": "src/itinerary_system/region_scenarios.py:CALIFORNIA_STATEWIDE_NATURE_REGIONS"
+      },
+      {
+        "entity_id": "yosemite_southgate_hotel",
+        "latitude": 37.3285,
+        "longitude": -119.6499,
+        "name": "Yosemite Southgate Hotel & Suites",
+        "source_ref": "src/itinerary_system/data_enrichment.py:CURATED_FALLBACK_HOTELS"
+      }
+    ],
+    "scenario_id": "california_coast_approved_seven_day",
+    "schema_version": "product-demo-scenario-v1"
+  },
+  "schema_version": "product-demo-package-v2"
+}

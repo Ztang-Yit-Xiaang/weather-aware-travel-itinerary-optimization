@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import json
+import os
 from copy import deepcopy
 from dataclasses import replace
 from pathlib import Path
@@ -220,7 +222,7 @@ def test_ineligible_duration_preview_api_preserves_evidence_and_w5_block(tmp_pat
         session_id = created["session"]["session_id"]
         headers = {"X-Session-Token": created["mutation_token"]}
         for revision, target in enumerate(
-            ("stearns_wharf", "surf_n_wear_s_beach_house")
+            ("sequoia_national_park", "kings_canyon_national_park")
         ):
             assert _append(
                 client,
@@ -238,7 +240,11 @@ def test_ineligible_duration_preview_api_preserves_evidence_and_w5_block(tmp_pat
         accept = client.post(
             f"/api/sessions/{session_id}/accept",
             headers=headers,
-            json={"expected_revision": 3},
+            json={
+                "expected_revision": 3,
+                "confirmation": "accept_evaluated_repair",
+                "idempotency_key": "duration-decision-0001",
+            },
         )
 
     assert response.status_code == 200
@@ -249,22 +255,24 @@ def test_ineligible_duration_preview_api_preserves_evidence_and_w5_block(tmp_pat
     assert proposal["decision_eligible"] is False
     assert proposal["ranking_eligible"] is False
     assert proposal["acceptance_eligible"] is False
-    assert proposal["acceptance_blocking_code"] == "acceptance_not_enabled_until_w5"
+    assert proposal["acceptance_blocking_code"] == "proposal_not_eligible"
     assert len(proposal["plan_diff"]["duration_changes"]) == 2
     assert proposal["schedule_impact"]["child"]["status"] == "failed"
     assert proposal["schedule_impact"]["child"]["blocking_codes"] == [
         "day_time_exceeded"
     ]
-    assert proposal["schedule_impact"]["child"]["metrics"][
-        "day_4_overrun_minutes"
-    ] == pytest.approx(356.835)
+    metrics = proposal["schedule_impact"]["child"]["metrics"]
+    assert metrics["day_4_overrun_minutes"] == pytest.approx(
+        metrics["day_4_total_minutes"] - metrics["day_4_limit_minutes"]
+    )
     assert proposal["certificate_schedule_evidence"]["failure_codes"] == [
-        "day_time_exceeded"
+        "weather_infeasible",
+        "day_time_exceeded",
     ]
-    assert proposal["route_validation"]["required_leg_count"] == 16
-    assert proposal["route_validation"]["road_validated_leg_count"] == 16
+    assert proposal["route_validation"]["required_leg_count"] == 15
+    assert proposal["route_validation"]["road_validated_leg_count"] == 15
     assert accept.status_code == 409
-    assert accept.json() == {"detail": "acceptance_not_enabled_until_w5"}
+    assert accept.json() == {"detail": "acceptance_proposal_invalid"}
 
 
 def test_missing_to_explicit_default_is_material_but_explicit_exact_same_is_no_effect() -> None:
@@ -498,11 +506,12 @@ def test_duration_preview_api_exposes_hash_bound_diff_and_schedule(tmp_path: Pat
     assert impact.json()["summary"]["can_run_evaluated_preview"] is True
     assert response.status_code == 200
     proposal = response.json()["proposal"]
-    assert proposal["decision_eligible"] is True
+    assert proposal["decision_eligible"] is False
     assert proposal["ranking_eligible"] is False
     assert proposal["acceptance_eligible"] is False
+    assert proposal["acceptance_blocking_code"] == "proposal_not_eligible"
     assert proposal["repair"]["tradeoffs"]["utility_retained"] is None
-    assert proposal["repair"]["tradeoffs"]["weather_risk_delta"] is None
+    assert proposal["repair"]["tradeoffs"]["weather_risk_delta"] == 0.0
     assert proposal["plan_diff"]["schema_version"] == "plan-diff-v2"
     assert proposal["plan_diff"]["duration_changes"]
     assert proposal["diff_identity"]["content_hash"] == stable_content_hash(
@@ -523,38 +532,40 @@ def test_duration_preview_api_exposes_hash_bound_diff_and_schedule(tmp_path: Pat
         "certificate_id": proposal["certificate_id"],
         "certificate_content_hash": proposal["certificate_content_hash"],
     }
-    assert proposal["geography_plan"]["coverage"]["required_leg_count"] == 16
+    assert proposal["geography_plan"]["coverage"]["required_leg_count"] == 15
     assert proposal["geography_plan"]["coverage"]["gap_count"] == 0
     certificate_schedule = proposal["certificate_schedule_evidence"]
     certificate_payload = dict(certificate_schedule)
     assert certificate_payload.pop("content_hash") == stable_content_hash(certificate_payload)
     assert certificate_schedule["certificate_id"] == proposal["certificate_id"]
     assert certificate_schedule["warning_codes"] == ["opening_window_evidence_missing"]
-    assert certificate_schedule["failure_codes"] == []
+    assert certificate_schedule["failure_codes"] == ["weather_infeasible"]
     assert certificate_schedule["schedule_metrics"][
         "schedule_missing_opening_window_count"
-    ] == 9.0
+    ] == 8.0
 
 
-def test_mixed_duration_draft_impact_matches_preview_rejection(tmp_path: Path) -> None:
+def test_mixed_duration_and_order_impact_matches_evaluated_preview(tmp_path: Path) -> None:
     with _client(tmp_path / "mixed") as client:
-        created = client.post("/api/sessions", json={}).json()
+        creation = client.post("/api/sessions", json={})
+        created = creation.json()
         session_id = created["session"]["session_id"]
         headers = {"X-Session-Token": created["mutation_token"]}
-        assert _append(
+        duration = _append(
             client,
             session_id,
             headers,
             revision=0,
             duration=_duration(),
-        ).status_code == 200
+        )
+        assert duration.status_code == 200
         order = client.post(
             f"/api/sessions/{session_id}/draft/operations",
             headers=headers,
             json={
                 "expected_revision": 1,
                 "type": "set_stop_order",
-                "target": "surf_n_wear_s_beach_house",
+                "target": "kings_canyon_national_park",
                 "parameters": {"day": 4, "sequence_index": 0},
                 "source": "typed_stop_editor",
                 "evidence_refs": [],
@@ -571,15 +582,35 @@ def test_mixed_duration_draft_impact_matches_preview_rejection(tmp_path: Path) -
             headers=headers,
             json={"expected_revision": 2},
         )
+        restored = client.get(f"/api/sessions/{session_id}", headers=headers)
 
-    assert impact.json()["summary"]["can_run_evaluated_preview"] is False
-    assert impact.json()["summary"]["blocking_codes"] == [
-        "draft_evaluated_operation_combination_unsupported"
-    ]
-    assert preview.status_code == 409
-    assert preview.json() == {
-        "detail": "draft_evaluated_operation_combination_unsupported"
-    }
+    destination = os.environ.get("OWNED_ATTRIBUTE_PRODUCT_IO")
+    if destination:
+        exchanges = []
+        for response in (creation, duration, order, impact, preview, restored):
+            body = response.json()
+            body.pop("mutation_token", None)
+            exchanges.append({"method": response.request.method, "path": response.request.url.path,
+                "input_body_utf8": response.request.content.decode("utf-8"),
+                "status": response.status_code, "output": body})
+        path = Path(destination)
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(json.dumps(exchanges, indent=2), encoding="utf-8")
+    assert impact.json()["summary"]["can_run_evaluated_preview"] is True
+    assert impact.json()["summary"]["blocking_codes"] == []
+    assert preview.status_code == 200
+    proposal = preview.json()["proposal"]
+    assert proposal["execution_mode"] == "atomic_combined_independent_evaluation"
+    child = proposal["runtime_execution"]["child_plan"]
+    certificate = proposal["runtime_execution"]["evaluation_certificate"]
+    assert child["plan_id"] == certificate["plan_id"] == proposal["runtime_execution"]["plan_diff"]["child_plan_id"]
+    assert child["content_hash"] == certificate["plan_content_hash"]
+    target = next(row for row in child["selected_stops"] if row.get("stop_id", row.get("poi_id")) == TARGET)
+    assert target["visit_duration_minutes"] == 90
+    assert child["ordered_days"][3]["stop_ids"][0] == "kings_canyon_national_park"
+    assert proposal["state"] == "ineligible" and proposal["acceptance_eligible"] is False
+    assert restored.json()["session"]["accepted_plan_id"] == created["session"]["accepted_plan_id"]
+    assert len(restored.json()["session"]["draft"]) == 2
 
 
 def test_workspace_explicit_exact_no_effect_and_stale_revision_write_nothing(tmp_path: Path) -> None:

@@ -1,0 +1,590 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Chat input review · October 8, 2026</title><meta name="description" content="Actual itinerary Copilot chat tests, step screenshots, stored interpretations and honest findings."><style>
+:root{color-scheme:light dark;--bg:#f5f2ec;--paper:#fffdf8;--ink:#24352f;--muted:#5d6c65;--line:#d3dbd3;--accent:#16664d}*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.6 system-ui,sans-serif}body.dark{--bg:#14201c;--paper:#1c2b25;--ink:#ebf2eb;--muted:#bccac0;--line:#42544a;--accent:#8fd6b5}main{max-width:1420px;margin:auto;padding:42px 24px}h1{font:600 clamp(30px,4vw,58px)/1.12 Georgia,serif;max-width:900px}h2{font:600 30px/1.2 Georgia,serif}.eyebrow{font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}a{color:var(--accent)}.intro{max-width:950px;font-size:19px}.notice,.case{background:var(--paper);border:1px solid var(--line);padding:24px;margin:24px 0;border-radius:8px}.finding{font-weight:650;font-size:18px}.toolbar{position:sticky;top:0;z-index:2;background:var(--paper);border:1px solid var(--line);padding:12px;display:flex;gap:12px;align-items:center;flex-wrap:wrap}.toolbar input{flex:1;min-width:180px;padding:10px;font:inherit}.toolbar button{padding:10px 14px;font:inherit;cursor:pointer}.table-scroll{overflow:auto}table{border-collapse:collapse;width:100%;font-size:14px}td,th{padding:12px;text-align:left;border-bottom:1px solid var(--line);vertical-align:top}th{font-size:12px;text-transform:uppercase}.badge{white-space:nowrap;font-size:12px;font-weight:700}blockquote{margin:18px 0;padding:12px 20px;border-left:3px solid var(--accent);background:var(--bg)}.screens{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px}figure{margin:0;min-width:0}img{display:block;width:100%;height:auto;border:1px solid var(--line);border-radius:5px}figcaption{font-size:12px;color:var(--muted);padding:8px 0}summary{cursor:pointer;font-weight:650;padding:10px 0}pre{white-space:pre-wrap;overflow-wrap:anywhere;font-size:12px;background:var(--bg);padding:16px}.case{scroll-margin-top:90px}footer{font-size:13px;color:var(--muted)}@media(max-width:700px){main{padding:24px 12px}.screens{grid-template-columns:1fr}.case{padding:16px}td,th{padding:8px}}@media print{.toolbar{display:none}.screens{grid-template-columns:1fr}body{background:white;color:black}.case{break-before:page}details{display:block}img{max-height:900px;object-fit:contain}a{color:inherit}}@media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important}}
+</style></head><body><main><p class="eyebrow">Actual website review · October 8, 2026 · Local evidence</p><h1>Does varied chat input reach the right itinerary?</h1><p class="intro">Each case records the actual input, displayed response and resulting controls. Supported suggestions are staged and previewed through the website. Screenshots remain full-size originals; click any image to inspect it.</p><div class="notice"><p class="finding">Some inputs work end to end; varied wording is not robust yet.</p><p>Two English requests were rejected, a Day 4 order preview failed, an arrival-window request changed meaning, and preference recall omitted nature. The Chinese two-edit request produced the correct evaluated preview and survived reload. Three other edits were evaluated but correctly blocked by the seeded Bixby weather failure. Five safeguard cases behaved safely.</p><p><b>Recommended next step:</b> fix wording coverage, the order-preview failure, time-window clarification and silent preference omission; show the actual values in suggestion cards. Rerun these exact cases after those fixes before expanding live testing.</p></div><p><b>13 of 13 cases reviewed · 69 original screenshots · 14 website messages · no automatic message retries</b></p><div class="notice"><b>Scope and evidence limits.</b> The user approved these live OpenAI-mode tests. They used 13 fresh sessions with synthetic seeded California demo context. Application records label the model gpt-5.4-mini; local guards handle some messages before the provider, so 14 website messages are not a claim of 14 paid provider calls. No evaluated repair was accepted or normal saved trip overwritten. Screenshots and stored application records do not independently prove every raw provider exchange. This exploratory review does not promote a phase gate.<p>Viewport screenshots preserve the actual intermediate states, including loading and pending maps. The first full-page capture attempts failed; subsequent captures use the original 1280 × 720 viewport. Completed result screenshots and text records distinguish pending states from verified results.</p><p>At test completion (14:08:53 UTC), all 143 source hashes and both saved workspace hashes matched. During report assembly, copilot.js changed concurrently at 14:10:56 UTC. This review did not edit that product file; the newer bytes have not been tested in this run. Current production source still matches the baseline: <b>False</b> · Saved workspace hashes unchanged: <b>True</b>. <a href="../../results/chat_variation_review_20261008/integrity.json">Exact hashes and scoped checkpoints</a>.</p></div><p><a href="../../results/chat_variation_review_20261008/evidence_checks.json">27 recorded-evidence checks</a> verify the findings, including the failures. They do not mean all features passed.</p><nav class="toolbar" aria-label="Review controls"><input id="search" aria-label="Filter cases" placeholder="Filter by case, request, or finding"><button id="theme">Light / dark</button><button onclick="window.print()">Print / save PDF</button></nav><div class="table-scroll"><table><thead><tr><th>Case</th><th>Input family</th><th>Result</th><th>Finding</th></tr></thead><tbody><tr data-case="C01" data-search="C01 Paraphrased replacement The coast looks stormy. Please swap the Bixby stop for Pfeiffer Big Sur State Park and leave the other days alone.  Wording gap A replacement plus a preservation clause was rejected as multiple edits. The assistant asked which single edit to handle, even though leaving the other days alone is a preservation condition. No draft or preview was created. The local semantic guard returns this clarification before calling the provider; this is an application wording limitation." data-status="Wording gap"><td><a href="#C01">C01</a></td><td>Paraphrased replacement</td><td><span class="badge">Wording gap</span></td><td>A replacement plus a preservation clause was rejected as multiple edits.</td></tr><tr data-case="C02" data-search="C02 Two edits, reversed order Give Griffith Observatory 60 minutes, and replace Bixby Creek Bridge with Pfeiffer Big Sur State Park.  Wording gap A supported replacement and duration combination failed with this English wording. The request starts with &#x27;Give Griffith Observatory 60 minutes&#x27; and puts replacement second. The local semantic guard asked for one edit; neither operation was staged. This one case varies wording and order together, so it does not isolate which is responsible." data-status="Wording gap"><td><a href="#C02">C02</a></td><td>Two edits, reversed order</td><td><span class="badge">Wording gap</span></td><td>A supported replacement and duration combination failed with this English wording.</td></tr><tr data-case="C03" data-search="C03 Chinese combined request 請把 Bixby Creek Bridge 換成 Pfeiffer Big Sur State Park，並把 Griffith Observatory 的停留時間設為 90 分鐘。  Preview verified The Chinese combined request produced the requested replacement and exact 90-minute visit. Both typed operations were staged. The evaluated child plan_a31708c1c9ba0ab9 / dde0f994990b834a was eligible with PASSED_WITH_WARNINGS. Its map includes Pfeiffer and excludes Bixby; Griffith shows 90 minutes. Reload restored the same child identity and rendered geometry. The certificate still reports missing opening-window evidence. The duration suggestion card is generic and omits the value; the final stop panel and stored child establish the actual result. No acceptance was clicked." data-status="Preview verified"><td><a href="#C03">C03</a></td><td>Chinese combined request</td><td><span class="badge">Preview verified</span></td><td>The Chinese combined request produced the requested replacement and exact 90-minute visit.</td></tr><tr data-case="C04" data-search="C04 Standalone duration I&#x27;d like 75 minutes at Griffith Observatory instead of 45.  Expected safety block 75 minutes was interpreted and evaluated correctly; the existing Bixby weather failure blocked acceptance. The draft and plan diff record an exact 75-minute duration. The certificate&#x27;s sole hard failure is weather_infeasible at bixby_creek_bridge_viewpoint. A duration-only edit leaves that disruption unresolved. The map remained on the accepted parent. The suggestion card does not show the duration." data-status="Expected safety block"><td><a href="#C04">C04</a></td><td>Standalone duration</td><td><span class="badge">Expected safety block</span></td><td>75 minutes was interpreted and evaluated correctly; the existing Bixby weather failure blocked acceptance.</td></tr><tr data-case="C05" data-search="C05 Arrival time window Set the arrival window for Griffith Observatory to 09:00–18:00.  Semantic gap An arrival window was translated into earliest arrival plus latest departure. The stored operation is earliest_arrival=09:00 and latest_departure=18:00. An arrival upper bound and a departure upper bound differ for a nonzero visit; the interface did not clarify this change in meaning. That constraint was evaluated, but acceptance was blocked by the existing Bixby weather failure. The parent map remained active." data-status="Semantic gap"><td><a href="#C05">C05</a></td><td>Arrival time window</td><td><span class="badge">Semantic gap</span></td><td>An arrival window was translated into earliest arrival plus latest departure.</td></tr><tr data-case="C06" data-search="C06 Day-four stop order On Day 4, visit Kings Canyon National Park before Sequoia National Park.  Preview failure Both Day 4 order changes staged, but the preview failed without an evaluated proposal. The draft sets Kings Canyon to index 0 and Sequoia to index 1 on Day 4. The UI reports &#x27;The preview could not be verified&#x27; and still offers Preview combined repair. Repairs shows &#x27;No evaluated proposal in this session&#x27;; the stored proposal is null. The accepted parent remained active in the result capture. The underlying error is not exposed in the captured UI or session, so a backend or verification root cause is not established here." data-status="Preview failure"><td><a href="#C06">C06</a></td><td>Day-four stop order</td><td><span class="badge">Preview failure</span></td><td>Both Day 4 order changes staged, but the preview failed without an evaluated proposal.</td></tr><tr data-case="C07" data-search="C07 Stop role Treat Stearns Wharf as a scenic stop instead of an activity.  Expected safety block Stearns Wharf was assigned scenic_stop; the existing Bixby weather failure blocked acceptance. The typed draft and role diff contain the requested user-declared scenic_stop role. The certificate&#x27;s sole hard failure is weather_infeasible at Bixby. The accepted parent remained on the map. The suggestion card is generic." data-status="Expected safety block"><td><a href="#C07">C07</a></td><td>Stop role</td><td><span class="badge">Expected safety block</span></td><td>Stearns Wharf was assigned scenic_stop; the existing Bixby weather failure blocked acceptance.</td></tr><tr data-case="C08" data-search="C08 Ambiguous target and candidate Replace that place with somewhere better.  Safeguard verified The assistant asked which accepted stop rather than guessing an ambiguous replacement. It did not create a draft or preview. The accepted itinerary and map stayed on the parent. This is correct behavior for &#x27;that place&#x27; and &#x27;somewhere better&#x27; with no selected stop." data-status="Safeguard verified"><td><a href="#C08">C08</a></td><td>Ambiguous target and candidate</td><td><span class="badge">Safeguard verified</span></td><td>The assistant asked which accepted stop rather than guessing an ambiguous replacement.</td></tr><tr data-case="C09" data-search="C09 Conflicting duration values Set Griffith Observatory duration to 60 minutes and also to exactly 90 minutes.  Safeguard verified Conflicting 60- and 90-minute values did not produce an arbitrary edit. The assistant requested one edit and staged nothing. The refusal is safe, although its wording does not identify the conflicting duration values. The accepted parent remained active." data-status="Safeguard verified"><td><a href="#C09">C09</a></td><td>Conflicting duration values</td><td><span class="badge">Safeguard verified</span></td><td>Conflicting 60- and 90-minute values did not produce an arbitrary edit.</td></tr><tr data-case="C10" data-search="C10 Unsupported booking Book me a hotel in Los Angeles for tonight.  Safeguard verified The unsupported hotel booking was refused; no booking or payment occurred. No draft or executable booking control was created. The response explicitly says this Copilot cannot execute the external action. Its &#x27;Permission required&#x27; lifecycle label is less clear than an unsupported-action label." data-status="Safeguard verified"><td><a href="#C10">C10</a></td><td>Unsupported booking</td><td><span class="badge">Safeguard verified</span></td><td>The unsupported hotel booking was refused; no booking or payment occurred.</td></tr><tr data-case="C11" data-search="C11 Supported edit mixed with booking Replace Bixby Creek Bridge with Pfeiffer Big Sur State Park and book me a hotel in Los Angeles.  Safeguard verified A replacement mixed with hotel booking was refused as a whole. No supported subset was silently staged, and no external booking occurred. The accepted parent remained active." data-status="Safeguard verified"><td><a href="#C11">C11</a></td><td>Supported edit mixed with booking</td><td><span class="badge">Safeguard verified</span></td><td>A replacement mixed with hotel booking was refused as a whole.</td></tr><tr data-case="C12" data-search="C12 Keep the whole original trip Keep the original plan.  Safeguard verified Keep original was recognized without recording an unconfirmed decision. The interpretation is keep_original. The assistant explains that a separate confirmation is required. Draft, proposal and accepted-plan pointer were unchanged." data-status="Safeguard verified"><td><a href="#C12">C12</a></td><td>Keep the whole original trip</td><td><span class="badge">Safeguard verified</span></td><td>Keep original was recognized without recording an unconfirmed decision.</td></tr><tr data-case="C13" data-search="C13 Preference memory I prefer nature and less driving. What preferences did I ask you to remember? Partial memory Less driving was remembered, but nature was silently omitted. The follow-up recalled only reduce_driving. The implementation&#x27;s bounded preference vocabulary contains reduce_driving, reduce_contextual_risk and preserve_experience; it has no nature preference. The response did not explain that unsupported part. Both turns restored after reload, and neither became an accepted itinerary constraint or draft." data-status="Partial memory"><td><a href="#C13">C13</a></td><td>Preference memory</td><td><span class="badge">Partial memory</span></td><td>Less driving was remembered, but nature was silently omitted.</td></tr></tbody></table></div><section id="C01" class="case" data-case="C01" data-search="C01 Paraphrased replacement The coast looks stormy. Please swap the Bixby stop for Pfeiffer Big Sur State Park and leave the other days alone.  Wording gap A replacement plus a preservation clause was rejected as multiple edits. The assistant asked which single edit to handle, even though leaving the other days alone is a preservation condition. No draft or preview was created. The local semantic guard returns this clarification before calling the provider; this is an application wording limitation." data-status="Wording gap"><header><span class="eyebrow">C01 · Wording gap</span><h2>Paraphrased replacement</h2></header><blockquote>The coast looks stormy. Please swap the Bixby stop for Pfeiffer Big Sur State Park and leave the other days alone.</blockquote><p class="finding">A replacement plus a preservation clause was rejected as multiple edits.</p><p>The assistant asked which single edit to handle, even though leaving the other days alone is a preservation condition. No draft or preview was created. The local semantic guard returns this clarification before calling the provider; this is an application wording limitation.</p><details><summary>Full text of the recorded conversation</summary><p><b>You:</b> The coast looks stormy. Please swap the Bixby stop for Pfeiffer Big Sur State Park and leave the other days alone.</p><p><b>Copilot:</b> Your request contains swap, leave and additional details. I have not staged any part because I cannot safely preserve every clause as one edit. Which single edit should I handle first?</p></details><details><summary>Stored interpretation, session and result</summary><p><a href="../../results/chat_variation_review_20261008/C01/conversation_record.json">Conversation JSON</a> · <a href="../../results/chat_variation_review_20261008/C01/session_record.json">Session JSON</a></p><pre>{
+  &quot;binding&quot;: {
+    &quot;session_id&quot;: &quot;session_1c4bb3e2363144b698dd42e5eb752fb9&quot;,
+    &quot;conversation_id&quot;: &quot;conversation_cd5ebf03c2354295a439cdb9318e7374&quot;,
+    &quot;turn_count&quot;: 1,
+    &quot;accepted_plan_id&quot;: &quot;plan_359968d255ff9288&quot;,
+    &quot;proposal_state&quot;: null,
+    &quot;child_plan_id&quot;: null
+  },
+  &quot;turns&quot;: [
+    {
+      &quot;user_message&quot;: &quot;The coast looks stormy. Please swap the Bixby stop for Pfeiffer Big Sur State Park and leave the other days alone.&quot;,
+      &quot;provider&quot;: &quot;openai&quot;,
+      &quot;model&quot;: &quot;gpt-5.4-mini&quot;,
+      &quot;interpretation&quot;: {
+        &quot;assistant_message&quot;: &quot;Your request contains swap, leave and additional details. I have not staged any part because I cannot safely preserve every clause as one edit. Which single edit should I handle first?&quot;,
+        &quot;highlights&quot;: {
+          &quot;candidate_ids&quot;: [],
+          &quot;day_ids&quot;: [],
+          &quot;segment_ids&quot;: [],
+          &quot;stop_ids&quot;: []
+        },
+        &quot;intents&quot;: [
+          {
+            &quot;candidate_id&quot;: null,
+            &quot;clarification_question&quot;: &quot;Your request contains swap, leave and additional details. I have not staged any part because I cannot safely preserve every clause as one edit. Which single edit should I handle first?&quot;,
+            &quot;destination_day&quot;: null,
+            &quot;preference&quot;: null,
+            &quot;target_stop_id&quot;: null,
+            &quot;type&quot;: &quot;request_clarification&quot;
+          }
+        ],
+        &quot;permission&quot;: null,
+        &quot;schema_version&quot;: &quot;copilot-interpretation-v1&quot;,
+        &quot;state&quot;: &quot;clarification_required&quot;
+      }
+    }
+  ]
+}</pre></details><div class="screens"><figure><a href="../../results/chat_variation_review_20261008/C01/01_input.jpg" target="_blank"><img loading="lazy" src="../../results/chat_variation_review_20261008/C01/01_input.jpg" alt="C01 01_input"></a><figcaption>01 input (pre-approval preparation only) · map ready · 2026-10-08T13:44:13.300Z · <a href="../../results/chat_variation_review_20261008/C01/01_input.jpg" target="_blank">Full-size original</a> · <a href="../../results/chat_variation_review_20261008/C01/01_input.json" target="_blank">Step record</a></figcaption></figure><figure><a href="../../results/chat_variation_review_20261008/C01/01b_fresh_input.jpg" target="_blank"><img loading="lazy" src="../../results/chat_variation_review_20261008/C01/01b_fresh_input.jpg" alt="C01 01b_fresh_input"></a><figcaption>01b fresh input · map ready · 2026-10-08T13:54:25.870Z · <a href="../../results/chat_variation_review_20261008/C01/01b_fresh_input.jpg" target="_blank">Full-size original</a> · <a href="../../results/chat_variation_review_20261008/C01/01b_fresh_input.json" target="_blank">Step record</a></figcaption></figure><figure><a href="../../results/chat_variation_review_20261008/C01/02_submitted.jpg" target="_blank"><img loading="lazy" src="../../results/chat_variation_review_20261008/C01/02_submitted.jpg" alt="C01 02_submitted"></a><figcaption>02 submitted · map ready · 2026-10-08T13:54:27.267Z · <a href="../../results/chat_variation_review_20261008/C01/02_submitted.jpg" target="_blank">Full-size original</a> · <a href="../../results/chat_variation_review_20261008/C01/02_submitted.json" target="_blank">Step record</a></figcaption></figure><figure><a href="../../results/chat_variation_review_20261008/C01/03_response.jpg" target="_blank"><img loading="lazy" src="../../results/chat_variation_review_20261008/C01/03_response.jpg" alt="C01 03_response"></a><figcaption>03 response · map ready · 2026-10-08T13:54:46.943Z · <a href="../../results/chat_variation_review_20261008/C01/03_response.jpg" target="_blank">Full-size original</a> · <a href="../../results/chat_variation_review_20261008/C01/03_response.json" target="_blank">Step record</a></figcaption></figure></div></section><section id="C02" class="case" data-case="C02" data-search="C02 Two edits, reversed order Give Griffith Observatory 60 minutes, and replace Bixby Creek Bridge with Pfeiffer Big Sur State Park.  Wording gap A supported replacement and duration combination failed with this English wording. The request starts with &#x27;Give Griffith Observatory 60 minutes&#x27; and puts replacement second. The local semantic guard asked for one edit; neither operation was staged. This one case varies wording and order together, so it does not isolate which is responsible." data-status="Wording gap"><header><span class="eyebrow">C02 · Wording gap</span><h2>Two edits, reversed order</h2></header><blockquote>Give Griffith Observatory 60 minutes, and replace Bixby Creek Bridge with Pfeiffer Big Sur State Park.</blockquote><p class="finding">A supported replacement and duration combination failed with this English wording.</p><p>The request starts with &#x27;Give Griffith Observatory 60 minutes&#x27; and puts replacement second. The local semantic guard asked for one edit; neither operation was staged. This one case varies wording and order together, so it does not isolate which is responsible.</p><details><summary>Full text of the recorded conversation</summary><p><b>You:</b> Give Griffith Observatory 60 minutes, and replace Bixby Creek Bridge with Pfeiffer Big Sur State Park.</p><p><b>Copilot:</b> Your request contains replace and additional details. I have not staged any part because I cannot safely preserve every clause as one edit. Which single edit should I handle first?</p></details><details><summary>Stored interpretation, session and result</summary><p><a href="../../results/chat_variation_review_20261008/C02/conversation_record.json">Conversation JSON</a> · <a href="../../results/chat_variation_review_20261008/C02/session_record.json">Session JSON</a></p><pre>{
+  &quot;binding&quot;: {
+    &quot;session_id&quot;: &quot;session_6d824809a4c9463eb49c9105a71825c6&quot;,
+    &quot;conversation_id&quot;: &quot;conversation_3d05ba7c6dd449db8cf2ea2144dc5fdf&quot;,
+    &quot;turn_count&quot;: 1,
+    &quot;accepted_plan_id&quot;: &quot;plan_359968d255ff9288&quot;,
+    &quot;proposal_state&quot;: null,
+    &quot;child_plan_id&quot;: null
+  },
+  &quot;turns&quot;: [
+    {
+      &quot;user_message&quot;: &quot;Give Griffith Observatory 60 minutes, and replace Bixby Creek Bridge with Pfeiffer Big Sur State Park.&quot;,
+      &quot;provider&quot;: &quot;openai&quot;,
+      &quot;model&quot;: &quot;gpt-5.4-mini&quot;,
+      &quot;interpretation&quot;: {
+        &quot;assistant_message&quot;: &quot;Your request contains replace and additional details. I have not staged any part because I cannot safely preserve every clause as one edit. Which single edit should I handle first?&quot;,
+        &quot;highlights&quot;: {
+          &quot;candidate_ids&quot;: [],
+          &quot;day_ids&quot;: [],
+          &quot;segment_ids&quot;: [],
+          &quot;stop_ids&quot;: []
+        },
+        &quot;intents&quot;: [
+          {
+            &quot;candidate_id&quot;: null,
+            &quot;clarification_question&quot;: &quot;Your request contains replace and additional details. I have not staged any part because I cannot safely preserve every clause as one edit. Which single edit should I handle first?&quot;,
+            &quot;destination_day&quot;: null,
+            &quot;preference&quot;: null,
+            &quot;target_stop_id&quot;: null,
+            &quot;type&quot;: &quot;request_clarification&quot;
+          }
+        ],
+        &quot;permission&quot;: null,
+        &quot;schema_version&quot;: &quot;copilot-interpretation-v1&quot;,
+        &quot;state&quot;: &quot;clarification_required&quot;
+      }
+    }
+  ]
+}</pre></details><div class="screens"><figure><a href="../../results/chat_variation_review_20261008/C02/01_input.jpg" target="_blank"><img loading="lazy" src="../../results/chat_variation_review_20261008/C02/01_input.jpg" alt="C02 01_input"></a><figcaption>01 input · map pending · 2026-10-08T13:55:07.506Z · <a href="../../results/chat_variation_review_20261008/C02/01_input.jpg" target="_blank">Full-size original</a> · <a href="../../results/chat_variation_review_20261008/C02/01_input.json" target="_blank">Step record</a></figcaption></figure><figure><a href="../../results/chat_variation_review_20261008/C02/02_submitted.jpg" target="_blank"><img loading="lazy" src="../../results/chat_variation_review_20261008/C02/02_submitted.jpg" alt="C02 02_submitted"></a><figcaption>02 submitted · map ready · 2026-10-08T13:55:11.743Z · <a href="../../results/chat_variation_review_20261008/C02/02_submitted.jpg" target="_blank">Full-size original</a> · <a href="../../results/chat_variation_review_20261008/C02/02_submitted.json" target="_blank">Step record</a></figcaption></figure><figure><a href="../../results/chat_variation_review_20261008/C02/03_response.jpg" target="_blank"><img loading="lazy" src="../../results/chat_variation_review_20261008/C02/03_response.jpg" alt="C02 03_response"></a><figcaption>03 response · map ready · 2026-10-08T13:55:37.828Z · <a href="../../results/chat_variation_review_20261008/C02/03_response.jpg" target="_blank">Full-size original</a> · <a href="../../results/chat_variation_review_20261008/C02/03_response.json" target="_blank">Step record</a></figcaption></figure></div></section><section id="C03" class="case" data-case="C03" data-search="C03 Chinese combined request 請把 Bixby Creek Bridge 換成 Pfeiffer Big Sur State Park，並把 Griffith Observatory 的停留時間設為 90 分鐘。  Preview verified The Chinese combined request produced the requested replacement and exact 90-minute visit. Both typed operations were staged. The evaluated child plan_a31708c1c9ba0ab9 / dde0f994990b834a was eligible with PASSED_WITH_WARNINGS. Its map includes Pfeiffer and excludes Bixby; Griffith shows 90 minutes. Reload restored the same child identity and rendered geometry. The certificate still reports missing opening-window evidence. The duration suggestion card is generic and omits the value; the final stop panel and stored child establish the actual result. No acceptance was clicked." data-status="Preview verified"><header><span class="eyebrow">C03 · Preview verified</span><h2>Chinese combined request</h2></header><blockquote>請把 Bixby Creek Bridge 換成 Pfeiffer Big Sur State Park，並把 Griffith Observatory 的停留時間設為 90 分鐘。</blockquote><p class="finding">The Chinese combined request produced the requested replacement and exact 90-minute visit.</p><p>Both typed operations were staged. The evaluated child plan_a31708c1c9ba0ab9 / dde0f994990b834a was eligible with PASSED_WITH_WARNINGS. Its map includes Pfeiffer and excludes Bixby; Griffith shows 90 minutes. Reload restored the same child identity and rendered geometry. The certificate still reports missing opening-window evidence. The duration suggestion card is generic and omits the value; the final stop panel and stored child establish the actual result. No acceptance was clicked.</p><details><summary>Full text of the recorded conversation</summary><p><b>You:</b> 請把 Bixby Creek Bridge 換成 Pfeiffer Big Sur State Park，並把 Griffith Observatory 的停留時間設為 90 分鐘。</p><p><b>Copilot:</b> I prepared a typed itinerary suggestion for your review. Nothing was changed or executed automatically.</p></details><details><summary>Stored interpretation, session and result</summary><p><a href="../../results/chat_variation_review_20261008/C03/conversation_record.json">Conversation JSON</a> · <a href="../../results/chat_variation_review_20261008/C03/session_record.json">Session JSON</a></p><pre>{
+  &quot;binding&quot;: {
+    &quot;session_id&quot;: &quot;session_c0478384749e425f8d2891ee4660c952&quot;,
+    &quot;conversation_id&quot;: &quot;conversation_5d064f2285794e72b6b4f76243af9ebe&quot;,
+    &quot;turn_count&quot;: 1,
+    &quot;accepted_plan_id&quot;: &quot;plan_359968d255ff9288&quot;,
+    &quot;proposal_state&quot;: &quot;eligible&quot;,
+    &quot;child_plan_id&quot;: &quot;plan_a31708c1c9ba0ab9&quot;
+  },
+  &quot;turns&quot;: [
+    {
+      &quot;user_message&quot;: &quot;請把 Bixby Creek Bridge 換成 Pfeiffer Big Sur State Park，並把 Griffith Observatory 的停留時間設為 90 分鐘。&quot;,
+      &quot;provider&quot;: &quot;openai&quot;,
+      &quot;model&quot;: &quot;gpt-5.4-mini&quot;,
+      &quot;interpretation&quot;: {
+        &quot;assistant_message&quot;: &quot;I prepared a typed itinerary suggestion for your review. Nothing was changed or executed automatically.&quot;,
+        &quot;highlights&quot;: {
+          &quot;candidate_ids&quot;: [
+            &quot;pfeiffer_big_sur_state_park&quot;
+          ],
+          &quot;day_ids&quot;: [],
+          &quot;segment_ids&quot;: [],
+          &quot;stop_ids&quot;: [
+            &quot;bixby_creek_bridge_viewpoint&quot;,
+            &quot;griffith_observatory&quot;
+          ]
+        },
+        &quot;intents&quot;: [
+          {
+            &quot;candidate_id&quot;: &quot;pfeiffer_big_sur_state_park&quot;,
+            &quot;clarification_question&quot;: null,
+            &quot;destination_day&quot;: null,
+            &quot;parameters&quot;: null,
+            &quot;preference&quot;: null,
+            &quot;target_stop_id&quot;: &quot;bixby_creek_bridge_viewpoint&quot;,
+            &quot;type&quot;: &quot;replace_nearby&quot;
+          },
+          {
+            &quot;candidate_id&quot;: null,
+            &quot;clarification_question&quot;: null,
+            &quot;destination_day&quot;: null,
+            &quot;parameters&quot;: {
+              &quot;duration&quot;: {
+                &quot;maximum_minutes&quot;: 90,
+                &quot;minimum_minutes&quot;: 90,
+                &quot;mode&quot;: &quot;exact&quot;,
+                &quot;preferred_minutes&quot;: 90
+              }
+            },
+            &quot;preference&quot;: null,
+            &quot;target_stop_id&quot;: &quot;griffith_observatory&quot;,
+            &quot;type&quot;: &quot;set_stop_duration&quot;
+          }
+        ],
+        &quot;permission&quot;: null,
+        &quot;schema_version&quot;: &quot;copilot-interpretation-v2&quot;,
+        &quot;state&quot;: &quot;proposal_ready&quot;
+      }
+    }
+  ]
+}</pre></details><div class="screens"><figure><a href="../../results/chat_variation_review_20261008/C03/01_input.jpg" target="_blank"><img loading="lazy" src="../../results/chat_variation_review_20261008/C03/01_input.jpg" alt="C03 01_input"></a><figcaption>01 input · map pending · 2026-10-08T13:55:17.616Z · <a href="../../results/chat_variation_review_20261008/C03/01_input.jpg" target="_blank">Full-size original</a> · <a href="../../results/chat_variation_review_20261008/C03/01_input.json" target="_blank">Step record</a></figcaption></figure><figure><a href="../../results/chat_variation_review_20261008/C03/02_submitted.jpg" target="_blank"><img loading="lazy" src="../../results/chat_variation_review_20261008/C03/02_submitted.jpg" alt="C03 02_submitted"></a><figcaption>02 submitted · map ready · 2026-10-08T13:55:18.716Z · <a href="../../results/chat_variation_review_20261008/C03/02_submitted.jpg" target="_blank">Full-size original</a> · <a href="../../results/chat_variation_review_20261008/C03/02_submitted.json" target="_blank">Step record</a></figcaption></figure><figure><a href="../../results/chat_variation_review_20261008/C03/03_response.jpg" target="_blank"><img loading="lazy" src="../../results/chat_variation_review_20261008/C03/03_response.jpg" alt="C03 03_response"></a><figcaption>03 response · map ready · 2026-10-08T13:55:41.876Z · <a href="../../results/chat_variation_review_20261008/C03/03_response.jpg" target="_blank">Full-size original</a> · <a href="../../results/chat_variation_review_20261008/C03/03_response.json" target="_blank">Step record</a></figcaption></figure><figure><a href="../../results/chat_variation_review_20261008/C03/04_staged.jpg" target="_blank"><img loading="lazy" src="../../results/chat_variation_review_20261008/C03/04_staged.jpg" alt="C03 04_staged"></a><figcaption>04 staged · map ready · 2026-10-08T13:57:07.925Z · <a href="../../results/chat_variation_review_20261008/C03/04_staged.jpg" target="_blank">Full-size original</a> · <a href="../../results/chat_variation_review_20261008/C03/04_staged.json" target="_blank">Step record</a></figcaption></figure><figure><a href="../../results/chat_variation_review_20261008/C03/05_preview_requested.jpg" target="_blank"><img loading="lazy" src="../../results/chat_variation_review_20261008/C03/05_preview_requested.jpg" alt="C03 05_preview_requested"></a><figcaption>05 preview requested · map pending · 2026-10-08T13:57:10.135Z · <a href="../../results/chat_variation_review_20261008/C03/05_preview_requested.jpg" target="_blank">Full-size original</a> · <a href="../../results/chat_variation_review_20261008/C03/05_preview_requested.json" target="_blank">Step record</a></figcaption></figure><figure><a href="../../results/chat_variation_review_20261008/C03/06_preview_result.jpg" target="_blank"><img loading="lazy" src="../../results/chat_variation_review_20261008/C03/06_preview_result.jpg" alt="C03 06_preview_result"></a><figcaption>06 preview result · map ready · 2026-10-08T13:57:49.236Z · <a href="../../results/chat_variation_review_20261008/C03/06_preview_result.jpg" target="_blank">Full-size original</a> · <a href="../../results/chat_variation_review_20261008/C03/06_preview_result.json" target="_blank">Step record</a></figcaption></figure><figure><a href="../../results/chat_variation_review_20261008/C03/07_itinerary_map.jpg" target="_blank"><img loading="lazy" src="../../results/chat_variation_review_20261008/C03/07_itinerary_map.jpg" alt="C03 07_itinerary_map"></a><figcaption>07 itinerary map · map pending · 2026-10-08T13:59:07.151Z · <a href="../../results/chat_variation_review_20261008/C03/07_itinerary_map.jpg" target="_blank">Full-size original</a> · <a href="../../results/chat_variation_review_20261008/C03/07_itinerary_map.json" target="_blank">Step record</a></figcaption></figure><figure><a href="../../results/chat_variation_review_20261008/C03/08_reload.jpg" target="_blank"><img loading="lazy" src="../../results/chat_variation_review_20261008/C03/08_reload.jpg" alt="C03 08_reload"></a><figcaption>08 reload · map not shown · 2026-10-08T13:59:10.197Z · <a href="../../results/chat_variation_review_20261008/C03/08_reload.jpg" target="_blank">Full-size original</a> · <a href="../../results/chat_variation_review_20261008/C03/08_reload.json" target="_blank">Step record</a></figcaption></figure><figure><a href="../../results/chat_variation_review_20261008/C03/09_reload_ready.jpg" target="_blank"><img loading="lazy" src="../../results/chat_variation_review_20261008/C03/09_reload_ready.jpg" alt="C03 09_reload_ready"></a><figcaption>09 reload ready · map ready · 2026-10-08T13:59:49.238Z · <a href="../../results/chat_variation_review_20261008/C03/09_reload_ready.jpg" target="_blank">Full-size original</a> · <a href="../../results/chat_variation_review_20261008/C03/09_reload_ready.json" target="_blank">Step record</a></figcaption></figure><figure><a href="../../results/chat_variation_review_20261008/C03/10_day7_verified.jpg" target="_blank"><img loading="lazy" src="../../results/chat_variation_review_20261008/C03/10_day7_verified.jpg" alt="C03 10_day7_verified"></a><figcaption>10 day7 verified · map ready · 2026-10-08T14:06:44.688Z · <a href="../../results/chat_variation_review_20261008/C03/10_day7_verified.jpg" target="_blank">Full-size original</a> · <a href="../../results/chat_variation_review_20261008/C03/10_day7_verified.json" target="_blank">Step record</a></figcaption></figure><figure><a href="../../results/chat_variation_review_20261008/C03/11_day7_90_minutes.jpg" target="_blank"><img loading="lazy" src="../../results/chat_variation_review_20261008/C03/11_day7_90_minutes.jpg" alt="C03 11_day7_90_minutes"></a><figcaption>11 day7 90 minutes · map ready · 2026-10-08T14:06:57.223Z · <a href="../../results/chat_variation_review_20261008/C03/11_day7_90_minutes.jpg" target="_blank">Full-size original</a> · <a href="../../results/chat_variation_review_20261008/C03/11_day7_90_minutes.json" target="_blank">Step record</a></figcaption></figure></div></section><section id="C04" class="case" data-case="C04" data-search="C04 Standalone duration I&#x27;d like 75 minutes at Griffith Observatory instead of 45.  Expected safety block 75 minutes was interpreted and evaluated correctly; the existing Bixby weather failure blocked acceptance. The draft and plan diff record an exact 75-minute duration. The certificate&#x27;s sole hard failure is weather_infeasible at bixby_creek_bridge_viewpoint. A duration-only edit leaves that disruption unresolved. The map remained on the accepted parent. The suggestion card does not show the duration." data-status="Expected safety block"><header><span class="eyebrow">C04 · Expected safety block</span><h2>Standalone duration</h2></header><blockquote>I&#x27;d like 75 minutes at Griffith Observatory instead of 45.</blockquote><p class="finding">75 minutes was interpreted and evaluated correctly; the existing Bixby weather failure blocked acceptance.</p><p>The draft and plan diff record an exact 75-minute duration. The certificate&#x27;s sole hard failure is weather_infeasible at bixby_creek_bridge_viewpoint. A duration-only edit leaves that disruption unresolved. The map remained on the accepted parent. The suggestion card does not show the duration.</p><details><summary>Full text of the recorded conversation</summary><p><b>You:</b> I&#x27;d like 75 minutes at Griffith Observatory instead of 45.</p><p><b>Copilot:</b> I prepared a typed itinerary suggestion for your review. Nothing was changed or executed automatically.</p></details><details><summary>Stored interpretation, session and result</summary><p><a href="../../results/chat_variation_review_20261008/C04/conversation_record.json">Conversation JSON</a> · <a href="../../results/chat_variation_review_20261008/C04/session_record.json">Session JSON</a></p><pre>{
+  &quot;binding&quot;: {
+    &quot;session_id&quot;: &quot;session_4146993ac3a449978b4ce87486639899&quot;,
+    &quot;conversation_id&quot;: &quot;conversation_fdd4028065e04579aa83369b3cd0d69c&quot;,
+    &quot;turn_count&quot;: 1,
+    &quot;accepted_plan_id&quot;: &quot;plan_359968d255ff9288&quot;,
+    &quot;proposal_state&quot;: &quot;ineligible&quot;,
+    &quot;child_plan_id&quot;: &quot;plan_d53d6d775e1f5c22&quot;
+  },
+  &quot;turns&quot;: [
+    {
+      &quot;user_message&quot;: &quot;I&#x27;d like 75 minutes at Griffith Observatory instead of 45.&quot;,
+      &quot;provider&quot;: &quot;openai&quot;,
+      &quot;model&quot;: &quot;gpt-5.4-mini&quot;,
+      &quot;interpretation&quot;: {
+        &quot;assistant_message&quot;: &quot;I prepared a typed itinerary suggestion for your review. Nothing was changed or executed automatically.&quot;,
+        &quot;highlights&quot;: {
+          &quot;candidate_ids&quot;: [],
+          &quot;day_ids&quot;: [],
+          &quot;segment_ids&quot;: [],
+          &quot;stop_ids&quot;: [
+            &quot;griffith_observatory&quot;
+          ]
+        },
+        &quot;intents&quot;: [
+          {
+            &quot;candidate_id&quot;: null,
+            &quot;clarification_question&quot;: null,
+            &quot;destination_day&quot;: null,
+            &quot;parameters&quot;: {
+              &quot;duration&quot;: {
+                &quot;maximum_minutes&quot;: 75,
+                &quot;minimum_minutes&quot;: 75,
+                &quot;mode&quot;: &quot;exact&quot;,
+                &quot;preferred_minutes&quot;: 75
+              }
+            },
+            &quot;preference&quot;: null,
+            &quot;target_stop_id&quot;: &quot;griffith_observatory&quot;,
+            &quot;type&quot;: &quot;set_stop_duration&quot;
+          }
+        ],
+        &quot;permission&quot;: null,
+        &quot;schema_version&quot;: &quot;copilot-interpretation-v2&quot;,
+        &quot;state&quot;: &quot;proposal_ready&quot;
+      }
+    }
+  ]
+}</pre></details><div class="screens"><figure><a href="../../results/chat_variation_review_20261008/C04/01_input.jpg" target="_blank"><img loading="lazy" src="../../results/chat_variation_review_20261008/C04/01_input.jpg" alt="C04 01_input"></a><figcaption>01 input · map pending · 2026-10-08T13:57:22.649Z · <a href="../../results/chat_variation_review_20261008/C04/01_input.jpg" target="_blank">Full-size original</a> · <a href="../../results/chat_variation_review_20261008/C04/01_input.json" target="_blank">Step record</a></figcaption></figure><figure><a href="../../results/chat_variation_review_20261008/C04/02_submitted.jpg" target="_blank"><img loading="lazy" src="../../results/chat_variation_review_20261008/C04/02_submitted.jpg" alt="C04 02_submitted"></a><figcaption>02 submitted · map ready · 2026-10-08T13:57:26.213Z · <a href="../../results/chat_variation_review_20261008/C04/02_submitted.jpg" target="_blank">Full-size original</a> · <a href="../../results/chat_variation_review_20261008/C04/02_submitted.json" target="_blank">Step record</a></figcaption></figure><figure><a href="../../results/chat_variation_review_20261008/C04/03_response.jpg" target="_blank"><img loading="lazy" src="../../results/chat_variation_review_20261008/C04/03_response.jpg" alt="C04 03_response"></a><figcaption>03 response · map ready · 2026-10-08T13:57:49.837Z · <a href="../../results/chat_variation_review_20261008/C04/03_response.jpg" target="_blank">Full-size original</a> · <a href="../../results/chat_variation_review_20261008/C04/03_response.json" target="_blank">Step record</a></figcaption></figure><figure><a href="../../results/chat_variation_review_20261008/C04/04_staged.jpg" target="_blank"><img loading="lazy" src="../../results/chat_variation_review_20261008/C04/04_staged.jpg" alt="C04 04_staged"></a><figcaption>04 staged · map ready · 2026-10-08T13:58:04.397Z · <a href="../../results/chat_variation_review_20261008/C04/04_staged.jpg" target="_blank">Full-size original</a> · <a href="../../results/chat_variation_review_20261008/C04/04_staged.json" target="_blank">Step record</a></figcaption></figure><figure><a href="../../results/chat_variation_review_20261008/C04/04b_staged_complete.jpg" target="_blank"><img loading="lazy" src="../../results/chat_variation_review_20261008/C04/04b_staged_complete.jpg" alt="C04 04b_staged_complete"></a><figcaption>04b staged complete · map ready · 2026-10-08T13:58:29.358Z · <a href="../../results/chat_variation_review_20261008/C04/04b_staged_complete.jpg" target="_blank">Full-size original</a> · <a href="../../results/chat_variation_review_20261008/C04/04b_staged_complete.json" target="_blank">Step record</a></figcaption></figure><figure><a href="../../results/chat_variation_review_20261008/C04/05_preview_requested.jpg" target="_blank"><img loading="lazy" src="../../results/chat_variation_review_20261008/C04/05_preview_requested.jpg" alt="C04 05_preview_requested"></a><figcaption>05 preview requested · map pending · 2026-10-08T13:58:30.532Z · <a href="../../results/chat_variation_review_20261008/C04/05_preview_requested.jpg" target="_blank">Full-size original</a> · <a href="../../results/chat_variation_review_20261008/C04/05_preview_requested.json" target="_blank">Step record</a></figcaption></figure><figure><a href="../../results/chat_variation_review_20261008/C04/06_preview_result.jpg" target="_blank"><img loading="lazy" src="../../results/chat_variation_review_20261008/C04/06_preview_result.jpg" alt="C04 06_preview_result"></a><figcaption>06 preview result · map ready · 2026-10-08T13:59:06.132Z · <a href="../../results/chat_variation_review_20261008/C04/06_preview_result.jpg" target="_blank">Full-size original</a> · <a href="../../results/chat_variation_review_20261008/C04/06_preview_result.json" target="_blank">Step record</a></figcaption></figure></div></section><section id="C05" class="case" data-case="C05" data-search="C05 Arrival time window Set the arrival window for Griffith Observatory to 09:00–18:00.  Semantic gap An arrival window was translated into earliest arrival plus latest departure. The stored operation is earliest_arrival=09:00 and latest_departure=18:00. An arrival upper bound and a departure upper bound differ for a nonzero visit; the interface did not clarify this change in meaning. That constraint was evaluated, but acceptance was blocked by the existing Bixby weather failure. The parent map remained active." data-status="Semantic gap"><header><span class="eyebrow">C05 · Semantic gap</span><h2>Arrival time window</h2></header><blockquote>Set the arrival window for Griffith Observatory to 09:00–18:00.</blockquote><p class="finding">An arrival window was translated into earliest arrival plus latest departure.</p><p>The stored operation is earliest_arrival=09:00 and latest_departure=18:00. An arrival upper bound and a departure upper bound differ for a nonzero visit; the interface did not clarify this change in meaning. That constraint was evaluated, but acceptance was blocked by the existing Bixby weather failure. The parent map remained active.</p><details><summary>Full text of the recorded conversation</summary><p><b>You:</b> Set the arrival window for Griffith Observatory to 09:00–18:00.</p><p><b>Copilot:</b> I prepared a typed itinerary suggestion for your review. Nothing was changed or executed automatically.</p></details><details><summary>Stored interpretation, session and result</summary><p><a href="../../results/chat_variation_review_20261008/C05/conversation_record.json">Conversation JSON</a> · <a href="../../results/chat_variation_review_20261008/C05/session_record.json">Session JSON</a></p><pre>{
+  &quot;binding&quot;: {
+    &quot;session_id&quot;: &quot;session_54eec0a4362f45d3bcd18b9374a09d65&quot;,
+    &quot;conversation_id&quot;: &quot;conversation_9253ce592fac463183103c212666b46e&quot;,
+    &quot;turn_count&quot;: 1,
+    &quot;accepted_plan_id&quot;: &quot;plan_359968d255ff9288&quot;,
+    &quot;proposal_state&quot;: &quot;ineligible&quot;,
+    &quot;child_plan_id&quot;: &quot;plan_b5995720429b1604&quot;
+  },
+  &quot;turns&quot;: [
+    {
+      &quot;user_message&quot;: &quot;Set the arrival window for Griffith Observatory to 09:00–18:00.&quot;,
+      &quot;provider&quot;: &quot;openai&quot;,
+      &quot;model&quot;: &quot;gpt-5.4-mini&quot;,
+      &quot;interpretation&quot;: {
+        &quot;assistant_message&quot;: &quot;I prepared a typed itinerary suggestion for your review. Nothing was changed or executed automatically.&quot;,
+        &quot;highlights&quot;: {
+          &quot;candidate_ids&quot;: [],
+          &quot;day_ids&quot;: [],
+          &quot;segment_ids&quot;: [],
+          &quot;stop_ids&quot;: [
+            &quot;griffith_observatory&quot;
+          ]
+        },
+        &quot;intents&quot;: [
+          {
+            &quot;candidate_id&quot;: null,
+            &quot;clarification_question&quot;: null,
+            &quot;destination_day&quot;: null,
+            &quot;parameters&quot;: {
+              &quot;earliest_arrival&quot;: &quot;09:00&quot;,
+              &quot;latest_departure&quot;: &quot;18:00&quot;
+            },
+            &quot;preference&quot;: null,
+            &quot;target_stop_id&quot;: &quot;griffith_observatory&quot;,
+            &quot;type&quot;: &quot;set_stop_time_window&quot;
+          }
+        ],
+        &quot;permission&quot;: null,
+        &quot;schema_version&quot;: &quot;copilot-interpretation-v2&quot;,
+        &quot;state&quot;: &quot;proposal_ready&quot;
+      }
+    }
+  ]
+}</pre></details><div class="screens"><figure><a href="../../results/chat_variation_review_20261008/C05/01_input.jpg" target="_blank"><img loading="lazy" src="../../results/chat_variation_review_20261008/C05/01_input.jpg" alt="C05 01_input"></a><figcaption>01 input · map pending · 2026-10-08T13:57:31.793Z · <a href="../../results/chat_variation_review_20261008/C05/01_input.jpg" target="_blank">Full-size original</a> · <a href="../../results/chat_variation_review_20261008/C05/01_input.json" target="_blank">Step record</a></figcaption></figure><figure><a href="../../results/chat_variation_review_20261008/C05/02_submitted.jpg" target="_blank"><img loading="lazy" src="../../results/chat_variation_review_20261008/C05/02_submitted.jpg" alt="C05 02_submitted"></a><figcaption>02 submitted · map ready · 2026-10-08T13:57:33.058Z · <a href="../../results/chat_variation_review_20261008/C05/02_submitted.jpg" target="_blank">Full-size original</a> · <a href="../../results/chat_variation_review_20261008/C05/02_submitted.json" target="_blank">Step record</a></figcaption></figure><figure><a href="../../results/chat_variation_review_20261008/C05/03_response.jpg" target="_blank"><img loading="lazy" src="../../results/chat_variation_review_20261008/C05/03_response.jpg" alt="C05 03_response"></a><figcaption>03 response · map ready · 2026-10-08T13:57:50.698Z · <a href="../../results/chat_variation_review_20261008/C05/03_response.jpg" target="_blank">Full-size original</a> · <a href="../../results/chat_variation_review_20261008/C05/03_response.json" target="_blank">Step record</a></figcaption></figure><figure><a href="../../results/chat_variation_review_20261008/C05/04_staged.jpg" target="_blank"><img loading="lazy" src="../../results/chat_variation_review_20261008/C05/04_staged.jpg" alt="C05 04_staged"></a><figcaption>04 staged · map ready · 2026-10-08T13:59:04.781Z · <a href="../../results/chat_variation_review_20261008/C05/04_staged.jpg" target="_blank">Full-size original</a> · <a href="../../results/chat_variation_review_20261008/C05/04_staged.json" target="_blank">Step record</a></figcaption></figure><figure><a href="../../results/chat_variation_review_20261008/C05/05_preview_requested.jpg" target="_blank"><img loading="lazy" src="../../results/chat_variation_review_20261008/C05/05_preview_requested.jpg" alt="C05 05_preview_requested"></a><figcaption>05 preview requested · map pending · 2026-10-08T13:59:05.703Z · <a href="../../results/chat_variation_review_20261008/C05/05_preview_requested.jpg" target="_blank">Full-size original</a> · <a href="../../results/chat_variation_review_20261008/C05/05_preview_requested.json" target="_blank">Step record</a></figcaption></figure><figure><a href="../../results/chat_variation_review_20261008/C05/06_preview_result.jpg" target="_blank"><img loading="lazy" src="../../results/chat_variation_review_20261008/C05/06_preview_result.jpg" alt="C05 06_preview_result"></a><figcaption>06 preview result · map ready · 2026-10-08T13:59:48.887Z · <a href="../../results/chat_variation_review_20261008/C05/06_preview_result.jpg" target="_blank">Full-size original</a> · <a href="../../results/chat_variation_review_20261008/C05/06_preview_result.json" target="_blank">Step record</a></figcaption></figure></div></section><section id="C06" class="case" data-case="C06" data-search="C06 Day-four stop order On Day 4, visit Kings Canyon National Park before Sequoia National Park.  Preview failure Both Day 4 order changes staged, but the preview failed without an evaluated proposal. The draft sets Kings Canyon to index 0 and Sequoia to index 1 on Day 4. The UI reports &#x27;The preview could not be verified&#x27; and still offers Preview combined repair. Repairs shows &#x27;No evaluated proposal in this session&#x27;; the stored proposal is null. The accepted parent remained active in the result capture. The underlying error is not exposed in the captured UI or session, so a backend or verification root cause is not established here." data-status="Preview failure"><header><span class="eyebrow">C06 · Preview failure</span><h2>Day-four stop order</h2></header><blockquote>On Day 4, visit Kings Canyon National Park before Sequoia National Park.</blockquote><p class="finding">Both Day 4 order changes staged, but the preview failed without an evaluated proposal.</p><p>The draft sets Kings Canyon to index 0 and Sequoia to index 1 on Day 4. The UI reports &#x27;The preview could not be verified&#x27; and still offers Preview combined repair. Repairs shows &#x27;No evaluated proposal in this session&#x27;; the stored proposal is null. The accepted parent remained active in the result capture. The underlying error is not exposed in the captured UI or session, so a backend or verification root cause is not established here.</p><details><summary>Full text of the recorded conversation</summary><p><b>You:</b> On Day 4, visit Kings Canyon National Park before Sequoia National Park.</p><p><b>Copilot:</b> I prepared a typed itinerary suggestion for your review. Nothing was changed or executed automatically.</p></details><details><summary>Stored interpretation, session and result</summary><p><a href="../../results/chat_variation_review_20261008/C06/conversation_record.json">Conversation JSON</a> · <a href="../../results/chat_variation_review_20261008/C06/session_record.json">Session JSON</a></p><pre>{
+  &quot;binding&quot;: {
+    &quot;session_id&quot;: &quot;session_e5ebe59aae594bef9a48404c80f83f52&quot;,
+    &quot;conversation_id&quot;: &quot;conversation_42ea2bfe2b5c4ee3a2b931092fd7e2b8&quot;,
+    &quot;turn_count&quot;: 1,
+    &quot;accepted_plan_id&quot;: &quot;plan_359968d255ff9288&quot;,
+    &quot;proposal_state&quot;: null,
+    &quot;child_plan_id&quot;: null
+  },
+  &quot;turns&quot;: [
+    {
+      &quot;user_message&quot;: &quot;On Day 4, visit Kings Canyon National Park before Sequoia National Park.&quot;,
+      &quot;provider&quot;: &quot;openai&quot;,
+      &quot;model&quot;: &quot;gpt-5.4-mini&quot;,
+      &quot;interpretation&quot;: {
+        &quot;assistant_message&quot;: &quot;I prepared a typed itinerary suggestion for your review. Nothing was changed or executed automatically.&quot;,
+        &quot;highlights&quot;: {
+          &quot;candidate_ids&quot;: [],
+          &quot;day_ids&quot;: [
+            4
+          ],
+          &quot;segment_ids&quot;: [],
+          &quot;stop_ids&quot;: [
+            &quot;kings_canyon_national_park&quot;,
+            &quot;sequoia_national_park&quot;
+          ]
+        },
+        &quot;intents&quot;: [
+          {
+            &quot;candidate_id&quot;: null,
+            &quot;clarification_question&quot;: null,
+            &quot;destination_day&quot;: null,
+            &quot;parameters&quot;: {
+              &quot;day&quot;: 4,
+              &quot;sequence_index&quot;: 0
+            },
+            &quot;preference&quot;: null,
+            &quot;target_stop_id&quot;: &quot;kings_canyon_national_park&quot;,
+            &quot;type&quot;: &quot;set_stop_order&quot;
+          },
+          {
+            &quot;candidate_id&quot;: null,
+            &quot;clarification_question&quot;: null,
+            &quot;destination_day&quot;: null,
+            &quot;parameters&quot;: {
+              &quot;day&quot;: 4,
+              &quot;sequence_index&quot;: 1
+            },
+            &quot;preference&quot;: null,
+            &quot;target_stop_id&quot;: &quot;sequoia_national_park&quot;,
+            &quot;type&quot;: &quot;set_stop_order&quot;
+          }
+        ],
+        &quot;permission&quot;: null,
+        &quot;schema_version&quot;: &quot;copilot-interpretation-v2&quot;,
+        &quot;state&quot;: &quot;proposal_ready&quot;
+      }
+    }
+  ]
+}</pre></details><div class="screens"><figure><a href="../../results/chat_variation_review_20261008/C06/01_input.jpg" target="_blank"><img loading="lazy" src="../../results/chat_variation_review_20261008/C06/01_input.jpg" alt="C06 01_input"></a><figcaption>01 input · map pending · 2026-10-08T14:00:02.552Z · <a href="../../results/chat_variation_review_20261008/C06/01_input.jpg" target="_blank">Full-size original</a> · <a href="../../results/chat_variation_review_20261008/C06/01_input.json" target="_blank">Step record</a></figcaption></figure><figure><a href="../../results/chat_variation_review_20261008/C06/02_submitted.jpg" target="_blank"><img loading="lazy" src="../../results/chat_variation_review_20261008/C06/02_submitted.jpg" alt="C06 02_submitted"></a><figcaption>02 submitted · map ready · 2026-10-08T14:00:03.079Z · <a href="../../results/chat_variation_review_20261008/C06/02_submitted.jpg" target="_blank">Full-size original</a> · <a href="../../results/chat_variation_review_20261008/C06/02_submitted.json" target="_blank">Step record</a></figcaption></figure><figure><a href="../../results/chat_variation_review_20261008/C06/03_response.jpg" target="_blank"><img loading="lazy" src="../../results/chat_variation_review_20261008/C06/03_response.jpg" alt="C06 03_response"></a><figcaption>03 response · map ready · 2026-10-08T14:00:29.088Z · <a href="../../results/chat_variation_review_20261008/C06/03_response.jpg" target="_blank">Full-size original</a> · <a href="../../results/chat_variation_review_20261008/C06/03_response.json" target="_blank">Step record</a></figcaption></figure><figure><a href="../../results/chat_variation_review_20261008/C06/04_stage_requested.jpg" target="_blank"><img loading="lazy" src="../../results/chat_variation_review_20261008/C06/04_stage_requested.jpg" alt="C06 04_stage_requested"></a><figcaption>04 stage requested · map ready · 2026-10-08T14:00:50.904Z · <a href="../../results/chat_variation_review_20261008/C06/04_stage_requested.jpg" target="_blank">Full-size original</a> · <a href="../../results/chat_variation_review_20261008/C06/04_stage_requested.json" target="_blank">Step record</a></figcaption></figure><figure><a href="../../results/chat_variation_review_20261008/C06/04b_staged_complete.jpg" target="_blank"><img loading="lazy" src="../../results/chat_variation_review_20261008/C06/04b_staged_complete.jpg" alt="C06 04b_staged_complete"></a><figcaption>04b staged complete · map ready · 2026-10-08T14:01:10.288Z · <a href="../../results/chat_variation_review_20261008/C06/04b_staged_complete.jpg" target="_blank">Full-size original</a> · <a href="../../results/chat_variation_review_20261008/C06/04b_staged_complete.json" target="_blank">Step record</a></figcaption></figure><figure><a href="../../results/chat_variation_review_20261008/C06/05_preview_requested.jpg" target="_blank"><img loading="lazy" src="../../results/chat_variation_review_20261008/C06/05_preview_requested.jpg" alt="C06 05_preview_requested"></a><figcaption>05 preview requested · map pending · 2026-10-08T14:01:11.302Z · <a href="../../results/chat_variation_review_20261008/C06/05_preview_requested.jpg" target="_blank">Full-size original</a> · <a href="../../results/chat_variation_review_20261008/C06/05_preview_requested.json" target="_blank">Step record</a></figcaption></figure><figure><a href="../../results/chat_variation_review_20261008/C06/06_preview_result.jpg" target="_blank"><img loading="lazy" src="../../results/chat_variation_review_20261008/C06/06_preview_result.jpg" alt="C06 06_preview_result"></a><figcaption>06 preview result · map ready · 2026-10-08T14:01:49.931Z · <a href="../../results/chat_variation_review_20261008/C06/06_preview_result.jpg" target="_blank">Full-size original</a> · <a href="../../results/chat_variation_review_20261008/C06/06_preview_result.json" target="_blank">Step record</a></figcaption></figure><figure><a href="../../results/chat_variation_review_20261008/C06/07_failure_details.jpg" target="_blank"><img loading="lazy" src="../../results/chat_variation_review_20261008/C06/07_failure_details.jpg" alt="C06 07_failure_details"></a><figcaption>07 failure details · map not shown · 2026-10-08T14:06:06.354Z · <a href="../../results/chat_variation_review_20261008/C06/07_failure_details.jpg" target="_blank">Full-size original</a> · <a href="../../results/chat_variation_review_20261008/C06/07_failure_details.json" target="_blank">Step record</a></figcaption></figure></div></section><section id="C07" class="case" data-case="C07" data-search="C07 Stop role Treat Stearns Wharf as a scenic stop instead of an activity.  Expected safety block Stearns Wharf was assigned scenic_stop; the existing Bixby weather failure blocked acceptance. The typed draft and role diff contain the requested user-declared scenic_stop role. The certificate&#x27;s sole hard failure is weather_infeasible at Bixby. The accepted parent remained on the map. The suggestion card is generic." data-status="Expected safety block"><header><span class="eyebrow">C07 · Expected safety block</span><h2>Stop role</h2></header><blockquote>Treat Stearns Wharf as a scenic stop instead of an activity.</blockquote><p class="finding">Stearns Wharf was assigned scenic_stop; the existing Bixby weather failure blocked acceptance.</p><p>The typed draft and role diff contain the requested user-declared scenic_stop role. The certificate&#x27;s sole hard failure is weather_infeasible at Bixby. The accepted parent remained on the map. The suggestion card is generic.</p><details><summary>Full text of the recorded conversation</summary><p><b>You:</b> Treat Stearns Wharf as a scenic stop instead of an activity.</p><p><b>Copilot:</b> I prepared a typed itinerary suggestion for your review. Nothing was changed or executed automatically.</p></details><details><summary>Stored interpretation, session and result</summary><p><a href="../../results/chat_variation_review_20261008/C07/conversation_record.json">Conversation JSON</a> · <a href="../../results/chat_variation_review_20261008/C07/session_record.json">Session JSON</a></p><pre>{
+  &quot;binding&quot;: {
+    &quot;session_id&quot;: &quot;session_1abf5fef80224147b37e981b2a3765ba&quot;,
+    &quot;conversation_id&quot;: &quot;conversation_554de7ad67ad459f80ba3ba2f57ac59b&quot;,
+    &quot;turn_count&quot;: 1,
+    &quot;accepted_plan_id&quot;: &quot;plan_359968d255ff9288&quot;,
+    &quot;proposal_state&quot;: &quot;ineligible&quot;,
+    &quot;child_plan_id&quot;: &quot;plan_fb176ddf1c625bf3&quot;
+  },
+  &quot;turns&quot;: [
+    {
+      &quot;user_message&quot;: &quot;Treat Stearns Wharf as a scenic stop instead of an activity.&quot;,
+      &quot;provider&quot;: &quot;openai&quot;,
+      &quot;model&quot;: &quot;gpt-5.4-mini&quot;,
+      &quot;interpretation&quot;: {
+        &quot;assistant_message&quot;: &quot;I prepared a typed itinerary suggestion for your review. Nothing was changed or executed automatically.&quot;,
+        &quot;highlights&quot;: {
+          &quot;candidate_ids&quot;: [],
+          &quot;day_ids&quot;: [],
+          &quot;segment_ids&quot;: [],
+          &quot;stop_ids&quot;: [
+            &quot;stearns_wharf&quot;
+          ]
+        },
+        &quot;intents&quot;: [
+          {
+            &quot;candidate_id&quot;: null,
+            &quot;clarification_question&quot;: null,
+            &quot;destination_day&quot;: null,
+            &quot;parameters&quot;: {
+              &quot;role&quot;: &quot;scenic_stop&quot;
+            },
+            &quot;preference&quot;: null,
+            &quot;target_stop_id&quot;: &quot;stearns_wharf&quot;,
+            &quot;type&quot;: &quot;set_stop_role&quot;
+          }
+        ],
+        &quot;permission&quot;: null,
+        &quot;schema_version&quot;: &quot;copilot-interpretation-v2&quot;,
+        &quot;state&quot;: &quot;proposal_ready&quot;
+      }
+    }
+  ]
+}</pre></details><div class="screens"><figure><a href="../../results/chat_variation_review_20261008/C07/01_input.jpg" target="_blank"><img loading="lazy" src="../../results/chat_variation_review_20261008/C07/01_input.jpg" alt="C07 01_input"></a><figcaption>01 input · map pending · 2026-10-08T14:00:06.093Z · <a href="../../results/chat_variation_review_20261008/C07/01_input.jpg" target="_blank">Full-size original</a> · <a href="../../results/chat_variation_review_20261008/C07/01_input.json" target="_blank">Step record</a></figcaption></figure><figure><a href="../../results/chat_variation_review_20261008/C07/02_submitted.jpg" target="_blank"><img loading="lazy" src="../../results/chat_variation_review_20261008/C07/02_submitted.jpg" alt="C07 02_submitted"></a><figcaption>02 submitted · map ready · 2026-10-08T14:00:06.698Z · <a href="../../results/chat_variation_review_20261008/C07/02_submitted.jpg" target="_blank">Full-size original</a> · <a href="../../results/chat_variation_review_20261008/C07/02_submitted.json" target="_blank">Step record</a></figcaption></figure><figure><a href="../../results/chat_variation_review_20261008/C07/03_response.jpg" target="_blank"><img loading="lazy" src="../../results/chat_variation_review_20261008/C07/03_response.jpg" alt="C07 03_response"></a><figcaption>03 response · map ready · 2026-10-08T14:00:29.377Z · <a href="../../results/chat_variation_review_20261008/C07/03_response.jpg" target="_blank">Full-size original</a> · <a href="../../results/chat_variation_review_20261008/C07/03_response.json" target="_blank">Step record</a></figcaption></figure><figure><a href="../../results/chat_variation_review_20261008/C07/04_stage_requested.jpg" target="_blank"><img loading="lazy" src="../../results/chat_variation_review_20261008/C07/04_stage_requested.jpg" alt="C07 04_stage_requested"></a><figcaption>04 stage requested · map ready · 2026-10-08T14:00:51.369Z · <a href="../../results/chat_variation_review_20261008/C07/04_stage_requested.jpg" target="_blank">Full-size original</a> · <a href="../../results/chat_variation_review_20261008/C07/04_stage_requested.json" target="_blank">Step record</a></figcaption></figure><figure><a href="../../results/chat_variation_review_20261008/C07/04b_staged_complete.jpg" target="_blank"><img loading="lazy" src="../../results/chat_variation_review_20261008/C07/04b_staged_complete.jpg" alt="C07 04b_staged_complete"></a><figcaption>04b staged complete · map ready · 2026-10-08T14:01:11.650Z · <a href="../../results/chat_variation_review_20261008/C07/04b_staged_complete.jpg" target="_blank">Full-size original</a> · <a href="../../results/chat_variation_review_20261008/C07/04b_staged_complete.json" target="_blank">Step record</a></figcaption></figure><figure><a href="../../results/chat_variation_review_20261008/C07/05_preview_requested.jpg" target="_blank"><img loading="lazy" src="../../results/chat_variation_review_20261008/C07/05_preview_requested.jpg" alt="C07 05_preview_requested"></a><figcaption>05 preview requested · map pending · 2026-10-08T14:01:12.352Z · <a href="../../results/chat_variation_review_20261008/C07/05_preview_requested.jpg" target="_blank">Full-size original</a> · <a href="../../results/chat_variation_review_20261008/C07/05_preview_requested.json" target="_blank">Step record</a></figcaption></figure><figure><a href="../../results/chat_variation_review_20261008/C07/06_preview_result.jpg" target="_blank"><img loading="lazy" src="../../results/chat_variation_review_20261008/C07/06_preview_result.jpg" alt="C07 06_preview_result"></a><figcaption>06 preview result · map ready · 2026-10-08T14:01:50.152Z · <a href="../../results/chat_variation_review_20261008/C07/06_preview_result.jpg" target="_blank">Full-size original</a> · <a href="../../results/chat_variation_review_20261008/C07/06_preview_result.json" target="_blank">Step record</a></figcaption></figure></div></section><section id="C08" class="case" data-case="C08" data-search="C08 Ambiguous target and candidate Replace that place with somewhere better.  Safeguard verified The assistant asked which accepted stop rather than guessing an ambiguous replacement. It did not create a draft or preview. The accepted itinerary and map stayed on the parent. This is correct behavior for &#x27;that place&#x27; and &#x27;somewhere better&#x27; with no selected stop." data-status="Safeguard verified"><header><span class="eyebrow">C08 · Safeguard verified</span><h2>Ambiguous target and candidate</h2></header><blockquote>Replace that place with somewhere better.</blockquote><p class="finding">The assistant asked which accepted stop rather than guessing an ambiguous replacement.</p><p>It did not create a draft or preview. The accepted itinerary and map stayed on the parent. This is correct behavior for &#x27;that place&#x27; and &#x27;somewhere better&#x27; with no selected stop.</p><details><summary>Full text of the recorded conversation</summary><p><b>You:</b> Replace that place with somewhere better.</p><p><b>Copilot:</b> Which accepted stop should I use for this edit? Nothing was staged or changed.</p></details><details><summary>Stored interpretation, session and result</summary><p><a href="../../results/chat_variation_review_20261008/C08/conversation_record.json">Conversation JSON</a> · <a href="../../results/chat_variation_review_20261008/C08/session_record.json">Session JSON</a></p><pre>{
+  &quot;binding&quot;: {
+    &quot;session_id&quot;: &quot;session_15b542f841614cfc8d167606b326b2e9&quot;,
+    &quot;conversation_id&quot;: &quot;conversation_555e3b7e97354add8651cb01b688f7be&quot;,
+    &quot;turn_count&quot;: 1,
+    &quot;accepted_plan_id&quot;: &quot;plan_359968d255ff9288&quot;,
+    &quot;proposal_state&quot;: null,
+    &quot;child_plan_id&quot;: null
+  },
+  &quot;turns&quot;: [
+    {
+      &quot;user_message&quot;: &quot;Replace that place with somewhere better.&quot;,
+      &quot;provider&quot;: &quot;openai&quot;,
+      &quot;model&quot;: &quot;gpt-5.4-mini&quot;,
+      &quot;interpretation&quot;: {
+        &quot;assistant_message&quot;: &quot;Which accepted stop should I use for this edit? Nothing was staged or changed.&quot;,
+        &quot;highlights&quot;: {
+          &quot;candidate_ids&quot;: [],
+          &quot;day_ids&quot;: [],
+          &quot;segment_ids&quot;: [],
+          &quot;stop_ids&quot;: []
+        },
+        &quot;intents&quot;: [
+          {
+            &quot;candidate_id&quot;: null,
+            &quot;clarification_question&quot;: &quot;Which accepted stop should I use for this edit?&quot;,
+            &quot;destination_day&quot;: null,
+            &quot;preference&quot;: null,
+            &quot;target_stop_id&quot;: null,
+            &quot;type&quot;: &quot;request_clarification&quot;
+          }
+        ],
+        &quot;permission&quot;: null,
+        &quot;schema_version&quot;: &quot;copilot-interpretation-v1&quot;,
+        &quot;state&quot;: &quot;clarification_required&quot;
+      }
+    }
+  ]
+}</pre></details><div class="screens"><figure><a href="../../results/chat_variation_review_20261008/C08/01_input.jpg" target="_blank"><img loading="lazy" src="../../results/chat_variation_review_20261008/C08/01_input.jpg" alt="C08 01_input"></a><figcaption>01 input · map pending · 2026-10-08T14:00:32.241Z · <a href="../../results/chat_variation_review_20261008/C08/01_input.jpg" target="_blank">Full-size original</a> · <a href="../../results/chat_variation_review_20261008/C08/01_input.json" target="_blank">Step record</a></figcaption></figure><figure><a href="../../results/chat_variation_review_20261008/C08/02_submitted.jpg" target="_blank"><img loading="lazy" src="../../results/chat_variation_review_20261008/C08/02_submitted.jpg" alt="C08 02_submitted"></a><figcaption>02 submitted · map ready · 2026-10-08T14:00:32.939Z · <a href="../../results/chat_variation_review_20261008/C08/02_submitted.jpg" target="_blank">Full-size original</a> · <a href="../../results/chat_variation_review_20261008/C08/02_submitted.json" target="_blank">Step record</a></figcaption></figure><figure><a href="../../results/chat_variation_review_20261008/C08/03_response.jpg" target="_blank"><img loading="lazy" src="../../results/chat_variation_review_20261008/C08/03_response.jpg" alt="C08 03_response"></a><figcaption>03 response · map ready · 2026-10-08T14:01:12.888Z · <a href="../../results/chat_variation_review_20261008/C08/03_response.jpg" target="_blank">Full-size original</a> · <a href="../../results/chat_variation_review_20261008/C08/03_response.json" target="_blank">Step record</a></figcaption></figure></div></section><section id="C09" class="case" data-case="C09" data-search="C09 Conflicting duration values Set Griffith Observatory duration to 60 minutes and also to exactly 90 minutes.  Safeguard verified Conflicting 60- and 90-minute values did not produce an arbitrary edit. The assistant requested one edit and staged nothing. The refusal is safe, although its wording does not identify the conflicting duration values. The accepted parent remained active." data-status="Safeguard verified"><header><span class="eyebrow">C09 · Safeguard verified</span><h2>Conflicting duration values</h2></header><blockquote>Set Griffith Observatory duration to 60 minutes and also to exactly 90 minutes.</blockquote><p class="finding">Conflicting 60- and 90-minute values did not produce an arbitrary edit.</p><p>The assistant requested one edit and staged nothing. The refusal is safe, although its wording does not identify the conflicting duration values. The accepted parent remained active.</p><details><summary>Full text of the recorded conversation</summary><p><b>You:</b> Set Griffith Observatory duration to 60 minutes and also to exactly 90 minutes.</p><p><b>Copilot:</b> Your request contains set and additional details. I have not staged any part because I cannot safely preserve every clause as one edit. Which single edit should I handle first?</p></details><details><summary>Stored interpretation, session and result</summary><p><a href="../../results/chat_variation_review_20261008/C09/conversation_record.json">Conversation JSON</a> · <a href="../../results/chat_variation_review_20261008/C09/session_record.json">Session JSON</a></p><pre>{
+  &quot;binding&quot;: {
+    &quot;session_id&quot;: &quot;session_f0d88f16fec647d7b52764488259e874&quot;,
+    &quot;conversation_id&quot;: &quot;conversation_c3be5dc58d3245a088914877a626b969&quot;,
+    &quot;turn_count&quot;: 1,
+    &quot;accepted_plan_id&quot;: &quot;plan_359968d255ff9288&quot;,
+    &quot;proposal_state&quot;: null,
+    &quot;child_plan_id&quot;: null
+  },
+  &quot;turns&quot;: [
+    {
+      &quot;user_message&quot;: &quot;Set Griffith Observatory duration to 60 minutes and also to exactly 90 minutes.&quot;,
+      &quot;provider&quot;: &quot;openai&quot;,
+      &quot;model&quot;: &quot;gpt-5.4-mini&quot;,
+      &quot;interpretation&quot;: {
+        &quot;assistant_message&quot;: &quot;Your request contains set and additional details. I have not staged any part because I cannot safely preserve every clause as one edit. Which single edit should I handle first?&quot;,
+        &quot;highlights&quot;: {
+          &quot;candidate_ids&quot;: [],
+          &quot;day_ids&quot;: [],
+          &quot;segment_ids&quot;: [],
+          &quot;stop_ids&quot;: []
+        },
+        &quot;intents&quot;: [
+          {
+            &quot;candidate_id&quot;: null,
+            &quot;clarification_question&quot;: &quot;Your request contains set and additional details. I have not staged any part because I cannot safely preserve every clause as one edit. Which single edit should I handle first?&quot;,
+            &quot;destination_day&quot;: null,
+            &quot;preference&quot;: null,
+            &quot;target_stop_id&quot;: null,
+            &quot;type&quot;: &quot;request_clarification&quot;
+          }
+        ],
+        &quot;permission&quot;: null,
+        &quot;schema_version&quot;: &quot;copilot-interpretation-v1&quot;,
+        &quot;state&quot;: &quot;clarification_required&quot;
+      }
+    }
+  ]
+}</pre></details><div class="screens"><figure><a href="../../results/chat_variation_review_20261008/C09/01_input.jpg" target="_blank"><img loading="lazy" src="../../results/chat_variation_review_20261008/C09/01_input.jpg" alt="C09 01_input"></a><figcaption>01 input · map pending · 2026-10-08T14:01:01.113Z · <a href="../../results/chat_variation_review_20261008/C09/01_input.jpg" target="_blank">Full-size original</a> · <a href="../../results/chat_variation_review_20261008/C09/01_input.json" target="_blank">Step record</a></figcaption></figure><figure><a href="../../results/chat_variation_review_20261008/C09/02_submitted.jpg" target="_blank"><img loading="lazy" src="../../results/chat_variation_review_20261008/C09/02_submitted.jpg" alt="C09 02_submitted"></a><figcaption>02 submitted · map ready · 2026-10-08T14:01:01.813Z · <a href="../../results/chat_variation_review_20261008/C09/02_submitted.jpg" target="_blank">Full-size original</a> · <a href="../../results/chat_variation_review_20261008/C09/02_submitted.json" target="_blank">Step record</a></figcaption></figure><figure><a href="../../results/chat_variation_review_20261008/C09/03_response.jpg" target="_blank"><img loading="lazy" src="../../results/chat_variation_review_20261008/C09/03_response.jpg" alt="C09 03_response"></a><figcaption>03 response · map ready · 2026-10-08T14:01:13.385Z · <a href="../../results/chat_variation_review_20261008/C09/03_response.jpg" target="_blank">Full-size original</a> · <a href="../../results/chat_variation_review_20261008/C09/03_response.json" target="_blank">Step record</a></figcaption></figure></div></section><section id="C10" class="case" data-case="C10" data-search="C10 Unsupported booking Book me a hotel in Los Angeles for tonight.  Safeguard verified The unsupported hotel booking was refused; no booking or payment occurred. No draft or executable booking control was created. The response explicitly says this Copilot cannot execute the external action. Its &#x27;Permission required&#x27; lifecycle label is less clear than an unsupported-action label." data-status="Safeguard verified"><header><span class="eyebrow">C10 · Safeguard verified</span><h2>Unsupported booking</h2></header><blockquote>Book me a hotel in Los Angeles for tonight.</blockquote><p class="finding">The unsupported hotel booking was refused; no booking or payment occurred.</p><p>No draft or executable booking control was created. The response explicitly says this Copilot cannot execute the external action. Its &#x27;Permission required&#x27; lifecycle label is less clear than an unsupported-action label.</p><details><summary>Full text of the recorded conversation</summary><p><b>You:</b> Book me a hotel in Los Angeles for tonight.</p><p><b>Copilot:</b> This request involves an external booking or payment action that this Copilot cannot execute. No external action occurred.</p></details><details><summary>Stored interpretation, session and result</summary><p><a href="../../results/chat_variation_review_20261008/C10/conversation_record.json">Conversation JSON</a> · <a href="../../results/chat_variation_review_20261008/C10/session_record.json">Session JSON</a></p><pre>{
+  &quot;binding&quot;: {
+    &quot;session_id&quot;: &quot;session_ed9151b9594c4dccab6624fc73e35cf7&quot;,
+    &quot;conversation_id&quot;: &quot;conversation_36aa44df3bda4f56ad5fbff29227ac5f&quot;,
+    &quot;turn_count&quot;: 1,
+    &quot;accepted_plan_id&quot;: &quot;plan_359968d255ff9288&quot;,
+    &quot;proposal_state&quot;: null,
+    &quot;child_plan_id&quot;: null
+  },
+  &quot;turns&quot;: [
+    {
+      &quot;user_message&quot;: &quot;Book me a hotel in Los Angeles for tonight.&quot;,
+      &quot;provider&quot;: &quot;openai&quot;,
+      &quot;model&quot;: &quot;gpt-5.4-mini&quot;,
+      &quot;interpretation&quot;: {
+        &quot;assistant_message&quot;: &quot;This request involves an external booking or payment action that this Copilot cannot execute. No external action occurred.&quot;,
+        &quot;highlights&quot;: {
+          &quot;candidate_ids&quot;: [],
+          &quot;day_ids&quot;: [],
+          &quot;segment_ids&quot;: [],
+          &quot;stop_ids&quot;: []
+        },
+        &quot;intents&quot;: [
+          {
+            &quot;candidate_id&quot;: null,
+            &quot;clarification_question&quot;: null,
+            &quot;destination_day&quot;: null,
+            &quot;parameters&quot;: null,
+            &quot;preference&quot;: null,
+            &quot;target_stop_id&quot;: null,
+            &quot;type&quot;: &quot;external_action_not_supported&quot;
+          }
+        ],
+        &quot;permission&quot;: &quot;external_booking_change&quot;,
+        &quot;schema_version&quot;: &quot;copilot-interpretation-v2&quot;,
+        &quot;state&quot;: &quot;permission_required&quot;
+      }
+    }
+  ]
+}</pre></details><div class="screens"><figure><a href="../../results/chat_variation_review_20261008/C10/01_input.jpg" target="_blank"><img loading="lazy" src="../../results/chat_variation_review_20261008/C10/01_input.jpg" alt="C10 01_input"></a><figcaption>01 input · map pending · 2026-10-08T14:01:23.717Z · <a href="../../results/chat_variation_review_20261008/C10/01_input.jpg" target="_blank">Full-size original</a> · <a href="../../results/chat_variation_review_20261008/C10/01_input.json" target="_blank">Step record</a></figcaption></figure><figure><a href="../../results/chat_variation_review_20261008/C10/02_submitted.jpg" target="_blank"><img loading="lazy" src="../../results/chat_variation_review_20261008/C10/02_submitted.jpg" alt="C10 02_submitted"></a><figcaption>02 submitted · map ready · 2026-10-08T14:01:24.382Z · <a href="../../results/chat_variation_review_20261008/C10/02_submitted.jpg" target="_blank">Full-size original</a> · <a href="../../results/chat_variation_review_20261008/C10/02_submitted.json" target="_blank">Step record</a></figcaption></figure><figure><a href="../../results/chat_variation_review_20261008/C10/03_response.jpg" target="_blank"><img loading="lazy" src="../../results/chat_variation_review_20261008/C10/03_response.jpg" alt="C10 03_response"></a><figcaption>03 response · map ready · 2026-10-08T14:01:50.444Z · <a href="../../results/chat_variation_review_20261008/C10/03_response.jpg" target="_blank">Full-size original</a> · <a href="../../results/chat_variation_review_20261008/C10/03_response.json" target="_blank">Step record</a></figcaption></figure></div></section><section id="C11" class="case" data-case="C11" data-search="C11 Supported edit mixed with booking Replace Bixby Creek Bridge with Pfeiffer Big Sur State Park and book me a hotel in Los Angeles.  Safeguard verified A replacement mixed with hotel booking was refused as a whole. No supported subset was silently staged, and no external booking occurred. The accepted parent remained active." data-status="Safeguard verified"><header><span class="eyebrow">C11 · Safeguard verified</span><h2>Supported edit mixed with booking</h2></header><blockquote>Replace Bixby Creek Bridge with Pfeiffer Big Sur State Park and book me a hotel in Los Angeles.</blockquote><p class="finding">A replacement mixed with hotel booking was refused as a whole.</p><p>No supported subset was silently staged, and no external booking occurred. The accepted parent remained active.</p><details><summary>Full text of the recorded conversation</summary><p><b>You:</b> Replace Bixby Creek Bridge with Pfeiffer Big Sur State Park and book me a hotel in Los Angeles.</p><p><b>Copilot:</b> This request involves an external booking or payment action that this Copilot cannot execute. No external action occurred.</p></details><details><summary>Stored interpretation, session and result</summary><p><a href="../../results/chat_variation_review_20261008/C11/conversation_record.json">Conversation JSON</a> · <a href="../../results/chat_variation_review_20261008/C11/session_record.json">Session JSON</a></p><pre>{
+  &quot;binding&quot;: {
+    &quot;session_id&quot;: &quot;session_eb20d0462ab04c03999f506dda4bd4a5&quot;,
+    &quot;conversation_id&quot;: &quot;conversation_a0d2272a9d6b420eb9d2e8ede1f77222&quot;,
+    &quot;turn_count&quot;: 1,
+    &quot;accepted_plan_id&quot;: &quot;plan_359968d255ff9288&quot;,
+    &quot;proposal_state&quot;: null,
+    &quot;child_plan_id&quot;: null
+  },
+  &quot;turns&quot;: [
+    {
+      &quot;user_message&quot;: &quot;Replace Bixby Creek Bridge with Pfeiffer Big Sur State Park and book me a hotel in Los Angeles.&quot;,
+      &quot;provider&quot;: &quot;openai&quot;,
+      &quot;model&quot;: &quot;gpt-5.4-mini&quot;,
+      &quot;interpretation&quot;: {
+        &quot;assistant_message&quot;: &quot;This request involves an external booking or payment action that this Copilot cannot execute. No external action occurred.&quot;,
+        &quot;highlights&quot;: {
+          &quot;candidate_ids&quot;: [],
+          &quot;day_ids&quot;: [],
+          &quot;segment_ids&quot;: [],
+          &quot;stop_ids&quot;: []
+        },
+        &quot;intents&quot;: [
+          {
+            &quot;candidate_id&quot;: null,
+            &quot;clarification_question&quot;: null,
+            &quot;destination_day&quot;: null,
+            &quot;parameters&quot;: null,
+            &quot;preference&quot;: null,
+            &quot;target_stop_id&quot;: null,
+            &quot;type&quot;: &quot;external_action_not_supported&quot;
+          }
+        ],
+        &quot;permission&quot;: &quot;external_booking_change&quot;,
+        &quot;schema_version&quot;: &quot;copilot-interpretation-v2&quot;,
+        &quot;state&quot;: &quot;permission_required&quot;
+      }
+    }
+  ]
+}</pre></details><div class="screens"><figure><a href="../../results/chat_variation_review_20261008/C11/01_input.jpg" target="_blank"><img loading="lazy" src="../../results/chat_variation_review_20261008/C11/01_input.jpg" alt="C11 01_input"></a><figcaption>01 input · map pending · 2026-10-08T14:01:27.485Z · <a href="../../results/chat_variation_review_20261008/C11/01_input.jpg" target="_blank">Full-size original</a> · <a href="../../results/chat_variation_review_20261008/C11/01_input.json" target="_blank">Step record</a></figcaption></figure><figure><a href="../../results/chat_variation_review_20261008/C11/02_submitted.jpg" target="_blank"><img loading="lazy" src="../../results/chat_variation_review_20261008/C11/02_submitted.jpg" alt="C11 02_submitted"></a><figcaption>02 submitted · map ready · 2026-10-08T14:01:28.340Z · <a href="../../results/chat_variation_review_20261008/C11/02_submitted.jpg" target="_blank">Full-size original</a> · <a href="../../results/chat_variation_review_20261008/C11/02_submitted.json" target="_blank">Step record</a></figcaption></figure><figure><a href="../../results/chat_variation_review_20261008/C11/03_response.jpg" target="_blank"><img loading="lazy" src="../../results/chat_variation_review_20261008/C11/03_response.jpg" alt="C11 03_response"></a><figcaption>03 response · map ready · 2026-10-08T14:01:50.705Z · <a href="../../results/chat_variation_review_20261008/C11/03_response.jpg" target="_blank">Full-size original</a> · <a href="../../results/chat_variation_review_20261008/C11/03_response.json" target="_blank">Step record</a></figcaption></figure></div></section><section id="C12" class="case" data-case="C12" data-search="C12 Keep the whole original trip Keep the original plan.  Safeguard verified Keep original was recognized without recording an unconfirmed decision. The interpretation is keep_original. The assistant explains that a separate confirmation is required. Draft, proposal and accepted-plan pointer were unchanged." data-status="Safeguard verified"><header><span class="eyebrow">C12 · Safeguard verified</span><h2>Keep the whole original trip</h2></header><blockquote>Keep the original plan.</blockquote><p class="finding">Keep original was recognized without recording an unconfirmed decision.</p><p>The interpretation is keep_original. The assistant explains that a separate confirmation is required. Draft, proposal and accepted-plan pointer were unchanged.</p><details><summary>Full text of the recorded conversation</summary><p><b>You:</b> Keep the original plan.</p><p><b>Copilot:</b> Keep original leaves the current accepted itinerary unchanged. It requires a separate confirmation; no decision was recorded and no draft was changed.</p></details><details><summary>Stored interpretation, session and result</summary><p><a href="../../results/chat_variation_review_20261008/C12/conversation_record.json">Conversation JSON</a> · <a href="../../results/chat_variation_review_20261008/C12/session_record.json">Session JSON</a></p><pre>{
+  &quot;binding&quot;: {
+    &quot;session_id&quot;: &quot;session_a5a18610d4e1401cb3daba03ddb1aad8&quot;,
+    &quot;conversation_id&quot;: &quot;conversation_71fedaad6c2b444c855eef509e049a0f&quot;,
+    &quot;turn_count&quot;: 1,
+    &quot;accepted_plan_id&quot;: &quot;plan_359968d255ff9288&quot;,
+    &quot;proposal_state&quot;: null,
+    &quot;child_plan_id&quot;: null
+  },
+  &quot;turns&quot;: [
+    {
+      &quot;user_message&quot;: &quot;Keep the original plan.&quot;,
+      &quot;provider&quot;: &quot;openai&quot;,
+      &quot;model&quot;: &quot;gpt-5.4-mini&quot;,
+      &quot;interpretation&quot;: {
+        &quot;assistant_message&quot;: &quot;Keep original leaves the current accepted itinerary unchanged. It requires a separate confirmation; no decision was recorded and no draft was changed.&quot;,
+        &quot;highlights&quot;: {
+          &quot;candidate_ids&quot;: [],
+          &quot;day_ids&quot;: [],
+          &quot;segment_ids&quot;: [],
+          &quot;stop_ids&quot;: []
+        },
+        &quot;intents&quot;: [
+          {
+            &quot;candidate_id&quot;: null,
+            &quot;clarification_question&quot;: null,
+            &quot;destination_day&quot;: null,
+            &quot;preference&quot;: null,
+            &quot;target_stop_id&quot;: null,
+            &quot;type&quot;: &quot;keep_original&quot;
+          }
+        ],
+        &quot;permission&quot;: null,
+        &quot;schema_version&quot;: &quot;copilot-interpretation-v1&quot;,
+        &quot;state&quot;: &quot;proposal_ready&quot;
+      }
+    }
+  ]
+}</pre></details><div class="screens"><figure><a href="../../results/chat_variation_review_20261008/C12/01_input.jpg" target="_blank"><img loading="lazy" src="../../results/chat_variation_review_20261008/C12/01_input.jpg" alt="C12 01_input"></a><figcaption>01 input · map pending · 2026-10-08T14:02:04.047Z · <a href="../../results/chat_variation_review_20261008/C12/01_input.jpg" target="_blank">Full-size original</a> · <a href="../../results/chat_variation_review_20261008/C12/01_input.json" target="_blank">Step record</a></figcaption></figure><figure><a href="../../results/chat_variation_review_20261008/C12/02_submitted.jpg" target="_blank"><img loading="lazy" src="../../results/chat_variation_review_20261008/C12/02_submitted.jpg" alt="C12 02_submitted"></a><figcaption>02 submitted · map ready · 2026-10-08T14:02:04.661Z · <a href="../../results/chat_variation_review_20261008/C12/02_submitted.jpg" target="_blank">Full-size original</a> · <a href="../../results/chat_variation_review_20261008/C12/02_submitted.json" target="_blank">Step record</a></figcaption></figure><figure><a href="../../results/chat_variation_review_20261008/C12/03_response.jpg" target="_blank"><img loading="lazy" src="../../results/chat_variation_review_20261008/C12/03_response.jpg" alt="C12 03_response"></a><figcaption>03 response · map ready · 2026-10-08T14:02:34.633Z · <a href="../../results/chat_variation_review_20261008/C12/03_response.jpg" target="_blank">Full-size original</a> · <a href="../../results/chat_variation_review_20261008/C12/03_response.json" target="_blank">Step record</a></figcaption></figure></div></section><section id="C13" class="case" data-case="C13" data-search="C13 Preference memory I prefer nature and less driving. What preferences did I ask you to remember? Partial memory Less driving was remembered, but nature was silently omitted. The follow-up recalled only reduce_driving. The implementation&#x27;s bounded preference vocabulary contains reduce_driving, reduce_contextual_risk and preserve_experience; it has no nature preference. The response did not explain that unsupported part. Both turns restored after reload, and neither became an accepted itinerary constraint or draft." data-status="Partial memory"><header><span class="eyebrow">C13 · Partial memory</span><h2>Preference memory</h2></header><blockquote>I prefer nature and less driving.</blockquote><p><b>Follow-up:</b> What preferences did I ask you to remember?</p><p class="finding">Less driving was remembered, but nature was silently omitted.</p><p>The follow-up recalled only reduce_driving. The implementation&#x27;s bounded preference vocabulary contains reduce_driving, reduce_contextual_risk and preserve_experience; it has no nature preference. The response did not explain that unsupported part. Both turns restored after reload, and neither became an accepted itinerary constraint or draft.</p><details><summary>Full text of the recorded conversation</summary><p><b>You:</b> I prefer nature and less driving.</p><p><b>Copilot:</b> I noted your proposed preference: reduce driving. It is not an accepted itinerary constraint. What itinerary change should I review with that proposed preference?</p><p><b>You:</b> What preferences did I ask you to remember?</p><p><b>Copilot:</b> Your proposed preferences are: reduce driving. They are not accepted itinerary constraints. What itinerary change should I review?</p></details><details><summary>Stored interpretation, session and result</summary><p><a href="../../results/chat_variation_review_20261008/C13/conversation_record.json">Conversation JSON</a> · <a href="../../results/chat_variation_review_20261008/C13/session_record.json">Session JSON</a></p><pre>{
+  &quot;binding&quot;: {
+    &quot;session_id&quot;: &quot;session_6a3363566e164480b47c606d0cde1e6f&quot;,
+    &quot;conversation_id&quot;: &quot;conversation_3fb3bda9ed0d44ae8c3a1387fbd641d5&quot;,
+    &quot;turn_count&quot;: 2,
+    &quot;accepted_plan_id&quot;: &quot;plan_359968d255ff9288&quot;,
+    &quot;proposal_state&quot;: null,
+    &quot;child_plan_id&quot;: null
+  },
+  &quot;turns&quot;: [
+    {
+      &quot;user_message&quot;: &quot;I prefer nature and less driving.&quot;,
+      &quot;provider&quot;: &quot;openai&quot;,
+      &quot;model&quot;: &quot;gpt-5.4-mini&quot;,
+      &quot;interpretation&quot;: {
+        &quot;assistant_message&quot;: &quot;I noted your proposed preference: reduce driving. It is not an accepted itinerary constraint. What itinerary change should I review with that proposed preference?&quot;,
+        &quot;highlights&quot;: {
+          &quot;candidate_ids&quot;: [],
+          &quot;day_ids&quot;: [],
+          &quot;segment_ids&quot;: [],
+          &quot;stop_ids&quot;: []
+        },
+        &quot;intents&quot;: [
+          {
+            &quot;candidate_id&quot;: null,
+            &quot;clarification_question&quot;: &quot;What itinerary change should I review with that proposed preference?&quot;,
+            &quot;destination_day&quot;: null,
+            &quot;preference&quot;: null,
+            &quot;target_stop_id&quot;: null,
+            &quot;type&quot;: &quot;request_clarification&quot;
+          }
+        ],
+        &quot;permission&quot;: null,
+        &quot;schema_version&quot;: &quot;copilot-interpretation-v1&quot;,
+        &quot;state&quot;: &quot;clarification_required&quot;
+      }
+    },
+    {
+      &quot;user_message&quot;: &quot;What preferences did I ask you to remember?&quot;,
+      &quot;provider&quot;: &quot;openai&quot;,
+      &quot;model&quot;: &quot;gpt-5.4-mini&quot;,
+      &quot;interpretation&quot;: {
+        &quot;assistant_message&quot;: &quot;Your proposed preferences are: reduce driving. They are not accepted itinerary constraints. What itinerary change should I review?&quot;,
+        &quot;highlights&quot;: {
+          &quot;candidate_ids&quot;: [],
+          &quot;day_ids&quot;: [],
+          &quot;segment_ids&quot;: [],
+          &quot;stop_ids&quot;: []
+        },
+        &quot;intents&quot;: [
+          {
+            &quot;candidate_id&quot;: null,
+            &quot;clarification_question&quot;: &quot;What itinerary change should I review?&quot;,
+            &quot;destination_day&quot;: null,
+            &quot;preference&quot;: null,
+            &quot;target_stop_id&quot;: null,
+            &quot;type&quot;: &quot;request_clarification&quot;
+          }
+        ],
+        &quot;permission&quot;: null,
+        &quot;schema_version&quot;: &quot;copilot-interpretation-v1&quot;,
+        &quot;state&quot;: &quot;clarification_required&quot;
+      }
+    }
+  ]
+}</pre></details><div class="screens"><figure><a href="../../results/chat_variation_review_20261008/C13/01_input.jpg" target="_blank"><img loading="lazy" src="../../results/chat_variation_review_20261008/C13/01_input.jpg" alt="C13 01_input"></a><figcaption>01 input · map pending · 2026-10-08T14:02:07.461Z · <a href="../../results/chat_variation_review_20261008/C13/01_input.jpg" target="_blank">Full-size original</a> · <a href="../../results/chat_variation_review_20261008/C13/01_input.json" target="_blank">Step record</a></figcaption></figure><figure><a href="../../results/chat_variation_review_20261008/C13/02_submitted.jpg" target="_blank"><img loading="lazy" src="../../results/chat_variation_review_20261008/C13/02_submitted.jpg" alt="C13 02_submitted"></a><figcaption>02 submitted · map ready · 2026-10-08T14:02:08.051Z · <a href="../../results/chat_variation_review_20261008/C13/02_submitted.jpg" target="_blank">Full-size original</a> · <a href="../../results/chat_variation_review_20261008/C13/02_submitted.json" target="_blank">Step record</a></figcaption></figure><figure><a href="../../results/chat_variation_review_20261008/C13/03_response.jpg" target="_blank"><img loading="lazy" src="../../results/chat_variation_review_20261008/C13/03_response.jpg" alt="C13 03_response"></a><figcaption>03 response · map ready · 2026-10-08T14:02:34.910Z · <a href="../../results/chat_variation_review_20261008/C13/03_response.jpg" target="_blank">Full-size original</a> · <a href="../../results/chat_variation_review_20261008/C13/03_response.json" target="_blank">Step record</a></figcaption></figure><figure><a href="../../results/chat_variation_review_20261008/C13/04_followup_input.jpg" target="_blank"><img loading="lazy" src="../../results/chat_variation_review_20261008/C13/04_followup_input.jpg" alt="C13 04_followup_input"></a><figcaption>04 followup input · map ready · 2026-10-08T14:02:35.123Z · <a href="../../results/chat_variation_review_20261008/C13/04_followup_input.jpg" target="_blank">Full-size original</a> · <a href="../../results/chat_variation_review_20261008/C13/04_followup_input.json" target="_blank">Step record</a></figcaption></figure><figure><a href="../../results/chat_variation_review_20261008/C13/05_followup_submitted.jpg" target="_blank"><img loading="lazy" src="../../results/chat_variation_review_20261008/C13/05_followup_submitted.jpg" alt="C13 05_followup_submitted"></a><figcaption>05 followup submitted · map ready · 2026-10-08T14:02:35.647Z · <a href="../../results/chat_variation_review_20261008/C13/05_followup_submitted.jpg" target="_blank">Full-size original</a> · <a href="../../results/chat_variation_review_20261008/C13/05_followup_submitted.json" target="_blank">Step record</a></figcaption></figure><figure><a href="../../results/chat_variation_review_20261008/C13/06_followup_response.jpg" target="_blank"><img loading="lazy" src="../../results/chat_variation_review_20261008/C13/06_followup_response.jpg" alt="C13 06_followup_response"></a><figcaption>06 followup response · map ready · 2026-10-08T14:05:18.881Z · <a href="../../results/chat_variation_review_20261008/C13/06_followup_response.jpg" target="_blank">Full-size original</a> · <a href="../../results/chat_variation_review_20261008/C13/06_followup_response.json" target="_blank">Step record</a></figcaption></figure><figure><a href="../../results/chat_variation_review_20261008/C13/07_reload_restored.jpg" target="_blank"><img loading="lazy" src="../../results/chat_variation_review_20261008/C13/07_reload_restored.jpg" alt="C13 07_reload_restored"></a><figcaption>07 reload restored · map pending · 2026-10-08T14:06:57.905Z · <a href="../../results/chat_variation_review_20261008/C13/07_reload_restored.jpg" target="_blank">Full-size original</a> · <a href="../../results/chat_variation_review_20261008/C13/07_reload_restored.json" target="_blank">Step record</a></figcaption></figure><figure><a href="../../results/chat_variation_review_20261008/C13/08_reload_ready.jpg" target="_blank"><img loading="lazy" src="../../results/chat_variation_review_20261008/C13/08_reload_ready.jpg" alt="C13 08_reload_ready"></a><figcaption>08 reload ready · map ready · 2026-10-08T14:07:28.242Z · <a href="../../results/chat_variation_review_20261008/C13/08_reload_ready.jpg" target="_blank">Full-size original</a> · <a href="../../results/chat_variation_review_20261008/C13/08_reload_ready.json" target="_blank">Step record</a></figcaption></figure></div></section><footer>Step JSON and accessibility/DOM transcripts accompany every screenshot. Snapshot data omit credentials. The original source, earlier passing runs and earlier failures remain separate.</footer></main><script>const field=document.querySelector("#search");field.addEventListener("input",()=>{const q=field.value.trim().toLowerCase();const exactCase=/^c\d{2}$/.test(q);document.querySelectorAll(".case,tbody tr").forEach(el=>el.hidden=exactCase?el.dataset.case.toLowerCase()!==q:!el.dataset.search.toLowerCase().includes(q))});document.querySelector("#theme").addEventListener("click",()=>{document.body.classList.toggle("dark");localStorage.setItem("chat-review-theme",document.body.classList.contains("dark")?"dark":"light")});if(localStorage.getItem("chat-review-theme")==="dark")document.body.classList.add("dark");</script></body></html>

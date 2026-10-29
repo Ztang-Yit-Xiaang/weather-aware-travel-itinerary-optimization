@@ -62,10 +62,19 @@ class CopilotContextV1:
     allowed_days: tuple[int, ...]
     allowed_segment_ids: tuple[str, ...] = ()
     allowed_alternative_ids: tuple[str, ...] = ()
+    known_places: tuple[dict[str, Any], ...] = ()
     schema_version: str = "copilot-context-v1"
 
     def as_dict(self) -> dict[str, Any]:
         return asdict(self)
+
+
+@dataclass(frozen=True, kw_only=True)
+class CopilotContextV2(CopilotContextV1):
+    accepted_plan_content_hash: str
+    capabilities: dict[str, Any]
+    conversation_memory: dict[str, Any]
+    schema_version: str = "copilot-context-v2"
 
 
 @dataclass(frozen=True)
@@ -93,6 +102,11 @@ class CopilotHighlightsV1:
 
 
 @dataclass(frozen=True)
+class CopilotIntentV2(CopilotIntentV1):
+    parameters: dict[str, Any] | None = None
+
+
+@dataclass(frozen=True)
 class CopilotInterpretationV1:
     state: str
     assistant_message: str
@@ -103,6 +117,11 @@ class CopilotInterpretationV1:
 
     def as_dict(self) -> dict[str, Any]:
         return asdict(self)
+
+
+@dataclass(frozen=True)
+class CopilotInterpretationV2(CopilotInterpretationV1):
+    schema_version: str = "copilot-interpretation-v2"
 
 
 @dataclass(frozen=True)
@@ -162,6 +181,7 @@ class ProductSession:
     proposal: dict[str, Any] | None = None
     permission_decisions: list[dict[str, Any]] = field(default_factory=list)
     conversation_id: str | None = None
+    mutation_receipts: list[dict[str, Any]] = field(default_factory=list, repr=False)
     created_at: str = field(default_factory=utc_now)
     last_accessed_at: str = field(default_factory=utc_now)
 

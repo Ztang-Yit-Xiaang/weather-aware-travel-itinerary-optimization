@@ -149,6 +149,7 @@ def test_executable_contract_normalizers_and_parameter_reducers() -> None:
         check=False,
         capture_output=True,
         text=True,
+        encoding="utf-8",
     )
 
     assert completed.returncode == 0, completed.stderr
@@ -219,6 +220,7 @@ def test_actual_backend_contracts_are_accepted_by_frontend_normalizers(
         check=False,
         capture_output=True,
         text=True,
+        encoding="utf-8",
         env=environment,
     )
 

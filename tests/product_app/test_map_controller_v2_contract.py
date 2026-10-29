@@ -1,3 +1,4 @@
+import subprocess
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -14,6 +15,22 @@ CONTROLLER = (
 
 def _source() -> str:
     return CONTROLLER.read_text(encoding="utf-8")
+
+
+def test_independent_map_identity_and_readiness_guards() -> None:
+    result = subprocess.run(
+        ["node", "--test", str(Path(__file__).with_name("map_guard_independent_review.test.mjs"))],
+        cwd=ROOT, capture_output=True, text=True, encoding="utf-8", timeout=30,
+    )
+    assert result.returncode == 0, result.stdout + result.stderr
+
+
+def test_camera_survives_editor_rerenders_and_size_changes() -> None:
+    completed = subprocess.run(
+        ["node", "--test", str(Path(__file__).with_name("map_camera_stability.test.mjs"))],
+        cwd=ROOT, capture_output=True, text=True, encoding="utf-8", timeout=30,
+    )
+    assert completed.returncode == 0, completed.stdout + completed.stderr
 
 
 def test_controller_is_instance_owned_disposable_and_pane_scoped() -> None:
@@ -177,9 +194,18 @@ def test_map_ready_waits_for_visible_idle_tile_coverage_and_observes_size() -> N
     assert "function waitForVisibleContainer(renderGeneration)" in source
     assert "new ResizeObserver" in source
     assert 'nextMap.once("idle"' in source
-    assert "nextMap.areTilesLoaded()" in source
-    assert "tileCoverageRatio < 0.95" in source
+    assert "map.areTilesLoaded() === true" in source
+    assert "readiness.tileCoverageRatio < 0.95" in source
+    assert 'typeof map?.areTilesLoaded !== "function"' in source
+    assert 'container.dataset.mapReadyAt = mapReadyAt' in source
     assert 'container.dataset.mapReady = "true"' in source
+    assert 'delete container.dataset.mapReadyAt' in source
+    assert 'delete container.dataset.mapTileCoverage' in source
+    assert 'code: "map_resize_revalidation_pending"' in source
+    assert 'Math.abs(rect.width - observedWidth) >= 0.5' in source
+    assert 'if (!sizeChanged) return;' in source
+    assert 'nextMap.once("idle"' in source
+    assert 'validateReady();' in source
     assert "nextMap.fitBounds(fittedBounds" in source
     assert 'window.addEventListener("resize", resize)' in source
     assert "resizeObserver?.disconnect();" in source

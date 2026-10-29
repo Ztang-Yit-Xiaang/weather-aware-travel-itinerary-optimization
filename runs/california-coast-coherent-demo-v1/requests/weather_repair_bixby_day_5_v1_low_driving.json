@@ -1,0 +1,94 @@
+{
+  "baseline_route": [
+    {
+      "day": 1,
+      "label": "San Francisco",
+      "stop_ids": [
+        "golden_gate_bridge"
+      ]
+    },
+    {
+      "day": 2,
+      "label": "Stanford & Silicon Valley",
+      "stop_ids": [
+        "stanford_university_main_quad"
+      ]
+    },
+    {
+      "day": 3,
+      "label": "Yosemite National Park",
+      "stop_ids": [
+        "yosemite_national_park"
+      ]
+    },
+    {
+      "day": 4,
+      "label": "Sequoia & Kings Canyon",
+      "stop_ids": [
+        "sequoia_national_park",
+        "kings_canyon_national_park"
+      ]
+    },
+    {
+      "day": 5,
+      "label": "Central Coast",
+      "stop_ids": [
+        "bixby_creek_bridge_viewpoint"
+      ]
+    },
+    {
+      "day": 6,
+      "label": "Santa Barbara",
+      "stop_ids": [
+        "stearns_wharf"
+      ]
+    },
+    {
+      "day": 7,
+      "label": "Los Angeles",
+      "stop_ids": [
+        "griffith_observatory"
+      ]
+    }
+  ],
+  "candidate_pois": [
+    {
+      "city": "Monterey",
+      "latitude": 36.5159,
+      "longitude": -121.9425,
+      "name": "Point Lobos State Natural Reserve",
+      "source_ref": "src/itinerary_system/region_scenarios.py:california_coast.curated_seed_pois",
+      "stop_id": "point_lobos_state_natural_reserve"
+    }
+  ],
+  "confirmed_constraints": {
+    "affected_day": 5,
+    "affected_stop_id": "bixby_creek_bridge_viewpoint",
+    "preserve_day_assignments": [
+      1,
+      2,
+      3,
+      4,
+      6,
+      7
+    ],
+    "require_road_validated_routes": true,
+    "target_stop_ids": [
+      "bixby_creek_bridge_viewpoint"
+    ]
+  },
+  "evidence_records": [
+    {
+      "field_path": "confirmed_constraints.affected_stop_id",
+      "ref_id": "weather_day_5_bixby",
+      "source_id": "weather_repair_bixby_day_5_v1",
+      "source_type": "registered_product_fixture"
+    }
+  ],
+  "request_id": "weather_repair_bixby_day_5_v1",
+  "schema_version": "repair-request-v1",
+  "tolerance_profile": {
+    "route_fallback_allowed": false
+  },
+  "user_intent": "Replace the weather-infeasible Day 5 Bixby stop while preserving the approved seven-day San Francisco-to-Los Angeles trip."
+}

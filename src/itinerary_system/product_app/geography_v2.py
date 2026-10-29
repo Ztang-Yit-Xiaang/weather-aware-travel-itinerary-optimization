@@ -11,8 +11,10 @@ from __future__ import annotations
 
 import math
 from collections.abc import Iterable, Mapping
+from copy import deepcopy
 from typing import Any
 
+from .island_excursion import island_geography
 from .route_coverage import RouteCoverageReportV1, audit_route_coverage
 
 _ITINERARY_ROLES = frozenset(
@@ -203,6 +205,7 @@ def _plan_geography(
             "features": validated_legs,
         },
         "gaps": {"type": "FeatureCollection", "features": gaps},
+        **(island_geography(plan) if any(s.get("excursion") for s in stop_lookup.values()) else {}),
     }
 
 
@@ -219,6 +222,7 @@ def _stop_features(
         stop = stop_lookup[stop_id]
         coordinate = _stop_coordinate(stop)
         itinerary_role, itinerary_role_source = _itinerary_role_state(stop)
+        visit_duration_minutes, visit_duration_source = _visit_duration_state(stop)
         result.append(
             {
                 "type": "Feature",
@@ -230,6 +234,16 @@ def _stop_features(
                     "role": role,
                     "itinerary_role": itinerary_role,
                     "itinerary_role_source": itinerary_role_source,
+                    "visit_duration_minutes": visit_duration_minutes,
+                    "visit_duration_source": visit_duration_source,
+                    "inspector_metadata": {
+                        "schema_version": "plan-stop-inspector-v1",
+                        "duration_constraint": deepcopy(stop.get("duration_constraint")),
+                        "weather_feasible": stop.get("weather_feasible"),
+                        "weather_risk": _optional_finite_float(stop.get("weather_risk")),
+                        "source_list": deepcopy(stop.get("source_list")),
+                        "source_confidence": _optional_finite_float(stop.get("source_confidence")),
+                    },
                     "stop_id": stop_id,
                     "name": str(
                         stop.get("attraction_name") or stop.get("name") or stop_id
@@ -239,10 +253,31 @@ def _stop_features(
                     "stop_order": _optional_int(stop.get("stop_order")) or sequence_index,
                     "sequence_index": sequence_index,
                     "ownership_strength": ownership.get(stop_id, ""),
+                    **{name: deepcopy(stop[name]) for name in (
+                        "description", "official_url", "informational_url", "place_categories",
+                        "visit_guidance", "selected_access_point", "route_access_point", "access_note",
+                        "arrival_time", "departure_time", "expected_arrival", "expected_departure",
+                        "commitment_strength", "attribute_constraints", "guide",
+                    ) if name in stop},
                 },
             }
         )
+        if stop_id == "yosemite_national_park":
+            from .yosemite_extension import YOSEMITE_POIS
+
+            # Reference places are visitor information, not added itinerary stops.
+            result[-1]["properties"]["destination_places"] = deepcopy(list(YOSEMITE_POIS.values()))
     return result
+
+
+def _optional_finite_float(value: Any) -> float | None:
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        return None
+    try:
+        number = float(value)
+    except OverflowError:
+        return None
+    return number if math.isfinite(number) else None
 
 
 def _route_path_features(
@@ -487,9 +522,28 @@ def _itinerary_role_state(stop: Mapping[str, Any]) -> tuple[str | None, str]:
     return role, source
 
 
+def _visit_duration_state(stop: Mapping[str, Any]) -> tuple[float | None, str]:
+    for field in (
+        "visit_duration_minutes",
+        "duration_minutes",
+        "service_minutes",
+        "dwell_minutes",
+    ):
+        value = stop.get(field)
+        if value is None:
+            continue
+        if isinstance(value, bool) or not isinstance(value, (int, float)):
+            raise GeographyV2Error("visit_duration_invalid")
+        minutes = float(value)
+        if not math.isfinite(minutes) or not 15 <= minutes <= 480:
+            raise GeographyV2Error("visit_duration_invalid")
+        return minutes, field
+    return None, "unavailable"
+
+
 def _plan_points(plan: Mapping[str, Any]) -> list[list[float]]:
     result: list[list[float]] = []
-    for collection_name in ("route_path", "stops", "validated_legs"):
+    for collection_name in ("route_path", "stops", "validated_legs", "marine_routes", "offshore_stops"):
         collection = plan.get(collection_name)
         if not isinstance(collection, Mapping):
             continue

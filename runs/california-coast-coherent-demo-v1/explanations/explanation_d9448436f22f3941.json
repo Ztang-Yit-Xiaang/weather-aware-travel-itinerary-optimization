@@ -1,0 +1,50 @@
+{
+  "affected_stop_id": "bixby_creek_bridge_viewpoint",
+  "certificate_content_hash": "72f7d49f91371fcc",
+  "child_plan_id": "plan_2d2ac1f621d09d1d",
+  "claims": [
+    {
+      "claim_id": "claim_low_driving_replacement",
+      "claim_type": "repair_change",
+      "confidence": "artifact_backed",
+      "evidence_refs": [
+        "weather_day_5_bixby",
+        "route_low_driving_day_5"
+      ],
+      "rendered_text": "Day 5 replaces Bixby Creek Bridge Viewpoint with Point Lobos State Natural Reserve.",
+      "unsupported": false
+    },
+    {
+      "claim_id": "claim_low_driving_preservation",
+      "claim_type": "preservation",
+      "confidence": "artifact_backed",
+      "evidence_refs": [
+        "route_low_driving_day_5"
+      ],
+      "rendered_text": "The San Francisco, Stanford, Yosemite, Sequoia/Kings Canyon, Santa Barbara, and Los Angeles days remain unchanged.",
+      "unsupported": false
+    }
+  ],
+  "diff_id": "diff_0c04940fca6d733c",
+  "evidence_records": [
+    {
+      "field_path": "confirmed_constraints.affected_stop_id",
+      "record_hash": "e0a09b0a0a4cdde2",
+      "ref_id": "weather_day_5_bixby",
+      "source_id": "weather_repair_bixby_day_5_v1",
+      "source_type": "registered_product_fixture"
+    },
+    {
+      "field_path": "route_validation.day_5",
+      "record_hash": "6151f91e49db0d30",
+      "ref_id": "route_low_driving_day_5",
+      "source_id": "route_2a952009ec5efec7",
+      "source_type": "route_matrix"
+    }
+  ],
+  "explanation_id": "explanation_d9448436f22f3941",
+  "parent_plan_id": "plan_359968d255ff9288",
+  "replacement_stop_id": "point_lobos_state_natural_reserve",
+  "schema_version": "product-repair-explanation-v1",
+  "summary": "Replace the weather-infeasible Day 5 Bixby stop with Point Lobos State Natural Reserve while preserving Days 1-4 and 6-7."
+}

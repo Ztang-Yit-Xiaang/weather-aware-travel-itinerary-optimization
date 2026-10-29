@@ -39,7 +39,7 @@ def test_duration_editor_is_exact_evaluated_and_other_modes_are_truthfully_draft
     assert "maximum_minutes: preferred" in source
     assert "evaluator-owned modeled accounting" in source
     assert "parking/drop-off, walking transfer, queue wait, and service buffer" in source
-    assert "PlanDiff v2 evidence" in source
+    assert "Duration changes are ${escapeHtml(diff.schema_version)} evidence" in source
     assert "Contextual risk delta: ${formatMetric(repair.tradeoffs.weather_risk_delta)}" in source
 
 
@@ -153,7 +153,7 @@ def test_actual_api_duration_preview_passes_js_and_forged_variants_fail(
         ineligible_headers = {
             "X-Session-Token": ineligible_created["mutation_token"]
         }
-        for target in ("stearns_wharf", "surf_n_wear_s_beach_house"):
+        for target in ("sequoia_national_park", "kings_canyon_national_park"):
             ineligible_added = client.post(
                 f"/api/sessions/{ineligible_session['session_id']}/draft/operations",
                 headers=ineligible_headers,
@@ -183,12 +183,14 @@ def test_actual_api_duration_preview_passes_js_and_forged_variants_fail(
         ineligible_accept = client.post(
             f"/api/sessions/{ineligible_session['session_id']}/accept",
             headers=ineligible_headers,
-            json={"expected_revision": ineligible_session["revision"] + 1},
+            json={
+                "expected_revision": ineligible_session["revision"] + 1,
+                "confirmation": "accept_evaluated_repair",
+                "idempotency_key": "duration-frontend-ineligible-0001",
+            },
         )
         assert ineligible_accept.status_code == 409
-        assert ineligible_accept.json() == {
-            "detail": "acceptance_not_enabled_until_w5"
-        }
+        assert ineligible_accept.json() == {"detail": "acceptance_proposal_invalid"}
 
     contract_path = tmp_path / "actual-evaluated-duration-contract.json"
     contract_path.write_text(
@@ -259,8 +261,9 @@ def test_actual_api_duration_preview_passes_js_and_forged_variants_fail(
     assert "evaluated duration frontend contract and forgeries passed" in completed.stdout
 
 
-def test_asset_token_is_bumped_for_evaluated_duration_contract() -> None:
+def test_assets_are_build_bound_for_evaluated_duration_contract() -> None:
     markup = INDEX.read_text(encoding="utf-8")
 
-    assert "/static/css/app.css?v=20260810-stability5" in markup
-    assert "/static/js/app.js?v=20260810-stability5" in markup
+    assert '/static/css/app.css?v=__PRODUCT_BUILD_ID__' in markup
+    assert '/static/js/app.js?v=__PRODUCT_BUILD_ID__' in markup
+    assert '<meta name="product-build-id" content="__PRODUCT_BUILD_ID__">' in markup

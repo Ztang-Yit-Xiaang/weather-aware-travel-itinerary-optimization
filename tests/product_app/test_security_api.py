@@ -75,6 +75,43 @@ def test_health_is_versioned_truthful_and_secret_free(api_client: TestClient) ->
     assert "mutation_token" not in json.dumps(payload)
 
 
+def test_preserved_legacy_state_does_not_degrade_writable_current_store(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("PRODUCT_COPILOT_ADAPTER", "deterministic")
+    monkeypatch.setattr(
+        ProductRuntime,
+        "_probe_map",
+        lambda self: ComponentHealthV1("map", "ready", False, "maplibre_ready"),
+    )
+    state_root = tmp_path / "state"
+    decisions = state_root / "decisions"
+    decisions.mkdir(parents=True)
+    pointer = state_root / "workspace_pointer.json"
+    decision = decisions / "legacy-decision.json"
+    pointer_bytes = b'{"legacy":"pointer"}\n'
+    decision_bytes = b'{"legacy":"decision"}\n'
+    pointer.write_bytes(pointer_bytes)
+    decision.write_bytes(decision_bytes)
+    app = create_product_app(
+        repository_root=ROOT,
+        registry_path=REGISTRY,
+        state_root=state_root,
+        additional_allowed_authorities=("testserver",),
+    )
+
+    with TestClient(app) as client:
+        payload = client.get("/api/health").json()
+
+    state_store = payload["components"]["state_store"]
+    assert payload["status"] == "ready"
+    assert state_store["status"] == "ready"
+    assert state_store["required_for_core"] is True
+    assert state_store["code"] == "state_store_ready_legacy_preserved"
+    assert pointer.read_bytes() == pointer_bytes
+    assert decision.read_bytes() == decision_bytes
+
+
 def test_unexpected_api_failure_is_sanitized_and_keeps_security_headers(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -218,9 +255,9 @@ def test_host_origin_csp_and_cache_boundaries(api_client: TestClient) -> None:
     assert api_client.get("/api/health", headers={"Origin": "https://example.com"}).status_code == 200
 
     shell = api_client.get("/app")
-    assert shell.headers["cache-control"] == "no-cache"
+    assert shell.headers["cache-control"] == "no-store"
     static_script = api_client.get("/static/js/app.js")
-    assert static_script.headers["cache-control"] == "no-cache"
+    assert static_script.headers["cache-control"] == "no-store"
     assert shell.headers["x-content-type-options"] == "nosniff"
     assert shell.headers["x-frame-options"] == "DENY"
     assert shell.headers["referrer-policy"] == "no-referrer"
@@ -228,7 +265,11 @@ def test_host_origin_csp_and_cache_boundaries(api_client: TestClient) -> None:
     assert "default-src 'self'" in csp
     assert "http://127.0.0.1:8080" in csp
     assert "frame-ancestors 'none'" in csp
-    assert "https://" not in csp
+    directives = dict(part.strip().split(" ",1) for part in csp.split(";"))
+    approved_photos = {"https://www.nps.gov/yose/", "https://www.nps.gov/common/uploads/"}
+    assert {v for v in directives["img-src"].split() if v.startswith("https://")} == approved_photos
+    assert all("https://" not in value for key,value in directives.items() if key != "img-src")
+    assert "*" not in csp
 
 
 def test_map_config_is_no_store_maplibre_primary_and_contains_no_mapbox_token(

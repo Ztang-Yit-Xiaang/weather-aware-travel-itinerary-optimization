@@ -1,0 +1,793 @@
+{
+  "catalog_id": "california_statewide_discovery_v1",
+  "generated_at": "2026-08-13T00:00:00+00:00",
+  "places": [
+    {
+      "access_points": [],
+      "aliases": [],
+      "display_coordinate": {
+        "latitude": 40.8665,
+        "longitude": -124.0828
+      },
+      "name": "Arcata",
+      "place_categories": [
+        "statewide_discovery",
+        "destination_gateway"
+      ],
+      "place_id": "ca_gateway_arcata",
+      "region_id": "california_gateway",
+      "source_refs": [
+        "california_statewide_gateway_coordinates_v1"
+      ]
+    },
+    {
+      "access_points": [],
+      "aliases": [],
+      "display_coordinate": {
+        "latitude": 40.3063,
+        "longitude": -121.2319
+      },
+      "name": "Chester",
+      "place_categories": [
+        "statewide_discovery",
+        "destination_gateway"
+      ],
+      "place_id": "ca_gateway_chester",
+      "region_id": "california_gateway",
+      "source_refs": [
+        "california_statewide_gateway_coordinates_v1"
+      ]
+    },
+    {
+      "access_points": [],
+      "aliases": [],
+      "display_coordinate": {
+        "latitude": 41.7558,
+        "longitude": -124.2026
+      },
+      "name": "Crescent City",
+      "place_categories": [
+        "statewide_discovery",
+        "destination_gateway"
+      ],
+      "place_id": "ca_gateway_crescent_city",
+      "region_id": "california_gateway",
+      "source_refs": [
+        "california_statewide_gateway_coordinates_v1"
+      ]
+    },
+    {
+      "access_points": [],
+      "aliases": [],
+      "display_coordinate": {
+        "latitude": 40.8021,
+        "longitude": -124.1637
+      },
+      "name": "Eureka",
+      "place_categories": [
+        "statewide_discovery",
+        "destination_gateway"
+      ],
+      "place_id": "ca_gateway_eureka",
+      "region_id": "california_gateway",
+      "source_refs": [
+        "california_statewide_gateway_coordinates_v1"
+      ]
+    },
+    {
+      "access_points": [],
+      "aliases": [],
+      "display_coordinate": {
+        "latitude": 36.7378,
+        "longitude": -119.7871
+      },
+      "name": "Fresno",
+      "place_categories": [
+        "statewide_discovery",
+        "destination_gateway"
+      ],
+      "place_id": "ca_gateway_fresno",
+      "region_id": "california_gateway",
+      "source_refs": [
+        "california_statewide_gateway_coordinates_v1"
+      ]
+    },
+    {
+      "access_points": [],
+      "aliases": [],
+      "display_coordinate": {
+        "latitude": 36.457,
+        "longitude": -116.8675
+      },
+      "name": "Furnace Creek",
+      "place_categories": [
+        "statewide_discovery",
+        "destination_gateway"
+      ],
+      "place_id": "ca_gateway_furnace_creek",
+      "region_id": "california_gateway",
+      "source_refs": [
+        "california_statewide_gateway_coordinates_v1"
+      ]
+    },
+    {
+      "access_points": [],
+      "aliases": [],
+      "display_coordinate": {
+        "latitude": 36.8525,
+        "longitude": -121.4016
+      },
+      "name": "Hollister",
+      "place_categories": [
+        "statewide_discovery",
+        "destination_gateway"
+      ],
+      "place_id": "ca_gateway_hollister",
+      "region_id": "california_gateway",
+      "source_refs": [
+        "california_statewide_gateway_coordinates_v1"
+      ]
+    },
+    {
+      "access_points": [],
+      "aliases": [],
+      "display_coordinate": {
+        "latitude": 36.606,
+        "longitude": -118.0629
+      },
+      "name": "Lone Pine",
+      "place_categories": [
+        "statewide_discovery",
+        "destination_gateway"
+      ],
+      "place_id": "ca_gateway_lone_pine",
+      "region_id": "california_gateway",
+      "source_refs": [
+        "california_statewide_gateway_coordinates_v1"
+      ]
+    },
+    {
+      "access_points": [],
+      "aliases": [
+        "LA"
+      ],
+      "display_coordinate": {
+        "latitude": 34.0522,
+        "longitude": -118.2437
+      },
+      "name": "Los Angeles",
+      "place_categories": [
+        "statewide_discovery",
+        "destination_gateway"
+      ],
+      "place_id": "ca_gateway_los_angeles",
+      "region_id": "california_gateway",
+      "source_refs": [
+        "california_statewide_gateway_coordinates_v1"
+      ]
+    },
+    {
+      "access_points": [],
+      "aliases": [],
+      "display_coordinate": {
+        "latitude": 37.4849,
+        "longitude": -119.9663
+      },
+      "name": "Mariposa",
+      "place_categories": [
+        "statewide_discovery",
+        "destination_gateway"
+      ],
+      "place_id": "ca_gateway_mariposa",
+      "region_id": "california_gateway",
+      "source_refs": [
+        "california_statewide_gateway_coordinates_v1"
+      ]
+    },
+    {
+      "access_points": [],
+      "aliases": [],
+      "display_coordinate": {
+        "latitude": 36.6002,
+        "longitude": -121.8947
+      },
+      "name": "Monterey",
+      "place_categories": [
+        "statewide_discovery",
+        "destination_gateway"
+      ],
+      "place_id": "ca_gateway_monterey",
+      "region_id": "california_gateway",
+      "source_refs": [
+        "california_statewide_gateway_coordinates_v1"
+      ]
+    },
+    {
+      "access_points": [],
+      "aliases": [],
+      "display_coordinate": {
+        "latitude": 37.328,
+        "longitude": -119.6493
+      },
+      "name": "Oakhurst",
+      "place_categories": [
+        "statewide_discovery",
+        "destination_gateway"
+      ],
+      "place_id": "ca_gateway_oakhurst",
+      "region_id": "california_gateway",
+      "source_refs": [
+        "california_statewide_gateway_coordinates_v1"
+      ]
+    },
+    {
+      "access_points": [],
+      "aliases": [],
+      "display_coordinate": {
+        "latitude": 33.8303,
+        "longitude": -116.5453
+      },
+      "name": "Palm Springs",
+      "place_categories": [
+        "statewide_discovery",
+        "destination_gateway"
+      ],
+      "place_id": "ca_gateway_palm_springs",
+      "region_id": "california_gateway",
+      "source_refs": [
+        "california_statewide_gateway_coordinates_v1"
+      ]
+    },
+    {
+      "access_points": [],
+      "aliases": [],
+      "display_coordinate": {
+        "latitude": 38.0691,
+        "longitude": -122.8069
+      },
+      "name": "Point Reyes Station",
+      "place_categories": [
+        "statewide_discovery",
+        "destination_gateway"
+      ],
+      "place_id": "ca_gateway_point_reyes_station",
+      "region_id": "california_gateway",
+      "source_refs": [
+        "california_statewide_gateway_coordinates_v1"
+      ]
+    },
+    {
+      "access_points": [],
+      "aliases": [],
+      "display_coordinate": {
+        "latitude": 40.1785,
+        "longitude": -122.2358
+      },
+      "name": "Red Bluff",
+      "place_categories": [
+        "statewide_discovery",
+        "destination_gateway"
+      ],
+      "place_id": "ca_gateway_red_bluff",
+      "region_id": "california_gateway",
+      "source_refs": [
+        "california_statewide_gateway_coordinates_v1"
+      ]
+    },
+    {
+      "access_points": [],
+      "aliases": [],
+      "display_coordinate": {
+        "latitude": 40.5865,
+        "longitude": -122.3917
+      },
+      "name": "Redding",
+      "place_categories": [
+        "statewide_discovery",
+        "destination_gateway"
+      ],
+      "place_id": "ca_gateway_redding",
+      "region_id": "california_gateway",
+      "source_refs": [
+        "california_statewide_gateway_coordinates_v1"
+      ]
+    },
+    {
+      "access_points": [],
+      "aliases": [],
+      "display_coordinate": {
+        "latitude": 38.5816,
+        "longitude": -121.4944
+      },
+      "name": "Sacramento",
+      "place_categories": [
+        "statewide_discovery",
+        "destination_gateway"
+      ],
+      "place_id": "ca_gateway_sacramento",
+      "region_id": "california_gateway",
+      "source_refs": [
+        "california_statewide_gateway_coordinates_v1"
+      ]
+    },
+    {
+      "access_points": [],
+      "aliases": [],
+      "display_coordinate": {
+        "latitude": 32.7157,
+        "longitude": -117.1611
+      },
+      "name": "San Diego",
+      "place_categories": [
+        "statewide_discovery",
+        "destination_gateway"
+      ],
+      "place_id": "ca_gateway_san_diego",
+      "region_id": "california_gateway",
+      "source_refs": [
+        "california_statewide_gateway_coordinates_v1"
+      ]
+    },
+    {
+      "access_points": [],
+      "aliases": [
+        "SF"
+      ],
+      "display_coordinate": {
+        "latitude": 37.7749,
+        "longitude": -122.4194
+      },
+      "name": "San Francisco",
+      "place_categories": [
+        "statewide_discovery",
+        "destination_gateway"
+      ],
+      "place_id": "ca_gateway_san_francisco",
+      "region_id": "california_gateway",
+      "source_refs": [
+        "california_statewide_gateway_coordinates_v1"
+      ]
+    },
+    {
+      "access_points": [],
+      "aliases": [
+        "SLO"
+      ],
+      "display_coordinate": {
+        "latitude": 35.2828,
+        "longitude": -120.6596
+      },
+      "name": "San Luis Obispo",
+      "place_categories": [
+        "statewide_discovery",
+        "destination_gateway"
+      ],
+      "place_id": "ca_gateway_san_luis_obispo",
+      "region_id": "california_gateway",
+      "source_refs": [
+        "california_statewide_gateway_coordinates_v1"
+      ]
+    },
+    {
+      "access_points": [],
+      "aliases": [],
+      "display_coordinate": {
+        "latitude": 37.9735,
+        "longitude": -122.5311
+      },
+      "name": "San Rafael",
+      "place_categories": [
+        "statewide_discovery",
+        "destination_gateway"
+      ],
+      "place_id": "ca_gateway_san_rafael",
+      "region_id": "california_gateway",
+      "source_refs": [
+        "california_statewide_gateway_coordinates_v1"
+      ]
+    },
+    {
+      "access_points": [],
+      "aliases": [],
+      "display_coordinate": {
+        "latitude": 34.4208,
+        "longitude": -119.6982
+      },
+      "name": "Santa Barbara",
+      "place_categories": [
+        "statewide_discovery",
+        "destination_gateway"
+      ],
+      "place_id": "ca_gateway_santa_barbara",
+      "region_id": "california_gateway",
+      "source_refs": [
+        "california_statewide_gateway_coordinates_v1"
+      ]
+    },
+    {
+      "access_points": [],
+      "aliases": [],
+      "display_coordinate": {
+        "latitude": 36.9741,
+        "longitude": -122.0308
+      },
+      "name": "Santa Cruz",
+      "place_categories": [
+        "statewide_discovery",
+        "destination_gateway"
+      ],
+      "place_id": "ca_gateway_santa_cruz",
+      "region_id": "california_gateway",
+      "source_refs": [
+        "california_statewide_gateway_coordinates_v1"
+      ]
+    },
+    {
+      "access_points": [],
+      "aliases": [],
+      "display_coordinate": {
+        "latitude": 36.4247,
+        "longitude": -121.3263
+      },
+      "name": "Soledad",
+      "place_categories": [
+        "statewide_discovery",
+        "destination_gateway"
+      ],
+      "place_id": "ca_gateway_soledad",
+      "region_id": "california_gateway",
+      "source_refs": [
+        "california_statewide_gateway_coordinates_v1"
+      ]
+    },
+    {
+      "access_points": [],
+      "aliases": [
+        "Tahoe Gateway"
+      ],
+      "display_coordinate": {
+        "latitude": 38.9399,
+        "longitude": -119.9772
+      },
+      "name": "South Lake Tahoe",
+      "place_categories": [
+        "statewide_discovery",
+        "destination_gateway"
+      ],
+      "place_id": "ca_gateway_south_lake_tahoe",
+      "region_id": "california_gateway",
+      "source_refs": [
+        "california_statewide_gateway_coordinates_v1"
+      ]
+    },
+    {
+      "access_points": [],
+      "aliases": [],
+      "display_coordinate": {
+        "latitude": 36.4388,
+        "longitude": -118.9045
+      },
+      "name": "Three Rivers",
+      "place_categories": [
+        "statewide_discovery",
+        "destination_gateway"
+      ],
+      "place_id": "ca_gateway_three_rivers",
+      "region_id": "california_gateway",
+      "source_refs": [
+        "california_statewide_gateway_coordinates_v1"
+      ]
+    },
+    {
+      "access_points": [],
+      "aliases": [],
+      "display_coordinate": {
+        "latitude": 39.3279,
+        "longitude": -120.1833
+      },
+      "name": "Truckee",
+      "place_categories": [
+        "statewide_discovery",
+        "destination_gateway"
+      ],
+      "place_id": "ca_gateway_truckee",
+      "region_id": "california_gateway",
+      "source_refs": [
+        "california_statewide_gateway_coordinates_v1"
+      ]
+    },
+    {
+      "access_points": [],
+      "aliases": [],
+      "display_coordinate": {
+        "latitude": 34.1356,
+        "longitude": -116.0542
+      },
+      "name": "Twentynine Palms",
+      "place_categories": [
+        "statewide_discovery",
+        "destination_gateway"
+      ],
+      "place_id": "ca_gateway_twentynine_palms",
+      "region_id": "california_gateway",
+      "source_refs": [
+        "california_statewide_gateway_coordinates_v1"
+      ]
+    },
+    {
+      "access_points": [],
+      "aliases": [],
+      "display_coordinate": {
+        "latitude": 36.3302,
+        "longitude": -119.2921
+      },
+      "name": "Visalia",
+      "place_categories": [
+        "statewide_discovery",
+        "destination_gateway"
+      ],
+      "place_id": "ca_gateway_visalia",
+      "region_id": "california_gateway",
+      "source_refs": [
+        "california_statewide_gateway_coordinates_v1"
+      ]
+    },
+    {
+      "access_points": [],
+      "aliases": [],
+      "display_coordinate": {
+        "latitude": 37.7456,
+        "longitude": -119.5936
+      },
+      "name": "Yosemite Valley",
+      "place_categories": [
+        "statewide_discovery",
+        "destination_gateway"
+      ],
+      "place_id": "ca_gateway_yosemite_valley",
+      "region_id": "california_gateway",
+      "source_refs": [
+        "california_statewide_gateway_coordinates_v1"
+      ]
+    },
+    {
+      "access_points": [],
+      "aliases": [
+        "Big Sur Coast"
+      ],
+      "display_coordinate": {
+        "latitude": 36.2704,
+        "longitude": -121.8081
+      },
+      "name": "Big Sur",
+      "place_categories": [
+        "statewide_discovery",
+        "coastal_scenic_region"
+      ],
+      "place_id": "ca_region_big_sur",
+      "region_id": "big_sur",
+      "source_refs": [
+        "california_statewide_nature_regions_v1"
+      ]
+    },
+    {
+      "access_points": [],
+      "aliases": [
+        "Death Valley"
+      ],
+      "display_coordinate": {
+        "latitude": 36.5323,
+        "longitude": -116.9325
+      },
+      "name": "Death Valley National Park",
+      "place_categories": [
+        "statewide_discovery",
+        "national_park"
+      ],
+      "place_id": "ca_region_death_valley",
+      "region_id": "death_valley",
+      "source_refs": [
+        "california_statewide_nature_regions_v1"
+      ]
+    },
+    {
+      "access_points": [],
+      "aliases": [
+        "Joshua Tree"
+      ],
+      "display_coordinate": {
+        "latitude": 33.8734,
+        "longitude": -115.901
+      },
+      "name": "Joshua Tree National Park",
+      "place_categories": [
+        "statewide_discovery",
+        "national_park"
+      ],
+      "place_id": "ca_region_joshua_tree",
+      "region_id": "joshua_tree",
+      "source_refs": [
+        "california_statewide_nature_regions_v1"
+      ]
+    },
+    {
+      "access_points": [],
+      "aliases": [
+        "Kings Canyon"
+      ],
+      "display_coordinate": {
+        "latitude": 36.8879,
+        "longitude": -118.5551
+      },
+      "name": "Kings Canyon National Park",
+      "place_categories": [
+        "statewide_discovery",
+        "national_park"
+      ],
+      "place_id": "ca_region_kings_canyon",
+      "region_id": "kings_canyon",
+      "source_refs": [
+        "california_statewide_nature_regions_v1"
+      ]
+    },
+    {
+      "access_points": [],
+      "aliases": [
+        "Tahoe"
+      ],
+      "display_coordinate": {
+        "latitude": 39.0968,
+        "longitude": -120.0324
+      },
+      "name": "Lake Tahoe",
+      "place_categories": [
+        "statewide_discovery",
+        "lake_mountain_region"
+      ],
+      "place_id": "ca_region_lake_tahoe",
+      "region_id": "lake_tahoe",
+      "source_refs": [
+        "california_statewide_nature_regions_v1"
+      ]
+    },
+    {
+      "access_points": [],
+      "aliases": [
+        "Lassen",
+        "Lassen Volcanic"
+      ],
+      "display_coordinate": {
+        "latitude": 40.4977,
+        "longitude": -121.4207
+      },
+      "name": "Lassen Volcanic National Park",
+      "place_categories": [
+        "statewide_discovery",
+        "national_park"
+      ],
+      "place_id": "ca_region_lassen_volcanic",
+      "region_id": "lassen_volcanic",
+      "source_refs": [
+        "california_statewide_nature_regions_v1"
+      ]
+    },
+    {
+      "access_points": [],
+      "aliases": [
+        "Pinnacles"
+      ],
+      "display_coordinate": {
+        "latitude": 36.4906,
+        "longitude": -121.1825
+      },
+      "name": "Pinnacles National Park",
+      "place_categories": [
+        "statewide_discovery",
+        "national_park"
+      ],
+      "place_id": "ca_region_pinnacles",
+      "region_id": "pinnacles",
+      "source_refs": [
+        "california_statewide_nature_regions_v1"
+      ]
+    },
+    {
+      "access_points": [],
+      "aliases": [
+        "Point Reyes National Seashore"
+      ],
+      "display_coordinate": {
+        "latitude": 38.0691,
+        "longitude": -122.8069
+      },
+      "name": "Point Reyes",
+      "place_categories": [
+        "statewide_discovery",
+        "national_seashore"
+      ],
+      "place_id": "ca_region_point_reyes",
+      "region_id": "point_reyes",
+      "source_refs": [
+        "california_statewide_nature_regions_v1"
+      ]
+    },
+    {
+      "access_points": [],
+      "aliases": [
+        "Redwood",
+        "Redwoods",
+        "Red Wood",
+        "Redwood Parks"
+      ],
+      "display_coordinate": {
+        "latitude": 41.2132,
+        "longitude": -124.0046
+      },
+      "name": "Redwood National and State Parks",
+      "place_categories": [
+        "statewide_discovery",
+        "national_and_state_parks"
+      ],
+      "place_id": "ca_region_redwood",
+      "region_id": "redwood",
+      "source_refs": [
+        "california_statewide_nature_regions_v1"
+      ]
+    },
+    {
+      "access_points": [],
+      "aliases": [
+        "Sequoia"
+      ],
+      "display_coordinate": {
+        "latitude": 36.4864,
+        "longitude": -118.5658
+      },
+      "name": "Sequoia National Park",
+      "place_categories": [
+        "statewide_discovery",
+        "national_park"
+      ],
+      "place_id": "ca_region_sequoia",
+      "region_id": "sequoia",
+      "source_refs": [
+        "california_statewide_nature_regions_v1"
+      ]
+    },
+    {
+      "access_points": [],
+      "aliases": [
+        "Yosemite"
+      ],
+      "display_coordinate": {
+        "latitude": 37.8651,
+        "longitude": -119.5383
+      },
+      "name": "Yosemite National Park",
+      "place_categories": [
+        "statewide_discovery",
+        "national_park"
+      ],
+      "place_id": "ca_region_yosemite",
+      "region_id": "yosemite",
+      "source_refs": [
+        "california_statewide_nature_regions_v1"
+      ]
+    }
+  ],
+  "schema_version": "product-poi-catalog-v1",
+  "sources": [
+    {
+      "retrieved_at": null,
+      "source_id": "california_statewide_gateway_coordinates_v1",
+      "source_type": "curated_dataset",
+      "source_url": null
+    },
+    {
+      "retrieved_at": null,
+      "source_id": "california_statewide_nature_regions_v1",
+      "source_type": "curated_dataset",
+      "source_url": null
+    }
+  ]
+}

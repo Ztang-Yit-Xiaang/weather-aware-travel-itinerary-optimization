@@ -319,3 +319,51 @@ def test_pmtiles_cli_requires_exact_version(
 
     with pytest.raises(validator.MapAssetValidationError, match="pmtiles_cli_version_mismatch"):
         validator._run_pmtiles("pmtiles", archive, [(8, 0, 0)])
+
+
+def test_workspace_coordinate_discovery_is_read_only_across_historical_trip_contexts(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path,
+) -> None:
+    from itinerary_system.product_app.registry import ProductRunRegistry
+    from itinerary_system.product_app.service import ProductService
+
+    payload = json.loads((ROOT / "configs/product_app_registry.json").read_text(encoding="utf-8"))
+    payload["runs"] = [row for row in payload["runs"] if row["trip_id"] == "california_coast_demo"]
+    assert len(payload["runs"]) == 2
+    payload["runs"][0]["default"] = True
+    registry_path = tmp_path / "historical_registry.json"
+    registry_path.write_text(json.dumps(payload), encoding="utf-8")
+    registry = ProductRunRegistry(ROOT, registry_path)
+    assert len({record.trip_id for record in registry.all()}) == 1
+    assert len({record.run_id for record in registry.all()}) == 2
+
+    # The oracle is each real canonical dashboard in its own disposable context.
+    # No sessions, provider calls, or accepted user state participate.
+    expected = []
+    for record in registry.all():
+        workspace = ProductService(registry, tmp_path / "oracle" / record.run_id).workspace_view(record.run_id)
+        for name in ("parent", "child"):
+            plan = workspace["map"][name]
+            expected.extend((float(stop["longitude"]), float(stop["latitude"])) for stop in plan["stops"])
+            expected.extend((float(point[1]), float(point[0]))
+                            for segment in plan["segments"] for point in segment["coordinates"])
+    assert expected
+    before = {path.relative_to(tmp_path).as_posix(): sha256(path)
+              for path in tmp_path.rglob("*") if path.is_file()}
+    validator = load_validator()
+
+    def supplied_registry(repository_root, config_path):
+        assert repository_root == ROOT
+        assert config_path == ROOT / "configs/product_app_registry.json"
+        return registry
+
+    def forbidden_mutable_service(*_args, **_kwargs):
+        raise AssertionError("Asset coordinate discovery must not construct mutable ProductService state")
+
+    monkeypatch.setattr(validator, "ProductRunRegistry", supplied_registry)
+    monkeypatch.setattr(validator, "ProductService", forbidden_mutable_service, raising=False)
+    monkeypatch.setattr(ProductService, "__init__", forbidden_mutable_service)
+    assert validator._workspace_coordinates(ROOT) == expected
+    after = {path.relative_to(tmp_path).as_posix(): sha256(path)
+             for path in tmp_path.rglob("*") if path.is_file()}
+    assert after == before

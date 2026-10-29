@@ -43,18 +43,18 @@ def test_frontend_provider_boundary_disables_copilot_without_silent_fallback() -
     assert 'interaction().provider === "openai"' in source
     assert '"OpenAI Copilot" : "Deterministic demo"' in source
     assert "return interaction().enabled === true" in source
-    assert "control.disabled = !available()" in source
+    assert "control.disabled = requestActive || previewActionActive || !available() || Boolean(pendingConversationReset)" in source
     assert "visible trip context, your message, and a bounded recent conversation window are sent to OpenAI" in source
     assert "requests stay on this computer" in source
     assert "copilot.update()" in app_source
 
 
-def test_acceptance_controls_are_truthfully_deferred_to_w5() -> None:
+def test_acceptance_controls_are_truthfully_gated_by_evaluated_eligibility() -> None:
     source = APP_JS.read_text(encoding="utf-8")
 
-    assert 'id="accept-repair" disabled' in source
-    assert 'id="keep-original" disabled' in source
-    assert "Acceptance and Keep original remain disabled until the W5" in source
+    assert 'id="accept-repair" ${canAccept ? "" : "disabled"}' in source
+    assert '<button id="keep-original">Keep original</button>' in source
+    assert "Decisions append to the durable ledger and atomically update the accepted-plan pointer" in source
     assert "/accept`" not in source
     assert "/keep-original`" not in source
     assert "Legacy decision files are preserved but not trusted or extended." in source

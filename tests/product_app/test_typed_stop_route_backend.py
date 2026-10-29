@@ -73,11 +73,11 @@ def test_typed_edit_capabilities_are_closed_and_truthful(tmp_path: Path) -> None
         "report_route_issue",
     }
     assert capabilities["operations"]["set_stop_day"] == {
-        "enabled": True,
-        "feedback_tier": "evaluated",
-        "preview_executable": True,
-        "evaluated_repair": True,
-        "blocking_code": None,
+        "enabled": False,
+        "feedback_tier": "draft_only",
+        "preview_executable": False,
+        "evaluated_repair": False,
+        "blocking_code": "unsupported_optimizer_mapping",
     }
     assert capabilities["operations"]["set_stop_order"] == {
         "enabled": True,
@@ -110,7 +110,7 @@ def test_typed_edit_capabilities_are_closed_and_truthful(tmp_path: Path) -> None
         "constraint_schema_version": "stop-time-window-constraint-v1",
         "early_arrival_policy": "wait_until_earliest_arrival",
         "latest_departure_semantics": "departure_after_visit",
-        "combinable_operation_types": ["set_stop_time_window"],
+        "combinable_operation_types": ["keep_stop", "replace_nearby", "set_stop_duration", "set_stop_order", "set_stop_role", "set_stop_time_window"],
     }
     assert capabilities["operations"]["set_stop_role"] == {
         "enabled": True,
@@ -136,7 +136,7 @@ def test_typed_edit_capabilities_are_closed_and_truthful(tmp_path: Path) -> None
         "typed_plan_field": "itinerary_role",
         "typed_source_field": "itinerary_role_source",
         "typed_source_value": "user_declared_itinerary_role",
-        "combinable_operation_types": ["set_stop_role"],
+        "combinable_operation_types": ["keep_stop", "replace_nearby", "set_stop_duration", "set_stop_order", "set_stop_role", "set_stop_time_window"],
     }
     assert capabilities["operations"]["change_route_preference"]["enabled"] is False
     assert capabilities["operations"]["change_route_preference"]["blocking_code"] == (
@@ -168,8 +168,9 @@ def test_changed_set_stop_day_runs_pipeline_and_reports_no_feasible_child_truthf
         accepted_plan_id="plan_e1c4f803691e3188",
     )
 
-    assert compiled.state == "ineligible"
-    assert compiled.reason == "no_feasible_evaluated_child"
+    assert compiled.state == "not_evaluated"
+    assert compiled.reason == "no_feasible_local_candidate"
+    assert compiled.runtime_execution["evaluation_executed"] is False
     assert compiled.child_plan is None
     assert compiled.diff is None
     assert compiled.certificate is None
@@ -185,7 +186,7 @@ def test_same_day_set_stop_day_is_rejected_before_append(tmp_path: Path) -> None
             0,
             "set_stop_day",
             "golden_gate_bridge",
-            {"day": 7},
+            {"day": 1},
         )
         restored = client.get(f"/api/sessions/{session['session_id']}", headers=headers)
 

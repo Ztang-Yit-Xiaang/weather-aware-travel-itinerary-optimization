@@ -1,0 +1,1502 @@
+{
+  "build_id": "683c8cf6cf38473e",
+  "captured_utc": "2026-10-29T05:14:43.054885+00:00",
+  "files": [
+    {
+      "path": "configs/product_app_registry.json",
+      "sha256": "5ef94b434eed04a8dc3ebb246c3e9a6405a6a4c7a8e8ba0554214bb6dc61abc9"
+    },
+    {
+      "path": "configs/product_route_delta.json",
+      "sha256": "998d86e50df17b60c08c40232497035091d5fd58111fd76a50a0e6408bb96864"
+    },
+    {
+      "path": "scripts/run_live_copilot_prompt_evaluation_v2.py",
+      "sha256": "f33b035ebf5d78df372347483cfb6f9eb1bbd78d267c6a2310f5d52e94e892eb"
+    },
+    {
+      "path": "scripts/run_product_app.py",
+      "sha256": "caed9ea05f98cabce6ed382db52a82bd3712e6343d46116f0321826d1ae89ff9"
+    },
+    {
+      "path": "src/itinerary_system/__init__.py",
+      "sha256": "94ed4e82decf30f43afa285ea65b7b66f0f0a7a43a542346ded04d04ef60dc9c"
+    },
+    {
+      "path": "src/itinerary_system/_legacy.py",
+      "sha256": "638bb01a9cadc30a90c81e1d739bee9c816145f7809ac5cf8fd7e7200ec89079"
+    },
+    {
+      "path": "src/itinerary_system/artifact_metadata.py",
+      "sha256": "4a8dbae08d20f266b8a08747e6e2cbac6c4952b4ae61dbae70345048ce4ae9ec"
+    },
+    {
+      "path": "src/itinerary_system/bandit_candidate_selector.py",
+      "sha256": "b31b561993d1acab72d5af4bb7cabd0039807783c18f6ffd1315c77092ba0dd1"
+    },
+    {
+      "path": "src/itinerary_system/benchmark/__init__.py",
+      "sha256": "e98f9c212b88f0f3085978ab7f94d3528ffaa52d5e1932aba50c425bb2f6f01b"
+    },
+    {
+      "path": "src/itinerary_system/benchmark/disruptions.py",
+      "sha256": "2b541e3f943cb2c366d77a7f4cb15a242ee258d99342f230ffd931319ad2e54d"
+    },
+    {
+      "path": "src/itinerary_system/benchmark/methods.py",
+      "sha256": "f663003a45474a44f03f6df4ac799b18926a71e721b7bb32cf7f68d15aa4ae1d"
+    },
+    {
+      "path": "src/itinerary_system/benchmark/metrics.py",
+      "sha256": "d5200b27c7156fed7510c8b186e6e5922e0beb2fc19699bc030ec41b989f4c1e"
+    },
+    {
+      "path": "src/itinerary_system/benchmark/publication.py",
+      "sha256": "3591431c6c88a56b9fcb9ee3579ba472d2ac3a9ce54b555d5a8b76979ef1a014"
+    },
+    {
+      "path": "src/itinerary_system/benchmark/response_aware.py",
+      "sha256": "ca39d0eae5468d272c174039a499734a04f119e0696927711f1687023ab2dd65"
+    },
+    {
+      "path": "src/itinerary_system/benchmark/route_coverage.py",
+      "sha256": "01828b3e56086162dc366e93ab481f4aeb2f5766db3fe73429ddd586e56091a1"
+    },
+    {
+      "path": "src/itinerary_system/benchmark/runner.py",
+      "sha256": "eb7ec816ad358f2d715df7bcad5ae3859de219903412e46147631ef7b62eab13"
+    },
+    {
+      "path": "src/itinerary_system/benchmark/splits.py",
+      "sha256": "7afa58b011137f58aac6bdb636852c858c2976953ae94fbaf0781e2b72aba52d"
+    },
+    {
+      "path": "src/itinerary_system/blueprint_core.py",
+      "sha256": "87ad8a8fa621f5439a330f45aee47ce4c6ff4a553404edb306d0409c165ab454"
+    },
+    {
+      "path": "src/itinerary_system/blueprint_day_plans.py",
+      "sha256": "d4fa8ae82fd297f2ac168841e3668045ec38b05b6091e1b2fbeeb925327085c7"
+    },
+    {
+      "path": "src/itinerary_system/blueprint_render_layers.py",
+      "sha256": "5d5d034d34ffd6effd2033cba847b121c6d4e9159bb2158255bfa3ec33ad58ec"
+    },
+    {
+      "path": "src/itinerary_system/blueprint_render_panels.py",
+      "sha256": "b413b1ee0f3aaa605872645e48b0a408e19d7cb697cfc14038fa18896eeba311"
+    },
+    {
+      "path": "src/itinerary_system/blueprint_render_primitives.py",
+      "sha256": "9f91a8f0626c44cb20ac0c5ef057bd56fd2b3417ad4dce5850e7845a03267527"
+    },
+    {
+      "path": "src/itinerary_system/blueprint_renderer.py",
+      "sha256": "e6d537ef0f7d77e2064d4a45c07c5b650549cfa4eca8da6aa82456282be2a333"
+    },
+    {
+      "path": "src/itinerary_system/blueprint_renderer_sections.py",
+      "sha256": "b01fa55279bcd650f85ddad2be4374b389d8a81a7ff7deae31d3528ca9c7c7b0"
+    },
+    {
+      "path": "src/itinerary_system/blueprint_route_selector.py",
+      "sha256": "e6bfdcecf59c1b0e9e4a96ad6df38be08f37afd23c15a271eebe0536b02e45b5"
+    },
+    {
+      "path": "src/itinerary_system/budget.py",
+      "sha256": "2fa5ef8d1f4026798bcc0a2cd90595b23c8aa6a814479717f74a0b2889c15d18"
+    },
+    {
+      "path": "src/itinerary_system/config.py",
+      "sha256": "513b6d32df4985630267fed89a503446d15772f1d66d4629ef8516425d857516"
+    },
+    {
+      "path": "src/itinerary_system/dashboard_assets.py",
+      "sha256": "b9b59b022e683541e549415012167c6d2ed0fc0bd000b4f2b8b1e3ca9fa75cde"
+    },
+    {
+      "path": "src/itinerary_system/dashboard_data_loader.py",
+      "sha256": "960b90938cb0aee0a48359fe7d35bc6272e530fc0c11d7bffd660c34509edafc"
+    },
+    {
+      "path": "src/itinerary_system/dashboard_evaluation.py",
+      "sha256": "d4098dbff4e293b8cf9ded0d592eae3a4ae285677c131831e43f7e10226e7d21"
+    },
+    {
+      "path": "src/itinerary_system/dashboard_map_controls.py",
+      "sha256": "a1f54a89018307b6fc9e1bb91a63a82efc954bd71f6456c741ebb3cc53601f55"
+    },
+    {
+      "path": "src/itinerary_system/dashboard_ui.py",
+      "sha256": "024bfcab722245062ac1198bd22ca7ad0891d21830da93ffec4264bd77a950cf"
+    },
+    {
+      "path": "src/itinerary_system/data/__init__.py",
+      "sha256": "56ae56ec4f8bd01451503ebad08580dbdabecc639c8e8d0edfab500ad5bebd9a"
+    },
+    {
+      "path": "src/itinerary_system/data/context.py",
+      "sha256": "88e52788211fa8233d3565a40ca1c590206e894ef77c079a6f699958aa840583"
+    },
+    {
+      "path": "src/itinerary_system/data/schemas.py",
+      "sha256": "6eb7276673feabb81f79f71fa4b02f6411d6f47f49116532fe5bfd01f4fa723d"
+    },
+    {
+      "path": "src/itinerary_system/data/snapshot.py",
+      "sha256": "471a357f7cc918e49d5952f4931e600d9bb80c5992a186724138bd9f43d6958a"
+    },
+    {
+      "path": "src/itinerary_system/data_enrichment.py",
+      "sha256": "70fdf58d4f936e2e191ed8b6d9ef761cd2a230860e44b6bc5a278c0fd9a13fef"
+    },
+    {
+      "path": "src/itinerary_system/diversity.py",
+      "sha256": "ab7b1d2a3e1ded259c2dab7361404251cc141cc4793845d635674c8db84d797a"
+    },
+    {
+      "path": "src/itinerary_system/evaluation/__init__.py",
+      "sha256": "06b51aa0181c63f174aa1646992302ed36f120c553d462aab9d19bcdb70eafbc"
+    },
+    {
+      "path": "src/itinerary_system/evaluation/certificate.py",
+      "sha256": "eda44fdeacfe40cb0d0ccc26d872b8783fad7b285f12a1a2193fecf9c19bcfb5"
+    },
+    {
+      "path": "src/itinerary_system/evaluation/plan_evaluator.py",
+      "sha256": "8017fad706f81b9c2a211211ff558d2bf5adf54255e8847b6ea115694b121f35"
+    },
+    {
+      "path": "src/itinerary_system/experiment_runner.py",
+      "sha256": "d806a285ffbe892cbb5b73ed63a9595088caf3f9e02c5f8d8777c6524f85dbf9"
+    },
+    {
+      "path": "src/itinerary_system/explanation/__init__.py",
+      "sha256": "1c4baa9bd75d78fc628a32bdf88dc412ddf7d43e8472bd8a66c30418c1a06d98"
+    },
+    {
+      "path": "src/itinerary_system/explanation/counterfactual.py",
+      "sha256": "6b678d23f20ad09b236156b044ee7ca67cc87ff1d3db6ce0b29fa8ced4694d26"
+    },
+    {
+      "path": "src/itinerary_system/explanation/evidence.py",
+      "sha256": "e564c37a4076a4fee78e96757f7321c4d6de1e46de42d857683f9d07a7d6c418"
+    },
+    {
+      "path": "src/itinerary_system/explanation/verbalizer.py",
+      "sha256": "a72300eadadcd5a9a64e8843cae7fce6ad3236e2e411695cba4916ea4c7314af"
+    },
+    {
+      "path": "src/itinerary_system/hierarchical_gurobi.py",
+      "sha256": "d06ccb3fe95ee208fe8f6f3adfc97c995097113a9bdc4c9c5a44f46794255f76"
+    },
+    {
+      "path": "src/itinerary_system/interaction/__init__.py",
+      "sha256": "1364d08cb74f145ef1de82e047a9d28384664b8808861478551c9bf41bc16460"
+    },
+    {
+      "path": "src/itinerary_system/interaction/clarification_policy.py",
+      "sha256": "4fc4d8eb9e3c0f0059d7621f40c5365bd81b4cd83505dd280467b050194fba7e"
+    },
+    {
+      "path": "src/itinerary_system/interaction/cli.py",
+      "sha256": "4de5a3cb9f67ed03db831daeab7b564b1eae2185b9d29e912896fdeb4e3c704e"
+    },
+    {
+      "path": "src/itinerary_system/interaction/consequence.py",
+      "sha256": "823f93401aa6ba369a24039473bc8e9a466b150d05b2d4fedd87cdbb3715dfe4"
+    },
+    {
+      "path": "src/itinerary_system/interaction/controller.py",
+      "sha256": "162c2aa71c81a9511ebbf8142a901a08d3b134fb2c89fdd34f380bc7eb6a4075"
+    },
+    {
+      "path": "src/itinerary_system/interaction/counterfactual_probe.py",
+      "sha256": "d7a31aa36808a6ba49bf1daa76d604d885a1dd32bc74c642c765d4c7cb58cf78"
+    },
+    {
+      "path": "src/itinerary_system/interaction/frozen_probe.py",
+      "sha256": "aa3e1a6fa1b2d77b4dc92e7b7ad1e8fe7b8ccb2176360525c89661578fadad29"
+    },
+    {
+      "path": "src/itinerary_system/interaction/models.py",
+      "sha256": "590bad3ec336fedc2e2e6eacc7f9cf759dbab5841a0e5093012ad2e2a015b482"
+    },
+    {
+      "path": "src/itinerary_system/interaction/patch_compiler.py",
+      "sha256": "f3b79b5aed3b443da984ca5629082dc308e1eda6dae10f2afb6bfcca184b1b41"
+    },
+    {
+      "path": "src/itinerary_system/interaction/permission_policy.py",
+      "sha256": "c70c193e74708eb5cc5ee842ed81fc472345d0c5928e2a00b9d4417c51daf8d8"
+    },
+    {
+      "path": "src/itinerary_system/interaction/pipeline.py",
+      "sha256": "2ed65a28b4fc26ab6989f9d81d14ac67be50edc90e5ed6b770e82bbb03f25a6e"
+    },
+    {
+      "path": "src/itinerary_system/interaction/semantic_candidates.py",
+      "sha256": "e41ebe06202a8a179524ceb870c6387208263029481011fa6ba00cb653379303"
+    },
+    {
+      "path": "src/itinerary_system/interaction/tradeoff_selector.py",
+      "sha256": "1b52750b9f1b6abcd97452765f5a9a50c7617adecdc90f2ed80d42dd10d49e1b"
+    },
+    {
+      "path": "src/itinerary_system/interest_model.py",
+      "sha256": "44c50a8efade37d01270d4ad22cef5f11098dac872690fdfebafac754607a857"
+    },
+    {
+      "path": "src/itinerary_system/interest_surface.py",
+      "sha256": "7fd0a379540cb3c7277ed1283bf8855eca6bead545cb9530d500d3d4e79717c4"
+    },
+    {
+      "path": "src/itinerary_system/map_exporter.py",
+      "sha256": "7fccddfeaf078e408fa20f356f553f68e6b7b542a6e2e81597770b2913a84ed9"
+    },
+    {
+      "path": "src/itinerary_system/map_renderer.py",
+      "sha256": "0d64094bbce598f5065c795f4c77bf1575e8ab229ae3265d2d3f261d62bf4b8f"
+    },
+    {
+      "path": "src/itinerary_system/multi_objective_route.py",
+      "sha256": "94a38b22e81841df8b0783cfb40c99df5646636153b0f7c1d435d9845b4e5211"
+    },
+    {
+      "path": "src/itinerary_system/nature_catalog.py",
+      "sha256": "9c0e7f0f15c21b2673827fb1122642abb70ddeb60594c9e3b2cd4939b3054d0e"
+    },
+    {
+      "path": "src/itinerary_system/nature_site_routes.py",
+      "sha256": "bd4a490d81500d447d5d9fe9191c740cfda9cb347eb19bd69bb97cb716bd5fb9"
+    },
+    {
+      "path": "src/itinerary_system/phase0_exporter.py",
+      "sha256": "9a41df19239b56f446789107bcb1888d71796dc1ed3c61159179fe0c62ba86fd"
+    },
+    {
+      "path": "src/itinerary_system/pipeline_runner.py",
+      "sha256": "027e44d812f86a1db923c719e56de1750375d04aec533afb99c80d54d6506083"
+    },
+    {
+      "path": "src/itinerary_system/plans/__init__.py",
+      "sha256": "e1b0773e501291a39dd40263e93ae54afbf1e79c9a7936cf911d33420e052f25"
+    },
+    {
+      "path": "src/itinerary_system/plans/attribute_ownership.py",
+      "sha256": "cc73777bf7d934516aec95b3e4d196cc0e76b85be71a0b2eb061a325f6611b24"
+    },
+    {
+      "path": "src/itinerary_system/plans/diff.py",
+      "sha256": "806732c34c0e0e27c9c2f47409c5618781c9b1bdc10c44adcbb422b96d6834f5"
+    },
+    {
+      "path": "src/itinerary_system/plans/models.py",
+      "sha256": "a881496ea290fdacdbf9e351f2b226430ff8ab6a83407a0fd5bbf1c8100b21ac"
+    },
+    {
+      "path": "src/itinerary_system/plans/repository.py",
+      "sha256": "e92ade17f9ece014413b8080f84aebd096602f2b0f4fdb2c484a427a57a962d9"
+    },
+    {
+      "path": "src/itinerary_system/product_app/__init__.py",
+      "sha256": "f317bf6f573feed70b42b3f56a5a75a67224b323a7f85c08bb40e30020a830c5"
+    },
+    {
+      "path": "src/itinerary_system/product_app/acceptance.py",
+      "sha256": "112eb37604f10b7174a377ee8615b8a876592c271af5e4f20f0e3e93ae6789f6"
+    },
+    {
+      "path": "src/itinerary_system/product_app/api.py",
+      "sha256": "e7c1cd185b2e7828e45b0a36357c666b5d515537b69f0358aafc2a8a6a4e2fef"
+    },
+    {
+      "path": "src/itinerary_system/product_app/candidate_burden.py",
+      "sha256": "c5b24bc88c0e5dd56d66bc5f40b43ada08f6f8b975e198885fd0e499bb4263c9"
+    },
+    {
+      "path": "src/itinerary_system/product_app/candidate_discovery.py",
+      "sha256": "2e5dac3ccdea874391f54646f5fd93e20ac1ffcb17f1594d592f459038924520"
+    },
+    {
+      "path": "src/itinerary_system/product_app/coherent_product_demo.py",
+      "sha256": "927d50b58f3d6459cd044ad8d7aa0e9736971c943c9e810c5cbc68d681876c78"
+    },
+    {
+      "path": "src/itinerary_system/product_app/config.py",
+      "sha256": "ae2887a0ba68169beeb38545f51803db2c9f37b4705718289946c1432624c5c0"
+    },
+    {
+      "path": "src/itinerary_system/product_app/conversations.py",
+      "sha256": "cb9a3371a2174e2e67302d382acb078891526179c181a1c056968fd308da8810"
+    },
+    {
+      "path": "src/itinerary_system/product_app/copilot.py",
+      "sha256": "6c15ac7e53bc0fbd58da8f9c70286425e053bdbc2629e0b2c4dac9f59116cbac"
+    },
+    {
+      "path": "src/itinerary_system/product_app/copilot_memory.py",
+      "sha256": "d80eb989cfc6c745c8704627cbb165d51060d3fbb5a3a69b7d9d8f7c9427601d"
+    },
+    {
+      "path": "src/itinerary_system/product_app/copilot_prompt.py",
+      "sha256": "3aa129605d8f26842fca8506e865f62bd48f5cdd78a016f5e0dc6f6f5e43f003"
+    },
+    {
+      "path": "src/itinerary_system/product_app/copilot_typed_edits.py",
+      "sha256": "952e451f40d3bb910014a613dde25fa3b5259bff2cbcfd4c63be44d166bbbb79"
+    },
+    {
+      "path": "src/itinerary_system/product_app/draft_compiler.py",
+      "sha256": "355338bf75567d9039686c66352d968f59523941c3fb4cf2cd0ce7eb50440572"
+    },
+    {
+      "path": "src/itinerary_system/product_app/evaluated_stop_edits.py",
+      "sha256": "bb647168ba114d395a5039a63742f4a9c12a99701040b5491d9f4996931683b2"
+    },
+    {
+      "path": "src/itinerary_system/product_app/geography.py",
+      "sha256": "610db1a1249762751fe46017452bbbfbb5a5922ca7d6c82199d1ee6b93a2f0c3"
+    },
+    {
+      "path": "src/itinerary_system/product_app/geography_v2.py",
+      "sha256": "f2c9da80c3b29d0695201064a55a71ce393a03aa435c13f599699a518e31c07b"
+    },
+    {
+      "path": "src/itinerary_system/product_app/interaction_contracts.py",
+      "sha256": "df3831b7ce70665b308238c9dffe8f8e252022943e5dab43f25d5abcf2a873e1"
+    },
+    {
+      "path": "src/itinerary_system/product_app/interaction_state_machine.py",
+      "sha256": "6d338ec56b60b908b95201948f5a2308de488fa8c7d89af94712e7be755883c2"
+    },
+    {
+      "path": "src/itinerary_system/product_app/interest_regions.py",
+      "sha256": "fdf9eb46431f97f8673fdff93b92c74047719f82c3e16f7f88245aaef0c24654"
+    },
+    {
+      "path": "src/itinerary_system/product_app/island_excursion.py",
+      "sha256": "bbff873976e108b8edf087812906fd20bd5ff4eb156b3567be62bff21ee3f5f2"
+    },
+    {
+      "path": "src/itinerary_system/product_app/map_asset_contract.py",
+      "sha256": "1196c7ad97714b1eaa7ad7034f0353826eec2cb1082beb9f3b35c6a6f7f259f3"
+    },
+    {
+      "path": "src/itinerary_system/product_app/map_interactions.py",
+      "sha256": "98e5b13e83f788c1fc780c47ef46862b95261199477bacf17c9dcd7ffc7218bb"
+    },
+    {
+      "path": "src/itinerary_system/product_app/models.py",
+      "sha256": "c55bb02e5e2c2197dcd83f407f9e408c43fce17cfa5508457ca4e456d22b9f41"
+    },
+    {
+      "path": "src/itinerary_system/product_app/official_travel.py",
+      "sha256": "409fb3c537d9427c7203a0c720c25401544f2421d126469593ddfc9052e2f06c"
+    },
+    {
+      "path": "src/itinerary_system/product_app/openai_copilot.py",
+      "sha256": "a587d5b085ba3ee59628e9a0473c8ed5d1299adee54e482d6d4530abd2e7c951"
+    },
+    {
+      "path": "src/itinerary_system/product_app/persistence.py",
+      "sha256": "7c7b21dcafe5ec157f698726c9a805d8a9af4c3102b3912797fbf184a5f328ab"
+    },
+    {
+      "path": "src/itinerary_system/product_app/poi_catalog.py",
+      "sha256": "e89736ec81a052e00ebf1c04dfa30a339142008e556ea4f87b8c1c6ce4444f74"
+    },
+    {
+      "path": "src/itinerary_system/product_app/product_demo.py",
+      "sha256": "07c7e7cc6ab3db077f6fa311fd6bf1caae3c91fe874c63ffbbb83b735554d118"
+    },
+    {
+      "path": "src/itinerary_system/product_app/product_demo_coherence.py",
+      "sha256": "10092c098e47abc4610fb63a4d365af1e9b653a46a72a90a3b02bce067cf93ed"
+    },
+    {
+      "path": "src/itinerary_system/product_app/registry.py",
+      "sha256": "6aedf1b60c46979fda5693cbcbda3f3496c4d45149496ae8105a5ee2727cc850"
+    },
+    {
+      "path": "src/itinerary_system/product_app/route_coverage.py",
+      "sha256": "1309c8585e3b6dec4ce84dd357af7ff154a467c679dd4c883a161fb469fb7c51"
+    },
+    {
+      "path": "src/itinerary_system/product_app/route_delta.py",
+      "sha256": "0f5f026301facdc05402879ec1719fc8006b2752ade366034d1c703606ad7963"
+    },
+    {
+      "path": "src/itinerary_system/product_app/route_overlay.py",
+      "sha256": "9548f210ce4f4fb8a6cd3e9edc20833290b527b626690570992e48c210fcb978"
+    },
+    {
+      "path": "src/itinerary_system/product_app/routing_runtime.py",
+      "sha256": "2378f12c642e1b342da644baa1914bc717e7b38d42bcbb630aebfaf8d8cd302f"
+    },
+    {
+      "path": "src/itinerary_system/product_app/runtime.py",
+      "sha256": "323effc4fccbceb4fb2c01c0ed2448c8451cc6ef63c50d3ca2cfc103343630c2"
+    },
+    {
+      "path": "src/itinerary_system/product_app/schedule_preview.py",
+      "sha256": "bb8562b356319569855c58c48e15ee3e3638087f0853e63bd248533c542ee9e7"
+    },
+    {
+      "path": "src/itinerary_system/product_app/security.py",
+      "sha256": "85ff37976cd9bc897267c527b04edf603382f94b70f0f7675d4a06d428795ae3"
+    },
+    {
+      "path": "src/itinerary_system/product_app/service.py",
+      "sha256": "d7ece625fbf0d9b659331ece0e7bdcd0b39fc2a186637653bada9b221bfa7803"
+    },
+    {
+      "path": "src/itinerary_system/product_app/static/css/app.css",
+      "sha256": "cb7f380de683378989f744ad032f7f5557d9253d40947443acd82e6288c9890b"
+    },
+    {
+      "path": "src/itinerary_system/product_app/static/index.html",
+      "sha256": "bb1ddddd1b5d7570b676dbdf90ce83f11f2aa24dd74b87921773e48976032f48"
+    },
+    {
+      "path": "src/itinerary_system/product_app/static/js/app.js",
+      "sha256": "c4bb9103e779b27609e943a075158f2fc17aea32093497e15afbec97a68472c7"
+    },
+    {
+      "path": "src/itinerary_system/product_app/static/js/compare.js",
+      "sha256": "b143bdd9301e61649efa3a0ee77499b393c1beb1d6c79508312440b6bed02530"
+    },
+    {
+      "path": "src/itinerary_system/product_app/static/js/copilot.js",
+      "sha256": "ab54e19781ea3a8cce666c4efbf270d0f038985a4ef70746738872202eff2a4e"
+    },
+    {
+      "path": "src/itinerary_system/product_app/static/js/interest-regions.js",
+      "sha256": "18b33efcc11b4cd64776176cc51b671fa60d5d219d140cc8c88c7857bf0c2563"
+    },
+    {
+      "path": "src/itinerary_system/product_app/static/js/map-controller-v2.js",
+      "sha256": "02777ea5196fe77663f90b058d1680fb96e6bef5e64c55c8c70b5a2324475e1a"
+    },
+    {
+      "path": "src/itinerary_system/product_app/static/js/map.js",
+      "sha256": "0bbee6195467726b9e62840a6eff23354d987838afc5f71c3f96adfab59e152f"
+    },
+    {
+      "path": "src/itinerary_system/product_app/static/js/mutation-recovery.js",
+      "sha256": "dc0b1367671a1bdfb0b133316f14f6e3a11821b4b923eea5957931da17f03436"
+    },
+    {
+      "path": "src/itinerary_system/product_app/trip_planning.py",
+      "sha256": "2f6f1dfdfaea014ebdf3021c0f8c5eceafa0afd9478e1f19987e30d01a18d35a"
+    },
+    {
+      "path": "src/itinerary_system/product_app/trip_replanner.py",
+      "sha256": "03759f11c671315494af1f5f1555166f4ecdee4e5139540946a0b080dba1a399"
+    },
+    {
+      "path": "src/itinerary_system/product_app/trip_solver.py",
+      "sha256": "88b7cf1ab7df715ff06b3136027840a78ef95e058780764253ffad613f2a6093"
+    },
+    {
+      "path": "src/itinerary_system/product_app/workspace.py",
+      "sha256": "d6feaea63a09968d62a15d8f0ce44229ddb8feb8759a5a30734e5729b2ce342f"
+    },
+    {
+      "path": "src/itinerary_system/product_app/yosemite_extension.py",
+      "sha256": "9c0c6a544979f9684036b9ce77091a310cef88ded74687f90b8cfaddc63fb836"
+    },
+    {
+      "path": "src/itinerary_system/product_dashboard_adapter.py",
+      "sha256": "1ab2b41b1280f98478bd5d4b3e038963e214c41d4e813c0c58cc4fdb137cc5ea"
+    },
+    {
+      "path": "src/itinerary_system/product_dashboard_assets.py",
+      "sha256": "7439fa3ccb4937b1ae428d30cbbdb3705a06dbec1cb8c9881aeb30338316a6ca"
+    },
+    {
+      "path": "src/itinerary_system/product_dashboard_models.py",
+      "sha256": "dd26e741d92c1afcf421551af11bc4c54a360241bcff4af09b92307ac3a5b51d"
+    },
+    {
+      "path": "src/itinerary_system/product_dashboard_renderer.py",
+      "sha256": "9ca7000cb16006f05a5a4054ce32d7a64938269a01f8afcd23cd9cbe9d609792"
+    },
+    {
+      "path": "src/itinerary_system/product_dashboard_view_models.py",
+      "sha256": "71a77188a004b27deb14c6687db218cd507a4c589146e61495fcecd650adef5a"
+    },
+    {
+      "path": "src/itinerary_system/region_scenarios.py",
+      "sha256": "e7605e86e350d184a12b51a517648cfdbbdf56e7c760284b035f911ce78d1aa8"
+    },
+    {
+      "path": "src/itinerary_system/repair/__init__.py",
+      "sha256": "736d1daf9460fd442c76c0dc47ea80c86fe88375a252e1c7220b2fb3fd243585"
+    },
+    {
+      "path": "src/itinerary_system/repair/baselines.py",
+      "sha256": "2363cf6439b085ded0fc8c9d0a47920970691df59b637946379bc430c78cea5f"
+    },
+    {
+      "path": "src/itinerary_system/repair/change_variables.py",
+      "sha256": "92b5c5d2265606b39e37af2151dd820090b2050b2d0991807154f82856fd3100"
+    },
+    {
+      "path": "src/itinerary_system/repair/context.py",
+      "sha256": "7eb42ec3ff1f2d09108f1d153f4beaa8847542f714f6e3b33d6aaec76c8dddb5"
+    },
+    {
+      "path": "src/itinerary_system/repair/day_route_solver.py",
+      "sha256": "0c50041feacb3d542d380e9922d036b8fecbfb8674ac28e4e300ccfab77ef9d9"
+    },
+    {
+      "path": "src/itinerary_system/repair/exact_baselines.py",
+      "sha256": "14ac7a8e11bbb3278f436f5c102551464f85f21d0db0de235d157014822b14ed"
+    },
+    {
+      "path": "src/itinerary_system/repair/gurobi_exact_v2.py",
+      "sha256": "28c3dd2c7b69e2dff3cc37034ea5cc9f99f483fa8e7cdfd9aa4119cfa1fde190"
+    },
+    {
+      "path": "src/itinerary_system/repair/induced_disruption.py",
+      "sha256": "93822b71d18336b38ab727a5acaf1d18257157751422f968dbe2ce96fb080142"
+    },
+    {
+      "path": "src/itinerary_system/repair/lexicographic.py",
+      "sha256": "8fe5bbd70ed695add65859bf44fe4ea04ff20f12c26b118539bd66894c4cfb08"
+    },
+    {
+      "path": "src/itinerary_system/repair/master_model.py",
+      "sha256": "39e9a4f8733ef5b9c923ef6963ef423614095856a7dcd23a5046ff395a0a4816"
+    },
+    {
+      "path": "src/itinerary_system/repair/neighborhood.py",
+      "sha256": "15a9659af533edb5c1fe7fbb262a88818718a474824fb90e745547be16069149"
+    },
+    {
+      "path": "src/itinerary_system/repair/progressive.py",
+      "sha256": "7dd857935a262780493d6b9b869985d72e48a4efb5fbc419ca1d6511c5e514ca"
+    },
+    {
+      "path": "src/itinerary_system/repair_planner.py",
+      "sha256": "64b8a295a2f1e0195b8d78391b89b5d7ceabf5854dfa5fd2f2f82eeb88efb84b"
+    },
+    {
+      "path": "src/itinerary_system/repository_state.py",
+      "sha256": "92e328d3f73ee80a0d2bab20216386db68e6878d815a032a921bd8117c4294af"
+    },
+    {
+      "path": "src/itinerary_system/request_schema.py",
+      "sha256": "ec37ebc5225f38ee959f3136a821d23cbd94e1246ab2a02ba89c09fb6b889599"
+    },
+    {
+      "path": "src/itinerary_system/research_artifacts.py",
+      "sha256": "ab769d5772622682605474c442cfecbe070cca27faa1944862c8279ae6783f28"
+    },
+    {
+      "path": "src/itinerary_system/route_gurobi_oracle.py",
+      "sha256": "9a330f36e72e6a67509d6be5f91afd1d12faff58662ebac7cba5264c956b2727"
+    },
+    {
+      "path": "src/itinerary_system/routing/__init__.py",
+      "sha256": "96824be76f3aed52d36540ffc79b363d81391f545a93e51de0f4f138f9fab1ce"
+    },
+    {
+      "path": "src/itinerary_system/routing/cache.py",
+      "sha256": "9c2a8e9f3ac6bc493e7aed50a16168cff7c00a3801cf0cd45906417ff1b89996"
+    },
+    {
+      "path": "src/itinerary_system/routing/evidence_bundle.py",
+      "sha256": "97de98c773b2b60387bb19d9abf39e5887d8cbfab4a8c9e18d180c1eba31f558"
+    },
+    {
+      "path": "src/itinerary_system/routing/legacy_cache_audit.py",
+      "sha256": "48a1ae0ce9acd042d3a592b0a03707986b4f6441add003a26c33ae3f35d1dec8"
+    },
+    {
+      "path": "src/itinerary_system/routing/matrix.py",
+      "sha256": "216387f9fb17cbe7306a76523d577a0eb3ffc2cf11371f3a690046ea50e09f7f"
+    },
+    {
+      "path": "src/itinerary_system/routing/models.py",
+      "sha256": "58491a1a98677555beb5dbaa89e3af2362e145699af5b601a18d73e3d909a476"
+    },
+    {
+      "path": "src/itinerary_system/routing/provider.py",
+      "sha256": "19122800e28be2358a9bcc443f7ca368e1020164138ab440f9a521e87f3bed17"
+    },
+    {
+      "path": "src/itinerary_system/routing/road_cache_builder.py",
+      "sha256": "71c5dd3d32a59acc226e03365872f840746becab3d10d5b29872e825914b54b2"
+    },
+    {
+      "path": "src/itinerary_system/schemas.py",
+      "sha256": "192ae3fb0ce9889b7c0eca71f7a9ec0ff3f9d5e1f2ea3ae4a6bccfc7a5ad577a"
+    },
+    {
+      "path": "src/itinerary_system/utility_model.py",
+      "sha256": "febf3b98959d141094312c0204fe6fc2789edae23d5cec2675fa6e48c2a5fa53"
+    },
+    {
+      "path": "tests/product_app/accepted_day_order_contract.test.mjs",
+      "sha256": "8611cca3c3ae1fc12c35c1f542c8a20d6485e24b34528895ba8c8c66866fce15"
+    },
+    {
+      "path": "tests/product_app/accepted_evidence_context.test.mjs",
+      "sha256": "2dde0586401a00cfcb059956695c7d475870d723e8cc7d25f787c955919fae6e"
+    },
+    {
+      "path": "tests/product_app/accepted_typed_preview_contract.test.mjs",
+      "sha256": "2a83b4bfae7e2f4b5297bc82b58dd58a5e0bddf9ab4836683a8785f3366cda4f"
+    },
+    {
+      "path": "tests/product_app/active_proposal_identity_contract.test.mjs",
+      "sha256": "9c59b500b1af0d8aca520bb92069221404404cdbfcf22e1499db7ffb1e922d77"
+    },
+    {
+      "path": "tests/product_app/build_recovery_frontend.test.mjs",
+      "sha256": "5a0c8ceae480c44673edb1d9921fadeaf4661284a6e82fc51f079a97db3d743d"
+    },
+    {
+      "path": "tests/product_app/changed_day_summary_contract.test.mjs",
+      "sha256": "b2592e712c90e2c67fb6182f21ab13cf9f22d7ad133e51adf3acd1294312f212"
+    },
+    {
+      "path": "tests/product_app/combined_preview_frontend_contract.test.mjs",
+      "sha256": "24ef66963aca24168f38a6ff381eb917a720e7675af1e4f13d2ac1fcdc97f1a6"
+    },
+    {
+      "path": "tests/product_app/completed_preview_reconciliation_contract.test.mjs",
+      "sha256": "fb12f0831b8a7c680388536d54814f4c56c5391caff3b9e29d7650c8753f65b0"
+    },
+    {
+      "path": "tests/product_app/confirmed_waypoint_reducer.test.mjs",
+      "sha256": "37b45377df5d8652bd38988670bcb7819ef6ff5217506014ba3324a60d1f8d4a"
+    },
+    {
+      "path": "tests/product_app/confirmed_waypoint_reducer_stdin.mjs",
+      "sha256": "20625663f75b84189a004c5fed57193c15a8813f20371a149dc7ddb5d73762fc"
+    },
+    {
+      "path": "tests/product_app/conftest.py",
+      "sha256": "706eb8f89f0c2b4d2436b7fdb37d9bd304500522dacb72cd7c2d3b559bc7ef4d"
+    },
+    {
+      "path": "tests/product_app/copilot_capacity_contract.test.mjs",
+      "sha256": "338cf0a1b4e6c021b001663b9cb3d750013dc0d7b2b3269b6ca525abbd886fe8"
+    },
+    {
+      "path": "tests/product_app/copilot_context_actions_contract.test.mjs",
+      "sha256": "198960947e0005ec03343d585cdc1986c9ed274dd03161410dd3a1bd6afcbffc"
+    },
+    {
+      "path": "tests/product_app/copilot_conversation_generation_contract.test.mjs",
+      "sha256": "5ab53c78c428547b8da169e79b1d1c6c66e679a301942f5cd8091d0f654a47dd"
+    },
+    {
+      "path": "tests/product_app/copilot_draftability_contract.test.mjs",
+      "sha256": "4086421f52fcb51124ee1b6f1d710474a6d5f4397b68214f097eaf1dc43ed3af"
+    },
+    {
+      "path": "tests/product_app/copilot_interaction_state_contract.test.mjs",
+      "sha256": "6116a58dbfa4432fa3b2a9ba6e28fccf11c193d6c100a957af6fc949585b0c4c"
+    },
+    {
+      "path": "tests/product_app/copilot_preview_boundary_contract.test.mjs",
+      "sha256": "51eca990ccef37ee75f59385684c8e4fdd5354bc1f545fcec742ac741b46cabd"
+    },
+    {
+      "path": "tests/product_app/copilot_reference_links.test.mjs",
+      "sha256": "412b7668be47c0179ce7d48ca3956bf08c7117760ac2dfe8ab03a09d3d73e8f8"
+    },
+    {
+      "path": "tests/product_app/copilot_session_revision_contract.test.mjs",
+      "sha256": "4ca84d8cfdfd092790c9bfcfee27733772123b3c712f5af3a6aba9054b7e5c20"
+    },
+    {
+      "path": "tests/product_app/copilot_staged_lifecycle_contract.test.mjs",
+      "sha256": "d75b2fea49cffe8d48d3ce2fe3f1960d100154e3a83d71674097117af54572ab"
+    },
+    {
+      "path": "tests/product_app/copilot_staged_preview_contract.test.mjs",
+      "sha256": "ad7d9ddcecb46a33cd928cf389d9e5046ffecfb31e9871d021a9bd9205f372f6"
+    },
+    {
+      "path": "tests/product_app/destination_overlay_layout.test.mjs",
+      "sha256": "5a2b1a2aa44177a722e9fc04fb135e0daee81e309a9f8e0b5cb23138fcd2342e"
+    },
+    {
+      "path": "tests/product_app/evaluated_duration_frontend_contract.test.mjs",
+      "sha256": "76d11fc357f7dd3ef841f8cae5d59c3f85cebee933e38606e71fb86784311163"
+    },
+    {
+      "path": "tests/product_app/evaluated_reorder_frontend_contract.test.mjs",
+      "sha256": "4decda9aa427c88265aee82e8dc3e273059aad5ebcd5efd3fcf9009351137870"
+    },
+    {
+      "path": "tests/product_app/evaluated_role_frontend_contract.test.mjs",
+      "sha256": "83eeea52379d97e5668e78b48b4cceece90fac7cf09c3fdc0c2ae145eeb84f87"
+    },
+    {
+      "path": "tests/product_app/evaluated_time_window_frontend_contract.test.mjs",
+      "sha256": "9991c6f6cd96064cf6c14b0d596a2b5ddc3bd0621e8eda260b94806b7af497e0"
+    },
+    {
+      "path": "tests/product_app/idle_sync_contract.test.mjs",
+      "sha256": "ddeab7068aa4b32991a5ab5077aa4f77742759550590a17b5ac03943101f97f1"
+    },
+    {
+      "path": "tests/product_app/impact_read_recovery_contract.test.mjs",
+      "sha256": "3b00c830e6b23f25392ffbab9c4a7bcb9fcd961610e8dc4e6de5ea09467e2bd7"
+    },
+    {
+      "path": "tests/product_app/interest_regions_contract.test.mjs",
+      "sha256": "2d5643ca126e68baa3bb78df7d3b07ef5b875566c1be08c3c6dbecc65d077012"
+    },
+    {
+      "path": "tests/product_app/map_camera_stability.test.mjs",
+      "sha256": "42275cc091cbb7ce2ce7d0f16baddfaa1466d6a8700991bd37f0efdbb212767c"
+    },
+    {
+      "path": "tests/product_app/map_guard_independent_review.test.mjs",
+      "sha256": "98b95bf75124eb5445cf047d7d23ecae4d039dffd9e8cf30c6969d70883dffb5"
+    },
+    {
+      "path": "tests/product_app/map_initialization_recovery_contract.test.mjs",
+      "sha256": "7fbb39ca91c273b512eb8f41e10e1f24d04ee9c3fd38ebf3e4b0bdee93e45867"
+    },
+    {
+      "path": "tests/product_app/map_presentation_edge_review.test.mjs",
+      "sha256": "d62bf95049cf0a11f5e375c6684a3effcecce9f8eb56e49d95059ae8849cd2c5"
+    },
+    {
+      "path": "tests/product_app/map_preview_lifecycle_contract.test.mjs",
+      "sha256": "48ba41c54658bb0a358e19842a8ba6b5b07bf39d10e657fa6dabfe0243d12aac"
+    },
+    {
+      "path": "tests/product_app/map_selection_runtime_contract.test.mjs",
+      "sha256": "2e4329846c638e7d351d2c16f405296ec6027b7f896dd1c4ab4af6ec94ec5753"
+    },
+    {
+      "path": "tests/product_app/map_tile_readiness_contract.test.mjs",
+      "sha256": "9bc1f6b2a62a2d2a02b00b256ce54c9852e3f6bb3cebd1d40b1843208b065ce7"
+    },
+    {
+      "path": "tests/product_app/mutation_recovery_frontend_contract.test.mjs",
+      "sha256": "2521965b38c6909fe9c9c0736b0a4a03218e3a510661d560059edf4990ee6721"
+    },
+    {
+      "path": "tests/product_app/mutation_ui_contract.test.mjs",
+      "sha256": "dd235e8c3a48630d8ddd5b523dc2175c1d56785323828e7c98e8baa05cde407b"
+    },
+    {
+      "path": "tests/product_app/overlay_font_contract.test.mjs",
+      "sha256": "847ae8ee6aa6ff586fa4e5168ce46279d12a423fbba1007f43382a9e9c372dca"
+    },
+    {
+      "path": "tests/product_app/owned_product_fixture.py",
+      "sha256": "a71c533248be85fdd2a5512464917793391e9feb4c48bee16d9b84e6427d14f3"
+    },
+    {
+      "path": "tests/product_app/pending_resolution_contract.test.mjs",
+      "sha256": "343352b5cdd18f2a65e95f473e7531a200b34a568effc34ebc4369279baffc26"
+    },
+    {
+      "path": "tests/product_app/presentation_identity_adversarial_contract.test.mjs",
+      "sha256": "65824a3780e0de911e6754fc879c0f7cd9d886166135e9474d50700d56fde63b"
+    },
+    {
+      "path": "tests/product_app/presentation_truth_contract.test.mjs",
+      "sha256": "911069ec43e15cdc1d7611558ca0efe7d3053b082885c5dd0dd92faad1a44d28"
+    },
+    {
+      "path": "tests/product_app/preview_withdrawal_selection_contract.test.mjs",
+      "sha256": "19c13206e39a6df52a77c4205a662d0366e59f576a2262abc2f50c5e7085fb81"
+    },
+    {
+      "path": "tests/product_app/recorded-runtime-fixture.mjs",
+      "sha256": "3ba267d6bf315a3d36f0017f6a1746abfc4cd688422d230753798be0d1f68cc8"
+    },
+    {
+      "path": "tests/product_app/recorded_runtime_fixture.py",
+      "sha256": "89a4bf7369e37b3e5fdef3e6516fe4caa3f47bf489f434c4578928d8e7141f7f"
+    },
+    {
+      "path": "tests/product_app/runtime_preview_response_contract.test.mjs",
+      "sha256": "e6556fbaede9beba8269c7de508d8e3f1e40d45de247adfba3d90e5687e6a2aa"
+    },
+    {
+      "path": "tests/product_app/selection_conversation_generation_contract.test.mjs",
+      "sha256": "cc5bef489c971ff5030e7ee6655311f316df158d127efd0f84fd8e5f27e537de"
+    },
+    {
+      "path": "tests/product_app/selection_queue_contract.test.mjs",
+      "sha256": "96d997038e642430c87569b2d7080fdf4efc3fb33dfc42ce8eb34ec7d1c42fb3"
+    },
+    {
+      "path": "tests/product_app/selection_reconciliation_independent_review.test.mjs",
+      "sha256": "3de27dcac6e2537d9ae1f29108ddcf89ffdae102dc3f4391273383cd4245757b"
+    },
+    {
+      "path": "tests/product_app/session_bootstrap_contract.test.mjs",
+      "sha256": "e58bca2887cbc8d72ef0a2b03ccd5fb9874883b67fa5fc1939111256059d9743"
+    },
+    {
+      "path": "tests/product_app/stale_workspace_contract.test.mjs",
+      "sha256": "f4bcc74dd226d23cd16907fd771316f5b99dadfc10e92c1778873d27cc4bf354"
+    },
+    {
+      "path": "tests/product_app/stop_inspector_projection.test.mjs",
+      "sha256": "267b7bea2f6b5cefaef0b222a3ab41eb167d68b8a8ee5db6d21d962993117289"
+    },
+    {
+      "path": "tests/product_app/storage_recovery_contract.test.mjs",
+      "sha256": "0d2f147fd5a5c18a7ae1e5080d98259252a9217d61454e741831bce05efe585a"
+    },
+    {
+      "path": "tests/product_app/test_acceptance_long_paths.py",
+      "sha256": "a285382812427a8e1d8085f1119aa0d5a26bac2db21a55a16512043101ebf194"
+    },
+    {
+      "path": "tests/product_app/test_accepted_day_selection.py",
+      "sha256": "4ec8d8a1aed2ee05e937b461dac35f5cfb750c25777c952e890163d25b72bb8c"
+    },
+    {
+      "path": "tests/product_app/test_accepted_planning_validation_cache.py",
+      "sha256": "254bb074830e10ae9122494d71651e765cf0af314757551b206607321daa6953"
+    },
+    {
+      "path": "tests/product_app/test_accepted_repair_baseline.py",
+      "sha256": "54daeb6ee957b97acd349efbc7ec9e04d614ccc1a19c10dc161823fd80582fcc"
+    },
+    {
+      "path": "tests/product_app/test_browser_evidence_credentials.py",
+      "sha256": "000943a1c4fa306b88f46970e9a1795839c86b96771ecb123e248e47ee7e140f"
+    },
+    {
+      "path": "tests/product_app/test_browser_network_observation.py",
+      "sha256": "b7eaa0f0d74ca26b9a791df2fce3238f0b6fdf390c479c29fad6c9801a3dca64"
+    },
+    {
+      "path": "tests/product_app/test_build_coherence.py",
+      "sha256": "07eea327e1f8c2a29189b8daf190f61b9078885788330466e5df38e4141d6ac5"
+    },
+    {
+      "path": "tests/product_app/test_build_context_guard_review.py",
+      "sha256": "59970ec3b896203555274f13ec667c3c362e411b633555707fced2f5a2adb2bc"
+    },
+    {
+      "path": "tests/product_app/test_california_statewide_poi_copilot.py",
+      "sha256": "c08b167e2f1ea9f7396cc44e4e086683c8a555921f7c1e426ca2c76b64d11b47"
+    },
+    {
+      "path": "tests/product_app/test_candidate_addition_readiness.py",
+      "sha256": "0fb7747afffdc59c348a8ba88b322f14ac04987e4ca6ac8b6fe1a224369316d2"
+    },
+    {
+      "path": "tests/product_app/test_candidate_burden.py",
+      "sha256": "4a0ba9497241bc52bf198cb3b7362aa3b05624531f0c6875e6ddb1c7106ae43f"
+    },
+    {
+      "path": "tests/product_app/test_canonical_changed_day_summary.py",
+      "sha256": "81c070b9aec702e9f9e04b30c62add484a849b4f68cc80b7285cb27f0ee0cf5e"
+    },
+    {
+      "path": "tests/product_app/test_chat_closure_late_response_verifier.py",
+      "sha256": "465855c2c24058fd14a24d6020d00b1aa0db094839141460807564f4024da535"
+    },
+    {
+      "path": "tests/product_app/test_chat_closure_reference_contract.py",
+      "sha256": "5002b7e8776447b14b8ea927b87098f69145f8bea999e8be8918400e4ffac25b"
+    },
+    {
+      "path": "tests/product_app/test_chat_closure_session_wire.py",
+      "sha256": "16bc80f729cceb03ca4060fed48d33b6e1593f0bf95f1233d384046b2ef06335"
+    },
+    {
+      "path": "tests/product_app/test_chat_stability_variations.py",
+      "sha256": "a86235f47b7eef70e3fb36ff3561de12d8a9b6b80a274532f74819c150a0c666"
+    },
+    {
+      "path": "tests/product_app/test_chat_undo_selection_verifier.py",
+      "sha256": "f2cb37e75839dc173ddd7f5a0c4b59a4a92e67f0d087114d7dc04c87a5df7b7a"
+    },
+    {
+      "path": "tests/product_app/test_coherent_poi_candidates_integration.py",
+      "sha256": "26f87927e7b6c765c5aeeb134af174f1964cc339a3c99052ea98966d01540ad0"
+    },
+    {
+      "path": "tests/product_app/test_coherent_product_demo.py",
+      "sha256": "9718439d5ba0fab6342b011d7b946ac02b1ec5f45688adc1c1d5cc9b600ccd90"
+    },
+    {
+      "path": "tests/product_app/test_compare_frontend_contract.py",
+      "sha256": "40cf7cb67605f77367b8858f5afc66c7df9f7a073d54803907410a52661c4e1a"
+    },
+    {
+      "path": "tests/product_app/test_compiler_audit_semantics.py",
+      "sha256": "0aa04c0b3258d0f28e1dbe770d46ea33c5c19e4e91d026528fdeb2c3bec4eedb"
+    },
+    {
+      "path": "tests/product_app/test_condition_prerequisites.py",
+      "sha256": "07e9ae595e4b11624c3244da2faf597d1886141d27b04e9a122ee824a3d21d1c"
+    },
+    {
+      "path": "tests/product_app/test_config_runtime.py",
+      "sha256": "330721cb77e4e0b41546ec94117e2ce02c0aa81597623ec46aac948776713ec5"
+    },
+    {
+      "path": "tests/product_app/test_confirmed_waypoint_api.py",
+      "sha256": "483c166b0b378861015802999e4f90f798e6cbb63775e87757683d68ef2f8931"
+    },
+    {
+      "path": "tests/product_app/test_confirmed_waypoint_frontend_contract.py",
+      "sha256": "92e20a3ba4543dc868c2a90bff6336ac3f02bdbafd94cb22dcdc3852db222a28"
+    },
+    {
+      "path": "tests/product_app/test_conversation_creation_atomicity.py",
+      "sha256": "97ec2a071f2e81ed88570bfc192a24234f4f600633ecdd70bb562a4fcc3eb749"
+    },
+    {
+      "path": "tests/product_app/test_conversations.py",
+      "sha256": "8a3458ae354e5c8a91c81b64dacd79ac15ec1968c7baee795d32917f6ef6d344"
+    },
+    {
+      "path": "tests/product_app/test_copilot_api.py",
+      "sha256": "0f56b36943adc695d8a631097df5355d05dccf82d1adaa889913fde692e65227"
+    },
+    {
+      "path": "tests/product_app/test_copilot_contracts.py",
+      "sha256": "63fcd961df7c76bb856b32c9ad233ae54daf95c54aefc31e8375fb2eab4e12d0"
+    },
+    {
+      "path": "tests/product_app/test_copilot_dispatch_safety.py",
+      "sha256": "4f946f8b4abaa0fb5d5dea814dd6648adca3e79e4fbcc8819f9abcc1e7ff6ea0"
+    },
+    {
+      "path": "tests/product_app/test_copilot_duration_retention_regressions.py",
+      "sha256": "82ce9d9888fc4c0a8208574d266d1a5b242795ac40b743db8aee9f3d1c48eae7"
+    },
+    {
+      "path": "tests/product_app/test_copilot_frontend_contract.py",
+      "sha256": "9dcf80d56a207c2eb67463976d2f1da2567df9c2aab48f7be43607f6668c77e6"
+    },
+    {
+      "path": "tests/product_app/test_copilot_memory.py",
+      "sha256": "435b28891483292b1768aa7e355ef1f7fdd5612185529ffee0e00d1e1c875087"
+    },
+    {
+      "path": "tests/product_app/test_copilot_privacy.py",
+      "sha256": "5be86fdaede40cb3ee24ff8474dfb745972c942ec551fc385322fda765c46f41"
+    },
+    {
+      "path": "tests/product_app/test_copilot_prompt.py",
+      "sha256": "b22c8a3da635405e350b6b28e443f03c35b89aa357c2caac5894bd106fbdb07b"
+    },
+    {
+      "path": "tests/product_app/test_copilot_semantic_coherence.py",
+      "sha256": "73e3c4767cc94ac74ef1267b896a8f235609871db5cceefb19aab3ceac3f766b"
+    },
+    {
+      "path": "tests/product_app/test_copilot_typed_edits.py",
+      "sha256": "cff6195a6a50d1d3702c03ef370949cd2df6a55f142bb1183216b60bc1e82b55"
+    },
+    {
+      "path": "tests/product_app/test_demo_builder.py",
+      "sha256": "7487590afbd93058f6325347ed2c897aece6f7cf1a88110d2be2fc0982f61e19"
+    },
+    {
+      "path": "tests/product_app/test_destination_overlay_layout.py",
+      "sha256": "5b6010d790bc2de56ba077772211574712187520e04ec67d57d1ad0f8f19cb9c"
+    },
+    {
+      "path": "tests/product_app/test_e2e1_aggregate_runner.py",
+      "sha256": "de143fc584c73b608bc4fe5cfaf1c0b63b0172bcc5f73a71f1666428f7c0e007"
+    },
+    {
+      "path": "tests/product_app/test_e2e1_bootstrap_recovery_verifier.py",
+      "sha256": "02c473af4222d9b75c4bca08b291e0af998e75855f6296eae116a3420de09c9e"
+    },
+    {
+      "path": "tests/product_app/test_e2e1_browser_receipts.py",
+      "sha256": "52a78cfc74839900acb1d6677d0358f231922539170632c596099ba08a9d0f52"
+    },
+    {
+      "path": "tests/product_app/test_e2e1_candidate_day_matrix_verifier.py",
+      "sha256": "55d6260efb32e4b2e0cca1af1798fc39e12c9e4f2005d97634fac67bda3cf595"
+    },
+    {
+      "path": "tests/product_app/test_e2e1_capability_controls_verifier.py",
+      "sha256": "cec1ec44a62c295f77fa1ada64685f404149fed9eba956d9f30485b22d5f3ee0"
+    },
+    {
+      "path": "tests/product_app/test_e2e1_chat_closure_verifier.py",
+      "sha256": "9a4b24ce310a004f55c6323fd518fe2fb45ddaf88476782393e79fff9a248451"
+    },
+    {
+      "path": "tests/product_app/test_e2e1_completed_race_runner.py",
+      "sha256": "564a1e3daeb4a2b38ec09d89d4858e2a7aedcaf8504d0cb074a831236c740029"
+    },
+    {
+      "path": "tests/product_app/test_e2e1_control_actions_verifier.py",
+      "sha256": "f195d81371c9608e9b44369fe576d40815ae3ecb09bdd88f9ffd72cfc4301491"
+    },
+    {
+      "path": "tests/product_app/test_e2e1_control_closure_verifiers.py",
+      "sha256": "954e4f8625930456cb5ff3ae3246171385a5d2439e6c2cc857a3360b76334700"
+    },
+    {
+      "path": "tests/product_app/test_e2e1_conversation_control_projection.py",
+      "sha256": "c9b019b31f79d1a10d6ffd6cc8330bd77935bd90ec2539ba1f5efede0b86a70c"
+    },
+    {
+      "path": "tests/product_app/test_e2e1_evaluated_variants_verifier.py",
+      "sha256": "43f9e154a52d19881cb9dc373bab5f9878e0b8cd64eed3772ed95b86767fe3ae"
+    },
+    {
+      "path": "tests/product_app/test_e2e1_evidence.py",
+      "sha256": "39ed95fa445cad1cc7619c3e32b19b8891a8d718a91ee1e3130082bff4d6ff5e"
+    },
+    {
+      "path": "tests/product_app/test_e2e1_generated_controls_verifier.py",
+      "sha256": "9ee92faac7dd7b081d42561ae2a43d366440dcea66d3085e5a1eef9a7b782121"
+    },
+    {
+      "path": "tests/product_app/test_e2e1_interaction_coverage.py",
+      "sha256": "4aa4014af76ae95e367c397f3d09acc9cc0f87babf746987064752e09707bb40"
+    },
+    {
+      "path": "tests/product_app/test_e2e1_live_context_v2.py",
+      "sha256": "1bd7a4ebc552461af00fdbba0f215304bf14e3541bced39a676d209333cf941c"
+    },
+    {
+      "path": "tests/product_app/test_e2e1_live_copilot_evidence.py",
+      "sha256": "702245dafdfa035e593905a8257e5f20d2c8e262b1cbad26f8bd7ad6c5c8a1be"
+    },
+    {
+      "path": "tests/product_app/test_e2e1_live_runtime_binding.py",
+      "sha256": "11c013a0dffd90b693f5e883474fd50ae1a3130798f68222b4f67b58e7cb2b0f"
+    },
+    {
+      "path": "tests/product_app/test_e2e1_map_recovery_runner.py",
+      "sha256": "76161e945daa31b1e45c4078d5c5ad9e8e70510fecc1db90f5ffc8c9eb7f9172"
+    },
+    {
+      "path": "tests/product_app/test_e2e1_marker_overlay_release_verifier.py",
+      "sha256": "c198cc265375a174af41d53dda504f80ad82fbfdfb5ea8df538b327d5e30227d"
+    },
+    {
+      "path": "tests/product_app/test_e2e1_network_observations_verifier.py",
+      "sha256": "803116c949498242872a360ed1ac7a2b5b76ae6e48f35464f158d06568b898e3"
+    },
+    {
+      "path": "tests/product_app/test_e2e1_new_context_coverage.py",
+      "sha256": "ed05e0aa7205b5b15633507200fe2283218a05785259d2f8edd58e6e80115bb2"
+    },
+    {
+      "path": "tests/product_app/test_e2e1_optional_evidence_fault_verifier.py",
+      "sha256": "c6b5307db51eb8626bf096f1ec7cc7a029fc3b15efe7a3757938dfa919a7ada8"
+    },
+    {
+      "path": "tests/product_app/test_e2e1_overlay_release_verifier.py",
+      "sha256": "63ee5eda62208b86ff6fc268f8d78736f957f62b8f4a5ef79606326daf81081b"
+    },
+    {
+      "path": "tests/product_app/test_e2e1_owned_edits_verifier.py",
+      "sha256": "657516210f1229aaf6a2c4b2bbc3152e411c2747015450d6af5e20d7d00218c4"
+    },
+    {
+      "path": "tests/product_app/test_e2e1_preview_geography_fault_verifier.py",
+      "sha256": "01d062352ecc3b4bd33209265b32957f0649473e27f0158145e1a4602caec523"
+    },
+    {
+      "path": "tests/product_app/test_e2e1_provider_isolation.py",
+      "sha256": "f970cb705e48f1f38856cb6ed7ff9b92010df349a0c3b8a816ffbda5f50a3638"
+    },
+    {
+      "path": "tests/product_app/test_e2e1_queued_preview_receipt.py",
+      "sha256": "514e0bc461665e50808f9e746328bb51fccc8beaeb88c10324cc75bf0d20fd50"
+    },
+    {
+      "path": "tests/product_app/test_e2e1_registered_manifest_modes.py",
+      "sha256": "1d036585230b143f5fd9e88a5867cc0bde646e7fdd30b24aa61fa2e95a0422ce"
+    },
+    {
+      "path": "tests/product_app/test_e2e1_remount_independent_review.py",
+      "sha256": "184a5ab215d04659976a01539f32eea7df25390fb9533953b6646a27edec6f87"
+    },
+    {
+      "path": "tests/product_app/test_e2e1_runner.py",
+      "sha256": "6d713dc42ec3c1c189efac3331ebc49215e89df350a96f091ed4c621510d272a"
+    },
+    {
+      "path": "tests/product_app/test_e2e1_runtime_environment.py",
+      "sha256": "4bd48101bd16a2ee94f2687e0e62f1415234e4ab447f7d83ca38c1fa13bf1833"
+    },
+    {
+      "path": "tests/product_app/test_e2e1_runtime_gate_coverage.py",
+      "sha256": "00692803fbd5ffd1afc94670059030c24b61e31f7e73f38bf839885c657e2330"
+    },
+    {
+      "path": "tests/product_app/test_e2e1_same_plan_remount_verifier.py",
+      "sha256": "f398bbbf0058e842b3471b4762f3959f5026c8031165e4a4bd46861a62627146"
+    },
+    {
+      "path": "tests/product_app/test_e2e1_selection_generation_verifier.py",
+      "sha256": "a0c46363d339f31f28825c430c4f39bb5dd1da5fadd85fc18de78fa81c600c12"
+    },
+    {
+      "path": "tests/product_app/test_e2e1_self_managed.py",
+      "sha256": "17a352de36aec367548b759890744e8f9adafdfaffde51158c63aa8f2ea6a53c"
+    },
+    {
+      "path": "tests/product_app/test_e2e1_waypoint_contexts_verifier.py",
+      "sha256": "4d903cbf1173b4e279a354b0587f31fd60d3264abc9010bcf7bd3356d4e743b6"
+    },
+    {
+      "path": "tests/product_app/test_e2e1_waypoint_pointer_verifier.py",
+      "sha256": "e5d70c6a76087077367483a6bd7634da5fdc38cb40139b2374178e7ff7f97fd1"
+    },
+    {
+      "path": "tests/product_app/test_e2e1_webgl_recovery_verifier.py",
+      "sha256": "03d58ae986b5b3aa1b3d882e5a5f156a2730d8ad60116fe58ec59cb45feaf5fd"
+    },
+    {
+      "path": "tests/product_app/test_e2e1_workspace_visibility_verifier.py",
+      "sha256": "878d8c562a98d2b9197f5571620cfc304afe2bddc4f85543a995b395e2342812"
+    },
+    {
+      "path": "tests/product_app/test_evaluated_duration_frontend_contract.py",
+      "sha256": "66455667dd0d79a53f4ed3a3b5356c23af93230570baa2cec1509ea539c68cfe"
+    },
+    {
+      "path": "tests/product_app/test_evaluated_reorder_frontend_contract.py",
+      "sha256": "6be3ae9628713465567bb9877adf3a715591a7de199484baa56b042382958292"
+    },
+    {
+      "path": "tests/product_app/test_evaluated_role_frontend_contract.py",
+      "sha256": "fb24c69042a89e7015e908a23004457ce3d2830a1acfa68494578c653632bd28"
+    },
+    {
+      "path": "tests/product_app/test_evaluated_stop_duration.py",
+      "sha256": "0e5d51b481228acb3ac90efbf2221062e5a3e0dfeadcc0eabe8898d4447cee72"
+    },
+    {
+      "path": "tests/product_app/test_evaluated_stop_order.py",
+      "sha256": "26c62ea1b502944b507edfd7230d04edc911657a302d845c190df24bc611762a"
+    },
+    {
+      "path": "tests/product_app/test_evaluated_stop_role.py",
+      "sha256": "939e67cc0b176c4281024aa6ea4860067fbbbe451f44c53ebaf5edcfd791c3e0"
+    },
+    {
+      "path": "tests/product_app/test_evaluated_stop_time_window.py",
+      "sha256": "9c4973bdbf31cb59a889afa9d723ff31766df25dd1b08780f6c28c59f9e21461"
+    },
+    {
+      "path": "tests/product_app/test_evaluated_time_window_frontend_contract.py",
+      "sha256": "ebb432f6f3981435e59016cb0c95b4a0323006f5747168b198ede3e0c88d099c"
+    },
+    {
+      "path": "tests/product_app/test_frontend_contract.py",
+      "sha256": "fa25371c9283ffeb9f3bf94706950701ea0c5dd76c909f2cafc66cf9789a0a90"
+    },
+    {
+      "path": "tests/product_app/test_g4r_remediation_contract.py",
+      "sha256": "89b876ad64eef238477afbb3aafb0829ae2182a213bfe5ea798cb45cefef7a22"
+    },
+    {
+      "path": "tests/product_app/test_geographic_frontend_contract.py",
+      "sha256": "2db0386bf29a6c39b353e8c88ef213d59f7407e20b0f427db29dd109f4f66439"
+    },
+    {
+      "path": "tests/product_app/test_geography.py",
+      "sha256": "7b41c9d8a0ac1c5e1eba60f207af8172a5e31beff57e660bbf7ca8f3a185abdd"
+    },
+    {
+      "path": "tests/product_app/test_geography_v2.py",
+      "sha256": "36174e5fbbb6c3ce06dd0816cf47011070dc413896276d799f98838c44e514dd"
+    },
+    {
+      "path": "tests/product_app/test_geography_v2_api.py",
+      "sha256": "e7d222eacec373de7ebc0947790cb40881e9ee079ddff55f6d5d027b77245018"
+    },
+    {
+      "path": "tests/product_app/test_idle_sync_frontend.py",
+      "sha256": "da33979f512c47b438c16011d3bf0ddcb4b328ed01ce4231c03ba0551ad1bb53"
+    },
+    {
+      "path": "tests/product_app/test_interaction_contracts.py",
+      "sha256": "636a0dcc6d500fba3fae1a506f6d02ec11fe533079cd811c4ba7be034eb1797a"
+    },
+    {
+      "path": "tests/product_app/test_interaction_state_machine.py",
+      "sha256": "c2dbbafaa5e56a47a978310795a76bae5fe3d762834e63bd0d58eb420fdb9716"
+    },
+    {
+      "path": "tests/product_app/test_interest_acceptance_lifecycle.py",
+      "sha256": "4bcabc27fea0ffb9ce5f5d11d24d7e7da8611c8336acb04dc01e48cae21ac679"
+    },
+    {
+      "path": "tests/product_app/test_interest_preview_context.py",
+      "sha256": "4579b75ac70a6af3b163195e6b1cd269b4f36517f12f7524103955ec336a7b82"
+    },
+    {
+      "path": "tests/product_app/test_interest_regions_api.py",
+      "sha256": "1beff70f56de67d460c05c4dd03eaacf898df627764369d023231b0103b0a4bc"
+    },
+    {
+      "path": "tests/product_app/test_launcher.py",
+      "sha256": "f1e66067a86f8476c60d17f3d4a82337617d332d232042c4cce983d0d4bafea9"
+    },
+    {
+      "path": "tests/product_app/test_live_copilot_exact_io.py",
+      "sha256": "2652b1cac412ea7afbf6dfaf59a082806ff78a2859908fb80d15a36e6152e09c"
+    },
+    {
+      "path": "tests/product_app/test_live_copilot_exact_io_evidence.py",
+      "sha256": "db463b9f8b96a8b9b06267db2a1dec4305e6f66fb6edc6f3c00d40905cb281fc"
+    },
+    {
+      "path": "tests/product_app/test_live_copilot_prompt_evaluation.py",
+      "sha256": "505a6fb751a8444bbdf2b768a998d3cf51f80d1e6dd3cec5c33d817fc8c854ae"
+    },
+    {
+      "path": "tests/product_app/test_live_copilot_smoke.py",
+      "sha256": "6a300fe7ae9bb50896c8ce0d490bddcc5251bfa927b8cb6b20d54598981a6e37"
+    },
+    {
+      "path": "tests/product_app/test_live_gate_hardening.py",
+      "sha256": "01e7dc3d70ca65e2b13c510f6b41fae248a35b5bc33e765676b5eb5d38807078"
+    },
+    {
+      "path": "tests/product_app/test_map_asset_preflight.py",
+      "sha256": "b08bd68fd91a81564f4ea00f8235f5feba741963c75140f337fc3a3280a3696e"
+    },
+    {
+      "path": "tests/product_app/test_map_controller_v2_contract.py",
+      "sha256": "100b4009debd9bdc5f10add21a1f4c12ef46a65cb34547f8f62ee699660c06fd"
+    },
+    {
+      "path": "tests/product_app/test_map_interactions.py",
+      "sha256": "19851ebc9d82ecd2333c7533854915b7f9c832104b79000e89ebfffd91a279bd"
+    },
+    {
+      "path": "tests/product_app/test_mutation_recovery.py",
+      "sha256": "50a7c4a1a2a642cbb3280d589ec65a828be3caa53a719dcbe9729272648adeca"
+    },
+    {
+      "path": "tests/product_app/test_mutation_recovery_frontend_contract.py",
+      "sha256": "eb17555e1ce119d63c0e3362721080f7a18724cb2619df33d28474cd0b5eb83a"
+    },
+    {
+      "path": "tests/product_app/test_mutation_responsiveness.py",
+      "sha256": "012032aff00df5572d351b451017b2734c632fe8aaecc91eb68e6c72631d5bc4"
+    },
+    {
+      "path": "tests/product_app/test_openai_copilot.py",
+      "sha256": "48436066212e4270b210d49e60d8b31c5be3158171ee9b403eba9ff65f82bc1a"
+    },
+    {
+      "path": "tests/product_app/test_owned_combined_runtime.py",
+      "sha256": "d70a0e654f9d1f457ec9bcc7e73b5cad71c66a794e17471b029d16eeb8eac799"
+    },
+    {
+      "path": "tests/product_app/test_pending_mutation_resolution.py",
+      "sha256": "4436548dc9bd6840954ed1eb17673132cd453868928e3789d7bf60c8204cfec5"
+    },
+    {
+      "path": "tests/product_app/test_pending_resolution_frontend.py",
+      "sha256": "3e0544c44ac0f6fa6104ff18b06d7ee07973ae2a3ae71d7de71a7644966d85b8"
+    },
+    {
+      "path": "tests/product_app/test_persistence.py",
+      "sha256": "af254594818b6714b245539ff4d59d1e5876446bf7128d578f46b2b7e35e9bbd"
+    },
+    {
+      "path": "tests/product_app/test_planner_audit_regressions.py",
+      "sha256": "61d4e96ee225bd2c007e0bf1104677c016db6a7c88032cc755c7376304240b35"
+    },
+    {
+      "path": "tests/product_app/test_poi_candidate_frontend_contract.py",
+      "sha256": "fb317a67926eecc79bf4c39be41f867a2e16ba66580272b3f368a584bb2a0229"
+    },
+    {
+      "path": "tests/product_app/test_poi_candidates_api.py",
+      "sha256": "74258b84c6ae2e846dffd4f9615b3b1ffd048b34ed1cc88f42357531c314c2a2"
+    },
+    {
+      "path": "tests/product_app/test_poi_catalog.py",
+      "sha256": "c3c93c34866afa9382026ed32f267414d408205262b3abe2bd89c848b44652c8"
+    },
+    {
+      "path": "tests/product_app/test_presentation_truth.py",
+      "sha256": "dc9c4e419ef6967f1839bd40240cb7d855baafc515accd85e73cd0e0ce3160aa"
+    },
+    {
+      "path": "tests/product_app/test_preview_concurrency.py",
+      "sha256": "77561d226ab918ea56d313099312591c1978939207811d675ad24a424081f1ca"
+    },
+    {
+      "path": "tests/product_app/test_preview_identity_guard_review.py",
+      "sha256": "77df4bee056d520ec8ffa854bb25daaa2cc92a9fcf290aee5da472d2f33f9116"
+    },
+    {
+      "path": "tests/product_app/test_preview_invalidation_selection.py",
+      "sha256": "24d19f6b57c89f324d7c549eee20224d39203c78d83f27ed2dc16bb41c010275"
+    },
+    {
+      "path": "tests/product_app/test_preview_outcome_connectivity.py",
+      "sha256": "8f15b50e59119e3ce57b06ec8b2a65dd3872f415403972084e6427eef91bf5a0"
+    },
+    {
+      "path": "tests/product_app/test_preview_responsiveness.py",
+      "sha256": "b71dbb692640b498c9de7434de8fd60fafb2b3d6696027745f7651373531c872"
+    },
+    {
+      "path": "tests/product_app/test_preview_selection.py",
+      "sha256": "c95c3940a26cada8c649a6745583a29b0fcdc7fa728325a5f24091b8cd5147b6"
+    },
+    {
+      "path": "tests/product_app/test_product_app.py",
+      "sha256": "e9e324d81ef319e4966741f3f6fef7a8a287149686bcc70163321b5e58d6cae9"
+    },
+    {
+      "path": "tests/product_app/test_product_demo.py",
+      "sha256": "82f1edae14a79863704e688c7d2f592b9251f37f096d449e075c383a9894fe3c"
+    },
+    {
+      "path": "tests/product_app/test_product_poi_catalog_fixture.py",
+      "sha256": "5264d25584bb67d5718f575f15cb838395f25a5f3228c0e695f8135b382200db"
+    },
+    {
+      "path": "tests/product_app/test_product_route_coverage.py",
+      "sha256": "c62a6af15c6b4c01d556f756f6377ec4a572a5ef5b04392f88ad9034f8ea5266"
+    },
+    {
+      "path": "tests/product_app/test_product_route_delta.py",
+      "sha256": "4b57304231d17c015ca9f205591175d34e4adba0909b1c117896a3208f83f62a"
+    },
+    {
+      "path": "tests/product_app/test_readonly_review.py",
+      "sha256": "449de44edbe672242dba772de2355fc2831758487f87a63c98f4462510635282"
+    },
+    {
+      "path": "tests/product_app/test_recorded_runtime_fixtures.py",
+      "sha256": "965f9ec6134673c62fde92fa279baa5e13dbd876c187db32487456a657a1a0ea"
+    },
+    {
+      "path": "tests/product_app/test_registry.py",
+      "sha256": "5f297a71885c9936a3d04e69b298a28ecb29c44b5f05e660c9dc5170bd26856e"
+    },
+    {
+      "path": "tests/product_app/test_request_completeness.py",
+      "sha256": "6e3bbf6bdb2a077409ea8bf73faa026b72adf0d7a85f1addf8dd79f9b9928b71"
+    },
+    {
+      "path": "tests/product_app/test_route_overlay.py",
+      "sha256": "52dbace548813845e3a4b4d6228df8a77d73132d1f022f64c86a9bb92020b916"
+    },
+    {
+      "path": "tests/product_app/test_runtime_optimizer_mapping.py",
+      "sha256": "ee453bfef98ea7cf83b8d3c8365dc640d9b9d927b13043c6a191941d800468d3"
+    },
+    {
+      "path": "tests/product_app/test_runtime_routing.py",
+      "sha256": "924be6815485196f672ce8e9496ba4226571fe69013592ceab1819b989ab9772"
+    },
+    {
+      "path": "tests/product_app/test_schedule_preview.py",
+      "sha256": "1690ea2f94d8bc701e9efe9cd6c8ffa6cde057b87e3b2a97a61dc26124b7c3a8"
+    },
+    {
+      "path": "tests/product_app/test_security_api.py",
+      "sha256": "f11ce55dce761a32dde4aea38dbcf6018bcdc69c86c74bde3fa0af53f4233387"
+    },
+    {
+      "path": "tests/product_app/test_selection_conversation_generation.py",
+      "sha256": "5342912cbdb21d21da93aa254a225f27f5e6f2ea8d3a697f25e7f55936cdb63a"
+    },
+    {
+      "path": "tests/product_app/test_session_bootstrap_frontend.py",
+      "sha256": "311159949d62e8d25b5cb5eb7c6b7051db47caf0c202aca18a561a21badb8f2a"
+    },
+    {
+      "path": "tests/product_app/test_snap_preview_api.py",
+      "sha256": "d025599625d22d39939c5a38279af85a30cef3b0f97ea4c3608ae4c4fa3a4ad4"
+    },
+    {
+      "path": "tests/product_app/test_stale_workspace_frontend.py",
+      "sha256": "a894e71b15fc663457b7fdf75930f14e6212befb9a0ea0d73fc79b6c4a4ad355"
+    },
+    {
+      "path": "tests/product_app/test_state_retention_regressions.py",
+      "sha256": "7ca6666e2c52c0a4baac4afcc1003da69b45b8e6d0346d7357525486d2dada13"
+    },
+    {
+      "path": "tests/product_app/test_stop_inspector_projection.py",
+      "sha256": "9f4c28e7f133569e50b757ef939c5e0da6480b1d5ad6fd6594002e7fa369bd1c"
+    },
+    {
+      "path": "tests/product_app/test_storage_recovery_frontend.py",
+      "sha256": "92e6477028223b096014aa9a546b3e8029e5a87724fa7eb72767d46bdcb85bbe"
+    },
+    {
+      "path": "tests/product_app/test_trip_planning.py",
+      "sha256": "a1277fb12a1d0268c7c097cfbd95801c0db4818b8f9a664423d7e9618cda5477"
+    },
+    {
+      "path": "tests/product_app/test_typed_stop_route_backend.py",
+      "sha256": "70556e1374d09f950da25f077aa6dd2a50e17d9215874d6e33048749ff78c747"
+    },
+    {
+      "path": "tests/product_app/test_typed_stop_route_frontend_contract.py",
+      "sha256": "1bcbd64c605b436938714779e58a7c91cf3a015bd7550082ce0e08beefab9738"
+    },
+    {
+      "path": "tests/product_app/test_w1m_status_contract.py",
+      "sha256": "1b7da7045ca9a3a79bc9f431efeb55acab7e1349dd2376b72c62b3ce69e8af63"
+    },
+    {
+      "path": "tests/product_app/test_w3_preview.py",
+      "sha256": "ba97a5f2e9e0adff1d537c7284946ed2a97f1e6fed811d7e30b4ec3e5ab4510f"
+    },
+    {
+      "path": "tests/product_app/test_w4r_frontend_interaction_contract.py",
+      "sha256": "43b538e90270a70d51054815edcdf09357be752475b55f7bbe4e9aa83d209c0d"
+    },
+    {
+      "path": "tests/product_app/test_w4r_responsive_accessibility_contract.py",
+      "sha256": "b8c529c708e4ca6fb9599a40af30f41a6bcb31924d9102cc06dc2e260fa11d86"
+    },
+    {
+      "path": "tests/product_app/test_w5_acceptance_api.py",
+      "sha256": "5dd6c4c813d65fc3a0078316dc4d67034971beb6560904097fe3df249a2ea4d8"
+    },
+    {
+      "path": "tests/product_app/test_w5_acceptance_frontend_contract.py",
+      "sha256": "00e8e1279e9470f9d78e372eef7c76f6d9ee485e19993e158f8606f4bc4e8b8f"
+    },
+    {
+      "path": "tests/product_app/test_w5_acceptance_store.py",
+      "sha256": "3e1b08c33b850da7420bb5ab25d4ebb4a7de22af4d7614665504a5e864314a1a"
+    },
+    {
+      "path": "tests/product_app/test_waypoint_pointer_framing.py",
+      "sha256": "736898ea15648e85a6f0b36c7aa1d8b58608c4b31258951c8762993952fafb4f"
+    },
+    {
+      "path": "tests/product_app/test_workspace_w3.py",
+      "sha256": "315c9c7cf58177319ae18519884c07ec5afad5cbdfef04ad0dad75934e1d8227"
+    },
+    {
+      "path": "tests/product_app/typed_edit_frontend_contract.test.mjs",
+      "sha256": "10bb5d3fe5145988266513902fe1e54a3d37be785cd8e6c26f626ec74c0b6ac4"
+    },
+    {
+      "path": "tests/product_app/visible_tile_coverage_contract.test.mjs",
+      "sha256": "50dfba03db10f7e5d8710b80149703f97f02d81add5010aabd3de3d208afdda4"
+    }
+  ]
+}

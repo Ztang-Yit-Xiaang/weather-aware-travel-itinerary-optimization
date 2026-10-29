@@ -1,0 +1,6 @@
+{
+  "schema_version": "product-route-delta-registration-v1",
+  "run_id": "california_coast_coherent_demo_v1",
+  "descriptor_path": "results/route_deltas/product_pfeiffer_point_lobos_20260908_v1/descriptor.json",
+  "descriptor_sha256": "525e1bb70f864759957a9e7fb34dc3901ca31ed72424c1fdf6bbaf30bef32c9e"
+}

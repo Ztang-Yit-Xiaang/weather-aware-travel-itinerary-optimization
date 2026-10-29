@@ -1,0 +1,1133 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Copilot boundary repair review</title><style>
+:root{color-scheme:light dark;--bg:#f5f2ec;--paper:#fffdf8;--ink:#24352f;--muted:#5d6c65;--line:#d3dbd3;--accent:#16664d}*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.6 system-ui,sans-serif}body.dark{--bg:#14201c;--paper:#1c2b25;--ink:#ebf2eb;--muted:#bccac0;--line:#42544a;--accent:#8fd6b5}main{max-width:1420px;margin:auto;padding:42px 24px}h1{font:600 clamp(30px,4vw,58px)/1.12 Georgia,serif;max-width:900px}h2{font:600 30px/1.2 Georgia,serif}.eyebrow{font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}a{color:var(--accent)}.intro{max-width:950px;font-size:19px}.notice,.case{background:var(--paper);border:1px solid var(--line);padding:24px;margin:24px 0;border-radius:8px}.finding{font-weight:650;font-size:18px}.toolbar{position:sticky;top:0;z-index:2;background:var(--paper);border:1px solid var(--line);padding:12px;display:flex;gap:12px;align-items:center;flex-wrap:wrap}.toolbar input{flex:1;min-width:180px;padding:10px;font:inherit}.toolbar button{padding:10px 14px;font:inherit;cursor:pointer}.table-scroll{overflow:auto}table{border-collapse:collapse;width:100%;font-size:14px}td,th{padding:12px;text-align:left;border-bottom:1px solid var(--line);vertical-align:top}th{font-size:12px;text-transform:uppercase}.badge{white-space:nowrap;font-size:12px;font-weight:700}blockquote{margin:18px 0;padding:12px 20px;border-left:3px solid var(--accent);background:var(--bg)}.screens{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px}figure{margin:0;min-width:0}img{display:block;width:100%;height:auto;border:1px solid var(--line);border-radius:5px}figcaption{font-size:12px;color:var(--muted);padding:8px 0}summary{cursor:pointer;font-weight:650;padding:10px 0}pre{white-space:pre-wrap;overflow-wrap:anywhere;font-size:12px;background:var(--bg);padding:16px}.case{scroll-margin-top:90px}footer{font-size:13px;color:var(--muted)}@media(max-width:700px){main{padding:24px 12px}.screens{grid-template-columns:1fr}.case{padding:16px}td,th{padding:8px}}@media print{.toolbar{display:none}.screens{grid-template-columns:1fr}body{background:white;color:black}.case{break-before:page}details{display:block}img{max-height:900px;object-fit:contain}a{color:inherit}}@media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important}}
+
+.metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin:25px 0}.metric{border-top:3px solid var(--accent);padding:14px;background:var(--paper)}.metric strong{display:block;font-size:28px}.muted{color:var(--muted)}.gate{border-left:5px solid #b87926}.featured{max-width:1050px}.step-links{font-size:12px}.case[hidden],tr[hidden]{display:none}.toolbar select{padding:10px;font:inherit;max-width:260px}.screens img{aspect-ratio:16/10;object-fit:contain;background:var(--bg)}@media(max-width:700px){.metrics{grid-template-columns:repeat(2,1fr)}}
+.case[hidden]{display:none} .review-image{width:100%;height:auto;border:1px solid var(--line)} pre{white-space:pre-wrap;overflow-wrap:anywhere} .toolbar input{width:min(100%,680px)}</style></head><body><main><p class="eyebrow">Itinerary Repair Copilot · October 9 Chicago / October 10 UTC · Additional local checkpoint</p><h1>More boundary defects found.<br>Exact meaning is now preserved in these cases.</h1><p class="intro">The integration remains fragile for unrestricted natural language. This additional review found local interpretation defects that do not require a live model to reproduce. The repair strengthens the existing typed boundary; general live reliability remains unverified.</p><div class="notice gate"><p class="finding">20 new development cases: 10 initially failed, all now pass their expected semantic checks.</p><p>Eight initial failures produced a suggestion when clarification or rejection was needed. Two rejected clear supported wording. This deliberately adversarial sample is not an estimate of real-user failure rate.</p></div><div class="metrics"><div class="metric"><strong>242</strong>affected checks passed</div><div class="metric"><strong>43</strong>provider fixture checks passed</div><div class="metric"><strong>29</strong>new step screenshots</div><div class="metric"><strong>0</strong>new paid calls</div></div><p><a href="chat_stability_repair_20261009.html">Earlier repair and 165 screenshots</a> · <a href="../../results/repairs/chat_stability_20261009_v2/implementation.patch">Additional production diff</a> · <a href="../../results/repairs/chat_stability_20261009_v2/source_freeze.json">Current source hashes</a> · <a href="../../results/repairs/chat_stability_20261009_v2/verification_summary.json">Verification summary</a></p><h2>What was repaired</h2><div class="table-scroll"><table><thead><tr><th>Problem</th><th>Current behavior</th></tr></thead><tbody><tr><td>Two times were assigned by textual order.</td><td>Explicit arrival and departure labels determine the bound. Departure 18:00 followed by arrival 09:00 yields arrival 09:00 / departure 18:00. The inverse invalid request is refused.</td></tr><tr><td>Latest arrival and earliest departure could become supported but different constraints.</td><td>These unsupported bound directions require clarification, even when the request also mentions departure.</td></tr><tr><td>Extra duration, clock, range or alternative values could be silently ignored.</td><td>A time-window or order shortcut must account for its numeric values; unresolved extra quantities require clarification before provider dispatch.</td></tr><tr><td>An old duration written first confused new-value extraction.</td><td>The explicitly labelled old value is removed before extracting the exact new duration.</td></tr></tbody></table></div><h2>How this was tested</h2><p>The 20 expected results were saved before changing production code. The first run failed 10 cases; its log is retained. The current 140-case semantic corpus runs through the deterministic adapter and the OpenAI adapter with an injected transport. Unsafe requests must make zero provider calls. The 242-check run also covers recorded prompts, provider mutations, real typed-edit API evaluation, memory and atomic stop ordering. A separate 43-check provider suite passes. These counts overlap earlier evidence and must not be added to it.</p><p><a href="../../results/repairs/chat_stability_20261009_v2/red.log">First failing run</a> · <a href="../../results/repairs/chat_stability_20261009_v2/green.log">242-check passing run</a> · <a href="../../results/repairs/chat_stability_20261009_v2/provider.log">43 provider checks</a> · <a href="../../results/repairs/chat_stability_20261009_v2/ruff.log">Scoped static checks</a> · <a href="../../results/repairs/chat_stability_20261009_v2/case_freeze.json">Expected-case freeze</a></p><p>Six representative requests were also entered through the actual local website. The corrected time window was added to the isolated draft, recovered after reload, and undone. A final reload restored all six completed turns with an empty draft and the original accepted plan. No repair acceptance or booking occurred. The map is explicitly unavailable on this separate test origin; this checkpoint provides chat and draft evidence only. The existing map configuration was left unchanged.</p><h2>What will make reliability measurable</h2><ol><li>Keep a single typed contract as the authority for supported operations, targets and values. Any unresolved clause must remain visible as a clarification or unsupported request.</li><li>Use the exact review card and independent evaluation before acceptance. Preserve atomic batches and reject stale responses or changed workspace state.</li><li>Maintain separate measures for wrong-meaning suggestions, successful supported requests, safe clarification, legitimate feasibility blocks and transport failures. A safe refusal must not inflate supported-request success.</li><li>Run a separately reviewed unseen English/Chinese/multiturn set on a frozen version. The cases used for this repair are development regressions, not blind holdout evidence.</li><li>Run the proposed bounded live batch, then repeated source-frozen trials and the remaining full browser/keyboard/overlay checks. A single 14-message batch cannot establish general reliability.</li></ol><div class="notice gate"><p>Still open: fresh live-model accuracy, independent unseen paraphrases, the full regression and browser aggregate, and E2E-1/G5 acceptance. The existing proposed live batch remains unexecuted pending the previously requested approval.</p></div><h2>Inspect each case</h2><label for="search">Filter by case, request or result</label><div class="toolbar"><input id="search" type="search" placeholder="Try B001, arrival, position, or 75"></div><section class="case" id="B001" data-search="b001 set griffith observatory time window with latest departure 18:00 with earliest arrival 09:00. proposal_ready"><p class="eyebrow">B001 · Mismatch reproduced</p><h3>Set Griffith Observatory time window with latest departure 18:00 with earliest arrival 09:00.</h3><p class="finding">Current result: proposal_ready</p><p>I prepared this typed stop-edit suggestion for review. Nothing was staged or changed.</p><details><summary>Exact expected and actual meaning in both adapters</summary><pre>{
+  &quot;expected_states&quot;: [
+    &quot;proposal_ready&quot;
+  ],
+  &quot;expected_intents&quot;: [
+    {
+      &quot;type&quot;: &quot;set_stop_time_window&quot;,
+      &quot;target_stop_id&quot;: &quot;griffith_observatory&quot;,
+      &quot;parameters&quot;: {
+        &quot;earliest_arrival&quot;: &quot;09:00&quot;,
+        &quot;latest_departure&quot;: &quot;18:00&quot;
+      }
+    }
+  ],
+  &quot;deterministic&quot;: {
+    &quot;state&quot;: &quot;proposal_ready&quot;,
+    &quot;assistant_message&quot;: &quot;I prepared this typed stop-edit suggestion for review. Nothing was staged or changed.&quot;,
+    &quot;intents&quot;: [
+      {
+        &quot;type&quot;: &quot;set_stop_time_window&quot;,
+        &quot;target_stop_id&quot;: &quot;griffith_observatory&quot;,
+        &quot;destination_day&quot;: null,
+        &quot;candidate_id&quot;: null,
+        &quot;preference&quot;: null,
+        &quot;clarification_question&quot;: null,
+        &quot;parameters&quot;: {
+          &quot;earliest_arrival&quot;: &quot;09:00&quot;,
+          &quot;latest_departure&quot;: &quot;18:00&quot;
+        }
+      }
+    ],
+    &quot;permission&quot;: null,
+    &quot;highlights&quot;: {
+      &quot;day_ids&quot;: [],
+      &quot;stop_ids&quot;: [],
+      &quot;segment_ids&quot;: [],
+      &quot;candidate_ids&quot;: []
+    },
+    &quot;schema_version&quot;: &quot;copilot-interpretation-v2&quot;
+  },
+  &quot;openai_adapter_injected&quot;: {
+    &quot;state&quot;: &quot;proposal_ready&quot;,
+    &quot;assistant_message&quot;: &quot;I prepared a typed itinerary suggestion for your review. Nothing was changed or executed automatically.&quot;,
+    &quot;intents&quot;: [
+      {
+        &quot;type&quot;: &quot;set_stop_time_window&quot;,
+        &quot;target_stop_id&quot;: &quot;griffith_observatory&quot;,
+        &quot;destination_day&quot;: null,
+        &quot;candidate_id&quot;: null,
+        &quot;preference&quot;: null,
+        &quot;clarification_question&quot;: null,
+        &quot;parameters&quot;: {
+          &quot;earliest_arrival&quot;: &quot;09:00&quot;,
+          &quot;latest_departure&quot;: &quot;18:00&quot;
+        }
+      }
+    ],
+    &quot;permission&quot;: null,
+    &quot;highlights&quot;: {
+      &quot;day_ids&quot;: [],
+      &quot;stop_ids&quot;: [],
+      &quot;segment_ids&quot;: [],
+      &quot;candidate_ids&quot;: []
+    },
+    &quot;schema_version&quot;: &quot;copilot-interpretation-v2&quot;
+  },
+  &quot;fake_transport_calls&quot;: 1
+}</pre></details><figure><img class="review-image" loading="lazy" src="../../results/repairs/chat_stability_20261009_v2/browser/B001_03_response.jpg" alt="B001_03_response"><figcaption>B001_03_response · <a href="../../results/repairs/chat_stability_20261009_v2/browser/B001_03_response.txt">Recorded visible page state</a></figcaption></figure><figure><img class="review-image" loading="lazy" src="../../results/repairs/chat_stability_20261009_v2/browser/B001_07_restored.jpg" alt="B001_07_restored"><figcaption>B001_07_restored · <a href="../../results/repairs/chat_stability_20261009_v2/browser/B001_07_restored.txt">Recorded visible page state</a></figcaption></figure><details><summary>All recorded steps, including transitional captures</summary><div class="screens"><figure><a href="../../results/repairs/chat_stability_20261009_v2/browser/B001_01_input.jpg"><img loading="lazy" src="../../results/repairs/chat_stability_20261009_v2/browser/B001_01_input.jpg" alt="B001_01_input"></a><figcaption>B001_01_input · <a href="../../results/repairs/chat_stability_20261009_v2/browser/B001_01_input.txt">Page state</a></figcaption></figure><figure><a href="../../results/repairs/chat_stability_20261009_v2/browser/B001_02_submitted.jpg"><img loading="lazy" src="../../results/repairs/chat_stability_20261009_v2/browser/B001_02_submitted.jpg" alt="B001_02_submitted"></a><figcaption>B001_02_submitted · <a href="../../results/repairs/chat_stability_20261009_v2/browser/B001_02_submitted.txt">Page state</a></figcaption></figure><figure><a href="../../results/repairs/chat_stability_20261009_v2/browser/B001_03_response.jpg"><img loading="lazy" src="../../results/repairs/chat_stability_20261009_v2/browser/B001_03_response.jpg" alt="B001_03_response"></a><figcaption>B001_03_response · <a href="../../results/repairs/chat_stability_20261009_v2/browser/B001_03_response.txt">Page state</a></figcaption></figure><figure><a href="../../results/repairs/chat_stability_20261009_v2/browser/B001_04_staged.jpg"><img loading="lazy" src="../../results/repairs/chat_stability_20261009_v2/browser/B001_04_staged.jpg" alt="B001_04_staged"></a><figcaption>B001_04_staged · <a href="../../results/repairs/chat_stability_20261009_v2/browser/B001_04_staged.txt">Page state</a></figcaption></figure><figure><a href="../../results/repairs/chat_stability_20261009_v2/browser/B001_05_reloaded.jpg"><img loading="lazy" src="../../results/repairs/chat_stability_20261009_v2/browser/B001_05_reloaded.jpg" alt="B001_05_reloaded"></a><figcaption>B001_05_reloaded · <a href="../../results/repairs/chat_stability_20261009_v2/browser/B001_05_reloaded.txt">Page state</a></figcaption></figure><figure><a href="../../results/repairs/chat_stability_20261009_v2/browser/B001_06_reload_ready.jpg"><img loading="lazy" src="../../results/repairs/chat_stability_20261009_v2/browser/B001_06_reload_ready.jpg" alt="B001_06_reload_ready"></a><figcaption>B001_06_reload_ready · <a href="../../results/repairs/chat_stability_20261009_v2/browser/B001_06_reload_ready.txt">Page state</a></figcaption></figure><figure><a href="../../results/repairs/chat_stability_20261009_v2/browser/B001_07_restored.jpg"><img loading="lazy" src="../../results/repairs/chat_stability_20261009_v2/browser/B001_07_restored.jpg" alt="B001_07_restored"></a><figcaption>B001_07_restored · <a href="../../results/repairs/chat_stability_20261009_v2/browser/B001_07_restored.txt">Page state</a></figcaption></figure><figure><a href="../../results/repairs/chat_stability_20261009_v2/browser/B001_08_undo_submitted.jpg"><img loading="lazy" src="../../results/repairs/chat_stability_20261009_v2/browser/B001_08_undo_submitted.jpg" alt="B001_08_undo_submitted"></a><figcaption>B001_08_undo_submitted · <a href="../../results/repairs/chat_stability_20261009_v2/browser/B001_08_undo_submitted.txt">Page state</a></figcaption></figure></div></details></section><section class="case" id="B002" data-search="b002 set griffith observatory time window with latest departure 09:00 with earliest arrival 18:00. unsupported"><p class="eyebrow">B002 · Mismatch reproduced</p><h3>Set Griffith Observatory time window with latest departure 09:00 with earliest arrival 18:00.</h3><p class="finding">Current result: unsupported</p><p>These edit parameters are invalid or not supported by independent evaluation. Nothing was staged or changed.</p><details><summary>Exact expected and actual meaning in both adapters</summary><pre>{
+  &quot;expected_states&quot;: [
+    &quot;clarification_required&quot;,
+    &quot;unsupported&quot;
+  ],
+  &quot;expected_intents&quot;: null,
+  &quot;deterministic&quot;: {
+    &quot;state&quot;: &quot;unsupported&quot;,
+    &quot;assistant_message&quot;: &quot;These edit parameters are invalid or not supported by independent evaluation. Nothing was staged or changed.&quot;,
+    &quot;intents&quot;: [
+      {
+        &quot;type&quot;: &quot;unsupported_request&quot;,
+        &quot;target_stop_id&quot;: null,
+        &quot;destination_day&quot;: null,
+        &quot;candidate_id&quot;: null,
+        &quot;preference&quot;: null,
+        &quot;clarification_question&quot;: null
+      }
+    ],
+    &quot;permission&quot;: null,
+    &quot;highlights&quot;: {
+      &quot;day_ids&quot;: [],
+      &quot;stop_ids&quot;: [],
+      &quot;segment_ids&quot;: [],
+      &quot;candidate_ids&quot;: []
+    },
+    &quot;schema_version&quot;: &quot;copilot-interpretation-v1&quot;
+  },
+  &quot;openai_adapter_injected&quot;: {
+    &quot;state&quot;: &quot;unsupported&quot;,
+    &quot;assistant_message&quot;: &quot;These edit parameters are invalid or not supported by independent evaluation. Nothing was staged or changed.&quot;,
+    &quot;intents&quot;: [
+      {
+        &quot;type&quot;: &quot;unsupported_request&quot;,
+        &quot;target_stop_id&quot;: null,
+        &quot;destination_day&quot;: null,
+        &quot;candidate_id&quot;: null,
+        &quot;preference&quot;: null,
+        &quot;clarification_question&quot;: null
+      }
+    ],
+    &quot;permission&quot;: null,
+    &quot;highlights&quot;: {
+      &quot;day_ids&quot;: [],
+      &quot;stop_ids&quot;: [],
+      &quot;segment_ids&quot;: [],
+      &quot;candidate_ids&quot;: []
+    },
+    &quot;schema_version&quot;: &quot;copilot-interpretation-v1&quot;
+  },
+  &quot;fake_transport_calls&quot;: 0
+}</pre></details><figure><img class="review-image" loading="lazy" src="../../results/repairs/chat_stability_20261009_v2/browser/B002_03_response.jpg" alt="B002_03_response"><figcaption>B002_03_response · <a href="../../results/repairs/chat_stability_20261009_v2/browser/B002_03_response.txt">Recorded visible page state</a></figcaption></figure><details><summary>All recorded steps, including transitional captures</summary><div class="screens"><figure><a href="../../results/repairs/chat_stability_20261009_v2/browser/B002_01_input.jpg"><img loading="lazy" src="../../results/repairs/chat_stability_20261009_v2/browser/B002_01_input.jpg" alt="B002_01_input"></a><figcaption>B002_01_input · <a href="../../results/repairs/chat_stability_20261009_v2/browser/B002_01_input.txt">Page state</a></figcaption></figure><figure><a href="../../results/repairs/chat_stability_20261009_v2/browser/B002_02_submitted.jpg"><img loading="lazy" src="../../results/repairs/chat_stability_20261009_v2/browser/B002_02_submitted.jpg" alt="B002_02_submitted"></a><figcaption>B002_02_submitted · <a href="../../results/repairs/chat_stability_20261009_v2/browser/B002_02_submitted.txt">Page state</a></figcaption></figure><figure><a href="../../results/repairs/chat_stability_20261009_v2/browser/B002_03_response.jpg"><img loading="lazy" src="../../results/repairs/chat_stability_20261009_v2/browser/B002_03_response.jpg" alt="B002_03_response"></a><figcaption>B002_03_response · <a href="../../results/repairs/chat_stability_20261009_v2/browser/B002_03_response.txt">Page state</a></figcaption></figure></div></details></section><section class="case" id="B003" data-search="b003 set griffith observatory earliest departure 09:00 with latest arrival 18:00. clarification_required"><p class="eyebrow">B003 · Mismatch reproduced</p><h3>Set Griffith Observatory earliest departure 09:00 with latest arrival 18:00.</h3><p class="finding">Current result: clarification_required</p><p>Do you mean an earliest arrival and a latest departure after the visit? An arrival upper bound or a departure lower bound is not supported by this time-window edit. Nothing was staged or changed.</p><details><summary>Exact expected and actual meaning in both adapters</summary><pre>{
+  &quot;expected_states&quot;: [
+    &quot;clarification_required&quot;,
+    &quot;unsupported&quot;
+  ],
+  &quot;expected_intents&quot;: null,
+  &quot;deterministic&quot;: {
+    &quot;state&quot;: &quot;clarification_required&quot;,
+    &quot;assistant_message&quot;: &quot;Do you mean an earliest arrival and a latest departure after the visit? An arrival upper bound or a departure lower bound is not supported by this time-window edit. Nothing was staged or changed.&quot;,
+    &quot;intents&quot;: [
+      {
+        &quot;type&quot;: &quot;request_clarification&quot;,
+        &quot;target_stop_id&quot;: null,
+        &quot;destination_day&quot;: null,
+        &quot;candidate_id&quot;: null,
+        &quot;preference&quot;: null,
+        &quot;clarification_question&quot;: &quot;Do you mean an earliest arrival and a latest departure after the visit? An arrival upper bound or a departure lower bound is not supported by this time-window edit.&quot;
+      }
+    ],
+    &quot;permission&quot;: null,
+    &quot;highlights&quot;: {
+      &quot;day_ids&quot;: [],
+      &quot;stop_ids&quot;: [],
+      &quot;segment_ids&quot;: [],
+      &quot;candidate_ids&quot;: []
+    },
+    &quot;schema_version&quot;: &quot;copilot-interpretation-v1&quot;
+  },
+  &quot;openai_adapter_injected&quot;: {
+    &quot;state&quot;: &quot;clarification_required&quot;,
+    &quot;assistant_message&quot;: &quot;Do you mean an earliest arrival and a latest departure after the visit? An arrival upper bound or a departure lower bound is not supported by this time-window edit. Nothing was staged or changed.&quot;,
+    &quot;intents&quot;: [
+      {
+        &quot;type&quot;: &quot;request_clarification&quot;,
+        &quot;target_stop_id&quot;: null,
+        &quot;destination_day&quot;: null,
+        &quot;candidate_id&quot;: null,
+        &quot;preference&quot;: null,
+        &quot;clarification_question&quot;: &quot;Do you mean an earliest arrival and a latest departure after the visit? An arrival upper bound or a departure lower bound is not supported by this time-window edit.&quot;
+      }
+    ],
+    &quot;permission&quot;: null,
+    &quot;highlights&quot;: {
+      &quot;day_ids&quot;: [],
+      &quot;stop_ids&quot;: [],
+      &quot;segment_ids&quot;: [],
+      &quot;candidate_ids&quot;: []
+    },
+    &quot;schema_version&quot;: &quot;copilot-interpretation-v1&quot;
+  },
+  &quot;fake_transport_calls&quot;: 0
+}</pre></details></section><section class="case" id="B004" data-search="b004 set griffith observatory latest arrival to 10:00 and leave the other days alone. clarification_required"><p class="eyebrow">B004 · Expected behavior preserved</p><h3>Set Griffith Observatory latest arrival to 10:00 and leave the other days alone.</h3><p class="finding">Current result: clarification_required</p><p>Do you mean an earliest arrival and a latest departure after the visit? An arrival upper bound or a departure lower bound is not supported by this time-window edit. Nothing was staged or changed.</p><details><summary>Exact expected and actual meaning in both adapters</summary><pre>{
+  &quot;expected_states&quot;: [
+    &quot;clarification_required&quot;,
+    &quot;unsupported&quot;
+  ],
+  &quot;expected_intents&quot;: null,
+  &quot;deterministic&quot;: {
+    &quot;state&quot;: &quot;clarification_required&quot;,
+    &quot;assistant_message&quot;: &quot;Do you mean an earliest arrival and a latest departure after the visit? An arrival upper bound or a departure lower bound is not supported by this time-window edit. Nothing was staged or changed.&quot;,
+    &quot;intents&quot;: [
+      {
+        &quot;type&quot;: &quot;request_clarification&quot;,
+        &quot;target_stop_id&quot;: null,
+        &quot;destination_day&quot;: null,
+        &quot;candidate_id&quot;: null,
+        &quot;preference&quot;: null,
+        &quot;clarification_question&quot;: &quot;Do you mean an earliest arrival and a latest departure after the visit? An arrival upper bound or a departure lower bound is not supported by this time-window edit.&quot;
+      }
+    ],
+    &quot;permission&quot;: null,
+    &quot;highlights&quot;: {
+      &quot;day_ids&quot;: [],
+      &quot;stop_ids&quot;: [],
+      &quot;segment_ids&quot;: [],
+      &quot;candidate_ids&quot;: []
+    },
+    &quot;schema_version&quot;: &quot;copilot-interpretation-v1&quot;
+  },
+  &quot;openai_adapter_injected&quot;: {
+    &quot;state&quot;: &quot;clarification_required&quot;,
+    &quot;assistant_message&quot;: &quot;Do you mean an earliest arrival and a latest departure after the visit? An arrival upper bound or a departure lower bound is not supported by this time-window edit. Nothing was staged or changed.&quot;,
+    &quot;intents&quot;: [
+      {
+        &quot;type&quot;: &quot;request_clarification&quot;,
+        &quot;target_stop_id&quot;: null,
+        &quot;destination_day&quot;: null,
+        &quot;candidate_id&quot;: null,
+        &quot;preference&quot;: null,
+        &quot;clarification_question&quot;: &quot;Do you mean an earliest arrival and a latest departure after the visit? An arrival upper bound or a departure lower bound is not supported by this time-window edit.&quot;
+      }
+    ],
+    &quot;permission&quot;: null,
+    &quot;highlights&quot;: {
+      &quot;day_ids&quot;: [],
+      &quot;stop_ids&quot;: [],
+      &quot;segment_ids&quot;: [],
+      &quot;candidate_ids&quot;: []
+    },
+    &quot;schema_version&quot;: &quot;copilot-interpretation-v1&quot;
+  },
+  &quot;fake_transport_calls&quot;: 0
+}</pre></details></section><section class="case" id="B005" data-search="b005 set griffith observatory latest arrival 10:00 with departure 18:00. clarification_required"><p class="eyebrow">B005 · Mismatch reproduced</p><h3>Set Griffith Observatory latest arrival 10:00 with departure 18:00.</h3><p class="finding">Current result: clarification_required</p><p>Do you mean an earliest arrival and a latest departure after the visit? An arrival upper bound or a departure lower bound is not supported by this time-window edit. Nothing was staged or changed.</p><details><summary>Exact expected and actual meaning in both adapters</summary><pre>{
+  &quot;expected_states&quot;: [
+    &quot;clarification_required&quot;,
+    &quot;unsupported&quot;
+  ],
+  &quot;expected_intents&quot;: null,
+  &quot;deterministic&quot;: {
+    &quot;state&quot;: &quot;clarification_required&quot;,
+    &quot;assistant_message&quot;: &quot;Do you mean an earliest arrival and a latest departure after the visit? An arrival upper bound or a departure lower bound is not supported by this time-window edit. Nothing was staged or changed.&quot;,
+    &quot;intents&quot;: [
+      {
+        &quot;type&quot;: &quot;request_clarification&quot;,
+        &quot;target_stop_id&quot;: null,
+        &quot;destination_day&quot;: null,
+        &quot;candidate_id&quot;: null,
+        &quot;preference&quot;: null,
+        &quot;clarification_question&quot;: &quot;Do you mean an earliest arrival and a latest departure after the visit? An arrival upper bound or a departure lower bound is not supported by this time-window edit.&quot;
+      }
+    ],
+    &quot;permission&quot;: null,
+    &quot;highlights&quot;: {
+      &quot;day_ids&quot;: [],
+      &quot;stop_ids&quot;: [],
+      &quot;segment_ids&quot;: [],
+      &quot;candidate_ids&quot;: []
+    },
+    &quot;schema_version&quot;: &quot;copilot-interpretation-v1&quot;
+  },
+  &quot;openai_adapter_injected&quot;: {
+    &quot;state&quot;: &quot;clarification_required&quot;,
+    &quot;assistant_message&quot;: &quot;Do you mean an earliest arrival and a latest departure after the visit? An arrival upper bound or a departure lower bound is not supported by this time-window edit. Nothing was staged or changed.&quot;,
+    &quot;intents&quot;: [
+      {
+        &quot;type&quot;: &quot;request_clarification&quot;,
+        &quot;target_stop_id&quot;: null,
+        &quot;destination_day&quot;: null,
+        &quot;candidate_id&quot;: null,
+        &quot;preference&quot;: null,
+        &quot;clarification_question&quot;: &quot;Do you mean an earliest arrival and a latest departure after the visit? An arrival upper bound or a departure lower bound is not supported by this time-window edit.&quot;
+      }
+    ],
+    &quot;permission&quot;: null,
+    &quot;highlights&quot;: {
+      &quot;day_ids&quot;: [],
+      &quot;stop_ids&quot;: [],
+      &quot;segment_ids&quot;: [],
+      &quot;candidate_ids&quot;: []
+    },
+    &quot;schema_version&quot;: &quot;copilot-interpretation-v1&quot;
+  },
+  &quot;fake_transport_calls&quot;: 0
+}</pre></details><figure><img class="review-image" loading="lazy" src="../../results/repairs/chat_stability_20261009_v2/browser/B005_03_response.jpg" alt="B005_03_response"><figcaption>B005_03_response · <a href="../../results/repairs/chat_stability_20261009_v2/browser/B005_03_response.txt">Recorded visible page state</a></figcaption></figure><details><summary>All recorded steps, including transitional captures</summary><div class="screens"><figure><a href="../../results/repairs/chat_stability_20261009_v2/browser/B005_01_input.jpg"><img loading="lazy" src="../../results/repairs/chat_stability_20261009_v2/browser/B005_01_input.jpg" alt="B005_01_input"></a><figcaption>B005_01_input · <a href="../../results/repairs/chat_stability_20261009_v2/browser/B005_01_input.txt">Page state</a></figcaption></figure><figure><a href="../../results/repairs/chat_stability_20261009_v2/browser/B005_02_submitted.jpg"><img loading="lazy" src="../../results/repairs/chat_stability_20261009_v2/browser/B005_02_submitted.jpg" alt="B005_02_submitted"></a><figcaption>B005_02_submitted · <a href="../../results/repairs/chat_stability_20261009_v2/browser/B005_02_submitted.txt">Page state</a></figcaption></figure><figure><a href="../../results/repairs/chat_stability_20261009_v2/browser/B005_03_response.jpg"><img loading="lazy" src="../../results/repairs/chat_stability_20261009_v2/browser/B005_03_response.jpg" alt="B005_03_response"></a><figcaption>B005_03_response · <a href="../../results/repairs/chat_stability_20261009_v2/browser/B005_03_response.txt">Page state</a></figcaption></figure></div></details></section><section class="case" id="B006" data-search="b006 set griffith observatory earliest departure to 09:00. clarification_required"><p class="eyebrow">B006 · Mismatch reproduced</p><h3>Set Griffith Observatory earliest departure to 09:00.</h3><p class="finding">Current result: clarification_required</p><p>Do you mean an earliest arrival and a latest departure after the visit? An arrival upper bound or a departure lower bound is not supported by this time-window edit. Nothing was staged or changed.</p><details><summary>Exact expected and actual meaning in both adapters</summary><pre>{
+  &quot;expected_states&quot;: [
+    &quot;clarification_required&quot;,
+    &quot;unsupported&quot;
+  ],
+  &quot;expected_intents&quot;: null,
+  &quot;deterministic&quot;: {
+    &quot;state&quot;: &quot;clarification_required&quot;,
+    &quot;assistant_message&quot;: &quot;Do you mean an earliest arrival and a latest departure after the visit? An arrival upper bound or a departure lower bound is not supported by this time-window edit. Nothing was staged or changed.&quot;,
+    &quot;intents&quot;: [
+      {
+        &quot;type&quot;: &quot;request_clarification&quot;,
+        &quot;target_stop_id&quot;: null,
+        &quot;destination_day&quot;: null,
+        &quot;candidate_id&quot;: null,
+        &quot;preference&quot;: null,
+        &quot;clarification_question&quot;: &quot;Do you mean an earliest arrival and a latest departure after the visit? An arrival upper bound or a departure lower bound is not supported by this time-window edit.&quot;
+      }
+    ],
+    &quot;permission&quot;: null,
+    &quot;highlights&quot;: {
+      &quot;day_ids&quot;: [],
+      &quot;stop_ids&quot;: [],
+      &quot;segment_ids&quot;: [],
+      &quot;candidate_ids&quot;: []
+    },
+    &quot;schema_version&quot;: &quot;copilot-interpretation-v1&quot;
+  },
+  &quot;openai_adapter_injected&quot;: {
+    &quot;state&quot;: &quot;clarification_required&quot;,
+    &quot;assistant_message&quot;: &quot;Do you mean an earliest arrival and a latest departure after the visit? An arrival upper bound or a departure lower bound is not supported by this time-window edit. Nothing was staged or changed.&quot;,
+    &quot;intents&quot;: [
+      {
+        &quot;type&quot;: &quot;request_clarification&quot;,
+        &quot;target_stop_id&quot;: null,
+        &quot;destination_day&quot;: null,
+        &quot;candidate_id&quot;: null,
+        &quot;preference&quot;: null,
+        &quot;clarification_question&quot;: &quot;Do you mean an earliest arrival and a latest departure after the visit? An arrival upper bound or a departure lower bound is not supported by this time-window edit.&quot;
+      }
+    ],
+    &quot;permission&quot;: null,
+    &quot;highlights&quot;: {
+      &quot;day_ids&quot;: [],
+      &quot;stop_ids&quot;: [],
+      &quot;segment_ids&quot;: [],
+      &quot;candidate_ids&quot;: []
+    },
+    &quot;schema_version&quot;: &quot;copilot-interpretation-v1&quot;
+  },
+  &quot;fake_transport_calls&quot;: 0
+}</pre></details></section><section class="case" id="B007" data-search="b007 set griffith observatory time window to 09:00-18:00 with a 60 minute visit. clarification_required"><p class="eyebrow">B007 · Mismatch reproduced</p><h3>Set Griffith Observatory time window to 09:00-18:00 with a 60 minute visit.</h3><p class="finding">Current result: clarification_required</p><p>Please restate this one edit with the accepted stop name and a time window such as 10:00-12:00. Nothing was staged or changed.</p><details><summary>Exact expected and actual meaning in both adapters</summary><pre>{
+  &quot;expected_states&quot;: [
+    &quot;clarification_required&quot;,
+    &quot;unsupported&quot;
+  ],
+  &quot;expected_intents&quot;: null,
+  &quot;deterministic&quot;: {
+    &quot;state&quot;: &quot;clarification_required&quot;,
+    &quot;assistant_message&quot;: &quot;Please restate this one edit with the accepted stop name and a time window such as 10:00-12:00. Nothing was staged or changed.&quot;,
+    &quot;intents&quot;: [
+      {
+        &quot;type&quot;: &quot;request_clarification&quot;,
+        &quot;target_stop_id&quot;: null,
+        &quot;destination_day&quot;: null,
+        &quot;candidate_id&quot;: null,
+        &quot;preference&quot;: null,
+        &quot;clarification_question&quot;: &quot;Please restate this one edit with the accepted stop name and a time window such as 10:00-12:00.&quot;
+      }
+    ],
+    &quot;permission&quot;: null,
+    &quot;highlights&quot;: {
+      &quot;day_ids&quot;: [],
+      &quot;stop_ids&quot;: [],
+      &quot;segment_ids&quot;: [],
+      &quot;candidate_ids&quot;: []
+    },
+    &quot;schema_version&quot;: &quot;copilot-interpretation-v1&quot;
+  },
+  &quot;openai_adapter_injected&quot;: {
+    &quot;state&quot;: &quot;clarification_required&quot;,
+    &quot;assistant_message&quot;: &quot;Please restate this one edit with the accepted stop name and a time window such as 10:00-12:00. Nothing was staged or changed.&quot;,
+    &quot;intents&quot;: [
+      {
+        &quot;type&quot;: &quot;request_clarification&quot;,
+        &quot;target_stop_id&quot;: null,
+        &quot;destination_day&quot;: null,
+        &quot;candidate_id&quot;: null,
+        &quot;preference&quot;: null,
+        &quot;clarification_question&quot;: &quot;Please restate this one edit with the accepted stop name and a time window such as 10:00-12:00.&quot;
+      }
+    ],
+    &quot;permission&quot;: null,
+    &quot;highlights&quot;: {
+      &quot;day_ids&quot;: [],
+      &quot;stop_ids&quot;: [],
+      &quot;segment_ids&quot;: [],
+      &quot;candidate_ids&quot;: []
+    },
+    &quot;schema_version&quot;: &quot;copilot-interpretation-v1&quot;
+  },
+  &quot;fake_transport_calls&quot;: 0
+}</pre></details><figure><img class="review-image" loading="lazy" src="../../results/repairs/chat_stability_20261009_v2/browser/B007_03_response.jpg" alt="B007_03_response"><figcaption>B007_03_response · <a href="../../results/repairs/chat_stability_20261009_v2/browser/B007_03_response.txt">Recorded visible page state</a></figcaption></figure><details><summary>All recorded steps, including transitional captures</summary><div class="screens"><figure><a href="../../results/repairs/chat_stability_20261009_v2/browser/B007_01_input.jpg"><img loading="lazy" src="../../results/repairs/chat_stability_20261009_v2/browser/B007_01_input.jpg" alt="B007_01_input"></a><figcaption>B007_01_input · <a href="../../results/repairs/chat_stability_20261009_v2/browser/B007_01_input.txt">Page state</a></figcaption></figure><figure><a href="../../results/repairs/chat_stability_20261009_v2/browser/B007_02_submitted.jpg"><img loading="lazy" src="../../results/repairs/chat_stability_20261009_v2/browser/B007_02_submitted.jpg" alt="B007_02_submitted"></a><figcaption>B007_02_submitted · <a href="../../results/repairs/chat_stability_20261009_v2/browser/B007_02_submitted.txt">Page state</a></figcaption></figure><figure><a href="../../results/repairs/chat_stability_20261009_v2/browser/B007_03_response.jpg"><img loading="lazy" src="../../results/repairs/chat_stability_20261009_v2/browser/B007_03_response.jpg" alt="B007_03_response"></a><figcaption>B007_03_response · <a href="../../results/repairs/chat_stability_20261009_v2/browser/B007_03_response.txt">Page state</a></figcaption></figure></div></details></section><section class="case" id="B008" data-search="b008 set griffith observatory earliest arrival 09:00 with latest departure 18:00 with arrival deadline 12:00. clarification_required"><p class="eyebrow">B008 · Expected behavior preserved</p><h3>Set Griffith Observatory earliest arrival 09:00 with latest departure 18:00 with arrival deadline 12:00.</h3><p class="finding">Current result: clarification_required</p><p>Do you mean an earliest arrival and a latest departure after the visit? An arrival upper bound or a departure lower bound is not supported by this time-window edit. Nothing was staged or changed.</p><details><summary>Exact expected and actual meaning in both adapters</summary><pre>{
+  &quot;expected_states&quot;: [
+    &quot;clarification_required&quot;,
+    &quot;unsupported&quot;
+  ],
+  &quot;expected_intents&quot;: null,
+  &quot;deterministic&quot;: {
+    &quot;state&quot;: &quot;clarification_required&quot;,
+    &quot;assistant_message&quot;: &quot;Do you mean an earliest arrival and a latest departure after the visit? An arrival upper bound or a departure lower bound is not supported by this time-window edit. Nothing was staged or changed.&quot;,
+    &quot;intents&quot;: [
+      {
+        &quot;type&quot;: &quot;request_clarification&quot;,
+        &quot;target_stop_id&quot;: null,
+        &quot;destination_day&quot;: null,
+        &quot;candidate_id&quot;: null,
+        &quot;preference&quot;: null,
+        &quot;clarification_question&quot;: &quot;Do you mean an earliest arrival and a latest departure after the visit? An arrival upper bound or a departure lower bound is not supported by this time-window edit.&quot;
+      }
+    ],
+    &quot;permission&quot;: null,
+    &quot;highlights&quot;: {
+      &quot;day_ids&quot;: [],
+      &quot;stop_ids&quot;: [],
+      &quot;segment_ids&quot;: [],
+      &quot;candidate_ids&quot;: []
+    },
+    &quot;schema_version&quot;: &quot;copilot-interpretation-v1&quot;
+  },
+  &quot;openai_adapter_injected&quot;: {
+    &quot;state&quot;: &quot;clarification_required&quot;,
+    &quot;assistant_message&quot;: &quot;Do you mean an earliest arrival and a latest departure after the visit? An arrival upper bound or a departure lower bound is not supported by this time-window edit. Nothing was staged or changed.&quot;,
+    &quot;intents&quot;: [
+      {
+        &quot;type&quot;: &quot;request_clarification&quot;,
+        &quot;target_stop_id&quot;: null,
+        &quot;destination_day&quot;: null,
+        &quot;candidate_id&quot;: null,
+        &quot;preference&quot;: null,
+        &quot;clarification_question&quot;: &quot;Do you mean an earliest arrival and a latest departure after the visit? An arrival upper bound or a departure lower bound is not supported by this time-window edit.&quot;
+      }
+    ],
+    &quot;permission&quot;: null,
+    &quot;highlights&quot;: {
+      &quot;day_ids&quot;: [],
+      &quot;stop_ids&quot;: [],
+      &quot;segment_ids&quot;: [],
+      &quot;candidate_ids&quot;: []
+    },
+    &quot;schema_version&quot;: &quot;copilot-interpretation-v1&quot;
+  },
+  &quot;fake_transport_calls&quot;: 0
+}</pre></details></section><section class="case" id="B009" data-search="b009 set griffith observatory earliest arrival 09:00 with latest departure 18:00. proposal_ready"><p class="eyebrow">B009 · Expected behavior preserved</p><h3>Set Griffith Observatory earliest arrival 09:00 with latest departure 18:00.</h3><p class="finding">Current result: proposal_ready</p><p>I prepared this typed stop-edit suggestion for review. Nothing was staged or changed.</p><details><summary>Exact expected and actual meaning in both adapters</summary><pre>{
+  &quot;expected_states&quot;: [
+    &quot;proposal_ready&quot;
+  ],
+  &quot;expected_intents&quot;: [
+    {
+      &quot;type&quot;: &quot;set_stop_time_window&quot;,
+      &quot;target_stop_id&quot;: &quot;griffith_observatory&quot;,
+      &quot;parameters&quot;: {
+        &quot;earliest_arrival&quot;: &quot;09:00&quot;,
+        &quot;latest_departure&quot;: &quot;18:00&quot;
+      }
+    }
+  ],
+  &quot;deterministic&quot;: {
+    &quot;state&quot;: &quot;proposal_ready&quot;,
+    &quot;assistant_message&quot;: &quot;I prepared this typed stop-edit suggestion for review. Nothing was staged or changed.&quot;,
+    &quot;intents&quot;: [
+      {
+        &quot;type&quot;: &quot;set_stop_time_window&quot;,
+        &quot;target_stop_id&quot;: &quot;griffith_observatory&quot;,
+        &quot;destination_day&quot;: null,
+        &quot;candidate_id&quot;: null,
+        &quot;preference&quot;: null,
+        &quot;clarification_question&quot;: null,
+        &quot;parameters&quot;: {
+          &quot;earliest_arrival&quot;: &quot;09:00&quot;,
+          &quot;latest_departure&quot;: &quot;18:00&quot;
+        }
+      }
+    ],
+    &quot;permission&quot;: null,
+    &quot;highlights&quot;: {
+      &quot;day_ids&quot;: [],
+      &quot;stop_ids&quot;: [],
+      &quot;segment_ids&quot;: [],
+      &quot;candidate_ids&quot;: []
+    },
+    &quot;schema_version&quot;: &quot;copilot-interpretation-v2&quot;
+  },
+  &quot;openai_adapter_injected&quot;: {
+    &quot;state&quot;: &quot;proposal_ready&quot;,
+    &quot;assistant_message&quot;: &quot;I prepared a typed itinerary suggestion for your review. Nothing was changed or executed automatically.&quot;,
+    &quot;intents&quot;: [
+      {
+        &quot;type&quot;: &quot;set_stop_time_window&quot;,
+        &quot;target_stop_id&quot;: &quot;griffith_observatory&quot;,
+        &quot;destination_day&quot;: null,
+        &quot;candidate_id&quot;: null,
+        &quot;preference&quot;: null,
+        &quot;clarification_question&quot;: null,
+        &quot;parameters&quot;: {
+          &quot;earliest_arrival&quot;: &quot;09:00&quot;,
+          &quot;latest_departure&quot;: &quot;18:00&quot;
+        }
+      }
+    ],
+    &quot;permission&quot;: null,
+    &quot;highlights&quot;: {
+      &quot;day_ids&quot;: [],
+      &quot;stop_ids&quot;: [],
+      &quot;segment_ids&quot;: [],
+      &quot;candidate_ids&quot;: []
+    },
+    &quot;schema_version&quot;: &quot;copilot-interpretation-v2&quot;
+  },
+  &quot;fake_transport_calls&quot;: 1
+}</pre></details></section><section class="case" id="B010" data-search="b010 set griffith observatory earliest arrival to 09:00. proposal_ready"><p class="eyebrow">B010 · Expected behavior preserved</p><h3>Set Griffith Observatory earliest arrival to 09:00.</h3><p class="finding">Current result: proposal_ready</p><p>I prepared this typed stop-edit suggestion for review. Nothing was staged or changed.</p><details><summary>Exact expected and actual meaning in both adapters</summary><pre>{
+  &quot;expected_states&quot;: [
+    &quot;proposal_ready&quot;
+  ],
+  &quot;expected_intents&quot;: [
+    {
+      &quot;type&quot;: &quot;set_stop_time_window&quot;,
+      &quot;target_stop_id&quot;: &quot;griffith_observatory&quot;,
+      &quot;parameters&quot;: {
+        &quot;earliest_arrival&quot;: &quot;09:00&quot;,
+        &quot;latest_departure&quot;: null
+      }
+    }
+  ],
+  &quot;deterministic&quot;: {
+    &quot;state&quot;: &quot;proposal_ready&quot;,
+    &quot;assistant_message&quot;: &quot;I prepared this typed stop-edit suggestion for review. Nothing was staged or changed.&quot;,
+    &quot;intents&quot;: [
+      {
+        &quot;type&quot;: &quot;set_stop_time_window&quot;,
+        &quot;target_stop_id&quot;: &quot;griffith_observatory&quot;,
+        &quot;destination_day&quot;: null,
+        &quot;candidate_id&quot;: null,
+        &quot;preference&quot;: null,
+        &quot;clarification_question&quot;: null,
+        &quot;parameters&quot;: {
+          &quot;earliest_arrival&quot;: &quot;09:00&quot;,
+          &quot;latest_departure&quot;: null
+        }
+      }
+    ],
+    &quot;permission&quot;: null,
+    &quot;highlights&quot;: {
+      &quot;day_ids&quot;: [],
+      &quot;stop_ids&quot;: [],
+      &quot;segment_ids&quot;: [],
+      &quot;candidate_ids&quot;: []
+    },
+    &quot;schema_version&quot;: &quot;copilot-interpretation-v2&quot;
+  },
+  &quot;openai_adapter_injected&quot;: {
+    &quot;state&quot;: &quot;proposal_ready&quot;,
+    &quot;assistant_message&quot;: &quot;I prepared a typed itinerary suggestion for your review. Nothing was changed or executed automatically.&quot;,
+    &quot;intents&quot;: [
+      {
+        &quot;type&quot;: &quot;set_stop_time_window&quot;,
+        &quot;target_stop_id&quot;: &quot;griffith_observatory&quot;,
+        &quot;destination_day&quot;: null,
+        &quot;candidate_id&quot;: null,
+        &quot;preference&quot;: null,
+        &quot;clarification_question&quot;: null,
+        &quot;parameters&quot;: {
+          &quot;earliest_arrival&quot;: &quot;09:00&quot;,
+          &quot;latest_departure&quot;: null
+        }
+      }
+    ],
+    &quot;permission&quot;: null,
+    &quot;highlights&quot;: {
+      &quot;day_ids&quot;: [],
+      &quot;stop_ids&quot;: [],
+      &quot;segment_ids&quot;: [],
+      &quot;candidate_ids&quot;: []
+    },
+    &quot;schema_version&quot;: &quot;copilot-interpretation-v2&quot;
+  },
+  &quot;fake_transport_calls&quot;: 1
+}</pre></details></section><section class="case" id="B011" data-search="b011 set griffith observatory latest departure to 18:00. proposal_ready"><p class="eyebrow">B011 · Expected behavior preserved</p><h3>Set Griffith Observatory latest departure to 18:00.</h3><p class="finding">Current result: proposal_ready</p><p>I prepared this typed stop-edit suggestion for review. Nothing was staged or changed.</p><details><summary>Exact expected and actual meaning in both adapters</summary><pre>{
+  &quot;expected_states&quot;: [
+    &quot;proposal_ready&quot;
+  ],
+  &quot;expected_intents&quot;: [
+    {
+      &quot;type&quot;: &quot;set_stop_time_window&quot;,
+      &quot;target_stop_id&quot;: &quot;griffith_observatory&quot;,
+      &quot;parameters&quot;: {
+        &quot;earliest_arrival&quot;: null,
+        &quot;latest_departure&quot;: &quot;18:00&quot;
+      }
+    }
+  ],
+  &quot;deterministic&quot;: {
+    &quot;state&quot;: &quot;proposal_ready&quot;,
+    &quot;assistant_message&quot;: &quot;I prepared this typed stop-edit suggestion for review. Nothing was staged or changed.&quot;,
+    &quot;intents&quot;: [
+      {
+        &quot;type&quot;: &quot;set_stop_time_window&quot;,
+        &quot;target_stop_id&quot;: &quot;griffith_observatory&quot;,
+        &quot;destination_day&quot;: null,
+        &quot;candidate_id&quot;: null,
+        &quot;preference&quot;: null,
+        &quot;clarification_question&quot;: null,
+        &quot;parameters&quot;: {
+          &quot;earliest_arrival&quot;: null,
+          &quot;latest_departure&quot;: &quot;18:00&quot;
+        }
+      }
+    ],
+    &quot;permission&quot;: null,
+    &quot;highlights&quot;: {
+      &quot;day_ids&quot;: [],
+      &quot;stop_ids&quot;: [],
+      &quot;segment_ids&quot;: [],
+      &quot;candidate_ids&quot;: []
+    },
+    &quot;schema_version&quot;: &quot;copilot-interpretation-v2&quot;
+  },
+  &quot;openai_adapter_injected&quot;: {
+    &quot;state&quot;: &quot;proposal_ready&quot;,
+    &quot;assistant_message&quot;: &quot;I prepared a typed itinerary suggestion for your review. Nothing was changed or executed automatically.&quot;,
+    &quot;intents&quot;: [
+      {
+        &quot;type&quot;: &quot;set_stop_time_window&quot;,
+        &quot;target_stop_id&quot;: &quot;griffith_observatory&quot;,
+        &quot;destination_day&quot;: null,
+        &quot;candidate_id&quot;: null,
+        &quot;preference&quot;: null,
+        &quot;clarification_question&quot;: null,
+        &quot;parameters&quot;: {
+          &quot;earliest_arrival&quot;: null,
+          &quot;latest_departure&quot;: &quot;18:00&quot;
+        }
+      }
+    ],
+    &quot;permission&quot;: null,
+    &quot;highlights&quot;: {
+      &quot;day_ids&quot;: [],
+      &quot;stop_ids&quot;: [],
+      &quot;segment_ids&quot;: [],
+      &quot;candidate_ids&quot;: []
+    },
+    &quot;schema_version&quot;: &quot;copilot-interpretation-v2&quot;
+  },
+  &quot;fake_transport_calls&quot;: 1
+}</pre></details></section><section class="case" id="B012" data-search="b012 move kings canyon national park to position 1 or 2 on day 4. clarification_required"><p class="eyebrow">B012 · Mismatch reproduced</p><h3>Move Kings Canyon National Park to position 1 or 2 on day 4.</h3><p class="finding">Current result: clarification_required</p><p>Please restate this one edit with the accepted stop name and a stop position such as position 1. Nothing was staged or changed.</p><details><summary>Exact expected and actual meaning in both adapters</summary><pre>{
+  &quot;expected_states&quot;: [
+    &quot;clarification_required&quot;,
+    &quot;unsupported&quot;
+  ],
+  &quot;expected_intents&quot;: null,
+  &quot;deterministic&quot;: {
+    &quot;state&quot;: &quot;clarification_required&quot;,
+    &quot;assistant_message&quot;: &quot;Please restate this one edit with the accepted stop name and a stop position such as position 1. Nothing was staged or changed.&quot;,
+    &quot;intents&quot;: [
+      {
+        &quot;type&quot;: &quot;request_clarification&quot;,
+        &quot;target_stop_id&quot;: null,
+        &quot;destination_day&quot;: null,
+        &quot;candidate_id&quot;: null,
+        &quot;preference&quot;: null,
+        &quot;clarification_question&quot;: &quot;Please restate this one edit with the accepted stop name and a stop position such as position 1.&quot;
+      }
+    ],
+    &quot;permission&quot;: null,
+    &quot;highlights&quot;: {
+      &quot;day_ids&quot;: [],
+      &quot;stop_ids&quot;: [],
+      &quot;segment_ids&quot;: [],
+      &quot;candidate_ids&quot;: []
+    },
+    &quot;schema_version&quot;: &quot;copilot-interpretation-v1&quot;
+  },
+  &quot;openai_adapter_injected&quot;: {
+    &quot;state&quot;: &quot;clarification_required&quot;,
+    &quot;assistant_message&quot;: &quot;Please restate this one edit with the accepted stop name and a stop position such as position 1. Nothing was staged or changed.&quot;,
+    &quot;intents&quot;: [
+      {
+        &quot;type&quot;: &quot;request_clarification&quot;,
+        &quot;target_stop_id&quot;: null,
+        &quot;destination_day&quot;: null,
+        &quot;candidate_id&quot;: null,
+        &quot;preference&quot;: null,
+        &quot;clarification_question&quot;: &quot;Please restate this one edit with the accepted stop name and a stop position such as position 1.&quot;
+      }
+    ],
+    &quot;permission&quot;: null,
+    &quot;highlights&quot;: {
+      &quot;day_ids&quot;: [],
+      &quot;stop_ids&quot;: [],
+      &quot;segment_ids&quot;: [],
+      &quot;candidate_ids&quot;: []
+    },
+    &quot;schema_version&quot;: &quot;copilot-interpretation-v1&quot;
+  },
+  &quot;fake_transport_calls&quot;: 0
+}</pre></details><figure><img class="review-image" loading="lazy" src="../../results/repairs/chat_stability_20261009_v2/browser/B012_03_response.jpg" alt="B012_03_response"><figcaption>B012_03_response · <a href="../../results/repairs/chat_stability_20261009_v2/browser/B012_03_response.txt">Recorded visible page state</a></figcaption></figure><details><summary>All recorded steps, including transitional captures</summary><div class="screens"><figure><a href="../../results/repairs/chat_stability_20261009_v2/browser/B012_01_input.jpg"><img loading="lazy" src="../../results/repairs/chat_stability_20261009_v2/browser/B012_01_input.jpg" alt="B012_01_input"></a><figcaption>B012_01_input · <a href="../../results/repairs/chat_stability_20261009_v2/browser/B012_01_input.txt">Page state</a></figcaption></figure><figure><a href="../../results/repairs/chat_stability_20261009_v2/browser/B012_02_submitted.jpg"><img loading="lazy" src="../../results/repairs/chat_stability_20261009_v2/browser/B012_02_submitted.jpg" alt="B012_02_submitted"></a><figcaption>B012_02_submitted · <a href="../../results/repairs/chat_stability_20261009_v2/browser/B012_02_submitted.txt">Page state</a></figcaption></figure><figure><a href="../../results/repairs/chat_stability_20261009_v2/browser/B012_03_response.jpg"><img loading="lazy" src="../../results/repairs/chat_stability_20261009_v2/browser/B012_03_response.jpg" alt="B012_03_response"></a><figcaption>B012_03_response · <a href="../../results/repairs/chat_stability_20261009_v2/browser/B012_03_response.txt">Page state</a></figcaption></figure></div></details></section><section class="case" id="B013" data-search="b013 move kings canyon national park to position 1-2 on day 4. clarification_required"><p class="eyebrow">B013 · Mismatch reproduced</p><h3>Move Kings Canyon National Park to position 1-2 on day 4.</h3><p class="finding">Current result: clarification_required</p><p>Please restate this one edit with the accepted stop name and a stop position such as position 1. Nothing was staged or changed.</p><details><summary>Exact expected and actual meaning in both adapters</summary><pre>{
+  &quot;expected_states&quot;: [
+    &quot;clarification_required&quot;,
+    &quot;unsupported&quot;
+  ],
+  &quot;expected_intents&quot;: null,
+  &quot;deterministic&quot;: {
+    &quot;state&quot;: &quot;clarification_required&quot;,
+    &quot;assistant_message&quot;: &quot;Please restate this one edit with the accepted stop name and a stop position such as position 1. Nothing was staged or changed.&quot;,
+    &quot;intents&quot;: [
+      {
+        &quot;type&quot;: &quot;request_clarification&quot;,
+        &quot;target_stop_id&quot;: null,
+        &quot;destination_day&quot;: null,
+        &quot;candidate_id&quot;: null,
+        &quot;preference&quot;: null,
+        &quot;clarification_question&quot;: &quot;Please restate this one edit with the accepted stop name and a stop position such as position 1.&quot;
+      }
+    ],
+    &quot;permission&quot;: null,
+    &quot;highlights&quot;: {
+      &quot;day_ids&quot;: [],
+      &quot;stop_ids&quot;: [],
+      &quot;segment_ids&quot;: [],
+      &quot;candidate_ids&quot;: []
+    },
+    &quot;schema_version&quot;: &quot;copilot-interpretation-v1&quot;
+  },
+  &quot;openai_adapter_injected&quot;: {
+    &quot;state&quot;: &quot;clarification_required&quot;,
+    &quot;assistant_message&quot;: &quot;Please restate this one edit with the accepted stop name and a stop position such as position 1. Nothing was staged or changed.&quot;,
+    &quot;intents&quot;: [
+      {
+        &quot;type&quot;: &quot;request_clarification&quot;,
+        &quot;target_stop_id&quot;: null,
+        &quot;destination_day&quot;: null,
+        &quot;candidate_id&quot;: null,
+        &quot;preference&quot;: null,
+        &quot;clarification_question&quot;: &quot;Please restate this one edit with the accepted stop name and a stop position such as position 1.&quot;
+      }
+    ],
+    &quot;permission&quot;: null,
+    &quot;highlights&quot;: {
+      &quot;day_ids&quot;: [],
+      &quot;stop_ids&quot;: [],
+      &quot;segment_ids&quot;: [],
+      &quot;candidate_ids&quot;: []
+    },
+    &quot;schema_version&quot;: &quot;copilot-interpretation-v1&quot;
+  },
+  &quot;fake_transport_calls&quot;: 0
+}</pre></details></section><section class="case" id="B014" data-search="b014 move kings canyon national park to position 1.5 on day 4. clarification_required"><p class="eyebrow">B014 · Expected behavior preserved</p><h3>Move Kings Canyon National Park to position 1.5 on day 4.</h3><p class="finding">Current result: clarification_required</p><p>Your request contains move and additional details. I have not staged any part because I cannot safely preserve every clause as one edit. Which single edit should I handle first?</p><details><summary>Exact expected and actual meaning in both adapters</summary><pre>{
+  &quot;expected_states&quot;: [
+    &quot;clarification_required&quot;,
+    &quot;unsupported&quot;
+  ],
+  &quot;expected_intents&quot;: null,
+  &quot;deterministic&quot;: {
+    &quot;state&quot;: &quot;clarification_required&quot;,
+    &quot;assistant_message&quot;: &quot;Your request contains move and additional details. I have not staged any part because I cannot safely preserve every clause as one edit. Which single edit should I handle first?&quot;,
+    &quot;intents&quot;: [
+      {
+        &quot;type&quot;: &quot;request_clarification&quot;,
+        &quot;target_stop_id&quot;: null,
+        &quot;destination_day&quot;: null,
+        &quot;candidate_id&quot;: null,
+        &quot;preference&quot;: null,
+        &quot;clarification_question&quot;: &quot;Your request contains move and additional details. I have not staged any part because I cannot safely preserve every clause as one edit. Which single edit should I handle first?&quot;
+      }
+    ],
+    &quot;permission&quot;: null,
+    &quot;highlights&quot;: {
+      &quot;day_ids&quot;: [],
+      &quot;stop_ids&quot;: [],
+      &quot;segment_ids&quot;: [],
+      &quot;candidate_ids&quot;: []
+    },
+    &quot;schema_version&quot;: &quot;copilot-interpretation-v1&quot;
+  },
+  &quot;openai_adapter_injected&quot;: {
+    &quot;state&quot;: &quot;clarification_required&quot;,
+    &quot;assistant_message&quot;: &quot;Your request contains move and additional details. I have not staged any part because I cannot safely preserve every clause as one edit. Which single edit should I handle first?&quot;,
+    &quot;intents&quot;: [
+      {
+        &quot;type&quot;: &quot;request_clarification&quot;,
+        &quot;target_stop_id&quot;: null,
+        &quot;destination_day&quot;: null,
+        &quot;candidate_id&quot;: null,
+        &quot;preference&quot;: null,
+        &quot;clarification_question&quot;: &quot;Your request contains move and additional details. I have not staged any part because I cannot safely preserve every clause as one edit. Which single edit should I handle first?&quot;
+      }
+    ],
+    &quot;permission&quot;: null,
+    &quot;highlights&quot;: {
+      &quot;day_ids&quot;: [],
+      &quot;stop_ids&quot;: [],
+      &quot;segment_ids&quot;: [],
+      &quot;candidate_ids&quot;: []
+    },
+    &quot;schema_version&quot;: &quot;copilot-interpretation-v1&quot;
+  },
+  &quot;fake_transport_calls&quot;: 0
+}</pre></details></section><section class="case" id="B015" data-search="b015 move kings canyon national park to position 1 on day 4 and position 2 on day 4. clarification_required"><p class="eyebrow">B015 · Expected behavior preserved</p><h3>Move Kings Canyon National Park to position 1 on day 4 and position 2 on day 4.</h3><p class="finding">Current result: clarification_required</p><p>Change 2: Please restate this one edit with the accepted stop name and a stop position such as position 1. Nothing was staged or changed. No part of the combined request was staged or changed.</p><details><summary>Exact expected and actual meaning in both adapters</summary><pre>{
+  &quot;expected_states&quot;: [
+    &quot;clarification_required&quot;,
+    &quot;unsupported&quot;
+  ],
+  &quot;expected_intents&quot;: null,
+  &quot;deterministic&quot;: {
+    &quot;state&quot;: &quot;clarification_required&quot;,
+    &quot;assistant_message&quot;: &quot;Change 2: Please restate this one edit with the accepted stop name and a stop position such as position 1. Nothing was staged or changed. No part of the combined request was staged or changed.&quot;,
+    &quot;intents&quot;: [
+      {
+        &quot;type&quot;: &quot;request_clarification&quot;,
+        &quot;target_stop_id&quot;: null,
+        &quot;destination_day&quot;: null,
+        &quot;candidate_id&quot;: null,
+        &quot;preference&quot;: null,
+        &quot;clarification_question&quot;: &quot;Please restate this one edit with the accepted stop name and a stop position such as position 1.&quot;
+      }
+    ],
+    &quot;permission&quot;: null,
+    &quot;highlights&quot;: {
+      &quot;day_ids&quot;: [],
+      &quot;stop_ids&quot;: [],
+      &quot;segment_ids&quot;: [],
+      &quot;candidate_ids&quot;: []
+    },
+    &quot;schema_version&quot;: &quot;copilot-interpretation-v1&quot;
+  },
+  &quot;openai_adapter_injected&quot;: {
+    &quot;state&quot;: &quot;clarification_required&quot;,
+    &quot;assistant_message&quot;: &quot;Change 2: Please restate this one edit with the accepted stop name and a stop position such as position 1. Nothing was staged or changed. No part of the combined request was staged or changed.&quot;,
+    &quot;intents&quot;: [
+      {
+        &quot;type&quot;: &quot;request_clarification&quot;,
+        &quot;target_stop_id&quot;: null,
+        &quot;destination_day&quot;: null,
+        &quot;candidate_id&quot;: null,
+        &quot;preference&quot;: null,
+        &quot;clarification_question&quot;: &quot;Please restate this one edit with the accepted stop name and a stop position such as position 1.&quot;
+      }
+    ],
+    &quot;permission&quot;: null,
+    &quot;highlights&quot;: {
+      &quot;day_ids&quot;: [],
+      &quot;stop_ids&quot;: [],
+      &quot;segment_ids&quot;: [],
+      &quot;candidate_ids&quot;: []
+    },
+    &quot;schema_version&quot;: &quot;copilot-interpretation-v1&quot;
+  },
+  &quot;fake_transport_calls&quot;: 0
+}</pre></details></section><section class="case" id="B016" data-search="b016 instead of 45 minutes give griffith observatory 75 minutes. proposal_ready"><p class="eyebrow">B016 · Mismatch reproduced</p><h3>Instead of 45 minutes give Griffith Observatory 75 minutes.</h3><p class="finding">Current result: proposal_ready</p><p>I prepared this typed stop-edit suggestion for review. Nothing was staged or changed.</p><details><summary>Exact expected and actual meaning in both adapters</summary><pre>{
+  &quot;expected_states&quot;: [
+    &quot;proposal_ready&quot;
+  ],
+  &quot;expected_intents&quot;: [
+    {
+      &quot;type&quot;: &quot;set_stop_duration&quot;,
+      &quot;target_stop_id&quot;: &quot;griffith_observatory&quot;,
+      &quot;parameters&quot;: {
+        &quot;duration&quot;: {
+          &quot;mode&quot;: &quot;exact&quot;,
+          &quot;preferred_minutes&quot;: 75,
+          &quot;minimum_minutes&quot;: 75,
+          &quot;maximum_minutes&quot;: 75
+        }
+      }
+    }
+  ],
+  &quot;deterministic&quot;: {
+    &quot;state&quot;: &quot;proposal_ready&quot;,
+    &quot;assistant_message&quot;: &quot;I prepared this typed stop-edit suggestion for review. Nothing was staged or changed.&quot;,
+    &quot;intents&quot;: [
+      {
+        &quot;type&quot;: &quot;set_stop_duration&quot;,
+        &quot;target_stop_id&quot;: &quot;griffith_observatory&quot;,
+        &quot;destination_day&quot;: null,
+        &quot;candidate_id&quot;: null,
+        &quot;preference&quot;: null,
+        &quot;clarification_question&quot;: null,
+        &quot;parameters&quot;: {
+          &quot;duration&quot;: {
+            &quot;mode&quot;: &quot;exact&quot;,
+            &quot;preferred_minutes&quot;: 75,
+            &quot;minimum_minutes&quot;: 75,
+            &quot;maximum_minutes&quot;: 75
+          }
+        }
+      }
+    ],
+    &quot;permission&quot;: null,
+    &quot;highlights&quot;: {
+      &quot;day_ids&quot;: [],
+      &quot;stop_ids&quot;: [],
+      &quot;segment_ids&quot;: [],
+      &quot;candidate_ids&quot;: []
+    },
+    &quot;schema_version&quot;: &quot;copilot-interpretation-v2&quot;
+  },
+  &quot;openai_adapter_injected&quot;: {
+    &quot;state&quot;: &quot;proposal_ready&quot;,
+    &quot;assistant_message&quot;: &quot;I prepared a typed itinerary suggestion for your review. Nothing was changed or executed automatically.&quot;,
+    &quot;intents&quot;: [
+      {
+        &quot;type&quot;: &quot;set_stop_duration&quot;,
+        &quot;target_stop_id&quot;: &quot;griffith_observatory&quot;,
+        &quot;destination_day&quot;: null,
+        &quot;candidate_id&quot;: null,
+        &quot;preference&quot;: null,
+        &quot;clarification_question&quot;: null,
+        &quot;parameters&quot;: {
+          &quot;duration&quot;: {
+            &quot;mode&quot;: &quot;exact&quot;,
+            &quot;preferred_minutes&quot;: 75,
+            &quot;minimum_minutes&quot;: 75,
+            &quot;maximum_minutes&quot;: 75
+          }
+        }
+      }
+    ],
+    &quot;permission&quot;: null,
+    &quot;highlights&quot;: {
+      &quot;day_ids&quot;: [],
+      &quot;stop_ids&quot;: [],
+      &quot;segment_ids&quot;: [],
+      &quot;candidate_ids&quot;: []
+    },
+    &quot;schema_version&quot;: &quot;copilot-interpretation-v2&quot;
+  },
+  &quot;fake_transport_calls&quot;: 1
+}</pre></details><figure><img class="review-image" loading="lazy" src="../../results/repairs/chat_stability_20261009_v2/browser/B016_03_response.jpg" alt="B016_03_response"><figcaption>B016_03_response · <a href="../../results/repairs/chat_stability_20261009_v2/browser/B016_03_response.txt">Recorded visible page state</a></figcaption></figure><figure><img class="review-image" loading="lazy" src="../../results/repairs/chat_stability_20261009_v2/browser/B016_04_readable_card.jpg" alt="B016_04_readable_card"><figcaption>B016_04_readable_card · <a href="../../results/repairs/chat_stability_20261009_v2/browser/B016_04_readable_card.txt">Recorded visible page state</a></figcaption></figure><details><summary>All recorded steps, including transitional captures</summary><div class="screens"><figure><a href="../../results/repairs/chat_stability_20261009_v2/browser/B016_01_input.jpg"><img loading="lazy" src="../../results/repairs/chat_stability_20261009_v2/browser/B016_01_input.jpg" alt="B016_01_input"></a><figcaption>B016_01_input · <a href="../../results/repairs/chat_stability_20261009_v2/browser/B016_01_input.txt">Page state</a></figcaption></figure><figure><a href="../../results/repairs/chat_stability_20261009_v2/browser/B016_02_submitted.jpg"><img loading="lazy" src="../../results/repairs/chat_stability_20261009_v2/browser/B016_02_submitted.jpg" alt="B016_02_submitted"></a><figcaption>B016_02_submitted · <a href="../../results/repairs/chat_stability_20261009_v2/browser/B016_02_submitted.txt">Page state</a></figcaption></figure><figure><a href="../../results/repairs/chat_stability_20261009_v2/browser/B016_03_response.jpg"><img loading="lazy" src="../../results/repairs/chat_stability_20261009_v2/browser/B016_03_response.jpg" alt="B016_03_response"></a><figcaption>B016_03_response · <a href="../../results/repairs/chat_stability_20261009_v2/browser/B016_03_response.txt">Page state</a></figcaption></figure><figure><a href="../../results/repairs/chat_stability_20261009_v2/browser/B016_04_readable_card.jpg"><img loading="lazy" src="../../results/repairs/chat_stability_20261009_v2/browser/B016_04_readable_card.jpg" alt="B016_04_readable_card"></a><figcaption>B016_04_readable_card · <a href="../../results/repairs/chat_stability_20261009_v2/browser/B016_04_readable_card.txt">Page state</a></figcaption></figure></div></details></section><section class="case" id="B017" data-search="b017 move kings canyon national park to position -1 on day 4. clarification_required"><p class="eyebrow">B017 · Expected behavior preserved</p><h3>Move Kings Canyon National Park to position -1 on day 4.</h3><p class="finding">Current result: clarification_required</p><p>Please restate this one edit with the accepted stop name and a stop position such as position 1. Nothing was staged or changed.</p><details><summary>Exact expected and actual meaning in both adapters</summary><pre>{
+  &quot;expected_states&quot;: [
+    &quot;clarification_required&quot;,
+    &quot;unsupported&quot;
+  ],
+  &quot;expected_intents&quot;: null,
+  &quot;deterministic&quot;: {
+    &quot;state&quot;: &quot;clarification_required&quot;,
+    &quot;assistant_message&quot;: &quot;Please restate this one edit with the accepted stop name and a stop position such as position 1. Nothing was staged or changed.&quot;,
+    &quot;intents&quot;: [
+      {
+        &quot;type&quot;: &quot;request_clarification&quot;,
+        &quot;target_stop_id&quot;: null,
+        &quot;destination_day&quot;: null,
+        &quot;candidate_id&quot;: null,
+        &quot;preference&quot;: null,
+        &quot;clarification_question&quot;: &quot;Please restate this one edit with the accepted stop name and a stop position such as position 1.&quot;
+      }
+    ],
+    &quot;permission&quot;: null,
+    &quot;highlights&quot;: {
+      &quot;day_ids&quot;: [],
+      &quot;stop_ids&quot;: [],
+      &quot;segment_ids&quot;: [],
+      &quot;candidate_ids&quot;: []
+    },
+    &quot;schema_version&quot;: &quot;copilot-interpretation-v1&quot;
+  },
+  &quot;openai_adapter_injected&quot;: {
+    &quot;state&quot;: &quot;clarification_required&quot;,
+    &quot;assistant_message&quot;: &quot;Please restate this one edit with the accepted stop name and a stop position such as position 1. Nothing was staged or changed.&quot;,
+    &quot;intents&quot;: [
+      {
+        &quot;type&quot;: &quot;request_clarification&quot;,
+        &quot;target_stop_id&quot;: null,
+        &quot;destination_day&quot;: null,
+        &quot;candidate_id&quot;: null,
+        &quot;preference&quot;: null,
+        &quot;clarification_question&quot;: &quot;Please restate this one edit with the accepted stop name and a stop position such as position 1.&quot;
+      }
+    ],
+    &quot;permission&quot;: null,
+    &quot;highlights&quot;: {
+      &quot;day_ids&quot;: [],
+      &quot;stop_ids&quot;: [],
+      &quot;segment_ids&quot;: [],
+      &quot;candidate_ids&quot;: []
+    },
+    &quot;schema_version&quot;: &quot;copilot-interpretation-v1&quot;
+  },
+  &quot;fake_transport_calls&quot;: 0
+}</pre></details></section><section class="case" id="B018" data-search="b018 move kings canyon national park to position 1 on day 4 at 10:00. clarification_required"><p class="eyebrow">B018 · Mismatch reproduced</p><h3>Move Kings Canyon National Park to position 1 on day 4 at 10:00.</h3><p class="finding">Current result: clarification_required</p><p>Please restate this one edit with the accepted stop name and a stop position such as position 1. Nothing was staged or changed.</p><details><summary>Exact expected and actual meaning in both adapters</summary><pre>{
+  &quot;expected_states&quot;: [
+    &quot;clarification_required&quot;,
+    &quot;unsupported&quot;
+  ],
+  &quot;expected_intents&quot;: null,
+  &quot;deterministic&quot;: {
+    &quot;state&quot;: &quot;clarification_required&quot;,
+    &quot;assistant_message&quot;: &quot;Please restate this one edit with the accepted stop name and a stop position such as position 1. Nothing was staged or changed.&quot;,
+    &quot;intents&quot;: [
+      {
+        &quot;type&quot;: &quot;request_clarification&quot;,
+        &quot;target_stop_id&quot;: null,
+        &quot;destination_day&quot;: null,
+        &quot;candidate_id&quot;: null,
+        &quot;preference&quot;: null,
+        &quot;clarification_question&quot;: &quot;Please restate this one edit with the accepted stop name and a stop position such as position 1.&quot;
+      }
+    ],
+    &quot;permission&quot;: null,
+    &quot;highlights&quot;: {
+      &quot;day_ids&quot;: [],
+      &quot;stop_ids&quot;: [],
+      &quot;segment_ids&quot;: [],
+      &quot;candidate_ids&quot;: []
+    },
+    &quot;schema_version&quot;: &quot;copilot-interpretation-v1&quot;
+  },
+  &quot;openai_adapter_injected&quot;: {
+    &quot;state&quot;: &quot;clarification_required&quot;,
+    &quot;assistant_message&quot;: &quot;Please restate this one edit with the accepted stop name and a stop position such as position 1. Nothing was staged or changed.&quot;,
+    &quot;intents&quot;: [
+      {
+        &quot;type&quot;: &quot;request_clarification&quot;,
+        &quot;target_stop_id&quot;: null,
+        &quot;destination_day&quot;: null,
+        &quot;candidate_id&quot;: null,
+        &quot;preference&quot;: null,
+        &quot;clarification_question&quot;: &quot;Please restate this one edit with the accepted stop name and a stop position such as position 1.&quot;
+      }
+    ],
+    &quot;permission&quot;: null,
+    &quot;highlights&quot;: {
+      &quot;day_ids&quot;: [],
+      &quot;stop_ids&quot;: [],
+      &quot;segment_ids&quot;: [],
+      &quot;candidate_ids&quot;: []
+    },
+    &quot;schema_version&quot;: &quot;copilot-interpretation-v1&quot;
+  },
+  &quot;fake_transport_calls&quot;: 0
+}</pre></details></section><section class="case" id="B019" data-search="b019 set griffith observatory earliest arrival 09:00 and latest departure 18:00. proposal_ready"><p class="eyebrow">B019 · Expected behavior preserved</p><h3>Set Griffith Observatory earliest arrival 09:00 and latest departure 18:00.</h3><p class="finding">Current result: proposal_ready</p><p>I prepared this typed stop-edit suggestion for review. Nothing was staged or changed.</p><details><summary>Exact expected and actual meaning in both adapters</summary><pre>{
+  &quot;expected_states&quot;: [
+    &quot;proposal_ready&quot;
+  ],
+  &quot;expected_intents&quot;: [
+    {
+      &quot;type&quot;: &quot;set_stop_time_window&quot;,
+      &quot;target_stop_id&quot;: &quot;griffith_observatory&quot;,
+      &quot;parameters&quot;: {
+        &quot;earliest_arrival&quot;: &quot;09:00&quot;,
+        &quot;latest_departure&quot;: &quot;18:00&quot;
+      }
+    }
+  ],
+  &quot;deterministic&quot;: {
+    &quot;state&quot;: &quot;proposal_ready&quot;,
+    &quot;assistant_message&quot;: &quot;I prepared this typed stop-edit suggestion for review. Nothing was staged or changed.&quot;,
+    &quot;intents&quot;: [
+      {
+        &quot;type&quot;: &quot;set_stop_time_window&quot;,
+        &quot;target_stop_id&quot;: &quot;griffith_observatory&quot;,
+        &quot;destination_day&quot;: null,
+        &quot;candidate_id&quot;: null,
+        &quot;preference&quot;: null,
+        &quot;clarification_question&quot;: null,
+        &quot;parameters&quot;: {
+          &quot;earliest_arrival&quot;: &quot;09:00&quot;,
+          &quot;latest_departure&quot;: &quot;18:00&quot;
+        }
+      }
+    ],
+    &quot;permission&quot;: null,
+    &quot;highlights&quot;: {
+      &quot;day_ids&quot;: [],
+      &quot;stop_ids&quot;: [],
+      &quot;segment_ids&quot;: [],
+      &quot;candidate_ids&quot;: []
+    },
+    &quot;schema_version&quot;: &quot;copilot-interpretation-v2&quot;
+  },
+  &quot;openai_adapter_injected&quot;: {
+    &quot;state&quot;: &quot;proposal_ready&quot;,
+    &quot;assistant_message&quot;: &quot;I prepared a typed itinerary suggestion for your review. Nothing was changed or executed automatically.&quot;,
+    &quot;intents&quot;: [
+      {
+        &quot;type&quot;: &quot;set_stop_time_window&quot;,
+        &quot;target_stop_id&quot;: &quot;griffith_observatory&quot;,
+        &quot;destination_day&quot;: null,
+        &quot;candidate_id&quot;: null,
+        &quot;preference&quot;: null,
+        &quot;clarification_question&quot;: null,
+        &quot;parameters&quot;: {
+          &quot;earliest_arrival&quot;: &quot;09:00&quot;,
+          &quot;latest_departure&quot;: &quot;18:00&quot;
+        }
+      }
+    ],
+    &quot;permission&quot;: null,
+    &quot;highlights&quot;: {
+      &quot;day_ids&quot;: [],
+      &quot;stop_ids&quot;: [],
+      &quot;segment_ids&quot;: [],
+      &quot;candidate_ids&quot;: []
+    },
+    &quot;schema_version&quot;: &quot;copilot-interpretation-v2&quot;
+  },
+  &quot;fake_transport_calls&quot;: 1
+}</pre></details></section><section class="case" id="B020" data-search="b020 set griffith observatory time window to 25:00-26:00. unsupported"><p class="eyebrow">B020 · Expected behavior preserved</p><h3>Set Griffith Observatory time window to 25:00-26:00.</h3><p class="finding">Current result: unsupported</p><p>These edit parameters are invalid or not supported by independent evaluation. Nothing was staged or changed.</p><details><summary>Exact expected and actual meaning in both adapters</summary><pre>{
+  &quot;expected_states&quot;: [
+    &quot;clarification_required&quot;,
+    &quot;unsupported&quot;
+  ],
+  &quot;expected_intents&quot;: null,
+  &quot;deterministic&quot;: {
+    &quot;state&quot;: &quot;unsupported&quot;,
+    &quot;assistant_message&quot;: &quot;These edit parameters are invalid or not supported by independent evaluation. Nothing was staged or changed.&quot;,
+    &quot;intents&quot;: [
+      {
+        &quot;type&quot;: &quot;unsupported_request&quot;,
+        &quot;target_stop_id&quot;: null,
+        &quot;destination_day&quot;: null,
+        &quot;candidate_id&quot;: null,
+        &quot;preference&quot;: null,
+        &quot;clarification_question&quot;: null
+      }
+    ],
+    &quot;permission&quot;: null,
+    &quot;highlights&quot;: {
+      &quot;day_ids&quot;: [],
+      &quot;stop_ids&quot;: [],
+      &quot;segment_ids&quot;: [],
+      &quot;candidate_ids&quot;: []
+    },
+    &quot;schema_version&quot;: &quot;copilot-interpretation-v1&quot;
+  },
+  &quot;openai_adapter_injected&quot;: {
+    &quot;state&quot;: &quot;unsupported&quot;,
+    &quot;assistant_message&quot;: &quot;These edit parameters are invalid or not supported by independent evaluation. Nothing was staged or changed.&quot;,
+    &quot;intents&quot;: [
+      {
+        &quot;type&quot;: &quot;unsupported_request&quot;,
+        &quot;target_stop_id&quot;: null,
+        &quot;destination_day&quot;: null,
+        &quot;candidate_id&quot;: null,
+        &quot;preference&quot;: null,
+        &quot;clarification_question&quot;: null
+      }
+    ],
+    &quot;permission&quot;: null,
+    &quot;highlights&quot;: {
+      &quot;day_ids&quot;: [],
+      &quot;stop_ids&quot;: [],
+      &quot;segment_ids&quot;: [],
+      &quot;candidate_ids&quot;: []
+    },
+    &quot;schema_version&quot;: &quot;copilot-interpretation-v1&quot;
+  },
+  &quot;fake_transport_calls&quot;: 0
+}</pre></details></section><h2>Starting state and final recovery</h2><div class="screens"><figure><a href="../../results/repairs/chat_stability_20261009_v2/browser/00_start.jpg"><img loading="lazy" src="../../results/repairs/chat_stability_20261009_v2/browser/00_start.jpg" alt="00_start"></a><figcaption>00_start</figcaption></figure><figure><a href="../../results/repairs/chat_stability_20261009_v2/browser/01_chat_open.jpg"><img loading="lazy" src="../../results/repairs/chat_stability_20261009_v2/browser/01_chat_open.jpg" alt="01_chat_open"></a><figcaption>01_chat_open</figcaption></figure><figure><a href="../../results/repairs/chat_stability_20261009_v2/browser/final_01_reload_submitted.jpg"><img loading="lazy" src="../../results/repairs/chat_stability_20261009_v2/browser/final_01_reload_submitted.jpg" alt="final_01_reload_submitted"></a><figcaption>final_01_reload_submitted</figcaption></figure><figure><a href="../../results/repairs/chat_stability_20261009_v2/browser/final_02_restored.jpg"><img loading="lazy" src="../../results/repairs/chat_stability_20261009_v2/browser/final_02_restored.jpg" alt="final_02_restored"></a><figcaption>final_02_restored</figcaption></figure><figure><a href="../../results/repairs/chat_stability_20261009_v2/browser/final_03_conversation_restored.jpg"><img loading="lazy" src="../../results/repairs/chat_stability_20261009_v2/browser/final_03_conversation_restored.jpg" alt="final_03_conversation_restored"></a><figcaption>final_03_conversation_restored</figcaption></figure></div><p><a href="../../results/repairs/chat_stability_20261009_v2/browser/conversation_record.json">Sanitized six-turn conversation</a> · <a href="../../results/repairs/chat_stability_20261009_v2/browser/B001_staged_reload_session.json">Exact staged bounds after reload</a> · <a href="../../results/repairs/chat_stability_20261009_v2/browser/final_session.json">Final empty draft</a> · <a href="../../results/repairs/chat_stability_20261009_v2/browser/screenshots_verified.json">Screenshot index and hashes</a></p><script>document.getElementById("search").addEventListener("input",event=>{const query=event.target.value.toLowerCase().trim();document.querySelectorAll(".case").forEach(section=>section.hidden=!section.dataset.search.includes(query));});</script></main></body></html>

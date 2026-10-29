@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import logging
 import re
 import threading
 import time
@@ -18,6 +19,7 @@ from fastapi import HTTPException
 
 from .config import ProductRuntimeConfig
 from .conversations import ConversationError
+from .copilot import CopilotAdapter
 from .map_asset_contract import (
     EXPECTED_STYLE_ATTRIBUTION,
     required_fontstacks,
@@ -32,7 +34,9 @@ from .service import ProductService
 PRODUCT_ID = "itinerary-repair-copilot"
 PRODUCT_VERSION = "0.2.0"
 MAP_CACHE_SECONDS = 2.0
-MAP_TIMEOUT_SECONDS = 1.0
+MAP_TIMEOUT_SECONDS = 3.0
+MAP_ASSET_MAX_BYTES = 4 * 1024 * 1024
+LOGGER = logging.getLogger(__name__)
 
 BUILD_FINGERPRINT_SUFFIXES = frozenset({
     ".css",
@@ -50,13 +54,35 @@ def product_build_id(repository_root: Path) -> str:
 
     digest = hashlib.sha256()
     product_root = repository_root / "src" / "itinerary_system" / "product_app"
-    candidates = [repository_root / "scripts" / "run_product_app.py"]
+    route_registration = repository_root / "configs" / "product_route_delta.json"
+    candidates = [repository_root / "scripts" / "run_product_app.py",
+        repository_root / "configs" / "product_app_registry.json", route_registration,
+        repository_root / "src" / "itinerary_system" / "interest_model.py",
+        repository_root / "src" / "itinerary_system" / "interest_surface.py"]
+    try:
+        registration = json.loads(route_registration.read_text(encoding="utf-8"))
+        descriptor = registration.get("descriptor_path") if isinstance(registration, dict) else None
+        if isinstance(descriptor, str):
+            descriptor_path = (repository_root / descriptor).resolve()
+            if descriptor_path.is_relative_to(repository_root.resolve()):
+                candidates.append(descriptor_path)
+    except (OSError, ValueError):
+        # The registration bytes (or missing-file marker) still affect the identity.
+        pass
     candidates.extend(
         path
         for path in product_root.rglob("*")
         if path.is_file()
         and "__pycache__" not in path.parts
         and path.suffix.lower() in BUILD_FINGERPRINT_SUFFIXES
+    )
+    # Previews also execute imported plan, routing, evaluator and solver modules.
+    # Bind their Python source so a live edit cannot mix backend generations.
+    candidates.extend(
+        path for path in (repository_root / "src" / "itinerary_system").rglob("*.py")
+        if path.is_file() and "__pycache__" not in path.parts
+        and not path.is_relative_to(product_root)
+        and path not in candidates
     )
     for path in sorted(candidates):
         relative_path = path.relative_to(repository_root).as_posix()
@@ -81,9 +107,17 @@ def _component(name: str, status: str, required: bool, code: str) -> ComponentHe
 class ProductRuntime:
     """Owns initialization and sanitized component readiness."""
 
-    def __init__(self, config: ProductRuntimeConfig) -> None:
+    def __init__(
+        self,
+        config: ProductRuntimeConfig,
+        *,
+        copilot: CopilotAdapter | None = None,
+    ) -> None:
         self.config = config
+        self._copilot = copilot
         self.build_id = product_build_id(config.repository_root)
+        self._build_changed = False
+        self._build_lock = threading.Lock()
         self.registry: ProductRunRegistry | None = None
         self.service: ProductService | None = None
         self.routing: RuntimeRoutingService | None = None
@@ -92,6 +126,17 @@ class ProductRuntime:
         self._initialized = False
         self._map_checked_monotonic = 0.0
         self._cache_lock = threading.RLock()
+
+    def require_current_build(self) -> None:
+        """Reject detected source drift until this server process is restarted."""
+        with self._build_lock:
+            if not self._build_changed:
+                try:
+                    self._build_changed = product_build_id(self.config.repository_root) != self.build_id
+                except OSError:
+                    self._build_changed = True
+            if self._build_changed:
+                raise HTTPException(status_code=503, detail="product_server_build_changed")
 
     def initialize(self) -> ProductHealthV2:
         with self._cache_lock:
@@ -111,6 +156,7 @@ class ProductRuntime:
                     self.service = ProductService(
                         self.registry,
                         self.config.state_root,
+                        copilot=self._copilot,
                         runtime_config=self.config,
                     )
                     self.service.load(self.registry.default.run_id)
@@ -139,9 +185,9 @@ class ProductRuntime:
                 has_legacy = bool(legacy.workspace_pointer_count or legacy.decision_file_count)
                 self._components["state_store"] = _component(
                     "state_store",
-                    "degraded" if has_legacy else "ready",
+                    "ready",
                     True,
-                    "legacy_state_deferred" if has_legacy else state_readiness.code,
+                    "state_store_ready_legacy_preserved" if has_legacy else state_readiness.code,
                 )
             else:
                 self._components["state_store"] = _component(
@@ -176,7 +222,9 @@ class ProductRuntime:
             return self._health_payload()
 
     def require_service(self) -> ProductService:
-        health = self.health()
+        # Core readiness is fixed at initialization; optional network probes
+        # must not block loading or editing an otherwise healthy saved trip.
+        health = self._health_payload() if self._initialized else self.initialize()
         if not health.core_ready or self.service is None:
             raise HTTPException(status_code=503, detail="product_core_not_ready")
         return self.service
@@ -354,7 +402,14 @@ class ProductRuntime:
             return _component("map", "degraded", False, "map_style_invalid")
         except ValueError as exc:
             return _component("map", "degraded", False, str(exc))
-        except (OSError, urllib.error.URLError, TimeoutError):
+        except (OSError, urllib.error.URLError, TimeoutError) as exc:
+            reason = getattr(exc, "reason", exc)
+            # Never log exception text, URLs, headers or environment credentials.
+            LOGGER.warning("map_probe_transport_failure type=%s reason_type=%s errno=%s winerror=%s http_status=%s",
+                type(exc).__name__, type(reason).__name__, getattr(reason, "errno", None),
+                getattr(reason, "winerror", None), getattr(exc, "code", None))
+            if isinstance(exc, TimeoutError) or isinstance(getattr(exc, "reason", None), TimeoutError):
+                return _component("map", "degraded", False, "map_probe_timeout")
             code = "maplibre_unavailable" if provider == "maplibre_pmtiles" else "atlas_unavailable"
             return _component("map", "degraded", False, code)
         code = "maplibre_ready" if provider == "maplibre_pmtiles" else "atlas_ready"
@@ -371,7 +426,10 @@ class ProductRuntime:
         with urllib.request.urlopen(request, timeout=MAP_TIMEOUT_SECONDS) as response:
             if not self._is_map_url(response.geturl()):
                 raise ValueError("map_redirect_not_loopback")
-            return response.read(1_048_576), response.headers, response.status
+            body = response.read(MAP_ASSET_MAX_BYTES + 1)
+            if len(body) > MAP_ASSET_MAX_BYTES:
+                raise ValueError("map_asset_size_limit_exceeded")
+            return body, response.headers, response.status
 
     def _fetch_checked(
         self, path_or_url: str, *, range_request: bool = False

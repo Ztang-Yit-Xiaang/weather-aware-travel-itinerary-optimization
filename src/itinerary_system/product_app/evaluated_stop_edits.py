@@ -190,6 +190,7 @@ class EvaluatedStopOrderCompiler:
             for stop_id in stop_ids
         }
         seen_targets: set[str] = set()
+        requested_positions: dict[int, dict[int, str]] = {}
         for operation in operations:
             target = operation["target"]
             parameters = operation["parameters"]
@@ -207,11 +208,19 @@ class EvaluatedStopOrderCompiler:
                 or not 0 <= index < len(day_stops)
             ):
                 raise WorkspaceError("draft_order_index_invalid", 409)
-            current_index = day_stops.index(target)
-            if current_index == index:
-                raise WorkspaceError("draft_no_effect", 409)
-            day_stops.pop(current_index)
-            day_stops.insert(index, target)
+            positions = requested_positions.setdefault(day, {})
+            if index in positions:
+                raise WorkspaceError("draft_conflicting_stop_order", 409)
+            positions[index] = target
+
+        # Rows describe final positions. Apply them together so a row already
+        # satisfied by another row remains valid and input order cannot undo it.
+        for day, positions in requested_positions.items():
+            remaining = iter(stop for stop in ordered_by_day[day] if stop not in seen_targets)
+            ordered_by_day[day] = [
+                positions[index] if index in positions else next(remaining)
+                for index in range(len(ordered_by_day[day]))
+            ]
 
         if ordered_by_day == parent_ordered_by_day:
             raise WorkspaceError("draft_no_effect", 409)
@@ -244,7 +253,7 @@ class EvaluatedStopOrderCompiler:
         for day in affected_days:
             route_ids[day] = self._route_id(day, ordered_by_day[day])
 
-        selected_stops = _reordered_stop_records(self._parent, ordered_by_day)
+        selected_stops = _reordered_stop_records(self._parent, ordered_by_day, affected_days)
         ordered_days = tuple(
             {"day": day, "stop_ids": tuple(stop_ids)}
             for day, stop_ids in sorted(ordered_by_day.items())
@@ -456,7 +465,7 @@ class EvaluatedStopDurationCompiler:
             child,
         )
         if (
-            diff.schema_version != "plan-diff-v2"
+            diff.schema_version not in {"plan-diff-v2", "plan-diff-v5"}
             or len(diff.duration_changes) != len(operations)
             or diff.added_stops
             or diff.deleted_stops
@@ -921,7 +930,7 @@ class EvaluatedStopTimeWindowCompiler:
             child,
         )
         if (
-            diff.schema_version != "plan-diff-v3"
+            diff.schema_version not in {"plan-diff-v3", "plan-diff-v5"}
             or len(diff.time_window_changes) != len(operations)
             or diff.added_stops
             or diff.deleted_stops
@@ -1348,6 +1357,7 @@ def _ordered_stop_ids(plan: PlanArtifactV2) -> dict[int, list[str]]:
 def _reordered_stop_records(
     parent: PlanArtifactV2,
     ordered_by_day: dict[int, list[str]],
+    affected_days: set[int],
 ) -> tuple[dict[str, Any], ...]:
     lookup = {
         str(stop.get("stop_id") or stop.get("poi_id") or ""): dict(stop)
@@ -1361,7 +1371,7 @@ def _reordered_stop_records(
             stop = lookup.get(stop_id)
             if stop is None or stop.get("day") != day:
                 raise WorkspaceError("draft_parent_order_invalid", 409)
-            result.append({**stop, "day": day, "stop_order": stop_order})
+            result.append({**stop, "day": day, "stop_order": stop_order} if day in affected_days else stop)
     return tuple(result)
 
 

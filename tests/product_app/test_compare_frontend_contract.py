@@ -37,6 +37,7 @@ def _resolve_with_node(selected: str | None, *, plan_hash: str = "hash-child", e
             "child-plan": {
                 "plan_id": "child-plan",
                 "plan_content_hash": evidence_hash,
+                "certificate": {"plan_id": "child-plan", "plan_content_hash": evidence_hash},
             }
         },
     }
@@ -137,11 +138,14 @@ def test_selection_stays_on_compare_and_evidence_is_explicit() -> None:
     compare_source = COMPARE.read_text(encoding="utf-8")
     app_source = APP.read_text(encoding="utf-8")
     active_render = app_source[app_source.index("function renderCompare()") :]
-    active_render = active_render[: active_render.index("function comparisonTable()")]
+    active_render = active_render[: active_render.index("function renderEvidence(")]
 
     assert "onSelectAlternative(button.dataset.compareOption)" in compare_source
     assert "navigate(" not in compare_source
-    assert "onSelectAlternative: (planId) => selectContext({ selected_alternative_id: planId })" in active_render
+    assert "evaluatedProposalCompareContext()" in active_render
+    assert "geography: activeGeography()" in app_source
+    assert "geographyForActiveProposal" not in app_source
+    assert "(planId) => selectContext({ selected_alternative_id: planId })" in active_render
     assert "onOpenEvidence" in active_render
     assert "alternatives[0]" not in app_source
     assert "No first-option fallback was used." in app_source
@@ -151,9 +155,10 @@ def test_compare_preserves_unavailable_and_has_no_acceptance_action() -> None:
     source = COMPARE.read_text(encoding="utf-8")
 
     assert 'return "Unavailable";' in source
-    assert "Ineligible options remain inspectable" in source
+    assert "Accepting a repair still requires an eligible evaluated preview and confirmation." in source
     assert "Select one available repair above to preview its route" in source
-    assert "Choose option (not enabled)" in source
+    assert "Choose option for Trip preview" in source
+    assert "await onSelectAlternative(resolution.option.plan_id)" in source
     assert "accept-repair" not in source
     assert "/accept" not in source
 
@@ -170,7 +175,7 @@ def test_each_map_pane_has_local_status_and_text_fallback() -> None:
     assert "Use the text route evidence in this pane." in source
 
 
-def test_compare_maps_wait_for_nonzero_layout_and_resize_after_ready() -> None:
+def test_compare_maps_wait_for_nonzero_layout_without_ready_resize_recursion() -> None:
     source = COMPARE.read_text(encoding="utf-8")
     css = CSS.read_text(encoding="utf-8")
 
@@ -181,7 +186,26 @@ def test_compare_maps_wait_for_nonzero_layout_and_resize_after_ready() -> None:
     assert "const generation = compareGeneration;" in source
     assert "if (generation !== compareGeneration || !root.isConnected) return;" in source
     assert "activeCompare = startCompareMaps(root, workspace, mapConfig, baseline, resolution);" in source
-    assert source.count('window.dispatchEvent(new Event("resize"))') >= 3
+    assert source.count('window.dispatchEvent(new Event("resize"))') == 2
+
+
+def test_status_reporting_cannot_retrigger_resize_and_loading_is_not_ready():
+    script = f"""
+      const assert = await import('node:assert/strict');
+      const fs = await import('node:fs');
+      const source = fs.readFileSync({json.dumps(str(COMPARE))}, 'utf8');
+      const code = source.slice(source.indexOf('function setPaneStatus('), source.indexOf('function mapPane('));
+      let scheduled = 0;
+      const apply = new Function('requestAnimationFrame', `${{code}}; return setPaneStatus;`)(() => scheduled++);
+      const status = {{textContent:'',dataset:{{}},setAttribute(){{}}}};
+      const pane = {{querySelector:() => status}};
+      for (const state of ['ready','ready_with_gaps','ready']) apply(pane,{{state,code:'ready'}});
+      assert.strictEqual(scheduled,0,'Ready -> resize -> not ready -> ready must not form a feedback loop');
+      apply(pane,{{state:'loading',code:'map_resize_revalidation_pending'}});
+      assert.doesNotMatch(status.textContent,/Map ready/i);
+      assert.match(status.textContent,/Loading|Rechecking/i);
+    """
+    subprocess.run(["node","--input-type=module","--eval",script],cwd=ROOT,check=True)
 
 
 def test_camera_sync_starts_only_after_both_maps_finish_their_initial_fit() -> None:
@@ -207,7 +231,9 @@ def test_camera_sync_starts_only_after_both_maps_finish_their_initial_fit() -> N
 def test_compare_is_user_oriented_and_keeps_technical_identity_in_evidence() -> None:
     source = COMPARE.read_text(encoding="utf-8")
 
-    assert "The recommended eligible repair is selected automatically" in source
+    assert "When no option is selected, an eligible recommended repair is selected automatically." in source
+    assert 'mapPane("baseline", "Current trip route", baseline, baselineUnavailable)' in source
+    assert "<h3>Current accepted trip</h3>" in source
     assert "View advanced Evidence" in source
     assert "Technical plan, diff, hash, method, and certificate identities" in source
     assert "<code>${escapeHtml(option.plan_id)}" not in source

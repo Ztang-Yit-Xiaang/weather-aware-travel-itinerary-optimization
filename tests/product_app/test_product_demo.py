@@ -120,19 +120,19 @@ def test_default_product_session_exposes_registered_three_plan_demo(tmp_path: Pa
 
     assert response.status_code == 200
     payload = response.json()
-    assert payload["registry"]["run_id"] == "california_coast_product_demo_v2"
-    assert payload["session"]["accepted_plan_id"] == "plan_e1c4f803691e3188"
+    assert payload["registry"]["run_id"] == "california_coast_coherent_demo_v1"
+    assert payload["session"]["accepted_plan_id"] == "plan_359968d255ff9288"
     geography = payload["workspace"]["geography"]
     alternatives = payload["workspace"]["alternatives"]
     assert len(geography["plans"]) == 3
     assert len(alternatives) == 2
     assert {row["plan_id"] for row in alternatives} == {
-        "plan_f5ee52459659dcb5",
-        "plan_8aa919c8323dbac0",
+        "plan_8ae77712483a709e",
+        "plan_2d2ac1f621d09d1d",
     }
     assert set(payload["workspace"]["alternative_evidence"]) == {
-        "plan_f5ee52459659dcb5",
-        "plan_8aa919c8323dbac0",
+        "plan_8ae77712483a709e",
+        "plan_2d2ac1f621d09d1d",
     }
 
 

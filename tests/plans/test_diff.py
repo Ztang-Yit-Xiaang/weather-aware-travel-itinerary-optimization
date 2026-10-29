@@ -276,6 +276,34 @@ class PlanDiffTests(unittest.TestCase):
         self.assertGreater(diff.weighted_edit_cost, 2000.0)
         self.assertEqual(diff.unchanged_days, ())
 
+    def test_combined_attribute_diff_serializes_all_families_and_costs(self):
+        parent = parent_plan()
+        stops = [dict(stop) for stop in parent.selected_stops]
+        stops[0].update({
+            "visit_duration_minutes": 60,
+            "time_window_constraint": {
+                "schema_version": "stop-time-window-constraint-v1",
+                "earliest_arrival": "10:00", "latest_departure": None,
+                "early_arrival_policy": "wait_until_earliest_arrival",
+                "latest_departure_semantics": "departure_after_visit",
+            },
+            "itinerary_role": "scenic_stop",
+            "itinerary_role_source": "user_declared_itinerary_role",
+        })
+        child = replace(parent, plan_id="combined_child", parent_plan_id=parent.plan_id,
+                        selected_stops=tuple(stops))
+        diff = compute_plan_diff(parent, child, default_visit_minutes=45)
+        record = diff.to_record()
+        self.assertEqual(record["schema_version"], "plan-diff-v6")
+        for name in ("duration_changes", "time_window_changes", "role_changes"):
+            self.assertEqual(len(record[name]), 1)
+            self.assertEqual(record[name][0]["stop_id"], "poi_a")
+        self.assertEqual(record["weighted_edit_cost"], 0.75)
+        with self.assertRaisesRegex(ValueError, "only duration changes"):
+            replace(diff, schema_version="plan-diff-v2").to_record()
+        with self.assertRaisesRegex(ValueError, "multiple typed attribute families"):
+            replace(diff, time_window_changes=(), role_changes=()).to_record()
+
     def test_incompatible_catalog_raises(self):
         parent = parent_plan()
         child = replace(parent, plan_id="child", catalog_snapshot_id="different_catalog")

@@ -22,6 +22,7 @@ ALLOWED_CAPABILITIES = frozenset(
         "typed_drafts",
         "registered_preview",
         "experimental_pointer_decisions",
+        "local_acceptance",
         "multi_plan_product_demo",
     }
 )

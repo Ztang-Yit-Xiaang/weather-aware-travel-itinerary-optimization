@@ -100,6 +100,78 @@ def test_state_probe_failure_preserves_valid_metadata(
     assert list((layout.root / "temporary").iterdir()) == []
 
 
+def test_atomic_json_write_retries_transient_windows_replace_lock(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    target = tmp_path / "state.json"
+    original_replace = os.replace
+    calls = 0
+
+    def transient_replace(source: Path, destination: Path) -> None:
+        nonlocal calls
+        calls += 1
+        if calls == 1:
+            error = PermissionError("simulated sharing violation")
+            error.winerror = 32
+            raise error
+        original_replace(source, destination)
+
+    monkeypatch.setattr(os, "replace", transient_replace)
+
+    LocalStateLayout._atomic_json_write(target, {"value": "persisted"})
+
+    assert calls == 2
+    assert json.loads(target.read_text(encoding="utf-8")) == {"value": "persisted"}
+    assert list(tmp_path.glob(".tmp-*.json")) == []
+
+
+def test_atomic_json_write_does_not_retry_unrecognized_replace_error(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    target = tmp_path / "state.json"
+    target.write_text('{"value":"original"}\n', encoding="utf-8")
+    calls = 0
+
+    def rejected_replace(_source: Path, _destination: Path) -> None:
+        nonlocal calls
+        calls += 1
+        error = PermissionError("simulated permanent denial")
+        error.winerror = 87
+        raise error
+
+    monkeypatch.setattr(os, "replace", rejected_replace)
+
+    with pytest.raises(PermissionError, match="permanent denial"):
+        LocalStateLayout._atomic_json_write(target, {"value": "not persisted"})
+
+    assert calls == 1
+    assert json.loads(target.read_text(encoding="utf-8")) == {"value": "original"}
+    assert list(tmp_path.glob(".tmp-*.json")) == []
+
+
+def test_state_probe_retries_transient_windows_replace_lock(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    layout = LocalStateLayout(tmp_path / "state")
+    assert layout.initialize().ready
+    original_replace = os.replace
+    calls = 0
+
+    def transient_replace(source: Path, destination: Path) -> None:
+        nonlocal calls
+        calls += 1
+        if calls == 1:
+            error = PermissionError("simulated sharing violation")
+            error.winerror = 32
+            raise error
+        original_replace(source, destination)
+
+    monkeypatch.setattr(os, "replace", transient_replace)
+
+    assert layout.probe().ready
+    assert calls == 2
+
+
 def test_state_lock_times_out_across_processes(tmp_path: Path) -> None:
     layout = LocalStateLayout(tmp_path / "state")
     assert layout.initialize().ready

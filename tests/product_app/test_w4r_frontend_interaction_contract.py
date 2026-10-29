@@ -25,7 +25,7 @@ def test_workspace_consumes_geography_v2_and_exposes_route_gaps() -> None:
 def test_map_lifecycle_is_delegated_to_the_instance_owned_v2_controller() -> None:
     source = MAP.read_text(encoding="utf-8")
 
-    assert 'from "./map-controller-v2.js?v=20260810-stability5"' in source
+    assert 'from "./map-controller-v2.js?v=20260817-e2e3"' in source
     assert "createGeographicMapController" in source
     assert "activeController?.dispose()" in source
     assert "activePlanId: planId" in source
@@ -40,9 +40,9 @@ def test_select_and_edit_modes_have_keyboard_equivalent_controls() -> None:
     source = APP.read_text(encoding="utf-8")
     markup = INDEX.read_text(encoding="utf-8")
 
-    assert 'class="map-mode-switch" role="group" aria-label="Map interaction mode"' in source
-    assert 'data-map-mode="select"' in source
-    assert 'data-map-mode="edit"' in source
+    assert 'role="toolbar" aria-label="Map actions"' in markup
+    assert 'id="map-select-button" type="button" aria-pressed="true"' in markup
+    assert 'class="map-mode-switch"' not in source
     assert 'class="accessible-stop-list"' in source
     assert 'class="accessible-route-list"' in source
     assert 'data-geo-route-leg=' in source
@@ -101,7 +101,7 @@ def test_context_inspector_never_claims_freehand_or_automatic_execution() -> Non
 def test_interaction_cards_keep_touch_size_and_mobile_bounds() -> None:
     css = CSS.read_text(encoding="utf-8")
 
-    assert ".map-mode-switch button" in css
+    assert ".toolbar-button { min-width: 44px; min-height: 44px;" in css
     assert ".map-context-card" in css
     assert ".map-context-card button { min-height: 44px;" in css
     assert ".accessible-route-list button { width: 100%; min-height: 44px;" in css

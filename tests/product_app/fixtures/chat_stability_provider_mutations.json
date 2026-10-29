@@ -1,0 +1,5967 @@
+[
+  {
+    "id": "X001",
+    "message": "請把 Bixby Creek Bridge 換成 Pfeiffer Big Sur State Park，並把 Griffith Observatory 的停留時間設為 90 分鐘。",
+    "provider_intents": [
+      {
+        "type": "replace_nearby",
+        "target_stop_id": "bixby_creek_bridge_viewpoint",
+        "candidate_id": "pfeiffer_big_sur_state_park"
+      },
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 90,
+            "minimum_minutes": 90,
+            "maximum_minutes": 90
+          }
+        }
+      }
+    ],
+    "expected_states": [
+      "proposal_ready"
+    ],
+    "expected_intents": [
+      {
+        "type": "replace_nearby",
+        "target_stop_id": "bixby_creek_bridge_viewpoint",
+        "candidate_id": "pfeiffer_big_sur_state_park"
+      },
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 90,
+            "minimum_minutes": 90,
+            "maximum_minutes": 90
+          }
+        }
+      }
+    ],
+    "expected_fake_calls": 1,
+    "expected_local_intents": [
+      {
+        "type": "replace_nearby",
+        "target_stop_id": "bixby_creek_bridge_viewpoint",
+        "candidate_id": "pfeiffer_big_sur_state_park"
+      },
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 90,
+            "minimum_minutes": 90,
+            "maximum_minutes": 90
+          }
+        }
+      }
+    ]
+  },
+  {
+    "id": "X002",
+    "message": "請把 Bixby Creek Bridge 換成 Pfeiffer Big Sur State Park，並把 Griffith Observatory 的停留時間設為 90 分鐘。",
+    "provider_intents": [
+      {
+        "type": "replace_nearby",
+        "target_stop_id": "bixby_creek_bridge_viewpoint",
+        "candidate_id": "pfeiffer_big_sur_state_park"
+      }
+    ],
+    "expected_states": [
+      "clarification_required"
+    ],
+    "expected_intents": null,
+    "expected_fake_calls": 1,
+    "expected_local_intents": [
+      {
+        "type": "replace_nearby",
+        "target_stop_id": "bixby_creek_bridge_viewpoint",
+        "candidate_id": "pfeiffer_big_sur_state_park"
+      },
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 90,
+            "minimum_minutes": 90,
+            "maximum_minutes": 90
+          }
+        }
+      }
+    ]
+  },
+  {
+    "id": "X003",
+    "message": "請把 Bixby Creek Bridge 換成 Pfeiffer Big Sur State Park，並把 Griffith Observatory 的停留時間設為 90 分鐘。",
+    "provider_intents": [
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 90,
+            "minimum_minutes": 90,
+            "maximum_minutes": 90
+          }
+        }
+      }
+    ],
+    "expected_states": [
+      "clarification_required"
+    ],
+    "expected_intents": null,
+    "expected_fake_calls": 1,
+    "expected_local_intents": [
+      {
+        "type": "replace_nearby",
+        "target_stop_id": "bixby_creek_bridge_viewpoint",
+        "candidate_id": "pfeiffer_big_sur_state_park"
+      },
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 90,
+            "minimum_minutes": 90,
+            "maximum_minutes": 90
+          }
+        }
+      }
+    ]
+  },
+  {
+    "id": "X004",
+    "message": "請把 Bixby Creek Bridge 換成 Pfeiffer Big Sur State Park，並把 Griffith Observatory 的停留時間設為 90 分鐘。",
+    "provider_intents": [
+      {
+        "type": "replace_nearby",
+        "target_stop_id": "bixby_creek_bridge_viewpoint",
+        "candidate_id": "pfeiffer_big_sur_state_park"
+      },
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 60,
+            "minimum_minutes": 60,
+            "maximum_minutes": 60
+          }
+        }
+      }
+    ],
+    "expected_states": [
+      "clarification_required"
+    ],
+    "expected_intents": null,
+    "expected_fake_calls": 1,
+    "expected_local_intents": [
+      {
+        "type": "replace_nearby",
+        "target_stop_id": "bixby_creek_bridge_viewpoint",
+        "candidate_id": "pfeiffer_big_sur_state_park"
+      },
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 90,
+            "minimum_minutes": 90,
+            "maximum_minutes": 90
+          }
+        }
+      }
+    ]
+  },
+  {
+    "id": "X005",
+    "message": "請把 Bixby Creek Bridge 換成 Pfeiffer Big Sur State Park，並把 Griffith Observatory 的停留時間設為 90 分鐘。",
+    "provider_intents": [
+      {
+        "type": "replace_nearby",
+        "target_stop_id": "bixby_creek_bridge_viewpoint",
+        "candidate_id": "pfeiffer_big_sur_state_park"
+      },
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "stearns_wharf",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 90,
+            "minimum_minutes": 90,
+            "maximum_minutes": 90
+          }
+        }
+      }
+    ],
+    "expected_states": [
+      "clarification_required"
+    ],
+    "expected_intents": null,
+    "expected_fake_calls": 1,
+    "expected_local_intents": [
+      {
+        "type": "replace_nearby",
+        "target_stop_id": "bixby_creek_bridge_viewpoint",
+        "candidate_id": "pfeiffer_big_sur_state_park"
+      },
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 90,
+            "minimum_minutes": 90,
+            "maximum_minutes": 90
+          }
+        }
+      }
+    ]
+  },
+  {
+    "id": "X006",
+    "message": "請把 Bixby Creek Bridge 換成 Pfeiffer Big Sur State Park，並把 Griffith Observatory 的停留時間設為 90 分鐘。",
+    "provider_intents": [
+      {
+        "type": "replace_nearby",
+        "target_stop_id": "bixby_creek_bridge_viewpoint",
+        "candidate_id": "pfeiffer_big_sur_state_park"
+      },
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 90,
+            "minimum_minutes": 90,
+            "maximum_minutes": 90
+          }
+        }
+      },
+      {
+        "type": "keep_stop",
+        "target_stop_id": "golden_gate_bridge"
+      }
+    ],
+    "expected_states": [
+      "clarification_required"
+    ],
+    "expected_intents": null,
+    "expected_fake_calls": 1,
+    "expected_local_intents": [
+      {
+        "type": "replace_nearby",
+        "target_stop_id": "bixby_creek_bridge_viewpoint",
+        "candidate_id": "pfeiffer_big_sur_state_park"
+      },
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 90,
+            "minimum_minutes": 90,
+            "maximum_minutes": 90
+          }
+        }
+      }
+    ]
+  },
+  {
+    "id": "X007",
+    "message": "Replace Bixby Creek Bridge with Pfeiffer Big Sur State Park, and give Griffith Observatory 90 minutes.",
+    "provider_intents": [
+      {
+        "type": "replace_nearby",
+        "target_stop_id": "bixby_creek_bridge_viewpoint",
+        "candidate_id": "pfeiffer_big_sur_state_park"
+      },
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 90,
+            "minimum_minutes": 90,
+            "maximum_minutes": 90
+          }
+        }
+      }
+    ],
+    "expected_states": [
+      "proposal_ready"
+    ],
+    "expected_intents": [
+      {
+        "type": "replace_nearby",
+        "target_stop_id": "bixby_creek_bridge_viewpoint",
+        "candidate_id": "pfeiffer_big_sur_state_park"
+      },
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 90,
+            "minimum_minutes": 90,
+            "maximum_minutes": 90
+          }
+        }
+      }
+    ],
+    "expected_fake_calls": 1,
+    "expected_local_intents": [
+      {
+        "type": "replace_nearby",
+        "target_stop_id": "bixby_creek_bridge_viewpoint",
+        "candidate_id": "pfeiffer_big_sur_state_park"
+      },
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 90,
+            "minimum_minutes": 90,
+            "maximum_minutes": 90
+          }
+        }
+      }
+    ]
+  },
+  {
+    "id": "X008",
+    "message": "Replace Bixby Creek Bridge with Pfeiffer Big Sur State Park, and give Griffith Observatory 90 minutes.",
+    "provider_intents": [
+      {
+        "type": "replace_nearby",
+        "target_stop_id": "bixby_creek_bridge_viewpoint",
+        "candidate_id": "pfeiffer_big_sur_state_park"
+      }
+    ],
+    "expected_states": [
+      "clarification_required"
+    ],
+    "expected_intents": null,
+    "expected_fake_calls": 1,
+    "expected_local_intents": [
+      {
+        "type": "replace_nearby",
+        "target_stop_id": "bixby_creek_bridge_viewpoint",
+        "candidate_id": "pfeiffer_big_sur_state_park"
+      },
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 90,
+            "minimum_minutes": 90,
+            "maximum_minutes": 90
+          }
+        }
+      }
+    ]
+  },
+  {
+    "id": "X009",
+    "message": "请把 Bixby Creek Bridge 换成 Pfeiffer Big Sur State Park，并把 Griffith Observatory 的停留时间设为 90 分钟。",
+    "provider_intents": [
+      {
+        "type": "replace_nearby",
+        "target_stop_id": "bixby_creek_bridge_viewpoint",
+        "candidate_id": "pfeiffer_big_sur_state_park"
+      },
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 90,
+            "minimum_minutes": 90,
+            "maximum_minutes": 90
+          }
+        }
+      }
+    ],
+    "expected_states": [
+      "proposal_ready"
+    ],
+    "expected_intents": [
+      {
+        "type": "replace_nearby",
+        "target_stop_id": "bixby_creek_bridge_viewpoint",
+        "candidate_id": "pfeiffer_big_sur_state_park"
+      },
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 90,
+            "minimum_minutes": 90,
+            "maximum_minutes": 90
+          }
+        }
+      }
+    ],
+    "expected_fake_calls": 1,
+    "expected_local_intents": [
+      {
+        "type": "replace_nearby",
+        "target_stop_id": "bixby_creek_bridge_viewpoint",
+        "candidate_id": "pfeiffer_big_sur_state_park"
+      },
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 90,
+            "minimum_minutes": 90,
+            "maximum_minutes": 90
+          }
+        }
+      }
+    ]
+  },
+  {
+    "id": "X010",
+    "message": "请把 Bixby Creek Bridge 换成 Pfeiffer Big Sur State Park，并把 Griffith Observatory 的停留时间设为 90 分钟。",
+    "provider_intents": [
+      {
+        "type": "replace_nearby",
+        "target_stop_id": "bixby_creek_bridge_viewpoint",
+        "candidate_id": "pfeiffer_big_sur_state_park"
+      }
+    ],
+    "expected_states": [
+      "clarification_required"
+    ],
+    "expected_intents": null,
+    "expected_fake_calls": 1,
+    "expected_local_intents": [
+      {
+        "type": "replace_nearby",
+        "target_stop_id": "bixby_creek_bridge_viewpoint",
+        "candidate_id": "pfeiffer_big_sur_state_park"
+      },
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 90,
+            "minimum_minutes": 90,
+            "maximum_minutes": 90
+          }
+        }
+      }
+    ]
+  },
+  {
+    "id": "X011",
+    "message": "請把 Bixby Creek Bridge 換成 Pfeiffer Big Sur State Park，並把 Griffith Observatory 的停留時間設為 90 分鐘，并帮我预订今晚的酒店。",
+    "provider_intents": [
+      {
+        "type": "replace_nearby",
+        "target_stop_id": "bixby_creek_bridge_viewpoint",
+        "candidate_id": "pfeiffer_big_sur_state_park"
+      },
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 90,
+            "minimum_minutes": 90,
+            "maximum_minutes": 90
+          }
+        }
+      }
+    ],
+    "expected_states": [
+      "clarification_required",
+      "unsupported"
+    ],
+    "expected_intents": null,
+    "expected_fake_calls": 0,
+    "expected_local_intents": null
+  },
+  {
+    "id": "X012",
+    "message": "不要把 Griffith Observatory 的停留时间设为 90 分钟。",
+    "provider_intents": [
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 90,
+            "minimum_minutes": 90,
+            "maximum_minutes": 90
+          }
+        }
+      }
+    ],
+    "expected_states": [
+      "clarification_required"
+    ],
+    "expected_intents": null,
+    "expected_fake_calls": 0,
+    "expected_local_intents": null
+  },
+  {
+    "id": "H001",
+    "message": "請把 Bixby 換成 Pfeiffer Big Sur State Park，並把 Griffith Observatory 的停留時間設為 1 小時。",
+    "expected_states": [
+      "proposal_ready"
+    ],
+    "expected_intents": [
+      {
+        "type": "replace_nearby",
+        "target_stop_id": "bixby_creek_bridge_viewpoint",
+        "candidate_id": "pfeiffer_big_sur_state_park"
+      },
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 60,
+            "minimum_minutes": 60,
+            "maximum_minutes": 60
+          }
+        }
+      }
+    ],
+    "provider_intents": [
+      {
+        "type": "replace_nearby",
+        "target_stop_id": "bixby_creek_bridge_viewpoint",
+        "candidate_id": "pfeiffer_big_sur_state_park"
+      },
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 60,
+            "minimum_minutes": 60,
+            "maximum_minutes": 60
+          }
+        }
+      }
+    ],
+    "expected_fake_calls": 1,
+    "expected_local_intents": [
+      {
+        "type": "replace_nearby",
+        "target_stop_id": "bixby_creek_bridge_viewpoint",
+        "candidate_id": "pfeiffer_big_sur_state_park"
+      },
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 60,
+            "minimum_minutes": 60,
+            "maximum_minutes": 60
+          }
+        }
+      }
+    ]
+  },
+  {
+    "id": "H002",
+    "message": "请把Bixby Creek Bridge换成Pfeiffer Big Sur State Park，并把Griffith Observatory的停留时间设为90分钟。",
+    "expected_states": [
+      "proposal_ready"
+    ],
+    "expected_intents": [
+      {
+        "type": "replace_nearby",
+        "target_stop_id": "bixby_creek_bridge_viewpoint",
+        "candidate_id": "pfeiffer_big_sur_state_park"
+      },
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 90,
+            "minimum_minutes": 90,
+            "maximum_minutes": 90
+          }
+        }
+      }
+    ],
+    "provider_intents": [
+      {
+        "type": "replace_nearby",
+        "target_stop_id": "bixby_creek_bridge_viewpoint",
+        "candidate_id": "pfeiffer_big_sur_state_park"
+      },
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 90,
+            "minimum_minutes": 90,
+            "maximum_minutes": 90
+          }
+        }
+      }
+    ],
+    "expected_fake_calls": 1,
+    "expected_local_intents": [
+      {
+        "type": "replace_nearby",
+        "target_stop_id": "bixby_creek_bridge_viewpoint",
+        "candidate_id": "pfeiffer_big_sur_state_park"
+      },
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 90,
+            "minimum_minutes": 90,
+            "maximum_minutes": 90
+          }
+        }
+      }
+    ]
+  },
+  {
+    "id": "H003",
+    "message": "把 Griffith Observatory 的停留时间设为 90 分钟，并把 Bixby Creek Bridge 换成 Pfeiffer Big Sur State Park。",
+    "expected_states": [
+      "proposal_ready"
+    ],
+    "expected_intents": [
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 90,
+            "minimum_minutes": 90,
+            "maximum_minutes": 90
+          }
+        }
+      },
+      {
+        "type": "replace_nearby",
+        "target_stop_id": "bixby_creek_bridge_viewpoint",
+        "candidate_id": "pfeiffer_big_sur_state_park"
+      }
+    ],
+    "provider_intents": [
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 90,
+            "minimum_minutes": 90,
+            "maximum_minutes": 90
+          }
+        }
+      },
+      {
+        "type": "replace_nearby",
+        "target_stop_id": "bixby_creek_bridge_viewpoint",
+        "candidate_id": "pfeiffer_big_sur_state_park"
+      }
+    ],
+    "expected_fake_calls": 1,
+    "expected_local_intents": [
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 90,
+            "minimum_minutes": 90,
+            "maximum_minutes": 90
+          }
+        }
+      },
+      {
+        "type": "replace_nearby",
+        "target_stop_id": "bixby_creek_bridge_viewpoint",
+        "candidate_id": "pfeiffer_big_sur_state_park"
+      }
+    ]
+  },
+  {
+    "id": "H004",
+    "message": "把 Bixby Creek Bridge 换成 Pfeiffer Big Sur State Park, and give Griffith Observatory 90 minutes.",
+    "expected_states": [
+      "proposal_ready"
+    ],
+    "expected_intents": [
+      {
+        "type": "replace_nearby",
+        "target_stop_id": "bixby_creek_bridge_viewpoint",
+        "candidate_id": "pfeiffer_big_sur_state_park"
+      },
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 90,
+            "minimum_minutes": 90,
+            "maximum_minutes": 90
+          }
+        }
+      }
+    ],
+    "provider_intents": [
+      {
+        "type": "replace_nearby",
+        "target_stop_id": "bixby_creek_bridge_viewpoint",
+        "candidate_id": "pfeiffer_big_sur_state_park"
+      },
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 90,
+            "minimum_minutes": 90,
+            "maximum_minutes": 90
+          }
+        }
+      }
+    ],
+    "expected_fake_calls": 1,
+    "expected_local_intents": [
+      {
+        "type": "replace_nearby",
+        "target_stop_id": "bixby_creek_bridge_viewpoint",
+        "candidate_id": "pfeiffer_big_sur_state_park"
+      },
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 90,
+            "minimum_minutes": 90,
+            "maximum_minutes": 90
+          }
+        }
+      }
+    ]
+  },
+  {
+    "id": "H005",
+    "message": "Don't replace Bixby Creek Bridge with Pfeiffer Big Sur State Park，並把 Griffith Observatory 的停留時間設為 90 分鐘。",
+    "expected_states": [
+      "clarification_required",
+      "unsupported"
+    ],
+    "expected_intents": null,
+    "provider_intents": [
+      {
+        "type": "replace_nearby",
+        "target_stop_id": "bixby_creek_bridge_viewpoint",
+        "candidate_id": "pfeiffer_big_sur_state_park"
+      },
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 90,
+            "minimum_minutes": 90,
+            "maximum_minutes": 90
+          }
+        }
+      }
+    ],
+    "expected_fake_calls": 0,
+    "expected_local_intents": null
+  },
+  {
+    "id": "H006",
+    "message": "请把 Bixby Creek Bridge 换成 Pfeiffer Big Sur State Park，并把 Griffith Observatory 的停留时间设为 90 分钟，并把午餐变成免费。",
+    "expected_states": [
+      "clarification_required",
+      "unsupported"
+    ],
+    "expected_intents": null,
+    "provider_intents": [
+      {
+        "type": "replace_nearby",
+        "target_stop_id": "bixby_creek_bridge_viewpoint",
+        "candidate_id": "pfeiffer_big_sur_state_park"
+      },
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 90,
+            "minimum_minutes": 90,
+            "maximum_minutes": 90
+          }
+        }
+      }
+    ],
+    "expected_fake_calls": 0,
+    "expected_local_intents": null
+  },
+  {
+    "id": "H007",
+    "message": "請把 Bixby Creek Bridge 換成 Pfeiffer Big Sur State Park，並刪除 Yosemite National Park。",
+    "expected_states": [
+      "clarification_required",
+      "unsupported"
+    ],
+    "expected_intents": null,
+    "provider_intents": [
+      {
+        "type": "replace_nearby",
+        "target_stop_id": "bixby_creek_bridge_viewpoint",
+        "candidate_id": "pfeiffer_big_sur_state_park"
+      },
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 90,
+            "minimum_minutes": 90,
+            "maximum_minutes": 90
+          }
+        }
+      }
+    ],
+    "expected_fake_calls": 0,
+    "expected_local_intents": null
+  },
+  {
+    "id": "H008",
+    "message": "把 Griffith Observatory 的停留时间设为 90 分钟，并把 Griffith Observatory 的停留时间设为 60 分钟。",
+    "expected_states": [
+      "clarification_required",
+      "unsupported"
+    ],
+    "expected_intents": null,
+    "provider_intents": [
+      {
+        "type": "replace_nearby",
+        "target_stop_id": "bixby_creek_bridge_viewpoint",
+        "candidate_id": "pfeiffer_big_sur_state_park"
+      },
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 90,
+            "minimum_minutes": 90,
+            "maximum_minutes": 90
+          }
+        }
+      }
+    ],
+    "expected_fake_calls": 0,
+    "expected_local_intents": null
+  },
+  {
+    "id": "H009",
+    "message": "把 Griffith Observatory 的停留時間設為 90 分鐘，並把 Griffith Observatory 的停留時間設為 90 分鐘，並把 Griffith Observatory 的停留時間設為 90 分鐘，並把 Griffith Observatory 的停留時間設為 90 分鐘，並把 Griffith Observatory 的停留時間設為 90 分鐘。",
+    "expected_states": [
+      "clarification_required",
+      "unsupported"
+    ],
+    "expected_intents": null,
+    "provider_intents": [
+      {
+        "type": "replace_nearby",
+        "target_stop_id": "bixby_creek_bridge_viewpoint",
+        "candidate_id": "pfeiffer_big_sur_state_park"
+      },
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 90,
+            "minimum_minutes": 90,
+            "maximum_minutes": 90
+          }
+        }
+      }
+    ],
+    "expected_fake_calls": 0,
+    "expected_local_intents": null
+  },
+  {
+    "id": "H010",
+    "message": "把 Griffith Observatory 的停留时间设为 -90 分钟。",
+    "expected_states": [
+      "clarification_required",
+      "unsupported"
+    ],
+    "expected_intents": null,
+    "provider_intents": [
+      {
+        "type": "replace_nearby",
+        "target_stop_id": "bixby_creek_bridge_viewpoint",
+        "candidate_id": "pfeiffer_big_sur_state_park"
+      },
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 90,
+            "minimum_minutes": 90,
+            "maximum_minutes": 90
+          }
+        }
+      }
+    ],
+    "expected_fake_calls": 0,
+    "expected_local_intents": null
+  },
+  {
+    "id": "H011",
+    "message": "把 Griffith Observatory 的停留时间设为 1.5 小时。",
+    "expected_states": [
+      "clarification_required",
+      "unsupported"
+    ],
+    "expected_intents": null,
+    "provider_intents": [
+      {
+        "type": "replace_nearby",
+        "target_stop_id": "bixby_creek_bridge_viewpoint",
+        "candidate_id": "pfeiffer_big_sur_state_park"
+      },
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 90,
+            "minimum_minutes": 90,
+            "maximum_minutes": 90
+          }
+        }
+      }
+    ],
+    "expected_fake_calls": 0,
+    "expected_local_intents": null
+  },
+  {
+    "id": "H012",
+    "message": "把 Griffith Observatory 的停留时间设为 90 或 60 分钟。",
+    "expected_states": [
+      "clarification_required",
+      "unsupported"
+    ],
+    "expected_intents": null,
+    "provider_intents": [
+      {
+        "type": "replace_nearby",
+        "target_stop_id": "bixby_creek_bridge_viewpoint",
+        "candidate_id": "pfeiffer_big_sur_state_park"
+      },
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 90,
+            "minimum_minutes": 90,
+            "maximum_minutes": 90
+          }
+        }
+      }
+    ],
+    "expected_fake_calls": 0,
+    "expected_local_intents": null
+  },
+  {
+    "id": "H013",
+    "message": "把 COPILOTZHPLACE0 的停留时间设为 90 分钟。",
+    "provider_intents": [
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "golden_gate_bridge",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 90,
+            "minimum_minutes": 90,
+            "maximum_minutes": 90
+          }
+        }
+      }
+    ],
+    "expected_states": [
+      "clarification_required"
+    ],
+    "expected_intents": null,
+    "expected_fake_calls": 0,
+    "expected_local_intents": null
+  },
+  {
+    "id": "H014",
+    "message": "把 COPILOTZHPLACE99999 的停留时间设为 90 分钟。",
+    "provider_intents": [
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "golden_gate_bridge",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 90,
+            "minimum_minutes": 90,
+            "maximum_minutes": 90
+          }
+        }
+      }
+    ],
+    "expected_states": [
+      "clarification_required"
+    ],
+    "expected_intents": null,
+    "expected_fake_calls": 0,
+    "expected_local_intents": null
+  },
+  {
+    "id": "order-correct-control",
+    "message": "On Day 4, visit Kings Canyon National Park before Sequoia National Park.",
+    "provider_intents": [
+      {
+        "type": "set_stop_order",
+        "target_stop_id": "kings_canyon_national_park",
+        "parameters": {
+          "day": 4,
+          "sequence_index": 0
+        }
+      },
+      {
+        "type": "set_stop_order",
+        "target_stop_id": "sequoia_national_park",
+        "parameters": {
+          "day": 4,
+          "sequence_index": 1
+        }
+      }
+    ],
+    "expected_states": [
+      "proposal_ready"
+    ],
+    "expected_fake_calls": 1,
+    "expected_local_intents": [
+      {
+        "type": "set_stop_order",
+        "target_stop_id": "kings_canyon_national_park",
+        "parameters": {
+          "day": 4,
+          "sequence_index": 0
+        }
+      },
+      {
+        "type": "set_stop_order",
+        "target_stop_id": "sequoia_national_park",
+        "parameters": {
+          "day": 4,
+          "sequence_index": 1
+        }
+      }
+    ],
+    "expected_intents": [
+      {
+        "type": "set_stop_order",
+        "target_stop_id": "kings_canyon_national_park",
+        "parameters": {
+          "day": 4,
+          "sequence_index": 0
+        }
+      },
+      {
+        "type": "set_stop_order",
+        "target_stop_id": "sequoia_national_park",
+        "parameters": {
+          "day": 4,
+          "sequence_index": 1
+        }
+      }
+    ]
+  },
+  {
+    "id": "order-reversed-reply",
+    "message": "On Day 4, visit Kings Canyon National Park before Sequoia National Park.",
+    "provider_intents": [
+      {
+        "type": "set_stop_order",
+        "target_stop_id": "kings_canyon_national_park",
+        "parameters": {
+          "day": 4,
+          "sequence_index": 1
+        }
+      },
+      {
+        "type": "set_stop_order",
+        "target_stop_id": "sequoia_national_park",
+        "parameters": {
+          "day": 4,
+          "sequence_index": 0
+        }
+      }
+    ],
+    "expected_states": [
+      "clarification_required"
+    ],
+    "expected_fake_calls": 1,
+    "expected_local_intents": [
+      {
+        "type": "set_stop_order",
+        "target_stop_id": "kings_canyon_national_park",
+        "parameters": {
+          "day": 4,
+          "sequence_index": 0
+        }
+      },
+      {
+        "type": "set_stop_order",
+        "target_stop_id": "sequoia_national_park",
+        "parameters": {
+          "day": 4,
+          "sequence_index": 1
+        }
+      }
+    ],
+    "expected_intents": null
+  },
+  {
+    "id": "order-omit-second",
+    "message": "On Day 4, visit Kings Canyon National Park before Sequoia National Park.",
+    "provider_intents": [
+      {
+        "type": "set_stop_order",
+        "target_stop_id": "kings_canyon_national_park",
+        "parameters": {
+          "day": 4,
+          "sequence_index": 0
+        }
+      }
+    ],
+    "expected_states": [
+      "clarification_required"
+    ],
+    "expected_fake_calls": 1,
+    "expected_local_intents": [
+      {
+        "type": "set_stop_order",
+        "target_stop_id": "kings_canyon_national_park",
+        "parameters": {
+          "day": 4,
+          "sequence_index": 0
+        }
+      },
+      {
+        "type": "set_stop_order",
+        "target_stop_id": "sequoia_national_park",
+        "parameters": {
+          "day": 4,
+          "sequence_index": 1
+        }
+      }
+    ],
+    "expected_intents": null
+  },
+  {
+    "id": "order-omit-first",
+    "message": "On Day 4, visit Kings Canyon National Park before Sequoia National Park.",
+    "provider_intents": [
+      {
+        "type": "set_stop_order",
+        "target_stop_id": "sequoia_national_park",
+        "parameters": {
+          "day": 4,
+          "sequence_index": 1
+        }
+      }
+    ],
+    "expected_states": [
+      "clarification_required"
+    ],
+    "expected_fake_calls": 1,
+    "expected_local_intents": [
+      {
+        "type": "set_stop_order",
+        "target_stop_id": "kings_canyon_national_park",
+        "parameters": {
+          "day": 4,
+          "sequence_index": 0
+        }
+      },
+      {
+        "type": "set_stop_order",
+        "target_stop_id": "sequoia_national_park",
+        "parameters": {
+          "day": 4,
+          "sequence_index": 1
+        }
+      }
+    ],
+    "expected_intents": null
+  },
+  {
+    "id": "order-duration-substitution",
+    "message": "On Day 4, visit Kings Canyon National Park before Sequoia National Park.",
+    "provider_intents": [
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 75,
+            "minimum_minutes": 75,
+            "maximum_minutes": 75
+          }
+        }
+      }
+    ],
+    "expected_states": [
+      "clarification_required"
+    ],
+    "expected_fake_calls": 1,
+    "expected_local_intents": [
+      {
+        "type": "set_stop_order",
+        "target_stop_id": "kings_canyon_national_park",
+        "parameters": {
+          "day": 4,
+          "sequence_index": 0
+        }
+      },
+      {
+        "type": "set_stop_order",
+        "target_stop_id": "sequoia_national_park",
+        "parameters": {
+          "day": 4,
+          "sequence_index": 1
+        }
+      }
+    ],
+    "expected_intents": null
+  },
+  {
+    "id": "order-keep-substitution",
+    "message": "On Day 4, visit Kings Canyon National Park before Sequoia National Park.",
+    "provider_intents": [
+      {
+        "type": "keep_stop",
+        "target_stop_id": "kings_canyon_national_park"
+      }
+    ],
+    "expected_states": [
+      "clarification_required"
+    ],
+    "expected_fake_calls": 1,
+    "expected_local_intents": [
+      {
+        "type": "set_stop_order",
+        "target_stop_id": "kings_canyon_national_park",
+        "parameters": {
+          "day": 4,
+          "sequence_index": 0
+        }
+      },
+      {
+        "type": "set_stop_order",
+        "target_stop_id": "sequoia_national_park",
+        "parameters": {
+          "day": 4,
+          "sequence_index": 1
+        }
+      }
+    ],
+    "expected_intents": null
+  },
+  {
+    "id": "order-extra-unrequested",
+    "message": "On Day 4, visit Kings Canyon National Park before Sequoia National Park.",
+    "provider_intents": [
+      {
+        "type": "set_stop_order",
+        "target_stop_id": "kings_canyon_national_park",
+        "parameters": {
+          "day": 4,
+          "sequence_index": 0
+        }
+      },
+      {
+        "type": "set_stop_order",
+        "target_stop_id": "sequoia_national_park",
+        "parameters": {
+          "day": 4,
+          "sequence_index": 1
+        }
+      },
+      {
+        "type": "keep_stop",
+        "target_stop_id": "griffith_observatory"
+      }
+    ],
+    "expected_states": [
+      "clarification_required"
+    ],
+    "expected_fake_calls": 1,
+    "expected_local_intents": [
+      {
+        "type": "set_stop_order",
+        "target_stop_id": "kings_canyon_national_park",
+        "parameters": {
+          "day": 4,
+          "sequence_index": 0
+        }
+      },
+      {
+        "type": "set_stop_order",
+        "target_stop_id": "sequoia_national_park",
+        "parameters": {
+          "day": 4,
+          "sequence_index": 1
+        }
+      }
+    ],
+    "expected_intents": null
+  },
+  {
+    "id": "order-after-control",
+    "message": "On Day 4, visit Sequoia National Park after Kings Canyon National Park.",
+    "provider_intents": [
+      {
+        "type": "set_stop_order",
+        "target_stop_id": "kings_canyon_national_park",
+        "parameters": {
+          "day": 4,
+          "sequence_index": 0
+        }
+      },
+      {
+        "type": "set_stop_order",
+        "target_stop_id": "sequoia_national_park",
+        "parameters": {
+          "day": 4,
+          "sequence_index": 1
+        }
+      }
+    ],
+    "expected_states": [
+      "proposal_ready"
+    ],
+    "expected_fake_calls": 1,
+    "expected_local_intents": [
+      {
+        "type": "set_stop_order",
+        "target_stop_id": "kings_canyon_national_park",
+        "parameters": {
+          "day": 4,
+          "sequence_index": 0
+        }
+      },
+      {
+        "type": "set_stop_order",
+        "target_stop_id": "sequoia_national_park",
+        "parameters": {
+          "day": 4,
+          "sequence_index": 1
+        }
+      }
+    ],
+    "expected_intents": [
+      {
+        "type": "set_stop_order",
+        "target_stop_id": "kings_canyon_national_park",
+        "parameters": {
+          "day": 4,
+          "sequence_index": 0
+        }
+      },
+      {
+        "type": "set_stop_order",
+        "target_stop_id": "sequoia_national_park",
+        "parameters": {
+          "day": 4,
+          "sequence_index": 1
+        }
+      }
+    ]
+  },
+  {
+    "id": "order-courtesy-control",
+    "message": "If possible, on Day 4, visit Kings Canyon National Park before Sequoia National Park.",
+    "provider_intents": [
+      {
+        "type": "set_stop_order",
+        "target_stop_id": "kings_canyon_national_park",
+        "parameters": {
+          "day": 4,
+          "sequence_index": 0
+        }
+      },
+      {
+        "type": "set_stop_order",
+        "target_stop_id": "sequoia_national_park",
+        "parameters": {
+          "day": 4,
+          "sequence_index": 1
+        }
+      }
+    ],
+    "expected_states": [
+      "proposal_ready"
+    ],
+    "expected_fake_calls": 1,
+    "expected_local_intents": [
+      {
+        "type": "set_stop_order",
+        "target_stop_id": "kings_canyon_national_park",
+        "parameters": {
+          "day": 4,
+          "sequence_index": 0
+        }
+      },
+      {
+        "type": "set_stop_order",
+        "target_stop_id": "sequoia_national_park",
+        "parameters": {
+          "day": 4,
+          "sequence_index": 1
+        }
+      }
+    ],
+    "expected_intents": [
+      {
+        "type": "set_stop_order",
+        "target_stop_id": "kings_canyon_national_park",
+        "parameters": {
+          "day": 4,
+          "sequence_index": 0
+        }
+      },
+      {
+        "type": "set_stop_order",
+        "target_stop_id": "sequoia_national_park",
+        "parameters": {
+          "day": 4,
+          "sequence_index": 1
+        }
+      }
+    ]
+  },
+  {
+    "id": "order-please-control",
+    "message": "On Day 4, please visit Kings Canyon National Park before Sequoia National Park.",
+    "provider_intents": [
+      {
+        "type": "set_stop_order",
+        "target_stop_id": "kings_canyon_national_park",
+        "parameters": {
+          "day": 4,
+          "sequence_index": 0
+        }
+      },
+      {
+        "type": "set_stop_order",
+        "target_stop_id": "sequoia_national_park",
+        "parameters": {
+          "day": 4,
+          "sequence_index": 1
+        }
+      }
+    ],
+    "expected_states": [
+      "proposal_ready"
+    ],
+    "expected_fake_calls": 1,
+    "expected_local_intents": [
+      {
+        "type": "set_stop_order",
+        "target_stop_id": "kings_canyon_national_park",
+        "parameters": {
+          "day": 4,
+          "sequence_index": 0
+        }
+      },
+      {
+        "type": "set_stop_order",
+        "target_stop_id": "sequoia_national_park",
+        "parameters": {
+          "day": 4,
+          "sequence_index": 1
+        }
+      }
+    ],
+    "expected_intents": [
+      {
+        "type": "set_stop_order",
+        "target_stop_id": "kings_canyon_national_park",
+        "parameters": {
+          "day": 4,
+          "sequence_index": 0
+        }
+      },
+      {
+        "type": "set_stop_order",
+        "target_stop_id": "sequoia_national_park",
+        "parameters": {
+          "day": 4,
+          "sequence_index": 1
+        }
+      }
+    ]
+  },
+  {
+    "id": "order-no-day-control",
+    "message": "Visit Kings Canyon National Park before Sequoia National Park.",
+    "provider_intents": [
+      {
+        "type": "set_stop_order",
+        "target_stop_id": "kings_canyon_national_park",
+        "parameters": {
+          "day": 4,
+          "sequence_index": 0
+        }
+      },
+      {
+        "type": "set_stop_order",
+        "target_stop_id": "sequoia_national_park",
+        "parameters": {
+          "day": 4,
+          "sequence_index": 1
+        }
+      }
+    ],
+    "expected_states": [
+      "proposal_ready"
+    ],
+    "expected_fake_calls": 1,
+    "expected_local_intents": [
+      {
+        "type": "set_stop_order",
+        "target_stop_id": "kings_canyon_national_park",
+        "parameters": {
+          "day": 4,
+          "sequence_index": 0
+        }
+      },
+      {
+        "type": "set_stop_order",
+        "target_stop_id": "sequoia_national_park",
+        "parameters": {
+          "day": 4,
+          "sequence_index": 1
+        }
+      }
+    ],
+    "expected_intents": [
+      {
+        "type": "set_stop_order",
+        "target_stop_id": "kings_canyon_national_park",
+        "parameters": {
+          "day": 4,
+          "sequence_index": 0
+        }
+      },
+      {
+        "type": "set_stop_order",
+        "target_stop_id": "sequoia_national_park",
+        "parameters": {
+          "day": 4,
+          "sequence_index": 1
+        }
+      }
+    ]
+  },
+  {
+    "id": "order-already-correct-control",
+    "message": "On Day 4, visit Sequoia National Park before Kings Canyon National Park.",
+    "provider_intents": [
+      {
+        "type": "set_stop_order",
+        "target_stop_id": "sequoia_national_park",
+        "parameters": {
+          "day": 4,
+          "sequence_index": 0
+        }
+      },
+      {
+        "type": "set_stop_order",
+        "target_stop_id": "kings_canyon_national_park",
+        "parameters": {
+          "day": 4,
+          "sequence_index": 1
+        }
+      }
+    ],
+    "expected_states": [
+      "proposal_ready"
+    ],
+    "expected_fake_calls": 1,
+    "expected_local_intents": [
+      {
+        "type": "set_stop_order",
+        "target_stop_id": "sequoia_national_park",
+        "parameters": {
+          "day": 4,
+          "sequence_index": 0
+        }
+      },
+      {
+        "type": "set_stop_order",
+        "target_stop_id": "kings_canyon_national_park",
+        "parameters": {
+          "day": 4,
+          "sequence_index": 1
+        }
+      }
+    ],
+    "expected_intents": [
+      {
+        "type": "set_stop_order",
+        "target_stop_id": "sequoia_national_park",
+        "parameters": {
+          "day": 4,
+          "sequence_index": 0
+        }
+      },
+      {
+        "type": "set_stop_order",
+        "target_stop_id": "kings_canyon_national_park",
+        "parameters": {
+          "day": 4,
+          "sequence_index": 1
+        }
+      }
+    ]
+  },
+  {
+    "id": "order-different-day",
+    "message": "On Day 5, visit Kings Canyon National Park before Sequoia National Park.",
+    "provider_intents": [
+      {
+        "type": "set_stop_order",
+        "target_stop_id": "kings_canyon_national_park",
+        "parameters": {
+          "day": 4,
+          "sequence_index": 0
+        }
+      },
+      {
+        "type": "set_stop_order",
+        "target_stop_id": "sequoia_national_park",
+        "parameters": {
+          "day": 4,
+          "sequence_index": 1
+        }
+      }
+    ],
+    "expected_states": [
+      "clarification_required"
+    ],
+    "expected_fake_calls": 0,
+    "expected_local_intents": null,
+    "expected_intents": null
+  },
+  {
+    "id": "order-cross-day-stops",
+    "message": "Visit Griffith Observatory before Yosemite National Park.",
+    "provider_intents": [
+      {
+        "type": "set_stop_order",
+        "target_stop_id": "kings_canyon_national_park",
+        "parameters": {
+          "day": 4,
+          "sequence_index": 0
+        }
+      },
+      {
+        "type": "set_stop_order",
+        "target_stop_id": "sequoia_national_park",
+        "parameters": {
+          "day": 4,
+          "sequence_index": 1
+        }
+      }
+    ],
+    "expected_states": [
+      "clarification_required"
+    ],
+    "expected_fake_calls": 0,
+    "expected_local_intents": null,
+    "expected_intents": null
+  },
+  {
+    "id": "order-internal-tokens",
+    "message": "Visit COPILOTPLACE0 before COPILOTPLACE1.",
+    "provider_intents": [
+      {
+        "type": "set_stop_order",
+        "target_stop_id": "kings_canyon_national_park",
+        "parameters": {
+          "day": 4,
+          "sequence_index": 0
+        }
+      },
+      {
+        "type": "set_stop_order",
+        "target_stop_id": "sequoia_national_park",
+        "parameters": {
+          "day": 4,
+          "sequence_index": 1
+        }
+      }
+    ],
+    "expected_states": [
+      "clarification_required"
+    ],
+    "expected_fake_calls": 0,
+    "expected_local_intents": null,
+    "expected_intents": null
+  },
+  {
+    "id": "order-conditional",
+    "message": "On Day 4, visit Kings Canyon National Park before Sequoia National Park only if the weather is dry.",
+    "provider_intents": [
+      {
+        "type": "set_stop_order",
+        "target_stop_id": "kings_canyon_national_park",
+        "parameters": {
+          "day": 4,
+          "sequence_index": 0
+        }
+      },
+      {
+        "type": "set_stop_order",
+        "target_stop_id": "sequoia_national_park",
+        "parameters": {
+          "day": 4,
+          "sequence_index": 1
+        }
+      }
+    ],
+    "expected_states": [
+      "clarification_required"
+    ],
+    "expected_fake_calls": 0,
+    "expected_local_intents": null,
+    "expected_intents": null
+  },
+  {
+    "id": "order-booking-clause",
+    "message": "On Day 4, visit Kings Canyon National Park before Sequoia National Park and book me a hotel.",
+    "provider_intents": [
+      {
+        "type": "set_stop_order",
+        "target_stop_id": "kings_canyon_national_park",
+        "parameters": {
+          "day": 4,
+          "sequence_index": 0
+        }
+      },
+      {
+        "type": "set_stop_order",
+        "target_stop_id": "sequoia_national_park",
+        "parameters": {
+          "day": 4,
+          "sequence_index": 1
+        }
+      }
+    ],
+    "expected_states": [
+      "clarification_required"
+    ],
+    "expected_fake_calls": 0,
+    "expected_local_intents": null,
+    "expected_intents": null
+  },
+  {
+    "id": "reviewed-composed-order-before-duration",
+    "message": "On Day 4, visit Kings Canyon National Park before Sequoia National Park and give Griffith Observatory 75 minutes.",
+    "provider_intents": [
+      {
+        "type": "set_stop_order",
+        "target_stop_id": "kings_canyon_national_park",
+        "parameters": {
+          "day": 4,
+          "sequence_index": 0
+        }
+      },
+      {
+        "type": "set_stop_order",
+        "target_stop_id": "sequoia_national_park",
+        "parameters": {
+          "day": 4,
+          "sequence_index": 1
+        }
+      },
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 75,
+            "minimum_minutes": 75,
+            "maximum_minutes": 75
+          }
+        }
+      }
+    ],
+    "expected_states": [
+      "proposal_ready"
+    ],
+    "expected_fake_calls": 1,
+    "expected_local_intents": [
+      {
+        "type": "set_stop_order",
+        "target_stop_id": "kings_canyon_national_park",
+        "parameters": {
+          "day": 4,
+          "sequence_index": 0
+        }
+      },
+      {
+        "type": "set_stop_order",
+        "target_stop_id": "sequoia_national_park",
+        "parameters": {
+          "day": 4,
+          "sequence_index": 1
+        }
+      },
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 75,
+            "minimum_minutes": 75,
+            "maximum_minutes": 75
+          }
+        }
+      }
+    ],
+    "expected_intents": [
+      {
+        "type": "set_stop_order",
+        "target_stop_id": "kings_canyon_national_park",
+        "parameters": {
+          "day": 4,
+          "sequence_index": 0
+        }
+      },
+      {
+        "type": "set_stop_order",
+        "target_stop_id": "sequoia_national_park",
+        "parameters": {
+          "day": 4,
+          "sequence_index": 1
+        }
+      },
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 75,
+            "minimum_minutes": 75,
+            "maximum_minutes": 75
+          }
+        }
+      }
+    ]
+  },
+  {
+    "id": "reviewed-composed-order-duration-before",
+    "message": "Give Griffith Observatory 75 minutes and visit Kings Canyon National Park before Sequoia National Park.",
+    "provider_intents": [
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 75,
+            "minimum_minutes": 75,
+            "maximum_minutes": 75
+          }
+        }
+      },
+      {
+        "type": "set_stop_order",
+        "target_stop_id": "kings_canyon_national_park",
+        "parameters": {
+          "day": 4,
+          "sequence_index": 0
+        }
+      },
+      {
+        "type": "set_stop_order",
+        "target_stop_id": "sequoia_national_park",
+        "parameters": {
+          "day": 4,
+          "sequence_index": 1
+        }
+      }
+    ],
+    "expected_states": [
+      "proposal_ready"
+    ],
+    "expected_fake_calls": 1,
+    "expected_local_intents": [
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 75,
+            "minimum_minutes": 75,
+            "maximum_minutes": 75
+          }
+        }
+      },
+      {
+        "type": "set_stop_order",
+        "target_stop_id": "kings_canyon_national_park",
+        "parameters": {
+          "day": 4,
+          "sequence_index": 0
+        }
+      },
+      {
+        "type": "set_stop_order",
+        "target_stop_id": "sequoia_national_park",
+        "parameters": {
+          "day": 4,
+          "sequence_index": 1
+        }
+      }
+    ],
+    "expected_intents": [
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 75,
+            "minimum_minutes": 75,
+            "maximum_minutes": 75
+          }
+        }
+      },
+      {
+        "type": "set_stop_order",
+        "target_stop_id": "kings_canyon_national_park",
+        "parameters": {
+          "day": 4,
+          "sequence_index": 0
+        }
+      },
+      {
+        "type": "set_stop_order",
+        "target_stop_id": "sequoia_national_park",
+        "parameters": {
+          "day": 4,
+          "sequence_index": 1
+        }
+      }
+    ]
+  },
+  {
+    "id": "reviewed-composed-order-after-duration",
+    "message": "Visit Sequoia National Park after Kings Canyon National Park and give Griffith Observatory 75 minutes.",
+    "provider_intents": [
+      {
+        "type": "set_stop_order",
+        "target_stop_id": "kings_canyon_national_park",
+        "parameters": {
+          "day": 4,
+          "sequence_index": 0
+        }
+      },
+      {
+        "type": "set_stop_order",
+        "target_stop_id": "sequoia_national_park",
+        "parameters": {
+          "day": 4,
+          "sequence_index": 1
+        }
+      },
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 75,
+            "minimum_minutes": 75,
+            "maximum_minutes": 75
+          }
+        }
+      }
+    ],
+    "expected_states": [
+      "proposal_ready"
+    ],
+    "expected_fake_calls": 1,
+    "expected_local_intents": [
+      {
+        "type": "set_stop_order",
+        "target_stop_id": "kings_canyon_national_park",
+        "parameters": {
+          "day": 4,
+          "sequence_index": 0
+        }
+      },
+      {
+        "type": "set_stop_order",
+        "target_stop_id": "sequoia_national_park",
+        "parameters": {
+          "day": 4,
+          "sequence_index": 1
+        }
+      },
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 75,
+            "minimum_minutes": 75,
+            "maximum_minutes": 75
+          }
+        }
+      }
+    ],
+    "expected_intents": [
+      {
+        "type": "set_stop_order",
+        "target_stop_id": "kings_canyon_national_park",
+        "parameters": {
+          "day": 4,
+          "sequence_index": 0
+        }
+      },
+      {
+        "type": "set_stop_order",
+        "target_stop_id": "sequoia_national_park",
+        "parameters": {
+          "day": 4,
+          "sequence_index": 1
+        }
+      },
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 75,
+            "minimum_minutes": 75,
+            "maximum_minutes": 75
+          }
+        }
+      }
+    ]
+  },
+  {
+    "id": "reviewed-composed-order-explicit-days",
+    "message": "On Day 4, visit Kings Canyon National Park before Sequoia National Park and on Day 7, give Griffith Observatory 75 minutes.",
+    "provider_intents": [
+      {
+        "type": "set_stop_order",
+        "target_stop_id": "kings_canyon_national_park",
+        "parameters": {
+          "day": 4,
+          "sequence_index": 0
+        }
+      },
+      {
+        "type": "set_stop_order",
+        "target_stop_id": "sequoia_national_park",
+        "parameters": {
+          "day": 4,
+          "sequence_index": 1
+        }
+      },
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 75,
+            "minimum_minutes": 75,
+            "maximum_minutes": 75
+          }
+        }
+      }
+    ],
+    "expected_states": [
+      "proposal_ready"
+    ],
+    "expected_fake_calls": 1,
+    "expected_local_intents": [
+      {
+        "type": "set_stop_order",
+        "target_stop_id": "kings_canyon_national_park",
+        "parameters": {
+          "day": 4,
+          "sequence_index": 0
+        }
+      },
+      {
+        "type": "set_stop_order",
+        "target_stop_id": "sequoia_national_park",
+        "parameters": {
+          "day": 4,
+          "sequence_index": 1
+        }
+      },
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 75,
+            "minimum_minutes": 75,
+            "maximum_minutes": 75
+          }
+        }
+      }
+    ],
+    "expected_intents": [
+      {
+        "type": "set_stop_order",
+        "target_stop_id": "kings_canyon_national_park",
+        "parameters": {
+          "day": 4,
+          "sequence_index": 0
+        }
+      },
+      {
+        "type": "set_stop_order",
+        "target_stop_id": "sequoia_national_park",
+        "parameters": {
+          "day": 4,
+          "sequence_index": 1
+        }
+      },
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 75,
+            "minimum_minutes": 75,
+            "maximum_minutes": 75
+          }
+        }
+      }
+    ]
+  },
+  {
+    "id": "reviewed-composed-order-mixed-language",
+    "message": "Visit Kings Canyon National Park before Sequoia National Park，並把 Griffith Observatory 的停留時間設為 75 分鐘。",
+    "provider_intents": [
+      {
+        "type": "set_stop_order",
+        "target_stop_id": "kings_canyon_national_park",
+        "parameters": {
+          "day": 4,
+          "sequence_index": 0
+        }
+      },
+      {
+        "type": "set_stop_order",
+        "target_stop_id": "sequoia_national_park",
+        "parameters": {
+          "day": 4,
+          "sequence_index": 1
+        }
+      },
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 75,
+            "minimum_minutes": 75,
+            "maximum_minutes": 75
+          }
+        }
+      }
+    ],
+    "expected_states": [
+      "proposal_ready"
+    ],
+    "expected_fake_calls": 1,
+    "expected_local_intents": [
+      {
+        "type": "set_stop_order",
+        "target_stop_id": "kings_canyon_national_park",
+        "parameters": {
+          "day": 4,
+          "sequence_index": 0
+        }
+      },
+      {
+        "type": "set_stop_order",
+        "target_stop_id": "sequoia_national_park",
+        "parameters": {
+          "day": 4,
+          "sequence_index": 1
+        }
+      },
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 75,
+            "minimum_minutes": 75,
+            "maximum_minutes": 75
+          }
+        }
+      }
+    ],
+    "expected_intents": [
+      {
+        "type": "set_stop_order",
+        "target_stop_id": "kings_canyon_national_park",
+        "parameters": {
+          "day": 4,
+          "sequence_index": 0
+        }
+      },
+      {
+        "type": "set_stop_order",
+        "target_stop_id": "sequoia_national_park",
+        "parameters": {
+          "day": 4,
+          "sequence_index": 1
+        }
+      },
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 75,
+            "minimum_minutes": 75,
+            "maximum_minutes": 75
+          }
+        }
+      }
+    ]
+  },
+  {
+    "id": "reviewed-composed-order-preserve-other-days",
+    "message": "On Day 4, visit Kings Canyon National Park before Sequoia National Park and give Griffith Observatory 75 minutes and leave the other days alone.",
+    "provider_intents": [
+      {
+        "type": "set_stop_order",
+        "target_stop_id": "kings_canyon_national_park",
+        "parameters": {
+          "day": 4,
+          "sequence_index": 0
+        }
+      },
+      {
+        "type": "set_stop_order",
+        "target_stop_id": "sequoia_national_park",
+        "parameters": {
+          "day": 4,
+          "sequence_index": 1
+        }
+      },
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 75,
+            "minimum_minutes": 75,
+            "maximum_minutes": 75
+          }
+        }
+      }
+    ],
+    "expected_states": [
+      "proposal_ready"
+    ],
+    "expected_fake_calls": 1,
+    "expected_local_intents": [
+      {
+        "type": "set_stop_order",
+        "target_stop_id": "kings_canyon_national_park",
+        "parameters": {
+          "day": 4,
+          "sequence_index": 0
+        }
+      },
+      {
+        "type": "set_stop_order",
+        "target_stop_id": "sequoia_national_park",
+        "parameters": {
+          "day": 4,
+          "sequence_index": 1
+        }
+      },
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 75,
+            "minimum_minutes": 75,
+            "maximum_minutes": 75
+          }
+        }
+      }
+    ],
+    "expected_intents": [
+      {
+        "type": "set_stop_order",
+        "target_stop_id": "kings_canyon_national_park",
+        "parameters": {
+          "day": 4,
+          "sequence_index": 0
+        }
+      },
+      {
+        "type": "set_stop_order",
+        "target_stop_id": "sequoia_national_park",
+        "parameters": {
+          "day": 4,
+          "sequence_index": 1
+        }
+      },
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 75,
+            "minimum_minutes": 75,
+            "maximum_minutes": 75
+          }
+        }
+      }
+    ]
+  },
+  {
+    "id": "reviewed-composed-order-already-current-order",
+    "message": "Visit Sequoia National Park before Kings Canyon National Park and give Griffith Observatory 75 minutes.",
+    "provider_intents": [
+      {
+        "type": "set_stop_order",
+        "target_stop_id": "sequoia_national_park",
+        "parameters": {
+          "day": 4,
+          "sequence_index": 0
+        }
+      },
+      {
+        "type": "set_stop_order",
+        "target_stop_id": "kings_canyon_national_park",
+        "parameters": {
+          "day": 4,
+          "sequence_index": 1
+        }
+      },
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 75,
+            "minimum_minutes": 75,
+            "maximum_minutes": 75
+          }
+        }
+      }
+    ],
+    "expected_states": [
+      "proposal_ready"
+    ],
+    "expected_fake_calls": 1,
+    "expected_local_intents": [
+      {
+        "type": "set_stop_order",
+        "target_stop_id": "sequoia_national_park",
+        "parameters": {
+          "day": 4,
+          "sequence_index": 0
+        }
+      },
+      {
+        "type": "set_stop_order",
+        "target_stop_id": "kings_canyon_national_park",
+        "parameters": {
+          "day": 4,
+          "sequence_index": 1
+        }
+      },
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 75,
+            "minimum_minutes": 75,
+            "maximum_minutes": 75
+          }
+        }
+      }
+    ],
+    "expected_intents": [
+      {
+        "type": "set_stop_order",
+        "target_stop_id": "sequoia_national_park",
+        "parameters": {
+          "day": 4,
+          "sequence_index": 0
+        }
+      },
+      {
+        "type": "set_stop_order",
+        "target_stop_id": "kings_canyon_national_park",
+        "parameters": {
+          "day": 4,
+          "sequence_index": 1
+        }
+      },
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 75,
+            "minimum_minutes": 75,
+            "maximum_minutes": 75
+          }
+        }
+      }
+    ]
+  },
+  {
+    "id": "reviewed-composed-order-same-day-duration",
+    "message": "Visit Kings Canyon National Park before Sequoia National Park and give Kings Canyon National Park 75 minutes.",
+    "provider_intents": [
+      {
+        "type": "set_stop_order",
+        "target_stop_id": "kings_canyon_national_park",
+        "parameters": {
+          "day": 4,
+          "sequence_index": 0
+        }
+      },
+      {
+        "type": "set_stop_order",
+        "target_stop_id": "sequoia_national_park",
+        "parameters": {
+          "day": 4,
+          "sequence_index": 1
+        }
+      },
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "kings_canyon_national_park",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 75,
+            "minimum_minutes": 75,
+            "maximum_minutes": 75
+          }
+        }
+      }
+    ],
+    "expected_states": [
+      "proposal_ready"
+    ],
+    "expected_fake_calls": 1,
+    "expected_local_intents": [
+      {
+        "type": "set_stop_order",
+        "target_stop_id": "kings_canyon_national_park",
+        "parameters": {
+          "day": 4,
+          "sequence_index": 0
+        }
+      },
+      {
+        "type": "set_stop_order",
+        "target_stop_id": "sequoia_national_park",
+        "parameters": {
+          "day": 4,
+          "sequence_index": 1
+        }
+      },
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "kings_canyon_national_park",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 75,
+            "minimum_minutes": 75,
+            "maximum_minutes": 75
+          }
+        }
+      }
+    ],
+    "expected_intents": [
+      {
+        "type": "set_stop_order",
+        "target_stop_id": "kings_canyon_national_park",
+        "parameters": {
+          "day": 4,
+          "sequence_index": 0
+        }
+      },
+      {
+        "type": "set_stop_order",
+        "target_stop_id": "sequoia_national_park",
+        "parameters": {
+          "day": 4,
+          "sequence_index": 1
+        }
+      },
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "kings_canyon_national_park",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 75,
+            "minimum_minutes": 75,
+            "maximum_minutes": 75
+          }
+        }
+      }
+    ]
+  },
+  {
+    "id": "reviewed-composed-order-four-intents",
+    "message": "On Day 4, visit Kings Canyon National Park before Sequoia National Park and give Griffith Observatory 75 minutes and treat Stearns Wharf as a scenic stop instead of an activity.",
+    "provider_intents": [
+      {
+        "type": "set_stop_order",
+        "target_stop_id": "kings_canyon_national_park",
+        "parameters": {
+          "day": 4,
+          "sequence_index": 0
+        }
+      },
+      {
+        "type": "set_stop_order",
+        "target_stop_id": "sequoia_national_park",
+        "parameters": {
+          "day": 4,
+          "sequence_index": 1
+        }
+      },
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 75,
+            "minimum_minutes": 75,
+            "maximum_minutes": 75
+          }
+        }
+      },
+      {
+        "type": "set_stop_role",
+        "target_stop_id": "stearns_wharf",
+        "parameters": {
+          "role": "scenic_stop"
+        }
+      }
+    ],
+    "expected_states": [
+      "proposal_ready"
+    ],
+    "expected_fake_calls": 1,
+    "expected_local_intents": [
+      {
+        "type": "set_stop_order",
+        "target_stop_id": "kings_canyon_national_park",
+        "parameters": {
+          "day": 4,
+          "sequence_index": 0
+        }
+      },
+      {
+        "type": "set_stop_order",
+        "target_stop_id": "sequoia_national_park",
+        "parameters": {
+          "day": 4,
+          "sequence_index": 1
+        }
+      },
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 75,
+            "minimum_minutes": 75,
+            "maximum_minutes": 75
+          }
+        }
+      },
+      {
+        "type": "set_stop_role",
+        "target_stop_id": "stearns_wharf",
+        "parameters": {
+          "role": "scenic_stop"
+        }
+      }
+    ],
+    "expected_intents": [
+      {
+        "type": "set_stop_order",
+        "target_stop_id": "kings_canyon_national_park",
+        "parameters": {
+          "day": 4,
+          "sequence_index": 0
+        }
+      },
+      {
+        "type": "set_stop_order",
+        "target_stop_id": "sequoia_national_park",
+        "parameters": {
+          "day": 4,
+          "sequence_index": 1
+        }
+      },
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 75,
+            "minimum_minutes": 75,
+            "maximum_minutes": 75
+          }
+        }
+      },
+      {
+        "type": "set_stop_role",
+        "target_stop_id": "stearns_wharf",
+        "parameters": {
+          "role": "scenic_stop"
+        }
+      }
+    ]
+  },
+  {
+    "id": "reviewed-composed-order-four-intents-reversed",
+    "message": "treat Stearns Wharf as a scenic stop instead of an activity and give Griffith Observatory 75 minutes and visit Kings Canyon National Park before Sequoia National Park.",
+    "provider_intents": [
+      {
+        "type": "set_stop_role",
+        "target_stop_id": "stearns_wharf",
+        "parameters": {
+          "role": "scenic_stop"
+        }
+      },
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 75,
+            "minimum_minutes": 75,
+            "maximum_minutes": 75
+          }
+        }
+      },
+      {
+        "type": "set_stop_order",
+        "target_stop_id": "kings_canyon_national_park",
+        "parameters": {
+          "day": 4,
+          "sequence_index": 0
+        }
+      },
+      {
+        "type": "set_stop_order",
+        "target_stop_id": "sequoia_national_park",
+        "parameters": {
+          "day": 4,
+          "sequence_index": 1
+        }
+      }
+    ],
+    "expected_states": [
+      "proposal_ready"
+    ],
+    "expected_fake_calls": 1,
+    "expected_local_intents": [
+      {
+        "type": "set_stop_role",
+        "target_stop_id": "stearns_wharf",
+        "parameters": {
+          "role": "scenic_stop"
+        }
+      },
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 75,
+            "minimum_minutes": 75,
+            "maximum_minutes": 75
+          }
+        }
+      },
+      {
+        "type": "set_stop_order",
+        "target_stop_id": "kings_canyon_national_park",
+        "parameters": {
+          "day": 4,
+          "sequence_index": 0
+        }
+      },
+      {
+        "type": "set_stop_order",
+        "target_stop_id": "sequoia_national_park",
+        "parameters": {
+          "day": 4,
+          "sequence_index": 1
+        }
+      }
+    ],
+    "expected_intents": [
+      {
+        "type": "set_stop_role",
+        "target_stop_id": "stearns_wharf",
+        "parameters": {
+          "role": "scenic_stop"
+        }
+      },
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 75,
+            "minimum_minutes": 75,
+            "maximum_minutes": 75
+          }
+        }
+      },
+      {
+        "type": "set_stop_order",
+        "target_stop_id": "kings_canyon_national_park",
+        "parameters": {
+          "day": 4,
+          "sequence_index": 0
+        }
+      },
+      {
+        "type": "set_stop_order",
+        "target_stop_id": "sequoia_national_park",
+        "parameters": {
+          "day": 4,
+          "sequence_index": 1
+        }
+      }
+    ]
+  },
+  {
+    "id": "reviewed-composed-order-drop-order",
+    "message": "On Day 4, visit Kings Canyon National Park before Sequoia National Park and give Griffith Observatory 75 minutes.",
+    "provider_intents": [
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 75,
+            "minimum_minutes": 75,
+            "maximum_minutes": 75
+          }
+        }
+      }
+    ],
+    "expected_states": [
+      "clarification_required"
+    ],
+    "expected_fake_calls": 1,
+    "expected_local_intents": [
+      {
+        "type": "set_stop_order",
+        "target_stop_id": "kings_canyon_national_park",
+        "parameters": {
+          "day": 4,
+          "sequence_index": 0
+        }
+      },
+      {
+        "type": "set_stop_order",
+        "target_stop_id": "sequoia_national_park",
+        "parameters": {
+          "day": 4,
+          "sequence_index": 1
+        }
+      },
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 75,
+            "minimum_minutes": 75,
+            "maximum_minutes": 75
+          }
+        }
+      }
+    ],
+    "expected_intents": null
+  },
+  {
+    "id": "reviewed-composed-order-drop-duration",
+    "message": "On Day 4, visit Kings Canyon National Park before Sequoia National Park and give Griffith Observatory 75 minutes.",
+    "provider_intents": [
+      {
+        "type": "set_stop_order",
+        "target_stop_id": "kings_canyon_national_park",
+        "parameters": {
+          "day": 4,
+          "sequence_index": 0
+        }
+      },
+      {
+        "type": "set_stop_order",
+        "target_stop_id": "sequoia_national_park",
+        "parameters": {
+          "day": 4,
+          "sequence_index": 1
+        }
+      }
+    ],
+    "expected_states": [
+      "clarification_required"
+    ],
+    "expected_fake_calls": 1,
+    "expected_local_intents": [
+      {
+        "type": "set_stop_order",
+        "target_stop_id": "kings_canyon_national_park",
+        "parameters": {
+          "day": 4,
+          "sequence_index": 0
+        }
+      },
+      {
+        "type": "set_stop_order",
+        "target_stop_id": "sequoia_national_park",
+        "parameters": {
+          "day": 4,
+          "sequence_index": 1
+        }
+      },
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 75,
+            "minimum_minutes": 75,
+            "maximum_minutes": 75
+          }
+        }
+      }
+    ],
+    "expected_intents": null
+  },
+  {
+    "id": "reviewed-composed-order-drop-one-stop",
+    "message": "On Day 4, visit Kings Canyon National Park before Sequoia National Park and give Griffith Observatory 75 minutes.",
+    "provider_intents": [
+      {
+        "type": "set_stop_order",
+        "target_stop_id": "kings_canyon_national_park",
+        "parameters": {
+          "day": 4,
+          "sequence_index": 0
+        }
+      },
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 75,
+            "minimum_minutes": 75,
+            "maximum_minutes": 75
+          }
+        }
+      }
+    ],
+    "expected_states": [
+      "clarification_required"
+    ],
+    "expected_fake_calls": 1,
+    "expected_local_intents": [
+      {
+        "type": "set_stop_order",
+        "target_stop_id": "kings_canyon_national_park",
+        "parameters": {
+          "day": 4,
+          "sequence_index": 0
+        }
+      },
+      {
+        "type": "set_stop_order",
+        "target_stop_id": "sequoia_national_park",
+        "parameters": {
+          "day": 4,
+          "sequence_index": 1
+        }
+      },
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 75,
+            "minimum_minutes": 75,
+            "maximum_minutes": 75
+          }
+        }
+      }
+    ],
+    "expected_intents": null
+  },
+  {
+    "id": "reviewed-composed-order-reverse-order",
+    "message": "On Day 4, visit Kings Canyon National Park before Sequoia National Park and give Griffith Observatory 75 minutes.",
+    "provider_intents": [
+      {
+        "type": "set_stop_order",
+        "target_stop_id": "kings_canyon_national_park",
+        "parameters": {
+          "day": 4,
+          "sequence_index": 1
+        }
+      },
+      {
+        "type": "set_stop_order",
+        "target_stop_id": "sequoia_national_park",
+        "parameters": {
+          "day": 4,
+          "sequence_index": 0
+        }
+      },
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 75,
+            "minimum_minutes": 75,
+            "maximum_minutes": 75
+          }
+        }
+      }
+    ],
+    "expected_states": [
+      "clarification_required"
+    ],
+    "expected_fake_calls": 1,
+    "expected_local_intents": [
+      {
+        "type": "set_stop_order",
+        "target_stop_id": "kings_canyon_national_park",
+        "parameters": {
+          "day": 4,
+          "sequence_index": 0
+        }
+      },
+      {
+        "type": "set_stop_order",
+        "target_stop_id": "sequoia_national_park",
+        "parameters": {
+          "day": 4,
+          "sequence_index": 1
+        }
+      },
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 75,
+            "minimum_minutes": 75,
+            "maximum_minutes": 75
+          }
+        }
+      }
+    ],
+    "expected_intents": null
+  },
+  {
+    "id": "reviewed-composed-order-change-duration",
+    "message": "On Day 4, visit Kings Canyon National Park before Sequoia National Park and give Griffith Observatory 75 minutes.",
+    "provider_intents": [
+      {
+        "type": "set_stop_order",
+        "target_stop_id": "kings_canyon_national_park",
+        "parameters": {
+          "day": 4,
+          "sequence_index": 0
+        }
+      },
+      {
+        "type": "set_stop_order",
+        "target_stop_id": "sequoia_national_park",
+        "parameters": {
+          "day": 4,
+          "sequence_index": 1
+        }
+      },
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 90,
+            "minimum_minutes": 90,
+            "maximum_minutes": 90
+          }
+        }
+      }
+    ],
+    "expected_states": [
+      "clarification_required"
+    ],
+    "expected_fake_calls": 1,
+    "expected_local_intents": [
+      {
+        "type": "set_stop_order",
+        "target_stop_id": "kings_canyon_national_park",
+        "parameters": {
+          "day": 4,
+          "sequence_index": 0
+        }
+      },
+      {
+        "type": "set_stop_order",
+        "target_stop_id": "sequoia_national_park",
+        "parameters": {
+          "day": 4,
+          "sequence_index": 1
+        }
+      },
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 75,
+            "minimum_minutes": 75,
+            "maximum_minutes": 75
+          }
+        }
+      }
+    ],
+    "expected_intents": null
+  },
+  {
+    "id": "reviewed-composed-order-extra-role",
+    "message": "On Day 4, visit Kings Canyon National Park before Sequoia National Park and give Griffith Observatory 75 minutes.",
+    "provider_intents": [
+      {
+        "type": "set_stop_order",
+        "target_stop_id": "kings_canyon_national_park",
+        "parameters": {
+          "day": 4,
+          "sequence_index": 0
+        }
+      },
+      {
+        "type": "set_stop_order",
+        "target_stop_id": "sequoia_national_park",
+        "parameters": {
+          "day": 4,
+          "sequence_index": 1
+        }
+      },
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 75,
+            "minimum_minutes": 75,
+            "maximum_minutes": 75
+          }
+        }
+      },
+      {
+        "type": "set_stop_role",
+        "target_stop_id": "stearns_wharf",
+        "parameters": {
+          "role": "scenic_stop"
+        }
+      }
+    ],
+    "expected_states": [
+      "clarification_required"
+    ],
+    "expected_fake_calls": 1,
+    "expected_local_intents": [
+      {
+        "type": "set_stop_order",
+        "target_stop_id": "kings_canyon_national_park",
+        "parameters": {
+          "day": 4,
+          "sequence_index": 0
+        }
+      },
+      {
+        "type": "set_stop_order",
+        "target_stop_id": "sequoia_national_park",
+        "parameters": {
+          "day": 4,
+          "sequence_index": 1
+        }
+      },
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 75,
+            "minimum_minutes": 75,
+            "maximum_minutes": 75
+          }
+        }
+      }
+    ],
+    "expected_intents": null
+  },
+  {
+    "id": "reviewed-composed-order-extra-conflicting-duration",
+    "message": "On Day 4, visit Kings Canyon National Park before Sequoia National Park and give Griffith Observatory 75 minutes.",
+    "provider_intents": [
+      {
+        "type": "set_stop_order",
+        "target_stop_id": "kings_canyon_national_park",
+        "parameters": {
+          "day": 4,
+          "sequence_index": 0
+        }
+      },
+      {
+        "type": "set_stop_order",
+        "target_stop_id": "sequoia_national_park",
+        "parameters": {
+          "day": 4,
+          "sequence_index": 1
+        }
+      },
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 75,
+            "minimum_minutes": 75,
+            "maximum_minutes": 75
+          }
+        }
+      },
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 90,
+            "minimum_minutes": 90,
+            "maximum_minutes": 90
+          }
+        }
+      }
+    ],
+    "expected_states": [
+      "clarification_required"
+    ],
+    "expected_fake_calls": 1,
+    "expected_local_intents": [
+      {
+        "type": "set_stop_order",
+        "target_stop_id": "kings_canyon_national_park",
+        "parameters": {
+          "day": 4,
+          "sequence_index": 0
+        }
+      },
+      {
+        "type": "set_stop_order",
+        "target_stop_id": "sequoia_national_park",
+        "parameters": {
+          "day": 4,
+          "sequence_index": 1
+        }
+      },
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 75,
+            "minimum_minutes": 75,
+            "maximum_minutes": 75
+          }
+        }
+      }
+    ],
+    "expected_intents": null
+  },
+  {
+    "id": "reviewed-composed-order-wrong-day",
+    "message": "On Day 4, visit Kings Canyon National Park before Sequoia National Park and give Griffith Observatory 75 minutes.",
+    "provider_intents": [
+      {
+        "type": "set_stop_order",
+        "target_stop_id": "kings_canyon_national_park",
+        "parameters": {
+          "day": 5,
+          "sequence_index": 0
+        }
+      },
+      {
+        "type": "set_stop_order",
+        "target_stop_id": "sequoia_national_park",
+        "parameters": {
+          "day": 5,
+          "sequence_index": 1
+        }
+      },
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 75,
+            "minimum_minutes": 75,
+            "maximum_minutes": 75
+          }
+        }
+      }
+    ],
+    "expected_states": [
+      "clarification_required"
+    ],
+    "expected_fake_calls": 1,
+    "expected_local_intents": [
+      {
+        "type": "set_stop_order",
+        "target_stop_id": "kings_canyon_national_park",
+        "parameters": {
+          "day": 4,
+          "sequence_index": 0
+        }
+      },
+      {
+        "type": "set_stop_order",
+        "target_stop_id": "sequoia_national_park",
+        "parameters": {
+          "day": 4,
+          "sequence_index": 1
+        }
+      },
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 75,
+            "minimum_minutes": 75,
+            "maximum_minutes": 75
+          }
+        }
+      }
+    ],
+    "expected_intents": null
+  },
+  {
+    "id": "reviewed-composed-order-condition",
+    "message": "On Day 4, visit Kings Canyon National Park before Sequoia National Park and give Griffith Observatory 75 minutes only if the weather is dry.",
+    "provider_intents": [
+      {
+        "type": "set_stop_order",
+        "target_stop_id": "kings_canyon_national_park",
+        "parameters": {
+          "day": 4,
+          "sequence_index": 0
+        }
+      },
+      {
+        "type": "set_stop_order",
+        "target_stop_id": "sequoia_national_park",
+        "parameters": {
+          "day": 4,
+          "sequence_index": 1
+        }
+      },
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 75,
+            "minimum_minutes": 75,
+            "maximum_minutes": 75
+          }
+        }
+      }
+    ],
+    "expected_states": [
+      "clarification_required"
+    ],
+    "expected_fake_calls": 0,
+    "expected_local_intents": null,
+    "expected_intents": null
+  },
+  {
+    "id": "reviewed-composed-order-booking",
+    "message": "On Day 4, visit Kings Canyon National Park before Sequoia National Park and give Griffith Observatory 75 minutes and book a hotel.",
+    "provider_intents": [
+      {
+        "type": "set_stop_order",
+        "target_stop_id": "kings_canyon_national_park",
+        "parameters": {
+          "day": 4,
+          "sequence_index": 0
+        }
+      },
+      {
+        "type": "set_stop_order",
+        "target_stop_id": "sequoia_national_park",
+        "parameters": {
+          "day": 4,
+          "sequence_index": 1
+        }
+      },
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 75,
+            "minimum_minutes": 75,
+            "maximum_minutes": 75
+          }
+        }
+      }
+    ],
+    "expected_states": [
+      "clarification_required"
+    ],
+    "expected_fake_calls": 0,
+    "expected_local_intents": null,
+    "expected_intents": null
+  },
+  {
+    "id": "reviewed-composed-order-unknown-clause",
+    "message": "On Day 4, visit Kings Canyon National Park before Sequoia National Park and give Griffith Observatory 75 minutes and email the confirmation.",
+    "provider_intents": [
+      {
+        "type": "set_stop_order",
+        "target_stop_id": "kings_canyon_national_park",
+        "parameters": {
+          "day": 4,
+          "sequence_index": 0
+        }
+      },
+      {
+        "type": "set_stop_order",
+        "target_stop_id": "sequoia_national_park",
+        "parameters": {
+          "day": 4,
+          "sequence_index": 1
+        }
+      },
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 75,
+            "minimum_minutes": 75,
+            "maximum_minutes": 75
+          }
+        }
+      }
+    ],
+    "expected_states": [
+      "clarification_required"
+    ],
+    "expected_fake_calls": 0,
+    "expected_local_intents": null,
+    "expected_intents": null
+  },
+  {
+    "id": "reviewed-composed-order-wrong-order-day",
+    "message": "On Day 5, visit Kings Canyon National Park before Sequoia National Park and give Griffith Observatory 75 minutes.",
+    "provider_intents": [
+      {
+        "type": "set_stop_order",
+        "target_stop_id": "kings_canyon_national_park",
+        "parameters": {
+          "day": 4,
+          "sequence_index": 0
+        }
+      },
+      {
+        "type": "set_stop_order",
+        "target_stop_id": "sequoia_national_park",
+        "parameters": {
+          "day": 4,
+          "sequence_index": 1
+        }
+      },
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 75,
+            "minimum_minutes": 75,
+            "maximum_minutes": 75
+          }
+        }
+      }
+    ],
+    "expected_states": [
+      "clarification_required"
+    ],
+    "expected_fake_calls": 0,
+    "expected_local_intents": null,
+    "expected_intents": null
+  },
+  {
+    "id": "reviewed-composed-order-wrong-duration-day",
+    "message": "Visit Kings Canyon National Park before Sequoia National Park and on Day 6, give Griffith Observatory 75 minutes.",
+    "provider_intents": [
+      {
+        "type": "set_stop_order",
+        "target_stop_id": "kings_canyon_national_park",
+        "parameters": {
+          "day": 4,
+          "sequence_index": 0
+        }
+      },
+      {
+        "type": "set_stop_order",
+        "target_stop_id": "sequoia_national_park",
+        "parameters": {
+          "day": 4,
+          "sequence_index": 1
+        }
+      },
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 75,
+            "minimum_minutes": 75,
+            "maximum_minutes": 75
+          }
+        }
+      }
+    ],
+    "expected_states": [
+      "clarification_required"
+    ],
+    "expected_fake_calls": 0,
+    "expected_local_intents": null,
+    "expected_intents": null
+  },
+  {
+    "id": "reviewed-composed-order-over-intent-limit",
+    "message": "On Day 4, visit Kings Canyon National Park before Sequoia National Park and give Griffith Observatory 75 minutes and give Golden Gate Bridge 60 minutes and treat Stearns Wharf as a scenic stop instead of an activity.",
+    "provider_intents": [
+      {
+        "type": "set_stop_order",
+        "target_stop_id": "kings_canyon_national_park",
+        "parameters": {
+          "day": 4,
+          "sequence_index": 0
+        }
+      },
+      {
+        "type": "set_stop_order",
+        "target_stop_id": "sequoia_national_park",
+        "parameters": {
+          "day": 4,
+          "sequence_index": 1
+        }
+      },
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 75,
+            "minimum_minutes": 75,
+            "maximum_minutes": 75
+          }
+        }
+      }
+    ],
+    "expected_states": [
+      "clarification_required"
+    ],
+    "expected_fake_calls": 0,
+    "expected_local_intents": null,
+    "expected_intents": null
+  },
+  {
+    "id": "condition-unknown-duration-01-if_suffix",
+    "message": "Allocate 75 minutes to Griffith Observatory only if parking is free.",
+    "expected_states": [
+      "clarification_required"
+    ],
+    "expected_intents": null,
+    "provider_intents": [
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 75,
+            "minimum_minutes": 75,
+            "maximum_minutes": 75
+          }
+        }
+      }
+    ],
+    "expected_fake_calls": 0,
+    "expected_local_intents": null,
+    "reason": "The typed duration has no field for the explicit parking/opening prerequisite; unconditional duration loses a required clause."
+  },
+  {
+    "id": "condition-unknown-duration-01-provided_suffix",
+    "message": "Allocate 75 minutes to Griffith Observatory provided that the observatory is open.",
+    "expected_states": [
+      "clarification_required"
+    ],
+    "expected_intents": null,
+    "provider_intents": [
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 75,
+            "minimum_minutes": 75,
+            "maximum_minutes": 75
+          }
+        }
+      }
+    ],
+    "expected_fake_calls": 0,
+    "expected_local_intents": null,
+    "reason": "The typed duration has no field for the explicit parking/opening prerequisite; unconditional duration loses a required clause."
+  },
+  {
+    "id": "condition-unknown-duration-01-if_prefix",
+    "message": "If parking is free, allocate 75 minutes to Griffith Observatory.",
+    "expected_states": [
+      "clarification_required"
+    ],
+    "expected_intents": null,
+    "provider_intents": [
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 75,
+            "minimum_minutes": 75,
+            "maximum_minutes": 75
+          }
+        }
+      }
+    ],
+    "expected_fake_calls": 0,
+    "expected_local_intents": null,
+    "reason": "The typed duration has no field for the explicit parking/opening prerequisite; unconditional duration loses a required clause."
+  },
+  {
+    "id": "condition-unknown-duration-01-unconditional",
+    "message": "Allocate 75 minutes to Griffith Observatory.",
+    "expected_states": [
+      "proposal_ready"
+    ],
+    "expected_intents": [
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 75,
+            "minimum_minutes": 75,
+            "maximum_minutes": 75
+          }
+        }
+      }
+    ],
+    "provider_intents": [
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 75,
+            "minimum_minutes": 75,
+            "maximum_minutes": 75
+          }
+        }
+      }
+    ],
+    "expected_fake_calls": 1,
+    "expected_local_intents": null,
+    "reason": "A complete unconditional duration reply preserves the specified stop and value."
+  },
+  {
+    "id": "condition-unknown-duration-02-if_suffix",
+    "message": "Allow 75 minutes at Griffith Observatory only if parking is free.",
+    "expected_states": [
+      "clarification_required"
+    ],
+    "expected_intents": null,
+    "provider_intents": [
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 75,
+            "minimum_minutes": 75,
+            "maximum_minutes": 75
+          }
+        }
+      }
+    ],
+    "expected_fake_calls": 0,
+    "expected_local_intents": null,
+    "reason": "The typed duration has no field for the explicit parking/opening prerequisite; unconditional duration loses a required clause."
+  },
+  {
+    "id": "condition-unknown-duration-02-provided_suffix",
+    "message": "Allow 75 minutes at Griffith Observatory provided that the observatory is open.",
+    "expected_states": [
+      "clarification_required"
+    ],
+    "expected_intents": null,
+    "provider_intents": [
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 75,
+            "minimum_minutes": 75,
+            "maximum_minutes": 75
+          }
+        }
+      }
+    ],
+    "expected_fake_calls": 0,
+    "expected_local_intents": null,
+    "reason": "The typed duration has no field for the explicit parking/opening prerequisite; unconditional duration loses a required clause."
+  },
+  {
+    "id": "condition-unknown-duration-02-if_prefix",
+    "message": "If parking is free, allow 75 minutes at Griffith Observatory.",
+    "expected_states": [
+      "clarification_required"
+    ],
+    "expected_intents": null,
+    "provider_intents": [
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 75,
+            "minimum_minutes": 75,
+            "maximum_minutes": 75
+          }
+        }
+      }
+    ],
+    "expected_fake_calls": 0,
+    "expected_local_intents": null,
+    "reason": "The typed duration has no field for the explicit parking/opening prerequisite; unconditional duration loses a required clause."
+  },
+  {
+    "id": "condition-unknown-duration-02-unconditional",
+    "message": "Allow 75 minutes at Griffith Observatory.",
+    "expected_states": [
+      "proposal_ready"
+    ],
+    "expected_intents": [
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 75,
+            "minimum_minutes": 75,
+            "maximum_minutes": 75
+          }
+        }
+      }
+    ],
+    "provider_intents": [
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 75,
+            "minimum_minutes": 75,
+            "maximum_minutes": 75
+          }
+        }
+      }
+    ],
+    "expected_fake_calls": 1,
+    "expected_local_intents": null,
+    "reason": "A complete unconditional duration reply preserves the specified stop and value."
+  },
+  {
+    "id": "condition-unknown-duration-03-if_suffix",
+    "message": "I need 75 minutes at Griffith Observatory only if parking is free.",
+    "expected_states": [
+      "clarification_required"
+    ],
+    "expected_intents": null,
+    "provider_intents": [
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 75,
+            "minimum_minutes": 75,
+            "maximum_minutes": 75
+          }
+        }
+      }
+    ],
+    "expected_fake_calls": 0,
+    "expected_local_intents": null,
+    "reason": "The typed duration has no field for the explicit parking/opening prerequisite; unconditional duration loses a required clause."
+  },
+  {
+    "id": "condition-unknown-duration-03-provided_suffix",
+    "message": "I need 75 minutes at Griffith Observatory provided that the observatory is open.",
+    "expected_states": [
+      "clarification_required"
+    ],
+    "expected_intents": null,
+    "provider_intents": [
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 75,
+            "minimum_minutes": 75,
+            "maximum_minutes": 75
+          }
+        }
+      }
+    ],
+    "expected_fake_calls": 0,
+    "expected_local_intents": null,
+    "reason": "The typed duration has no field for the explicit parking/opening prerequisite; unconditional duration loses a required clause."
+  },
+  {
+    "id": "condition-unknown-duration-03-if_prefix",
+    "message": "If parking is free, i need 75 minutes at Griffith Observatory.",
+    "expected_states": [
+      "clarification_required"
+    ],
+    "expected_intents": null,
+    "provider_intents": [
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 75,
+            "minimum_minutes": 75,
+            "maximum_minutes": 75
+          }
+        }
+      }
+    ],
+    "expected_fake_calls": 0,
+    "expected_local_intents": null,
+    "reason": "The typed duration has no field for the explicit parking/opening prerequisite; unconditional duration loses a required clause."
+  },
+  {
+    "id": "condition-unknown-duration-03-unconditional",
+    "message": "I need 75 minutes at Griffith Observatory.",
+    "expected_states": [
+      "proposal_ready"
+    ],
+    "expected_intents": [
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 75,
+            "minimum_minutes": 75,
+            "maximum_minutes": 75
+          }
+        }
+      }
+    ],
+    "provider_intents": [
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 75,
+            "minimum_minutes": 75,
+            "maximum_minutes": 75
+          }
+        }
+      }
+    ],
+    "expected_fake_calls": 1,
+    "expected_local_intents": null,
+    "reason": "A complete unconditional duration reply preserves the specified stop and value."
+  },
+  {
+    "id": "condition-unknown-duration-04-if_suffix",
+    "message": "Budget 75 minutes for Griffith Observatory only if parking is free.",
+    "expected_states": [
+      "clarification_required"
+    ],
+    "expected_intents": null,
+    "provider_intents": [
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 75,
+            "minimum_minutes": 75,
+            "maximum_minutes": 75
+          }
+        }
+      }
+    ],
+    "expected_fake_calls": 0,
+    "expected_local_intents": null,
+    "reason": "The typed duration has no field for the explicit parking/opening prerequisite; unconditional duration loses a required clause."
+  },
+  {
+    "id": "condition-unknown-duration-04-provided_suffix",
+    "message": "Budget 75 minutes for Griffith Observatory provided that the observatory is open.",
+    "expected_states": [
+      "clarification_required"
+    ],
+    "expected_intents": null,
+    "provider_intents": [
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 75,
+            "minimum_minutes": 75,
+            "maximum_minutes": 75
+          }
+        }
+      }
+    ],
+    "expected_fake_calls": 0,
+    "expected_local_intents": null,
+    "reason": "The typed duration has no field for the explicit parking/opening prerequisite; unconditional duration loses a required clause."
+  },
+  {
+    "id": "condition-unknown-duration-04-if_prefix",
+    "message": "If parking is free, budget 75 minutes for Griffith Observatory.",
+    "expected_states": [
+      "clarification_required"
+    ],
+    "expected_intents": null,
+    "provider_intents": [
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 75,
+            "minimum_minutes": 75,
+            "maximum_minutes": 75
+          }
+        }
+      }
+    ],
+    "expected_fake_calls": 0,
+    "expected_local_intents": null,
+    "reason": "The typed duration has no field for the explicit parking/opening prerequisite; unconditional duration loses a required clause."
+  },
+  {
+    "id": "condition-unknown-duration-04-unconditional",
+    "message": "Budget 75 minutes for Griffith Observatory.",
+    "expected_states": [
+      "proposal_ready"
+    ],
+    "expected_intents": [
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 75,
+            "minimum_minutes": 75,
+            "maximum_minutes": 75
+          }
+        }
+      }
+    ],
+    "provider_intents": [
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 75,
+            "minimum_minutes": 75,
+            "maximum_minutes": 75
+          }
+        }
+      }
+    ],
+    "expected_fake_calls": 1,
+    "expected_local_intents": null,
+    "reason": "A complete unconditional duration reply preserves the specified stop and value."
+  },
+  {
+    "id": "condition-unknown-duration-05-if_suffix",
+    "message": "Plan for 75 minutes at Griffith Observatory only if parking is free.",
+    "expected_states": [
+      "clarification_required"
+    ],
+    "expected_intents": null,
+    "provider_intents": [
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 75,
+            "minimum_minutes": 75,
+            "maximum_minutes": 75
+          }
+        }
+      }
+    ],
+    "expected_fake_calls": 0,
+    "expected_local_intents": null,
+    "reason": "The typed duration has no field for the explicit parking/opening prerequisite; unconditional duration loses a required clause."
+  },
+  {
+    "id": "condition-unknown-duration-05-provided_suffix",
+    "message": "Plan for 75 minutes at Griffith Observatory provided that the observatory is open.",
+    "expected_states": [
+      "clarification_required"
+    ],
+    "expected_intents": null,
+    "provider_intents": [
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 75,
+            "minimum_minutes": 75,
+            "maximum_minutes": 75
+          }
+        }
+      }
+    ],
+    "expected_fake_calls": 0,
+    "expected_local_intents": null,
+    "reason": "The typed duration has no field for the explicit parking/opening prerequisite; unconditional duration loses a required clause."
+  },
+  {
+    "id": "condition-unknown-duration-05-if_prefix",
+    "message": "If parking is free, plan for 75 minutes at Griffith Observatory.",
+    "expected_states": [
+      "clarification_required"
+    ],
+    "expected_intents": null,
+    "provider_intents": [
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 75,
+            "minimum_minutes": 75,
+            "maximum_minutes": 75
+          }
+        }
+      }
+    ],
+    "expected_fake_calls": 0,
+    "expected_local_intents": null,
+    "reason": "The typed duration has no field for the explicit parking/opening prerequisite; unconditional duration loses a required clause."
+  },
+  {
+    "id": "condition-unknown-duration-05-unconditional",
+    "message": "Plan for 75 minutes at Griffith Observatory.",
+    "expected_states": [
+      "proposal_ready"
+    ],
+    "expected_intents": [
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 75,
+            "minimum_minutes": 75,
+            "maximum_minutes": 75
+          }
+        }
+      }
+    ],
+    "provider_intents": [
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 75,
+            "minimum_minutes": 75,
+            "maximum_minutes": 75
+          }
+        }
+      }
+    ],
+    "expected_fake_calls": 1,
+    "expected_local_intents": null,
+    "reason": "A complete unconditional duration reply preserves the specified stop and value."
+  },
+  {
+    "id": "condition-unknown-duration-06-if_suffix",
+    "message": "Can we have 75 minutes at Griffith Observatory only if parking is free.",
+    "expected_states": [
+      "clarification_required"
+    ],
+    "expected_intents": null,
+    "provider_intents": [
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 75,
+            "minimum_minutes": 75,
+            "maximum_minutes": 75
+          }
+        }
+      }
+    ],
+    "expected_fake_calls": 0,
+    "expected_local_intents": null,
+    "reason": "The typed duration has no field for the explicit parking/opening prerequisite; unconditional duration loses a required clause."
+  },
+  {
+    "id": "condition-unknown-duration-06-provided_suffix",
+    "message": "Can we have 75 minutes at Griffith Observatory provided that the observatory is open.",
+    "expected_states": [
+      "clarification_required"
+    ],
+    "expected_intents": null,
+    "provider_intents": [
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 75,
+            "minimum_minutes": 75,
+            "maximum_minutes": 75
+          }
+        }
+      }
+    ],
+    "expected_fake_calls": 0,
+    "expected_local_intents": null,
+    "reason": "The typed duration has no field for the explicit parking/opening prerequisite; unconditional duration loses a required clause."
+  },
+  {
+    "id": "condition-unknown-duration-06-if_prefix",
+    "message": "If parking is free, can we have 75 minutes at Griffith Observatory.",
+    "expected_states": [
+      "clarification_required"
+    ],
+    "expected_intents": null,
+    "provider_intents": [
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 75,
+            "minimum_minutes": 75,
+            "maximum_minutes": 75
+          }
+        }
+      }
+    ],
+    "expected_fake_calls": 0,
+    "expected_local_intents": null,
+    "reason": "The typed duration has no field for the explicit parking/opening prerequisite; unconditional duration loses a required clause."
+  },
+  {
+    "id": "condition-unknown-duration-06-unconditional",
+    "message": "Can we have 75 minutes at Griffith Observatory.",
+    "expected_states": [
+      "proposal_ready"
+    ],
+    "expected_intents": [
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 75,
+            "minimum_minutes": 75,
+            "maximum_minutes": 75
+          }
+        }
+      }
+    ],
+    "provider_intents": [
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 75,
+            "minimum_minutes": 75,
+            "maximum_minutes": 75
+          }
+        }
+      }
+    ],
+    "expected_fake_calls": 1,
+    "expected_local_intents": null,
+    "reason": "A complete unconditional duration reply preserves the specified stop and value."
+  },
+  {
+    "id": "condition-unknown-duration-07-if_suffix",
+    "message": "Could we have 75 minutes at Griffith Observatory only if parking is free.",
+    "expected_states": [
+      "clarification_required"
+    ],
+    "expected_intents": null,
+    "provider_intents": [
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 75,
+            "minimum_minutes": 75,
+            "maximum_minutes": 75
+          }
+        }
+      }
+    ],
+    "expected_fake_calls": 0,
+    "expected_local_intents": null,
+    "reason": "The typed duration has no field for the explicit parking/opening prerequisite; unconditional duration loses a required clause."
+  },
+  {
+    "id": "condition-unknown-duration-07-provided_suffix",
+    "message": "Could we have 75 minutes at Griffith Observatory provided that the observatory is open.",
+    "expected_states": [
+      "clarification_required"
+    ],
+    "expected_intents": null,
+    "provider_intents": [
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 75,
+            "minimum_minutes": 75,
+            "maximum_minutes": 75
+          }
+        }
+      }
+    ],
+    "expected_fake_calls": 0,
+    "expected_local_intents": null,
+    "reason": "The typed duration has no field for the explicit parking/opening prerequisite; unconditional duration loses a required clause."
+  },
+  {
+    "id": "condition-unknown-duration-07-if_prefix",
+    "message": "If parking is free, could we have 75 minutes at Griffith Observatory.",
+    "expected_states": [
+      "clarification_required"
+    ],
+    "expected_intents": null,
+    "provider_intents": [
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 75,
+            "minimum_minutes": 75,
+            "maximum_minutes": 75
+          }
+        }
+      }
+    ],
+    "expected_fake_calls": 0,
+    "expected_local_intents": null,
+    "reason": "The typed duration has no field for the explicit parking/opening prerequisite; unconditional duration loses a required clause."
+  },
+  {
+    "id": "condition-unknown-duration-07-unconditional",
+    "message": "Could we have 75 minutes at Griffith Observatory.",
+    "expected_states": [
+      "proposal_ready"
+    ],
+    "expected_intents": [
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 75,
+            "minimum_minutes": 75,
+            "maximum_minutes": 75
+          }
+        }
+      }
+    ],
+    "provider_intents": [
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 75,
+            "minimum_minutes": 75,
+            "maximum_minutes": 75
+          }
+        }
+      }
+    ],
+    "expected_fake_calls": 1,
+    "expected_local_intents": null,
+    "reason": "A complete unconditional duration reply preserves the specified stop and value."
+  },
+  {
+    "id": "condition-unknown-duration-08-if_suffix",
+    "message": "How about 75 minutes at Griffith Observatory only if parking is free.",
+    "expected_states": [
+      "clarification_required"
+    ],
+    "expected_intents": null,
+    "provider_intents": [
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 75,
+            "minimum_minutes": 75,
+            "maximum_minutes": 75
+          }
+        }
+      }
+    ],
+    "expected_fake_calls": 0,
+    "expected_local_intents": null,
+    "reason": "The typed duration has no field for the explicit parking/opening prerequisite; unconditional duration loses a required clause."
+  },
+  {
+    "id": "condition-unknown-duration-08-provided_suffix",
+    "message": "How about 75 minutes at Griffith Observatory provided that the observatory is open.",
+    "expected_states": [
+      "clarification_required"
+    ],
+    "expected_intents": null,
+    "provider_intents": [
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 75,
+            "minimum_minutes": 75,
+            "maximum_minutes": 75
+          }
+        }
+      }
+    ],
+    "expected_fake_calls": 0,
+    "expected_local_intents": null,
+    "reason": "The typed duration has no field for the explicit parking/opening prerequisite; unconditional duration loses a required clause."
+  },
+  {
+    "id": "condition-unknown-duration-08-if_prefix",
+    "message": "If parking is free, how about 75 minutes at Griffith Observatory.",
+    "expected_states": [
+      "clarification_required"
+    ],
+    "expected_intents": null,
+    "provider_intents": [
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 75,
+            "minimum_minutes": 75,
+            "maximum_minutes": 75
+          }
+        }
+      }
+    ],
+    "expected_fake_calls": 0,
+    "expected_local_intents": null,
+    "reason": "The typed duration has no field for the explicit parking/opening prerequisite; unconditional duration loses a required clause."
+  },
+  {
+    "id": "condition-unknown-duration-08-unconditional",
+    "message": "How about 75 minutes at Griffith Observatory.",
+    "expected_states": [
+      "proposal_ready"
+    ],
+    "expected_intents": [
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 75,
+            "minimum_minutes": 75,
+            "maximum_minutes": 75
+          }
+        }
+      }
+    ],
+    "provider_intents": [
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 75,
+            "minimum_minutes": 75,
+            "maximum_minutes": 75
+          }
+        }
+      }
+    ],
+    "expected_fake_calls": 1,
+    "expected_local_intents": null,
+    "reason": "A complete unconditional duration reply preserves the specified stop and value."
+  },
+  {
+    "id": "condition-feasibility-courtesy-01",
+    "message": "If possible, give Griffith Observatory 75 minutes.",
+    "expected_states": [
+      "proposal_ready"
+    ],
+    "expected_intents": [
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 75,
+            "minimum_minutes": 75,
+            "maximum_minutes": 75
+          }
+        }
+      }
+    ],
+    "provider_intents": [
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 75,
+            "minimum_minutes": 75,
+            "maximum_minutes": 75
+          }
+        }
+      }
+    ],
+    "expected_fake_calls": 1,
+    "expected_local_intents": [
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 75,
+            "minimum_minutes": 75,
+            "maximum_minutes": 75
+          }
+        }
+      }
+    ],
+    "reason": "An explicit feasibility courtesy adds no external event prerequisite; independent preview still decides feasibility."
+  },
+  {
+    "id": "condition-feasibility-courtesy-02",
+    "message": "Give Griffith Observatory 75 minutes if possible.",
+    "expected_states": [
+      "proposal_ready"
+    ],
+    "expected_intents": [
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 75,
+            "minimum_minutes": 75,
+            "maximum_minutes": 75
+          }
+        }
+      }
+    ],
+    "provider_intents": [
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 75,
+            "minimum_minutes": 75,
+            "maximum_minutes": 75
+          }
+        }
+      }
+    ],
+    "expected_fake_calls": 1,
+    "expected_local_intents": [
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 75,
+            "minimum_minutes": 75,
+            "maximum_minutes": 75
+          }
+        }
+      }
+    ],
+    "reason": "An explicit feasibility courtesy adds no external event prerequisite; independent preview still decides feasibility."
+  },
+  {
+    "id": "condition-feasibility-courtesy-03",
+    "message": "If possible, allocate 75 minutes to Griffith Observatory.",
+    "expected_states": [
+      "proposal_ready"
+    ],
+    "expected_intents": [
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 75,
+            "minimum_minutes": 75,
+            "maximum_minutes": 75
+          }
+        }
+      }
+    ],
+    "provider_intents": [
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 75,
+            "minimum_minutes": 75,
+            "maximum_minutes": 75
+          }
+        }
+      }
+    ],
+    "expected_fake_calls": 1,
+    "expected_local_intents": null,
+    "reason": "An explicit feasibility courtesy adds no external event prerequisite; independent preview still decides feasibility."
+  },
+  {
+    "id": "condition-feasibility-courtesy-04",
+    "message": "If you can, allow 75 minutes at Griffith Observatory.",
+    "expected_states": [
+      "proposal_ready"
+    ],
+    "expected_intents": [
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 75,
+            "minimum_minutes": 75,
+            "maximum_minutes": 75
+          }
+        }
+      }
+    ],
+    "provider_intents": [
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 75,
+            "minimum_minutes": 75,
+            "maximum_minutes": 75
+          }
+        }
+      }
+    ],
+    "expected_fake_calls": 1,
+    "expected_local_intents": null,
+    "reason": "An explicit feasibility courtesy adds no external event prerequisite; independent preview still decides feasibility."
+  },
+  {
+    "id": "condition-existing-or-mixed-condition-01",
+    "message": "Give Griffith Observatory 75 minutes only if parking is free.",
+    "expected_states": [
+      "clarification_required"
+    ],
+    "expected_intents": null,
+    "provider_intents": [
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 75,
+            "minimum_minutes": 75,
+            "maximum_minutes": 75
+          }
+        }
+      }
+    ],
+    "expected_fake_calls": 0,
+    "expected_local_intents": null,
+    "reason": "A courtesy cannot hide the later substantive condition."
+  },
+  {
+    "id": "condition-existing-or-mixed-condition-02",
+    "message": "Provided that the observatory is open, give Griffith Observatory 75 minutes.",
+    "expected_states": [
+      "clarification_required"
+    ],
+    "expected_intents": null,
+    "provider_intents": [
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 75,
+            "minimum_minutes": 75,
+            "maximum_minutes": 75
+          }
+        }
+      }
+    ],
+    "expected_fake_calls": 0,
+    "expected_local_intents": null,
+    "reason": "A courtesy cannot hide the later substantive condition."
+  },
+  {
+    "id": "condition-existing-or-mixed-condition-03",
+    "message": "If possible, allocate 75 minutes to Griffith Observatory only if parking is free.",
+    "expected_states": [
+      "clarification_required"
+    ],
+    "expected_intents": null,
+    "provider_intents": [
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 75,
+            "minimum_minutes": 75,
+            "maximum_minutes": 75
+          }
+        }
+      }
+    ],
+    "expected_fake_calls": 0,
+    "expected_local_intents": null,
+    "reason": "A courtesy cannot hide the later substantive condition."
+  },
+  {
+    "id": "condition-existing-or-mixed-condition-04",
+    "message": "If you can, allow 75 minutes at Griffith Observatory provided that the observatory is open.",
+    "expected_states": [
+      "clarification_required"
+    ],
+    "expected_intents": null,
+    "provider_intents": [
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 75,
+            "minimum_minutes": 75,
+            "maximum_minutes": 75
+          }
+        }
+      }
+    ],
+    "expected_fake_calls": 0,
+    "expected_local_intents": null,
+    "reason": "A courtesy cannot hide the later substantive condition."
+  },
+  {
+    "id": "condition-unknown-role-01-if",
+    "message": "Switch Stearns Wharf to a scenic stop only if parking is free.",
+    "expected_states": [
+      "clarification_required"
+    ],
+    "expected_intents": null,
+    "provider_intents": [
+      {
+        "type": "set_stop_role",
+        "target_stop_id": "stearns_wharf",
+        "parameters": {
+          "role": "scenic_stop"
+        }
+      }
+    ],
+    "expected_fake_calls": 0,
+    "expected_local_intents": null,
+    "reason": "A stop-role edit has no condition field; an unconditional scenic role drops the prerequisite."
+  },
+  {
+    "id": "condition-unknown-role-01-provided",
+    "message": "Switch Stearns Wharf to a scenic stop provided that the wharf is open.",
+    "expected_states": [
+      "clarification_required"
+    ],
+    "expected_intents": null,
+    "provider_intents": [
+      {
+        "type": "set_stop_role",
+        "target_stop_id": "stearns_wharf",
+        "parameters": {
+          "role": "scenic_stop"
+        }
+      }
+    ],
+    "expected_fake_calls": 0,
+    "expected_local_intents": null,
+    "reason": "A stop-role edit has no condition field; an unconditional scenic role drops the prerequisite."
+  },
+  {
+    "id": "condition-unknown-role-01-when",
+    "message": "Switch Stearns Wharf to a scenic stop when parking is free.",
+    "expected_states": [
+      "clarification_required"
+    ],
+    "expected_intents": null,
+    "provider_intents": [
+      {
+        "type": "set_stop_role",
+        "target_stop_id": "stearns_wharf",
+        "parameters": {
+          "role": "scenic_stop"
+        }
+      }
+    ],
+    "expected_fake_calls": 0,
+    "expected_local_intents": null,
+    "reason": "A stop-role edit has no condition field; an unconditional scenic role drops the prerequisite."
+  },
+  {
+    "id": "condition-unknown-role-01-unconditional",
+    "message": "Switch Stearns Wharf to a scenic stop.",
+    "expected_states": [
+      "proposal_ready"
+    ],
+    "expected_intents": [
+      {
+        "type": "set_stop_role",
+        "target_stop_id": "stearns_wharf",
+        "parameters": {
+          "role": "scenic_stop"
+        }
+      }
+    ],
+    "provider_intents": [
+      {
+        "type": "set_stop_role",
+        "target_stop_id": "stearns_wharf",
+        "parameters": {
+          "role": "scenic_stop"
+        }
+      }
+    ],
+    "expected_fake_calls": 1,
+    "expected_local_intents": null,
+    "reason": "The complete unconditional scenic-role request is supported; local clarification is permitted for unknown grammar."
+  },
+  {
+    "id": "condition-unknown-role-02-if",
+    "message": "Make Stearns Wharf a scenic stop only if parking is free.",
+    "expected_states": [
+      "clarification_required"
+    ],
+    "expected_intents": null,
+    "provider_intents": [
+      {
+        "type": "set_stop_role",
+        "target_stop_id": "stearns_wharf",
+        "parameters": {
+          "role": "scenic_stop"
+        }
+      }
+    ],
+    "expected_fake_calls": 0,
+    "expected_local_intents": null,
+    "reason": "A stop-role edit has no condition field; an unconditional scenic role drops the prerequisite."
+  },
+  {
+    "id": "condition-unknown-role-02-provided",
+    "message": "Make Stearns Wharf a scenic stop provided that the wharf is open.",
+    "expected_states": [
+      "clarification_required"
+    ],
+    "expected_intents": null,
+    "provider_intents": [
+      {
+        "type": "set_stop_role",
+        "target_stop_id": "stearns_wharf",
+        "parameters": {
+          "role": "scenic_stop"
+        }
+      }
+    ],
+    "expected_fake_calls": 0,
+    "expected_local_intents": null,
+    "reason": "A stop-role edit has no condition field; an unconditional scenic role drops the prerequisite."
+  },
+  {
+    "id": "condition-unknown-role-02-when",
+    "message": "Make Stearns Wharf a scenic stop when parking is free.",
+    "expected_states": [
+      "clarification_required"
+    ],
+    "expected_intents": null,
+    "provider_intents": [
+      {
+        "type": "set_stop_role",
+        "target_stop_id": "stearns_wharf",
+        "parameters": {
+          "role": "scenic_stop"
+        }
+      }
+    ],
+    "expected_fake_calls": 0,
+    "expected_local_intents": null,
+    "reason": "A stop-role edit has no condition field; an unconditional scenic role drops the prerequisite."
+  },
+  {
+    "id": "condition-unknown-role-02-unconditional",
+    "message": "Make Stearns Wharf a scenic stop.",
+    "expected_states": [
+      "proposal_ready"
+    ],
+    "expected_intents": [
+      {
+        "type": "set_stop_role",
+        "target_stop_id": "stearns_wharf",
+        "parameters": {
+          "role": "scenic_stop"
+        }
+      }
+    ],
+    "provider_intents": [
+      {
+        "type": "set_stop_role",
+        "target_stop_id": "stearns_wharf",
+        "parameters": {
+          "role": "scenic_stop"
+        }
+      }
+    ],
+    "expected_fake_calls": 1,
+    "expected_local_intents": null,
+    "reason": "The complete unconditional scenic-role request is supported; local clarification is permitted for unknown grammar."
+  },
+  {
+    "id": "condition-unknown-role-03-if",
+    "message": "Mark Stearns Wharf as a scenic stop only if parking is free.",
+    "expected_states": [
+      "clarification_required"
+    ],
+    "expected_intents": null,
+    "provider_intents": [
+      {
+        "type": "set_stop_role",
+        "target_stop_id": "stearns_wharf",
+        "parameters": {
+          "role": "scenic_stop"
+        }
+      }
+    ],
+    "expected_fake_calls": 0,
+    "expected_local_intents": null,
+    "reason": "A stop-role edit has no condition field; an unconditional scenic role drops the prerequisite."
+  },
+  {
+    "id": "condition-unknown-role-03-provided",
+    "message": "Mark Stearns Wharf as a scenic stop provided that the wharf is open.",
+    "expected_states": [
+      "clarification_required"
+    ],
+    "expected_intents": null,
+    "provider_intents": [
+      {
+        "type": "set_stop_role",
+        "target_stop_id": "stearns_wharf",
+        "parameters": {
+          "role": "scenic_stop"
+        }
+      }
+    ],
+    "expected_fake_calls": 0,
+    "expected_local_intents": null,
+    "reason": "A stop-role edit has no condition field; an unconditional scenic role drops the prerequisite."
+  },
+  {
+    "id": "condition-unknown-role-03-when",
+    "message": "Mark Stearns Wharf as a scenic stop when parking is free.",
+    "expected_states": [
+      "clarification_required"
+    ],
+    "expected_intents": null,
+    "provider_intents": [
+      {
+        "type": "set_stop_role",
+        "target_stop_id": "stearns_wharf",
+        "parameters": {
+          "role": "scenic_stop"
+        }
+      }
+    ],
+    "expected_fake_calls": 0,
+    "expected_local_intents": null,
+    "reason": "A stop-role edit has no condition field; an unconditional scenic role drops the prerequisite."
+  },
+  {
+    "id": "condition-unknown-role-03-unconditional",
+    "message": "Mark Stearns Wharf as a scenic stop.",
+    "expected_states": [
+      "proposal_ready"
+    ],
+    "expected_intents": [
+      {
+        "type": "set_stop_role",
+        "target_stop_id": "stearns_wharf",
+        "parameters": {
+          "role": "scenic_stop"
+        }
+      }
+    ],
+    "provider_intents": [
+      {
+        "type": "set_stop_role",
+        "target_stop_id": "stearns_wharf",
+        "parameters": {
+          "role": "scenic_stop"
+        }
+      }
+    ],
+    "expected_fake_calls": 1,
+    "expected_local_intents": null,
+    "reason": "The complete unconditional scenic-role request is supported; local clarification is permitted for unknown grammar."
+  },
+  {
+    "id": "condition-unknown-role-04-if",
+    "message": "Use Stearns Wharf as a scenic stop only if parking is free.",
+    "expected_states": [
+      "clarification_required"
+    ],
+    "expected_intents": null,
+    "provider_intents": [
+      {
+        "type": "set_stop_role",
+        "target_stop_id": "stearns_wharf",
+        "parameters": {
+          "role": "scenic_stop"
+        }
+      }
+    ],
+    "expected_fake_calls": 0,
+    "expected_local_intents": null,
+    "reason": "A stop-role edit has no condition field; an unconditional scenic role drops the prerequisite."
+  },
+  {
+    "id": "condition-unknown-role-04-provided",
+    "message": "Use Stearns Wharf as a scenic stop provided that the wharf is open.",
+    "expected_states": [
+      "clarification_required"
+    ],
+    "expected_intents": null,
+    "provider_intents": [
+      {
+        "type": "set_stop_role",
+        "target_stop_id": "stearns_wharf",
+        "parameters": {
+          "role": "scenic_stop"
+        }
+      }
+    ],
+    "expected_fake_calls": 0,
+    "expected_local_intents": null,
+    "reason": "A stop-role edit has no condition field; an unconditional scenic role drops the prerequisite."
+  },
+  {
+    "id": "condition-unknown-role-04-when",
+    "message": "Use Stearns Wharf as a scenic stop when parking is free.",
+    "expected_states": [
+      "clarification_required"
+    ],
+    "expected_intents": null,
+    "provider_intents": [
+      {
+        "type": "set_stop_role",
+        "target_stop_id": "stearns_wharf",
+        "parameters": {
+          "role": "scenic_stop"
+        }
+      }
+    ],
+    "expected_fake_calls": 0,
+    "expected_local_intents": null,
+    "reason": "A stop-role edit has no condition field; an unconditional scenic role drops the prerequisite."
+  },
+  {
+    "id": "condition-unknown-role-04-unconditional",
+    "message": "Use Stearns Wharf as a scenic stop.",
+    "expected_states": [
+      "proposal_ready"
+    ],
+    "expected_intents": [
+      {
+        "type": "set_stop_role",
+        "target_stop_id": "stearns_wharf",
+        "parameters": {
+          "role": "scenic_stop"
+        }
+      }
+    ],
+    "provider_intents": [
+      {
+        "type": "set_stop_role",
+        "target_stop_id": "stearns_wharf",
+        "parameters": {
+          "role": "scenic_stop"
+        }
+      }
+    ],
+    "expected_fake_calls": 1,
+    "expected_local_intents": null,
+    "reason": "The complete unconditional scenic-role request is supported; local clarification is permitted for unknown grammar."
+  },
+  {
+    "id": "condition-unknown-role-05-if",
+    "message": "Consider Stearns Wharf a scenic stop only if parking is free.",
+    "expected_states": [
+      "clarification_required"
+    ],
+    "expected_intents": null,
+    "provider_intents": [
+      {
+        "type": "set_stop_role",
+        "target_stop_id": "stearns_wharf",
+        "parameters": {
+          "role": "scenic_stop"
+        }
+      }
+    ],
+    "expected_fake_calls": 0,
+    "expected_local_intents": null,
+    "reason": "A stop-role edit has no condition field; an unconditional scenic role drops the prerequisite."
+  },
+  {
+    "id": "condition-unknown-role-05-provided",
+    "message": "Consider Stearns Wharf a scenic stop provided that the wharf is open.",
+    "expected_states": [
+      "clarification_required"
+    ],
+    "expected_intents": null,
+    "provider_intents": [
+      {
+        "type": "set_stop_role",
+        "target_stop_id": "stearns_wharf",
+        "parameters": {
+          "role": "scenic_stop"
+        }
+      }
+    ],
+    "expected_fake_calls": 0,
+    "expected_local_intents": null,
+    "reason": "A stop-role edit has no condition field; an unconditional scenic role drops the prerequisite."
+  },
+  {
+    "id": "condition-unknown-role-05-when",
+    "message": "Consider Stearns Wharf a scenic stop when parking is free.",
+    "expected_states": [
+      "clarification_required"
+    ],
+    "expected_intents": null,
+    "provider_intents": [
+      {
+        "type": "set_stop_role",
+        "target_stop_id": "stearns_wharf",
+        "parameters": {
+          "role": "scenic_stop"
+        }
+      }
+    ],
+    "expected_fake_calls": 0,
+    "expected_local_intents": null,
+    "reason": "A stop-role edit has no condition field; an unconditional scenic role drops the prerequisite."
+  },
+  {
+    "id": "condition-unknown-role-05-unconditional",
+    "message": "Consider Stearns Wharf a scenic stop.",
+    "expected_states": [
+      "proposal_ready"
+    ],
+    "expected_intents": [
+      {
+        "type": "set_stop_role",
+        "target_stop_id": "stearns_wharf",
+        "parameters": {
+          "role": "scenic_stop"
+        }
+      }
+    ],
+    "provider_intents": [
+      {
+        "type": "set_stop_role",
+        "target_stop_id": "stearns_wharf",
+        "parameters": {
+          "role": "scenic_stop"
+        }
+      }
+    ],
+    "expected_fake_calls": 1,
+    "expected_local_intents": null,
+    "reason": "The complete unconditional scenic-role request is supported; local clarification is permitted for unknown grammar."
+  },
+  {
+    "id": "condition-unknown-role-06-if",
+    "message": "Stearns Wharf should be a scenic stop only if parking is free.",
+    "expected_states": [
+      "clarification_required"
+    ],
+    "expected_intents": null,
+    "provider_intents": [
+      {
+        "type": "set_stop_role",
+        "target_stop_id": "stearns_wharf",
+        "parameters": {
+          "role": "scenic_stop"
+        }
+      }
+    ],
+    "expected_fake_calls": 0,
+    "expected_local_intents": null,
+    "reason": "A stop-role edit has no condition field; an unconditional scenic role drops the prerequisite."
+  },
+  {
+    "id": "condition-unknown-role-06-provided",
+    "message": "Stearns Wharf should be a scenic stop provided that the wharf is open.",
+    "expected_states": [
+      "clarification_required"
+    ],
+    "expected_intents": null,
+    "provider_intents": [
+      {
+        "type": "set_stop_role",
+        "target_stop_id": "stearns_wharf",
+        "parameters": {
+          "role": "scenic_stop"
+        }
+      }
+    ],
+    "expected_fake_calls": 0,
+    "expected_local_intents": null,
+    "reason": "A stop-role edit has no condition field; an unconditional scenic role drops the prerequisite."
+  },
+  {
+    "id": "condition-unknown-role-06-when",
+    "message": "Stearns Wharf should be a scenic stop when parking is free.",
+    "expected_states": [
+      "clarification_required"
+    ],
+    "expected_intents": null,
+    "provider_intents": [
+      {
+        "type": "set_stop_role",
+        "target_stop_id": "stearns_wharf",
+        "parameters": {
+          "role": "scenic_stop"
+        }
+      }
+    ],
+    "expected_fake_calls": 0,
+    "expected_local_intents": null,
+    "reason": "A stop-role edit has no condition field; an unconditional scenic role drops the prerequisite."
+  },
+  {
+    "id": "condition-unknown-role-06-unconditional",
+    "message": "Stearns Wharf should be a scenic stop.",
+    "expected_states": [
+      "proposal_ready"
+    ],
+    "expected_intents": [
+      {
+        "type": "set_stop_role",
+        "target_stop_id": "stearns_wharf",
+        "parameters": {
+          "role": "scenic_stop"
+        }
+      }
+    ],
+    "provider_intents": [
+      {
+        "type": "set_stop_role",
+        "target_stop_id": "stearns_wharf",
+        "parameters": {
+          "role": "scenic_stop"
+        }
+      }
+    ],
+    "expected_fake_calls": 1,
+    "expected_local_intents": null,
+    "reason": "The complete unconditional scenic-role request is supported; local clarification is permitted for unknown grammar."
+  },
+  {
+    "id": "condition-unknown-role-07-if",
+    "message": "Let us have Stearns Wharf as a scenic stop only if parking is free.",
+    "expected_states": [
+      "clarification_required"
+    ],
+    "expected_intents": null,
+    "provider_intents": [
+      {
+        "type": "set_stop_role",
+        "target_stop_id": "stearns_wharf",
+        "parameters": {
+          "role": "scenic_stop"
+        }
+      }
+    ],
+    "expected_fake_calls": 0,
+    "expected_local_intents": null,
+    "reason": "A stop-role edit has no condition field; an unconditional scenic role drops the prerequisite."
+  },
+  {
+    "id": "condition-unknown-role-07-provided",
+    "message": "Let us have Stearns Wharf as a scenic stop provided that the wharf is open.",
+    "expected_states": [
+      "clarification_required"
+    ],
+    "expected_intents": null,
+    "provider_intents": [
+      {
+        "type": "set_stop_role",
+        "target_stop_id": "stearns_wharf",
+        "parameters": {
+          "role": "scenic_stop"
+        }
+      }
+    ],
+    "expected_fake_calls": 0,
+    "expected_local_intents": null,
+    "reason": "A stop-role edit has no condition field; an unconditional scenic role drops the prerequisite."
+  },
+  {
+    "id": "condition-unknown-role-07-when",
+    "message": "Let us have Stearns Wharf as a scenic stop when parking is free.",
+    "expected_states": [
+      "clarification_required"
+    ],
+    "expected_intents": null,
+    "provider_intents": [
+      {
+        "type": "set_stop_role",
+        "target_stop_id": "stearns_wharf",
+        "parameters": {
+          "role": "scenic_stop"
+        }
+      }
+    ],
+    "expected_fake_calls": 0,
+    "expected_local_intents": null,
+    "reason": "A stop-role edit has no condition field; an unconditional scenic role drops the prerequisite."
+  },
+  {
+    "id": "condition-unknown-role-07-unconditional",
+    "message": "Let us have Stearns Wharf as a scenic stop.",
+    "expected_states": [
+      "proposal_ready"
+    ],
+    "expected_intents": [
+      {
+        "type": "set_stop_role",
+        "target_stop_id": "stearns_wharf",
+        "parameters": {
+          "role": "scenic_stop"
+        }
+      }
+    ],
+    "provider_intents": [
+      {
+        "type": "set_stop_role",
+        "target_stop_id": "stearns_wharf",
+        "parameters": {
+          "role": "scenic_stop"
+        }
+      }
+    ],
+    "expected_fake_calls": 1,
+    "expected_local_intents": null,
+    "reason": "The complete unconditional scenic-role request is supported; local clarification is permitted for unknown grammar."
+  },
+  {
+    "id": "condition-unknown-role-08-if",
+    "message": "Stearns Wharf is to be a scenic stop only if parking is free.",
+    "expected_states": [
+      "clarification_required"
+    ],
+    "expected_intents": null,
+    "provider_intents": [
+      {
+        "type": "set_stop_role",
+        "target_stop_id": "stearns_wharf",
+        "parameters": {
+          "role": "scenic_stop"
+        }
+      }
+    ],
+    "expected_fake_calls": 0,
+    "expected_local_intents": null,
+    "reason": "A stop-role edit has no condition field; an unconditional scenic role drops the prerequisite."
+  },
+  {
+    "id": "condition-unknown-role-08-provided",
+    "message": "Stearns Wharf is to be a scenic stop provided that the wharf is open.",
+    "expected_states": [
+      "clarification_required"
+    ],
+    "expected_intents": null,
+    "provider_intents": [
+      {
+        "type": "set_stop_role",
+        "target_stop_id": "stearns_wharf",
+        "parameters": {
+          "role": "scenic_stop"
+        }
+      }
+    ],
+    "expected_fake_calls": 0,
+    "expected_local_intents": null,
+    "reason": "A stop-role edit has no condition field; an unconditional scenic role drops the prerequisite."
+  },
+  {
+    "id": "condition-unknown-role-08-when",
+    "message": "Stearns Wharf is to be a scenic stop when parking is free.",
+    "expected_states": [
+      "clarification_required"
+    ],
+    "expected_intents": null,
+    "provider_intents": [
+      {
+        "type": "set_stop_role",
+        "target_stop_id": "stearns_wharf",
+        "parameters": {
+          "role": "scenic_stop"
+        }
+      }
+    ],
+    "expected_fake_calls": 0,
+    "expected_local_intents": null,
+    "reason": "A stop-role edit has no condition field; an unconditional scenic role drops the prerequisite."
+  },
+  {
+    "id": "condition-unknown-role-08-unconditional",
+    "message": "Stearns Wharf is to be a scenic stop.",
+    "expected_states": [
+      "proposal_ready"
+    ],
+    "expected_intents": [
+      {
+        "type": "set_stop_role",
+        "target_stop_id": "stearns_wharf",
+        "parameters": {
+          "role": "scenic_stop"
+        }
+      }
+    ],
+    "provider_intents": [
+      {
+        "type": "set_stop_role",
+        "target_stop_id": "stearns_wharf",
+        "parameters": {
+          "role": "scenic_stop"
+        }
+      }
+    ],
+    "expected_fake_calls": 1,
+    "expected_local_intents": null,
+    "reason": "The complete unconditional scenic-role request is supported; local clarification is permitted for unknown grammar."
+  },
+  {
+    "id": "condition-role-courtesy-01",
+    "message": "If possible, switch Stearns Wharf to a scenic stop.",
+    "expected_states": [
+      "proposal_ready"
+    ],
+    "expected_intents": [
+      {
+        "type": "set_stop_role",
+        "target_stop_id": "stearns_wharf",
+        "parameters": {
+          "role": "scenic_stop"
+        }
+      }
+    ],
+    "provider_intents": [
+      {
+        "type": "set_stop_role",
+        "target_stop_id": "stearns_wharf",
+        "parameters": {
+          "role": "scenic_stop"
+        }
+      }
+    ],
+    "expected_fake_calls": 1,
+    "expected_local_intents": null,
+    "reason": "Exact feasibility courtesy does not require an event-condition field."
+  },
+  {
+    "id": "condition-role-courtesy-02",
+    "message": "Switch Stearns Wharf to a scenic stop if possible.",
+    "expected_states": [
+      "proposal_ready"
+    ],
+    "expected_intents": [
+      {
+        "type": "set_stop_role",
+        "target_stop_id": "stearns_wharf",
+        "parameters": {
+          "role": "scenic_stop"
+        }
+      }
+    ],
+    "provider_intents": [
+      {
+        "type": "set_stop_role",
+        "target_stop_id": "stearns_wharf",
+        "parameters": {
+          "role": "scenic_stop"
+        }
+      }
+    ],
+    "expected_fake_calls": 1,
+    "expected_local_intents": null,
+    "reason": "Exact feasibility courtesy does not require an event-condition field."
+  },
+  {
+    "id": "condition-role-courtesy-03",
+    "message": "If you can, make Stearns Wharf a scenic stop.",
+    "expected_states": [
+      "proposal_ready"
+    ],
+    "expected_intents": [
+      {
+        "type": "set_stop_role",
+        "target_stop_id": "stearns_wharf",
+        "parameters": {
+          "role": "scenic_stop"
+        }
+      }
+    ],
+    "provider_intents": [
+      {
+        "type": "set_stop_role",
+        "target_stop_id": "stearns_wharf",
+        "parameters": {
+          "role": "scenic_stop"
+        }
+      }
+    ],
+    "expected_fake_calls": 1,
+    "expected_local_intents": null,
+    "reason": "Exact feasibility courtesy does not require an event-condition field."
+  },
+  {
+    "id": "condition-role-courtesy-04",
+    "message": "Make Stearns Wharf a scenic stop if you can.",
+    "expected_states": [
+      "proposal_ready"
+    ],
+    "expected_intents": [
+      {
+        "type": "set_stop_role",
+        "target_stop_id": "stearns_wharf",
+        "parameters": {
+          "role": "scenic_stop"
+        }
+      }
+    ],
+    "provider_intents": [
+      {
+        "type": "set_stop_role",
+        "target_stop_id": "stearns_wharf",
+        "parameters": {
+          "role": "scenic_stop"
+        }
+      }
+    ],
+    "expected_fake_calls": 1,
+    "expected_local_intents": null,
+    "reason": "Exact feasibility courtesy does not require an event-condition field."
+  },
+  {
+    "id": "condition-known-role-condition-01",
+    "message": "Treat Stearns Wharf as a scenic stop only if parking is free.",
+    "expected_states": [
+      "clarification_required"
+    ],
+    "expected_intents": null,
+    "provider_intents": [
+      {
+        "type": "set_stop_role",
+        "target_stop_id": "stearns_wharf",
+        "parameters": {
+          "role": "scenic_stop"
+        }
+      }
+    ],
+    "expected_fake_calls": 0,
+    "expected_local_intents": null,
+    "reason": "Known-action condition control must remain fail-closed."
+  },
+  {
+    "id": "condition-known-role-condition-02",
+    "message": "Classify Stearns Wharf as a scenic stop provided that the wharf is open.",
+    "expected_states": [
+      "clarification_required"
+    ],
+    "expected_intents": null,
+    "provider_intents": [
+      {
+        "type": "set_stop_role",
+        "target_stop_id": "stearns_wharf",
+        "parameters": {
+          "role": "scenic_stop"
+        }
+      }
+    ],
+    "expected_fake_calls": 0,
+    "expected_local_intents": null,
+    "reason": "Known-action condition control must remain fail-closed."
+  },
+  {
+    "id": "condition-selected-stop-pronoun-01",
+    "message": "Make it a scenic stop only if parking is free.",
+    "expected_states": [
+      "clarification_required"
+    ],
+    "expected_intents": null,
+    "provider_intents": [
+      {
+        "type": "set_stop_role",
+        "target_stop_id": "stearns_wharf",
+        "parameters": {
+          "role": "scenic_stop"
+        }
+      }
+    ],
+    "expected_fake_calls": 1,
+    "expected_local_intents": null,
+    "reason": "The selected stop resolves the pronoun; a proposed edit still cannot omit a substantive prerequisite. Feasibility courtesies and unconditional edits remain supported.",
+    "context_selection": {
+      "selected_day": 6,
+      "selected_stop_id": "stearns_wharf"
+    }
+  },
+  {
+    "id": "condition-selected-stop-pronoun-02",
+    "message": "Switch it to a scenic stop provided that the wharf is open.",
+    "expected_states": [
+      "clarification_required"
+    ],
+    "expected_intents": null,
+    "provider_intents": [
+      {
+        "type": "set_stop_role",
+        "target_stop_id": "stearns_wharf",
+        "parameters": {
+          "role": "scenic_stop"
+        }
+      }
+    ],
+    "expected_fake_calls": 1,
+    "expected_local_intents": null,
+    "reason": "The selected stop resolves the pronoun; a proposed edit still cannot omit a substantive prerequisite. Feasibility courtesies and unconditional edits remain supported.",
+    "context_selection": {
+      "selected_day": 6,
+      "selected_stop_id": "stearns_wharf"
+    }
+  },
+  {
+    "id": "condition-selected-stop-pronoun-03",
+    "message": "Use it as a scenic stop when parking is free.",
+    "expected_states": [
+      "clarification_required"
+    ],
+    "expected_intents": null,
+    "provider_intents": [
+      {
+        "type": "set_stop_role",
+        "target_stop_id": "stearns_wharf",
+        "parameters": {
+          "role": "scenic_stop"
+        }
+      }
+    ],
+    "expected_fake_calls": 1,
+    "expected_local_intents": null,
+    "reason": "The selected stop resolves the pronoun; a proposed edit still cannot omit a substantive prerequisite. Feasibility courtesies and unconditional edits remain supported.",
+    "context_selection": {
+      "selected_day": 6,
+      "selected_stop_id": "stearns_wharf"
+    }
+  },
+  {
+    "id": "condition-selected-stop-pronoun-04",
+    "message": "Allocate 75 minutes there only if parking is free.",
+    "expected_states": [
+      "clarification_required"
+    ],
+    "expected_intents": null,
+    "provider_intents": [
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "stearns_wharf",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 75,
+            "minimum_minutes": 75,
+            "maximum_minutes": 75
+          }
+        }
+      }
+    ],
+    "expected_fake_calls": 1,
+    "expected_local_intents": null,
+    "reason": "The selected stop resolves the pronoun; a proposed edit still cannot omit a substantive prerequisite. Feasibility courtesies and unconditional edits remain supported.",
+    "context_selection": {
+      "selected_day": 6,
+      "selected_stop_id": "stearns_wharf"
+    }
+  },
+  {
+    "id": "condition-selected-stop-pronoun-05",
+    "message": "If parking is free, make it a scenic stop.",
+    "expected_states": [
+      "clarification_required"
+    ],
+    "expected_intents": null,
+    "provider_intents": [
+      {
+        "type": "set_stop_role",
+        "target_stop_id": "stearns_wharf",
+        "parameters": {
+          "role": "scenic_stop"
+        }
+      }
+    ],
+    "expected_fake_calls": 1,
+    "expected_local_intents": null,
+    "reason": "The selected stop resolves the pronoun; a proposed edit still cannot omit a substantive prerequisite. Feasibility courtesies and unconditional edits remain supported.",
+    "context_selection": {
+      "selected_day": 6,
+      "selected_stop_id": "stearns_wharf"
+    }
+  },
+  {
+    "id": "condition-selected-stop-pronoun-06",
+    "message": "If you can, make it a scenic stop only if parking is free.",
+    "expected_states": [
+      "clarification_required"
+    ],
+    "expected_intents": null,
+    "provider_intents": [
+      {
+        "type": "set_stop_role",
+        "target_stop_id": "stearns_wharf",
+        "parameters": {
+          "role": "scenic_stop"
+        }
+      }
+    ],
+    "expected_fake_calls": 1,
+    "expected_local_intents": null,
+    "reason": "The selected stop resolves the pronoun; a proposed edit still cannot omit a substantive prerequisite. Feasibility courtesies and unconditional edits remain supported.",
+    "context_selection": {
+      "selected_day": 6,
+      "selected_stop_id": "stearns_wharf"
+    }
+  },
+  {
+    "id": "condition-selected-stop-pronoun-07",
+    "message": "Make it a scenic stop.",
+    "expected_states": [
+      "proposal_ready"
+    ],
+    "expected_intents": [
+      {
+        "type": "set_stop_role",
+        "target_stop_id": "stearns_wharf",
+        "parameters": {
+          "role": "scenic_stop"
+        }
+      }
+    ],
+    "provider_intents": [
+      {
+        "type": "set_stop_role",
+        "target_stop_id": "stearns_wharf",
+        "parameters": {
+          "role": "scenic_stop"
+        }
+      }
+    ],
+    "expected_fake_calls": 1,
+    "expected_local_intents": null,
+    "reason": "The selected stop resolves the pronoun; a proposed edit still cannot omit a substantive prerequisite. Feasibility courtesies and unconditional edits remain supported.",
+    "context_selection": {
+      "selected_day": 6,
+      "selected_stop_id": "stearns_wharf"
+    }
+  },
+  {
+    "id": "condition-selected-stop-pronoun-08",
+    "message": "If possible make it a scenic stop.",
+    "expected_states": [
+      "proposal_ready"
+    ],
+    "expected_intents": [
+      {
+        "type": "set_stop_role",
+        "target_stop_id": "stearns_wharf",
+        "parameters": {
+          "role": "scenic_stop"
+        }
+      }
+    ],
+    "provider_intents": [
+      {
+        "type": "set_stop_role",
+        "target_stop_id": "stearns_wharf",
+        "parameters": {
+          "role": "scenic_stop"
+        }
+      }
+    ],
+    "expected_fake_calls": 1,
+    "expected_local_intents": null,
+    "reason": "The selected stop resolves the pronoun; a proposed edit still cannot omit a substantive prerequisite. Feasibility courtesies and unconditional edits remain supported.",
+    "context_selection": {
+      "selected_day": 6,
+      "selected_stop_id": "stearns_wharf"
+    }
+  },
+  {
+    "id": "condition-selected-stop-pronoun-09",
+    "message": "If you can, switch it to a scenic stop.",
+    "expected_states": [
+      "proposal_ready"
+    ],
+    "expected_intents": [
+      {
+        "type": "set_stop_role",
+        "target_stop_id": "stearns_wharf",
+        "parameters": {
+          "role": "scenic_stop"
+        }
+      }
+    ],
+    "provider_intents": [
+      {
+        "type": "set_stop_role",
+        "target_stop_id": "stearns_wharf",
+        "parameters": {
+          "role": "scenic_stop"
+        }
+      }
+    ],
+    "expected_fake_calls": 1,
+    "expected_local_intents": null,
+    "reason": "The selected stop resolves the pronoun; a proposed edit still cannot omit a substantive prerequisite. Feasibility courtesies and unconditional edits remain supported.",
+    "context_selection": {
+      "selected_day": 6,
+      "selected_stop_id": "stearns_wharf"
+    }
+  },
+  {
+    "id": "condition-selected-stop-pronoun-10",
+    "message": "Allocate 75 minutes there.",
+    "expected_states": [
+      "proposal_ready"
+    ],
+    "expected_intents": [
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "stearns_wharf",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 75,
+            "minimum_minutes": 75,
+            "maximum_minutes": 75
+          }
+        }
+      }
+    ],
+    "provider_intents": [
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "stearns_wharf",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 75,
+            "minimum_minutes": 75,
+            "maximum_minutes": 75
+          }
+        }
+      }
+    ],
+    "expected_fake_calls": 1,
+    "expected_local_intents": null,
+    "reason": "The selected stop resolves the pronoun; a proposed edit still cannot omit a substantive prerequisite. Feasibility courtesies and unconditional edits remain supported.",
+    "context_selection": {
+      "selected_day": 6,
+      "selected_stop_id": "stearns_wharf"
+    }
+  }
+]

@@ -177,11 +177,18 @@ class RepairModel:
             record = dict(parent_stops.get(stop_id) or candidate_stops.get(stop_id) or {"stop_id": stop_id})
             record["stop_id"] = stop_id
             day = int(solution.day_assignments.get(stop_id, record.get("day", 0)) or 0)
-            if day:
-                record["day"] = day
-                day_assignments[stop_id] = day
-                ordered_by_day.setdefault(day, []).append(stop_id)
+            if day <= 0:
+                raise ValueError(f"repair solution requires a positive day for {stop_id}")
+            record["day"] = day
+            day_assignments[stop_id] = day
+            ordered_by_day.setdefault(day, []).append(stop_id)
+            record["stop_order"] = len(ordered_by_day[day])
+            for alias in ("order", "route_sequence_index", "visit_order"):
+                if alias in record:
+                    record[alias] = record["stop_order"]
             selected_records.append(record)
+        records_by_id = {record["stop_id"]: record for record in selected_records}
+        selected_records = [records_by_id[stop_id] for day in sorted(ordered_by_day) for stop_id in ordered_by_day[day]]
         ordered_days = tuple({"day": day, "stop_ids": tuple(stop_ids)} for day, stop_ids in sorted(ordered_by_day.items()))
         child_id = child_plan_id or f"plan_{stable_content_hash({'parent': self.parent_plan_id, 'solution': solution.metadata})}"
         child = PlanArtifactV2(
@@ -199,7 +206,7 @@ class RepairModel:
             route_ids_by_day={int(day): route_id for day, route_id in solution.route_ids_by_day.items()},
             owned_constraints=tuple(dict(record) for record in self.metadata.get("owned_constraints", ())),
         )
-        diff = compute_plan_diff(self.metadata["parent_plan"], child, OwnershipPolicy())
+        diff = compute_plan_diff(self.metadata["parent_plan"], child, OwnershipPolicy(**self.metadata["ownership_policy"]))
         change_components = dict(child.change_components)
         change_components["weighted_edit_cost"] = diff.weighted_edit_cost
         return PlanArtifactV2(
@@ -323,6 +330,7 @@ def build_repair_master_model(
             matrix.cell(origin_id, destination_id).require_publication_eligible()
     request_id = _request_id(request)
     metadata = {
+        "ownership_policy": asdict(policy),
         "catalog_snapshot_id": parent.catalog_snapshot_id,
         "context_snapshot_id": parent.context_snapshot_id,
         "owned_constraints": tuple(dict(record) for record in parent.owned_constraints),
@@ -352,6 +360,7 @@ def build_repair_master_model(
         "parent_plan": parent,
     }
     model_seed = {
+        "ownership_policy": asdict(policy),
         "parent_plan_id": parent.plan_id,
         "request_id": request_id,
         "neighborhood": neighborhood.to_record(),
@@ -727,6 +736,17 @@ def _constraints(
                     reason_codes=("booked_without_permission",),
                 )
             )
+            if constraint.scope in {ConstraintScope.STOP, ConstraintScope.POI}:
+                rows.append(
+                    RepairConstraint(
+                        constraint_id=f"booked_select_{constraint.target_id}",
+                        constraint_type="fixed_selection",
+                        target_id=constraint.target_id,
+                        variable_name=f"select_stop[{constraint.target_id}]",
+                        required_value=1,
+                        reason_codes=("booked_stop_without_permission",),
+                    )
+                )
             if constraint.scope == ConstraintScope.LODGING:
                 for day, lodging_id in index.lodging_by_day.items():
                     if lodging_id == constraint.target_id:
@@ -800,31 +820,29 @@ def _change_indicator_value(change: TypedChangeVariable, solution: RepairSolutio
 def _ordered_solution_stop_ids(model: RepairModel, solution: RepairSolution) -> tuple[str, ...]:
     day_sequences = solution.metadata.get("day_sequences", {})
     if not isinstance(day_sequences, dict):
-        return tuple(model.metadata["ordered_stop_ids"])
+        raise ValueError("day_sequences must be a day-to-sequence mapping")
+    selected = set(solution.selected_stop_ids)
+    if len(selected) != len(solution.selected_stop_ids):
+        raise ValueError("duplicate selected stop in repair solution")
     emitted: set[str] = set()
     ordered: list[str] = []
-    parent = model.metadata["parent_plan"]
-    parent_day_by_stop = model.metadata.get("parent_day_by_stop", {})
-    for stop_id in parent.sequence:
-        day = parent_day_by_stop.get(str(stop_id))
-        override_key = str(day) if day is not None else ""
-        override = day_sequences.get(override_key)
-        if override_key in day_sequences:
-            for override_stop_id in override:
-                stop_text = str(override_stop_id)
-                if stop_text not in emitted:
-                    ordered.append(stop_text)
-                    emitted.add(stop_text)
-            continue
-        if stop_id not in emitted:
-            ordered.append(str(stop_id))
-            emitted.add(str(stop_id))
+    for raw_day, override in day_sequences.items():
+        if not isinstance(override, (list, tuple)):
+            raise ValueError("day sequence must be a list or tuple")
+        for stop_id in override:
+            key = str(stop_id)
+            if key not in selected or key in emitted or solution.day_assignments.get(key) != int(raw_day):
+                raise ValueError("day sequence disagrees with selected stops or day assignments")
+            ordered.append(key)
+            emitted.add(key)
     for stop_id in model.metadata["ordered_stop_ids"]:
         stop_text = str(stop_id)
-        if stop_text in emitted:
+        if stop_text in emitted or stop_text not in selected:
             continue
         ordered.append(stop_text)
         emitted.add(stop_text)
+    if selected != emitted:
+        raise ValueError("selected stop is outside the repair candidate universe")
     return tuple(ordered)
 
 

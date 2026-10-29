@@ -141,9 +141,16 @@ EVALUATED_TYPED_EDIT_OPERATIONS = frozenset(
     }
 )
 DRAFT_ONLY_TYPED_EDIT_OPERATIONS = frozenset(TYPED_EDIT_OPERATION_NAMES) - EVALUATED_TYPED_EDIT_OPERATIONS
+ATOMIC_DIRECT_EDIT_OPERATIONS = frozenset({
+    DraftOperationTypeV2.SET_STOP_ORDER.value,
+    DraftOperationTypeV2.SET_STOP_ROLE.value,
+    DraftOperationTypeV2.SET_STOP_DURATION.value,
+    DraftOperationTypeV2.SET_STOP_TIME_WINDOW.value,
+})
+ATOMIC_COMPOSABLE_OPERATIONS = ATOMIC_DIRECT_EDIT_OPERATIONS | {"keep_stop", "replace_nearby", "add_candidate"}
 
 
-def typed_edit_capabilities() -> dict[str, object]:
+def typed_edit_capabilities(*, combinable_operation_types: tuple[str, ...] = ()) -> dict[str, object]:
     """Return the closed W4R edit vocabulary without overstating execution support."""
 
     operations: dict[str, dict[str, object]] = {}
@@ -238,6 +245,9 @@ def typed_edit_capabilities() -> dict[str, object]:
             ],
         }
     )
+    for name in (DraftOperationTypeV2.SET_STOP_ROLE.value, DraftOperationTypeV2.SET_STOP_TIME_WINDOW.value):
+        if name in combinable_operation_types:
+            operations[name]["combinable_operation_types"] = list(combinable_operation_types)
     return {
         "schema_version": "product-typed-edit-capabilities-v1",
         "vocabularies": {

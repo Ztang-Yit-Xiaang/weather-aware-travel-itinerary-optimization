@@ -16,7 +16,10 @@ from itinerary_system.product_app.evaluated_stop_edits import (
 )
 from itinerary_system.product_app.models import DraftOperationV1
 from itinerary_system.product_app.product_demo import load_product_demo_package
-from itinerary_system.product_app.service import _attach_role_proposal_evidence
+from itinerary_system.product_app.service import (
+    _attach_role_proposal_evidence,
+    _attach_role_proposal_integrity,
+)
 from itinerary_system.product_app.workspace import WorkspaceError, WorkspaceStore
 from itinerary_system.research_artifacts import stable_content_hash
 
@@ -406,7 +409,11 @@ def test_role_api_exposes_v4_impact_geography_and_w5_block(tmp_path: Path) -> No
         accept = client.post(
             f"/api/sessions/{session_id}/accept",
             headers=headers,
-            json={"expected_revision": 2},
+            json={
+                "expected_revision": 2,
+                "confirmation": "accept_evaluated_repair",
+                "idempotency_key": "role-decision-0001",
+            },
         )
 
     assert appended.status_code == 200
@@ -422,11 +429,11 @@ def test_role_api_exposes_v4_impact_geography_and_w5_block(tmp_path: Path) -> No
     assert proposal["role_impact"]["role_constraint_evidence"] == (
         workspace_role_constraints
     )
-    assert proposal["decision_eligible"] is True
+    assert proposal["decision_eligible"] is False
     assert proposal["ranking_eligible"] is False
     assert proposal["acceptance_eligible"] is False
     assert proposal["repair"]["tradeoffs"]["utility_retained"] is None
-    assert proposal["repair"]["tradeoffs"]["weather_risk_delta"] is None
+    assert proposal["repair"]["tradeoffs"]["weather_risk_delta"] == 0.0
     stop_feature = next(
         feature
         for feature in proposal["geography_plan"]["stops"]["features"]
@@ -435,9 +442,9 @@ def test_role_api_exposes_v4_impact_geography_and_w5_block(tmp_path: Path) -> No
     assert stop_feature["properties"]["role"] == "draft_preview"
     assert stop_feature["properties"]["itinerary_role"] == "meal"
     assert stop_feature["properties"]["itinerary_role_source"] == ROLE_SOURCE
-    assert proposal["route_validation"]["required_leg_count"] == 16
+    assert proposal["route_validation"]["required_leg_count"] == 15
     assert accept.status_code == 409
-    assert accept.json() == {"detail": "acceptance_not_enabled_until_w5"}
+    assert accept.json() == {"detail": "acceptance_proposal_invalid"}
 
 
 def test_structural_role_api_stays_draft_only_with_specific_blocker(
@@ -787,3 +794,123 @@ def test_role_proposal_rejects_coherently_rehashed_evidence(tamper: str) -> None
             route_matrix=compiler._route_matrix,
             expected_route_legs=compiled.route_legs,
         )
+
+
+def _role_selection_fixture(api, repaired: bool = False):
+    created = api.post("/api/sessions", json={}).json()
+    session = created["session"]
+    headers = {"X-Session-Token": created["mutation_token"]}
+    path = f"/api/sessions/{session['session_id']}"
+    if repaired:
+        drafted = api.post(path + "/draft/operations", headers=headers, json={
+            "expected_revision": session["revision"], "type": "replace_nearby",
+            "target": "bixby_creek_bridge_viewpoint", "parameters": {"candidate_id": "pfeiffer_big_sur_state_park"},
+        })
+        drafted.raise_for_status()
+        evaluated = api.post(path + "/preview", headers=headers, json={"expected_revision": drafted.json()["session"]["revision"]})
+        evaluated.raise_for_status()
+        assert evaluated.json()["proposal"]["acceptance_eligible"] is True
+        accepted = api.post(path + "/accept", headers=headers, json={
+            "expected_revision": evaluated.json()["session"]["revision"],
+            "confirmation": "accept_evaluated_repair", "idempotency_key": "role-selection-parent-fixture-0001",
+        })
+        accepted.raise_for_status()
+        session = accepted.json()["session"]
+    drafted = api.post(path + "/draft/operations", headers=headers, json={
+        "expected_revision": session["revision"], "type": "set_stop_role",
+        "target": TARGET, "parameters": {"role": "scenic_stop"},
+    })
+    drafted.raise_for_status()
+    evaluated = api.post(path + "/preview", headers=headers, json={"expected_revision": drafted.json()["session"]["revision"]})
+    evaluated.raise_for_status()
+    return path, headers, evaluated.json()
+
+
+def _role_selection_evidence(proposal):
+    return {key: value for key, value in proposal.items()
+            if key not in {"expected_revision", "session_revision", "role_proposal_integrity"}}
+
+
+@pytest.mark.parametrize("repaired", [False, True])
+def test_role_selection_repeated_restore_and_restart_keep_exact_evidence(tmp_path: Path, repaired: bool) -> None:
+    state_root = tmp_path / "role_selection"
+    with _client(state_root) as first:
+        path, headers, evaluated = _role_selection_fixture(first, repaired)
+        original = evaluated["proposal"]
+        revision = evaluated["session"]["revision"]
+        for stop, day in ((TARGET, 6), ("griffith_observatory", 7)):
+            selected = first.post(path + "/selection", headers=headers, json={
+                "expected_revision": revision, "selected_day": day, "selected_stop_id": stop,
+            })
+            selected.raise_for_status()
+            session = selected.json()["session"]
+            assert session["revision"] == revision + 1
+            assert session["proposal"]["expected_revision"] == revision
+            assert session["proposal"]["session_revision"] == session["revision"]
+            assert _role_selection_evidence(session["proposal"]) == _role_selection_evidence(original)
+            restored = first.get(path, headers=headers)
+            assert restored.status_code == 200, restored.text
+            assert restored.json()["session"]["proposal"] == session["proposal"]
+            revision = session["revision"]
+        cached = first.post(path + "/preview", headers=headers, json={"expected_revision": revision})
+        cached.raise_for_status()
+        assert _role_selection_evidence(cached.json()["proposal"]) == _role_selection_evidence(original)
+    with _client(state_root) as restarted:
+        restored = restarted.get(path, headers=headers)
+        assert restored.status_code == 200, restored.text
+        assert restored.json()["session"]["revision"] == revision
+        assert _role_selection_evidence(restored.json()["session"]["proposal"]) == _role_selection_evidence(original)
+
+
+def test_role_selection_explicit_acceptance_keeps_the_evaluated_child(tmp_path: Path) -> None:
+    with _client(tmp_path / "role_selection_accept") as api:
+        path, headers, evaluated = _role_selection_fixture(api, repaired=True)
+        proposal = evaluated["proposal"]
+        assert proposal["acceptance_eligible"] is True
+        selected = api.post(path + "/selection", headers=headers, json={
+            "expected_revision": evaluated["session"]["revision"], "selected_day": 6, "selected_stop_id": TARGET,
+        })
+        selected.raise_for_status()
+        accepted = api.post(path + "/accept", headers=headers, json={
+            "expected_revision": selected.json()["session"]["revision"],
+            "confirmation": "accept_evaluated_repair", "idempotency_key": "role-selection-child-fixture-0001",
+        })
+        assert accepted.status_code == 200, accepted.text
+        session = accepted.json()["session"]
+        assert session["accepted_plan_id"] == proposal["child_plan_id"]
+        assert not session["draft"] and session["proposal"] is None
+
+
+@pytest.mark.parametrize("resign", [False, True])
+def test_role_selection_refuses_tampered_evidence_without_snapshot_rewrite(tmp_path: Path, resign: bool) -> None:
+    state_root = tmp_path / "role_selection_tamper"
+    with _client(state_root) as first:
+        path, headers, evaluated = _role_selection_fixture(first)
+    snapshot = state_root / "sessions" / (evaluated["session"]["session_id"] + ".json")
+    record = json.loads(snapshot.read_text(encoding="utf-8"))
+    record["session"]["proposal"]["geography_plan"]["label"] = "forged geography"
+    if resign:
+        _attach_role_proposal_integrity(record["session"]["proposal"], headers["X-Session-Token"])
+    snapshot.write_text(json.dumps(record), encoding="utf-8")
+    before = snapshot.read_bytes()
+    with _client(state_root) as restarted:
+        rejected = restarted.post(path + "/selection", headers=headers, json={
+            "expected_revision": evaluated["session"]["revision"], "selected_day": 6, "selected_stop_id": TARGET,
+        })
+        assert rejected.status_code == 409
+        assert rejected.json() == {"detail": "draft_role_proposal_invalid"}
+    assert snapshot.read_bytes() == before
+
+
+def test_role_selection_stale_request_preserves_snapshot(tmp_path: Path) -> None:
+    state_root = tmp_path / "role_selection_stale"
+    with _client(state_root) as api:
+        path, headers, evaluated = _role_selection_fixture(api)
+        snapshot = state_root / "sessions" / (evaluated["session"]["session_id"] + ".json")
+        before = snapshot.read_bytes()
+        rejected = api.post(path + "/selection", headers=headers, json={
+            "expected_revision": 0, "selected_day": 6, "selected_stop_id": TARGET,
+        })
+        assert rejected.status_code == 409
+        assert rejected.json() == {"detail": "stale_session_revision"}
+        assert snapshot.read_bytes() == before

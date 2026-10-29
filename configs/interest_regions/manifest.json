@@ -1,0 +1,26 @@
+{
+  "schema_version": "interest-land-support-v1",
+  "file": "land_support.geojson",
+  "sha256": "051ce757e0cff80fd769c8a77f6474a62ba29c7c0b965e10639c41ddbd097b39",
+  "coverage_bbox": [
+    -125.0,
+    32.0,
+    -113.0,
+    43.0
+  ],
+  "source": "Natural Earth 1:10m land and lakes",
+  "license": "public domain",
+  "sources": [
+    {
+      "kind": "land",
+      "url": "https://naciscdn.org/naturalearth/10m/physical/ne_10m_land.zip",
+      "archive_sha256": "e547d749445eaa0964aba76738090ec88f5e63c4585122170f98c67a7ea922dc"
+    },
+    {
+      "kind": "water",
+      "url": "https://naciscdn.org/naturalearth/10m/physical/ne_10m_lakes.zip",
+      "archive_sha256": "0803a06f9c3cb4671d89b68c48b142aad9366ba40f665245e12a913fbc61722a"
+    }
+  ],
+  "precision_note": "Cartographic land/water mask, not an accessibility or closure certificate."
+}

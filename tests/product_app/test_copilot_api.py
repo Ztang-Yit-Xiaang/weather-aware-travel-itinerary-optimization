@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import json
+from dataclasses import replace
 from pathlib import Path
 from uuid import uuid4
 
@@ -7,7 +9,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from itinerary_system.product_app.api import create_product_app
-from itinerary_system.product_app.conversations import ConversationError
+from itinerary_system.product_app.conversations import MAX_FILE_BYTES, MAX_TURNS, ConversationError
 from itinerary_system.product_app.copilot import DeterministicCopilotAdapter
 from itinerary_system.product_app.models import (
     ComponentHealthV1,
@@ -67,6 +69,19 @@ def _message(
     )
 
 
+def _sse_events(response) -> list[dict]:
+    events = []
+    for block in response.text.replace("\r\n", "\n").split("\n\n"):
+        data = "\n".join(
+            line[5:].lstrip()
+            for line in block.splitlines()
+            if line.startswith("data:")
+        )
+        if data:
+            events.append(json.loads(data))
+    return events
+
+
 def test_conversation_auth_empty_record_and_deterministic_send_are_separate_from_plan_state(api) -> None:
     client, service = api
     session, headers = _session(client)
@@ -97,6 +112,89 @@ def test_conversation_auth_empty_record_and_deterministic_send_are_separate_from
     assert payload["session"]["accepted_plan_id"] == session["accepted_plan_id"]
     assert payload["session"]["permission_decisions"] == []
     assert payload["advisory"]["automatic_activation"] is False
+
+
+@pytest.mark.parametrize("limit", ["turns", "bytes"])
+@pytest.mark.parametrize("streamed", [False, True])
+def test_capacity_block_is_explicit_before_dispatch_in_json_and_stream(api, limit, streamed) -> None:
+    client, service = api
+    service.copilot = DeterministicCopilotAdapter()
+    session, headers = _session(client)
+    first = _message(client, session, headers)
+    assert first.status_code == 200
+    current = service.workspace.authenticate(session["session_id"], headers["X-Session-Token"])
+    conversation = service.read_conversation(current)
+    template = service.conversations._validate_turn(first.json()["turn"])
+    if limit == "bytes":
+        template = replace(template, user_message="u" * 2000, assistant_message="a" * 4000, interpretation=None)
+    turns = []
+    while len(turns) < MAX_TURNS:
+        turns.append(replace(template, turn_id="copilot_turn_" + uuid4().hex, client_message_id="client_message_" + uuid4().hex))
+        if limit == "bytes" and service.conversations._encoded_size(replace(conversation, turns=tuple(turns), revision=len(turns)).as_dict()) >= MAX_FILE_BYTES - 64 * 1024:
+            break
+    if limit == "bytes":
+        assert len(turns) < MAX_TURNS
+    service.conversations._save(replace(conversation, turns=tuple(turns), revision=len(turns)))
+    class NoDispatch:
+        provider_name = "openai"
+        model = "fake-no-network"
+        calls = 0
+        async def interpret(self, **kwargs):
+            self.calls += 1
+            pytest.fail("Capacity must block before any provider dispatch")
+    adapter = NoDispatch()
+    service.copilot = adapter
+    before = current.public_dict()
+    history = service.conversations.dispatch_history(conversation.conversation_id, current.session_id)
+    message_id = "client_message_" + uuid4().hex
+    response = _message(client, session, {**headers, **({"Accept": "text/event-stream"} if streamed else {})}, client_message_id=message_id)
+    expected = "conversation_turn_limit_reached" if limit == "turns" else "conversation_size_limit_reached"
+    if streamed:
+        assert response.status_code == 200
+        events = _sse_events(response)
+        assert [event["type"] for event in events] == ["message.accepted", "assistant.status", "turn.failed"]
+        assert events[-1]["code"] == expected and events[-1]["status"] == 422 and events[-1]["retryable"] is False
+        assert events[-1]["client_message_id"] == message_id
+    else:
+        assert response.status_code == 422 and response.json() == {"detail": expected}
+    assert adapter.calls == 0 and current.public_dict() == before
+    assert service.conversations.dispatch_history(conversation.conversation_id, current.session_id) == history
+    assert service.conversations.dispatch_record(conversation.conversation_id, current.session_id, message_id, "Review the safer repair") is None
+
+
+def test_event_stream_is_versioned_ordered_and_returns_the_canonical_turn(api) -> None:
+    client, _ = api
+    session, headers = _session(client)
+    client_message_id = f"client_message_{uuid4().hex}"
+    streamed = _message(
+        client,
+        session,
+        {**headers, "Accept": "text/event-stream"},
+        client_message_id=client_message_id,
+    )
+
+    assert streamed.status_code == 200
+    assert streamed.headers["content-type"].startswith("text/event-stream")
+    # The global security middleware deliberately strengthens the route's
+    # no-cache directive to no-store so conversation events cannot be cached.
+    assert streamed.headers["cache-control"] == "no-store"
+    assert streamed.headers["vary"] == "Accept"
+    events = _sse_events(streamed)
+    assert [event["type"] for event in events] == [
+        "message.accepted",
+        "assistant.status",
+        "turn.completed",
+    ]
+    assert [event["sequence"] for event in events] == [1, 2, 3]
+    assert {event["schema_version"] for event in events} == {"copilot-stream-v1"}
+    assert {event["client_message_id"] for event in events} == {client_message_id}
+    assert len({event["request_id"] for event in events}) == 1
+    payload = events[-1]["payload"]
+    assert payload["turn"]["client_message_id"] == client_message_id
+    assert payload["turn"]["interpretation"]["state"] == "proposal_ready"
+    assert payload["conversation_revision"] == 1
+    assert payload["session"]["draft"] == []
+    assert payload["session"]["proposal"] is None
 
 
 def test_message_requires_canonical_client_id_and_is_idempotent(api) -> None:
@@ -177,7 +275,7 @@ class QuotaFailingAdapter:
         raise QuotaFailure("raw billing detail must not escape")
 
 
-def test_stale_revision_before_and_after_provider_appends_nothing(api) -> None:
+def test_stale_revision_blocks_dispatch_but_preserves_an_already_obtained_result(api) -> None:
     client, service = api
     session, headers = _session(client)
     stale_pre = client.post(
@@ -197,7 +295,9 @@ def test_stale_revision_before_and_after_provider_appends_nothing(api) -> None:
     conversation = client.get(
         f"/api/sessions/{session['session_id']}/conversation", headers=headers
     ).json()["conversation"]
-    assert conversation["turns"] == []
+    assert len(conversation["turns"]) == 1
+    assert conversation["turns"][0]["state"] == "completed"
+    assert conversation["turns"][0]["context_revision"] == session["revision"]
 
 
 def test_provider_failure_is_sanitized_and_persisted_without_itinerary_mutation(api) -> None:
@@ -222,6 +322,40 @@ def test_provider_failure_is_sanitized_and_persisted_without_itinerary_mutation(
     assert restored["revision"] == session["revision"]
     assert restored["draft"] == []
     assert restored["proposal"] is None
+
+
+def test_uncertain_event_stream_failure_is_terminal_not_silently_retryable_and_sanitized(api) -> None:
+    client, service = api
+    session, headers = _session(client)
+    service.copilot = FailingAdapter()
+    client_message_id = f"client_message_{uuid4().hex}"
+
+    failed = _message(
+        client,
+        session,
+        {**headers, "Accept": "text/event-stream"},
+        client_message_id=client_message_id,
+    )
+
+    assert failed.status_code == 200
+    events = _sse_events(failed)
+    assert [event["type"] for event in events] == [
+        "message.accepted",
+        "assistant.status",
+        "turn.failed",
+    ]
+    terminal = events[-1]
+    assert terminal["sequence"] == 3
+    assert terminal["client_message_id"] == client_message_id
+    assert terminal["code"] == "openai_timeout"
+    assert terminal["status"] == 504
+    assert terminal["retryable"] is False
+    assert "raw provider detail" not in failed.text
+    conversation = client.get(
+        f"/api/sessions/{session['session_id']}/conversation", headers=headers
+    ).json()["conversation"]
+    assert conversation["turns"][0]["client_message_id"] == client_message_id
+    assert conversation["turns"][0]["state"] == "failed"
 
 
 def test_quota_failure_is_distinct_from_rate_limit_and_remains_sanitized(api) -> None:
@@ -346,7 +480,11 @@ def test_deterministic_mode_is_network_free_and_w5_decisions_remain_blocked(
         response = client.post(
             f"/api/sessions/{session['session_id']}/{suffix}",
             headers=headers,
-            json={"expected_revision": 0},
+            json={
+                "expected_revision": 0,
+                "confirmation": "",
+                "idempotency_key": f"{suffix}-guard-0001",
+            },
         )
-        assert response.status_code == 409
-        assert response.json() == {"detail": "acceptance_not_enabled_until_w5"}
+        assert response.status_code == 422
+        assert response.json() == {"detail": "acceptance_confirmation_required"}

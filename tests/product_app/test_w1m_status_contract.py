@@ -26,10 +26,16 @@ def test_w1m_authority_chain_is_strict_utf8_and_has_one_status_story() -> None:
     assert "W1M/G1 are `verified`" in combined
     assert "| W2 / G2 | `verified` |" in documents[1]
     assert "| W3 / G3 | `verified` |" in documents[1]
-    assert "| W4 / G4 | W4 `implemented`; G4 `blocked` |" in documents[1]
+    assert "| W4 / G4 | W4 `implemented`; August v6 G4 `verified / passed` for its recorded source |" in documents[1]
+    assert "### Current corrective checkpoint" in documents[1]
+    for document in documents[1:]:
+        assert "runtime_coherence_status_20261007.md" in document
+        assert "in-progress" in document
+    assert "| E2E-1 | `in-progress`; " in documents[1]
+    assert "| G5 | `blocked` behind E2E-1 |" in documents[1]
     assert "corrected-v2 W2/G2" in documents[2]
     assert "corrected-v2 W3/G3 are `verified`" in documents[2]
-    assert "W4 is `implemented`" in documents[2]
+    assert "W4 and W4R are `implemented`" in documents[2]
     assert "W1M/G1 and corrected-v2 W2/G2 and W3/G3 are verified" in documents[3]
     assert "W4 is implemented" in documents[3]
     assert "G2 and G3 are `blocked` pending independent v2 revalidation" not in combined

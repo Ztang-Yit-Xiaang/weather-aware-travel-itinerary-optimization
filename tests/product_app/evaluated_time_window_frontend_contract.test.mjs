@@ -102,16 +102,18 @@ const normalizeCase = async (row, label) => {
   );
   assert.ok(full, `${label} full response`);
   assert.equal(full.proposal.ranking_eligible, false, `${label} has no ranking evidence`);
-  assert.equal(full.proposal.acceptance_eligible, false, `${label} W5 acceptance disabled`);
-  assert.equal(full.proposal.acceptance_blocking_code, "acceptance_not_enabled_until_w5");
+  assert.equal(full.proposal.acceptance_eligible, full.proposal.decision_eligible, `${label} acceptance follows independent eligibility`);
+  assert.equal(full.proposal.acceptance_blocking_code, full.proposal.decision_eligible ? null : "proposal_not_eligible");
   assert.equal(full.proposal.repair.tradeoffs.utility_retained, null);
-  assert.equal(full.proposal.repair.tradeoffs.weather_risk_delta, null);
+  assert.equal(full.proposal.repair.tradeoffs.weather_risk_delta, 0);
   return full;
 };
 
 const eligible = await normalizeCase(actual.eligible, "eligible earliest window");
-assert.equal(eligible.proposal.state, "eligible");
-assert.equal(eligible.proposal.decision_eligible, true);
+assert.equal(eligible.proposal.state, "ineligible");
+assert.equal(eligible.proposal.decision_eligible, false);
+assert.deepEqual(eligible.proposal.schedule_impact.child.blocking_codes, []);
+assert.deepEqual(eligible.proposal.certificate_schedule_evidence.failure_codes, ["weather_infeasible"]);
 const eligibleTarget = eligible.proposal.schedule_impact.child.stop_traces.find(
   (trace) => trace.stop_id === "stearns_wharf",
 );
@@ -138,17 +140,16 @@ assert.deepEqual(latestTarget.failure_codes, ["stop_time_window_latest_departure
 const dayOverrun = await normalizeCase(actual.day_overrun, "earliest-wait day overrun");
 assert.equal(dayOverrun.proposal.state, "ineligible");
 assert.ok(dayOverrun.proposal.schedule_impact.child.blocking_codes.includes("day_time_exceeded"));
-assert.ok(dayOverrun.proposal.schedule_impact.child.metrics.day_4_overrun_minutes > 0);
+const overrunDay = dayOverrun.proposal.schedule_impact.affected_days[0];
+assert.ok(dayOverrun.proposal.schedule_impact.child.metrics[`day_${overrunDay}_overrun_minutes`] > 0);
 
 const mixedState = { workspace: actual.workspace, session: actual.mixed.session };
 const mixedNormalizer = new Function(
   "state", `${contractCode}\nreturn {normalizeDraftImpactPreview};`,
 )(mixedState);
 assert.ok(mixedNormalizer.normalizeDraftImpactPreview(structuredClone(actual.mixed.impact)));
-assert.equal(actual.mixed.impact.summary.can_run_evaluated_preview, false);
-assert.ok(actual.mixed.impact.summary.blocking_codes.includes(
-  "draft_evaluated_operation_combination_unsupported",
-));
+assert.equal(actual.mixed.impact.summary.can_run_evaluated_preview, true);
+assert.deepEqual(actual.mixed.impact.summary.blocking_codes, []);
 
 const contentPayload = (value) => {
   const payload = structuredClone(value);
@@ -208,7 +209,7 @@ const ordinaryForgeries = [
   ["schedule_identity", (proposal) => {
     proposal.schedule_impact_identity.route_matrix_id = `route_matrix_${"1".repeat(16)}`;
   }],
-  ["missing_risk_as_zero", (proposal) => { proposal.repair.tradeoffs.weather_risk_delta = 0; }],
+  ["weather_risk_mismatch", (proposal) => { proposal.repair.tradeoffs.weather_risk_delta = 1; }],
   ["child_route_duration", (proposal) => {
     proposal.geography_plan.validated_legs.features[0].properties.duration_s += 1;
   }],
@@ -312,7 +313,7 @@ const coherentForgeries = [
     proposal.schedule_impact.child.stop_traces.pop();
   }, rehashSchedule],
   ["rehashed_visit_source", actual.eligible, (proposal) => {
-    targetTrace(proposal).visit_duration_source = "visit_duration_minutes";
+    targetTrace(proposal).visit_duration_source = "configured_evaluator_default";
   }, rehashSchedule],
 ];
 for (const [name, row, mutate, rehash] of coherentForgeries) {

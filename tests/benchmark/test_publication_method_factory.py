@@ -139,8 +139,9 @@ def test_four_concrete_adapters_run_together_and_retain_ineligible_baseline(tmp_
     assert {row["benchmark_route_source_bundle_id"] for row in rows} == {
         "synthetic_publication_fixture_bundle"
     }
-    assert by_method["deterministic_context_aware_heuristic"]["quality_weather_risk_delta"] == 0.95
-    assert by_method["progressive_sequential_lexicographic_repair"]["quality_weather_risk_delta"] == 0.95
+    # Selection changed and per-stop risk evidence is incomplete. Do not invent a comparable delta.
+    assert by_method["deterministic_context_aware_heuristic"]["quality_weather_risk_delta"] is None
+    assert by_method["progressive_sequential_lexicographic_repair"]["quality_weather_risk_delta"] is None
 
     manifest = json.loads(result.manifest_path.read_text(encoding="utf-8"))
     readiness = manifest["publication_readiness"]

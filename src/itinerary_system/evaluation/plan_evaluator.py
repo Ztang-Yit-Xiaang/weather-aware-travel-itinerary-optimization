@@ -9,6 +9,7 @@ from math import isfinite
 from typing import Any
 
 from ..plans import ConstraintScope, ConstraintStrength, active_owned_constraints
+from ..plans.attribute_ownership import attribute_ownership_rows, canonical_attribute_value
 from ..research_artifacts import PlanArtifactV2, PlannerRun, stable_content_hash
 from ..routing import RouteMatrix, RouteMatrixError, validate_route_matrix
 from .certificate import EvaluationFinding, PlanEvaluationCertificate
@@ -54,7 +55,7 @@ class PlanEvaluatorConfig:
 class PlanEvaluator:
     """Recompute final-plan eligibility from artifacts and context evidence."""
 
-    evaluator_version = "verify-001-plan-evaluator-v1"
+    evaluator_version = "verify-001-plan-evaluator-v3"
 
     def __init__(
         self,
@@ -103,11 +104,15 @@ class PlanEvaluator:
             warnings,
         )
         self._check_plan_shape(plan, stop_lookup, day_sequences, failures, warnings)
-        self._check_owned_constraints(plan, failures, warnings)
+        attribute_rows = self._check_owned_constraints(plan, failures, warnings)
         self._check_context_requirements(plan, failures)
         self._check_lodging(plan, stop_lookup, day_sequences, failures)
         self._check_budget_weather_and_closures(plan, stop_lookup, failures, warnings)
-        route_record = self._check_routes_and_schedule(plan, matrix, stop_lookup, day_sequences, failures, metrics)
+        stop_traces: list[dict[str, Any]] = []
+        route_record = self._check_routes_and_schedule(
+            plan, matrix, stop_lookup, day_sequences, failures, metrics, stop_traces=stop_traces,
+        )
+        self._check_owned_attribute_values(plan, attribute_rows, stop_traces, failures, warnings)
         if self.config.include_schedule_metrics:
             missing_windows = tuple(
                 sorted(
@@ -447,17 +452,65 @@ class PlanEvaluator:
             )
         if not day_sequences:
             failures.append(_failure("day_sequences_missing", "Plan has no day-grouped displayed sequence.", "artifact"))
+        conflicting: set[str] = set()
+        if tuple(sid for _, ids in sorted(day_sequences.items()) for sid in ids) != sequence:
+            conflicting.add("sequence")
+        for day, stop_ids in day_sequences.items():
+            for order, stop_id in enumerate(stop_ids, 1):
+                stop = stop_lookup.get(stop_id, {})
+                assigned = plan.day_assignments.get(stop_id)
+                if day <= 0 or (assigned is not None and (isinstance(assigned, bool) or _coerce_float(assigned) != day)):
+                    conflicting.add(stop_id)
+                for key, expected in (("day", day), ("stop_order", order), ("order", order),
+                                      ("route_sequence_index", order), ("visit_order", order)):
+                    value = stop.get(key)
+                    if value is not None and (isinstance(value, bool) or _coerce_float(value) != expected):
+                        conflicting.add(stop_id)
+        if plan.ordered_days:
+            declared = tuple((_coerce_float(row.get("day")), tuple(str(sid) for sid in row["stop_ids"]))
+                             for row in plan.ordered_days if isinstance(row.get("stop_ids"), (list, tuple)))
+            expected_days = tuple(sorted(day_sequences.items()))
+            if len(declared) != len(plan.ordered_days) or declared != expected_days:
+                conflicting.add("ordered_days")
+        if conflicting:
+            failures.append(_failure(
+                "plan_representation_conflict",
+                "Stop day/order fields or ordered_days disagree with the displayed sequence and assignments.",
+                "artifact", tuple(sorted(conflicting)),
+            ))
 
     def _check_owned_constraints(
         self,
         plan: PlanArtifactV2,
         failures: list[EvaluationFinding],
         warnings: list[EvaluationFinding],
-    ) -> None:
+    ) -> dict[tuple[str, str], tuple[dict[str, Any], ...]]:
         selected = set(str(stop_id) for stop_id in plan.sequence)
         stop_lookup = _stop_lookup(plan)
         lodging_ids = set(str(value) for value in plan.lodging_assignments.values())
-        for constraint in active_owned_constraints(tuple(dict(record) for record in plan.owned_constraints)):
+        try:
+            attribute_rows = attribute_ownership_rows(plan.owned_constraints)
+            constraints = active_owned_constraints(plan.owned_constraints)
+            if self.reference_plan is not None and plan.parent_plan_id == self.reference_plan.plan_id:
+                parent_constraints = active_owned_constraints(self.reference_plan.owned_constraints)
+                attribute_ownership_rows(self.reference_plan.owned_constraints)
+                if sorted((row.to_record() for row in constraints), key=lambda row: row["constraint_id"]) != sorted(
+                    (row.to_record() for row in parent_constraints), key=lambda row: row["constraint_id"],
+                ):
+                    failures.append(_failure(
+                        "owned_constraints_changed_from_parent",
+                        "Child ownership constraints differ from the immutable accepted parent; no relaxation is certified.",
+                        "artifact",
+                    ))
+        except (ValueError, TypeError):
+            failures.append(_failure(
+                "owned_attribute_constraint_invalid", "Active ownership constraints are malformed or contradictory.", "artifact",
+            ))
+            return {}
+        attribute_ids = {row["constraint_id"] for rows in attribute_rows.values() for row in rows}
+        for constraint in constraints:
+            if constraint.constraint_id in attribute_ids:
+                continue
             hard = constraint.strength in {
                 ConstraintStrength.LOCKED,
                 ConstraintStrength.BOOKED,
@@ -518,6 +571,75 @@ class PlanEvaluator:
                 code = "booked_lodging_missing" if constraint.strength == ConstraintStrength.BOOKED else "owned_lodging_missing"
                 finding = _failure(code, f"Owned lodging constraint {constraint.constraint_id!r} is not satisfied.", "hard", (constraint.constraint_id,))
                 (failures if hard else warnings).append(finding if hard else _warning(code, finding.message, "soft", finding.evidence_refs))
+        return attribute_rows
+
+    def _check_owned_attribute_values(
+        self,
+        plan: PlanArtifactV2,
+        rows_by_key: dict[tuple[str, str], tuple[dict[str, Any], ...]],
+        stop_traces: list[dict[str, Any]],
+        failures: list[EvaluationFinding],
+        warnings: list[EvaluationFinding],
+    ) -> None:
+        stops = _stop_lookup(plan)
+        selected = set(plan.sequence)
+        traces = {row["stop_id"]: row for row in stop_traces}
+        for (target, attribute), rows in rows_by_key.items():
+            stop = stops.get(target, {})
+            trace = traces.get(target, {})
+            try:
+                if attribute == "existence":
+                    actual = target in selected
+                elif attribute == "day":
+                    actual = trace.get("day")
+                    if stop.get("day") is not None and canonical_attribute_value("day", stop["day"]) != actual:
+                        raise ValueError("Stop day differs from the evaluated sequence")
+                elif attribute == "order":
+                    actual = trace["sequence_index"] + 1 if trace else None
+                    if stop.get("stop_order") is not None and canonical_attribute_value("order", stop["stop_order"]) != actual:
+                        raise ValueError("Stop order differs from the evaluated sequence")
+                elif attribute in {"start_time", "end_time"}:
+                    actual = trace.get("service_start_minute" if attribute == "start_time" else "departure_minute")
+                elif attribute == "duration":
+                    actual = trace.get("visit_minutes")
+                    declared = stop.get("duration_constraint")
+                    if declared is not None and canonical_attribute_value("duration", declared)["preferred_minutes"] != actual:
+                        raise ValueError("Declared duration differs from the evaluated visit")
+                    for key in ("visit_duration_minutes", "duration_minutes", "service_minutes", "dwell_minutes"):
+                        value = stop.get(key)
+                        if value is not None and (
+                            isinstance(value, bool) or not isinstance(value, (int, float))
+                            or not isfinite(value) or not 15 <= value <= 480 or value != actual
+                        ):
+                            raise ValueError("Duration aliases differ from the evaluated visit")
+                else:
+                    declared = stop.get("time_window_constraint")
+                    actual = canonical_attribute_value("time_window", declared) if declared is not None else None
+            except (ValueError, TypeError):
+                failures.append(_failure(
+                    "owned_attribute_value_invalid", f"Stop {target!r} has inconsistent {attribute!r} evidence.",
+                    "artifact", (target, *(row["constraint_id"] for row in rows)),
+                ))
+                continue
+            for row in rows:
+                required = row["canonical_value"]
+                if attribute in {"start_time", "end_time"}:
+                    required = _parse_minutes(required)
+                elif attribute == "duration":
+                    required = required["preferred_minutes"]
+                if actual == required:
+                    continue
+                protected = (
+                    row["strength"] in {"locked", "booked", "hard"}
+                    or row["relaxation_policy"] in {"never", "explicit_only"}
+                    or row["origin"] in {"booking", "user_booking"}
+                )
+                finding = (_failure if protected else _warning)(
+                    "owned_attribute_constraint_unsatisfied",
+                    f"Owned {attribute!r} constraint {row['constraint_id']!r} is not satisfied by the evaluated plan.",
+                    "hard" if protected else "soft", (row["constraint_id"], target),
+                )
+                (failures if protected else warnings).append(finding)
 
     def _check_context_requirements(
         self,

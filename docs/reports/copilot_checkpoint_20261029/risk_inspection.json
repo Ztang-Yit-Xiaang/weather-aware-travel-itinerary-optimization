@@ -1,0 +1,43 @@
+{
+  "inspection_date": "2026-10-29",
+  "build_id": "683c8cf6cf38473e",
+  "product_changes": false,
+  "paid_calls": 0,
+  "optimizer_runs": 0,
+  "pure_scoring_function_probe": {
+    "known_risk_0_2": 0.2,
+    "missing_risk": 0.0,
+    "known_weather_infeasible": 1000000.2
+  },
+  "probe_scope": "Pure helper execution with synthetic inputs; candidate ranking implication follows from the inspected lexicographic score. This is not a new route solve or travel-risk forecast.",
+  "findings": [
+    {
+      "id": "RISK-01",
+      "finding": "Missing weather_risk defaults to zero in local repair scoring.",
+      "implication": "Among otherwise feasible candidates, unknown risk can rank ahead of a positive known score."
+    },
+    {
+      "id": "RISK-02",
+      "finding": "Whole-trip MILP has no quantitative weather-risk objective term.",
+      "implication": "It minimizes travel and optional-stop/interest penalties after bounded exclusions and validation; it does not establish minimum trip risk."
+    },
+    {
+      "id": "RISK-03",
+      "finding": "Weather-risk delta requires complete numeric fields and identical selected stop-ID sets.",
+      "implication": "The metric can be unavailable after replacing a stop, even when both plans have risk values."
+    },
+    {
+      "id": "RISK-04",
+      "finding": "PASSED certification does not require complete numeric weather-risk coverage.",
+      "implication": "It confirms the configured checks, not a calibrated probability of safe travel."
+    }
+  ],
+  "recorded_preview": {
+    "selected_stop_count": 8,
+    "numeric_weather_risk_count": 7,
+    "missing_weather_risk_stop_ids": [
+      "pfeiffer_big_sur_state_park"
+    ],
+    "evidence_scope": "Retained synthetic preview from the same source build; no current-weather claim."
+  }
+}

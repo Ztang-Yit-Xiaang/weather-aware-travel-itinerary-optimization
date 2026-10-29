@@ -3,8 +3,10 @@
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
 from typing import Any
+from uuid import uuid4
 
 from ..research_artifacts import PlanArtifactV2
 
@@ -54,7 +56,14 @@ class PlanRepository:
             if existing != record:
                 raise PlanRepositoryConflict(f"plan_id {plan.plan_id!r} already exists with different content")
             return path
-        path.write_text(_stable_json(record), encoding="utf-8")
+        try:
+            _write_append_only(path, _stable_json(record))
+        except FileExistsError:
+            existing = json.loads(path.read_text(encoding="utf-8"))
+            if existing != record:
+                raise PlanRepositoryConflict(
+                    f"plan_id {plan.plan_id!r} already exists with different content"
+                ) from None
         self._write_index()
         return path
 
@@ -85,8 +94,31 @@ class PlanRepository:
                     "schema_version": record.get("schema_version", ""),
                 }
             )
-        self.index_path.write_text(_stable_json({"plans": entries}), encoding="utf-8")
+        _atomic_replace(self.index_path, _stable_json({"plans": entries}))
 
+
+def _write_append_only(path: Path, content: str) -> None:
+    temporary = path.parent / f".{path.name}.{uuid4().hex}.tmp"
+    try:
+        with temporary.open("x", encoding="utf-8", newline="\n") as handle:
+            handle.write(content)
+            handle.flush()
+            os.fsync(handle.fileno())
+        os.link(temporary, path)
+    finally:
+        temporary.unlink(missing_ok=True)
+
+
+def _atomic_replace(path: Path, content: str) -> None:
+    temporary = path.parent / f".{path.name}.{uuid4().hex}.tmp"
+    try:
+        with temporary.open("x", encoding="utf-8", newline="\n") as handle:
+            handle.write(content)
+            handle.flush()
+            os.fsync(handle.fileno())
+        os.replace(temporary, path)
+    finally:
+        temporary.unlink(missing_ok=True)
 
 def _plan_from_record(record: dict[str, Any]) -> PlanArtifactV2:
     route_ids_by_day = {

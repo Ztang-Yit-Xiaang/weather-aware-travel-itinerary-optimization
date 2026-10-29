@@ -108,9 +108,12 @@ class ProductRuntimeConfig:
         map_provider = os.environ.get("PRODUCT_MAP_PROVIDER", "maplibre_pmtiles").strip().lower()
         if map_provider not in {"maplibre_pmtiles", "mapbox_atlas_v3"}:
             raise ProductConfigError("invalid_map_provider")
+        map_port = _bounded_environment_integer(
+            "PRODUCT_MAP_PORT", default=8080, minimum=1, maximum=65_535, error_code="invalid_map_port"
+        )
         map_base_url = _loopback_http_url(
-            os.environ.get("PRODUCT_MAP_BASE_URL", "http://127.0.0.1:8080"),
-            expected_port=8080,
+            os.environ.get("PRODUCT_MAP_BASE_URL", f"http://127.0.0.1:{map_port}"),
+            expected_port=map_port,
         )
         routing_base_url = _loopback_http_url(
             os.environ.get("PRODUCT_ROUTING_BASE_URL", "http://127.0.0.1:5000")

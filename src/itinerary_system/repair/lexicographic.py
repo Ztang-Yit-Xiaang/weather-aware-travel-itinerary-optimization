@@ -54,6 +54,7 @@ class LexicographicResult:
     solver_backend: str = "enumeration"
     fallback_used: bool = False
     message: str = ""
+    preservation_cost_basis: Literal["change_variable_proxy", "plan_diff_plus_relaxation"] = "change_variable_proxy"
     repair_model: RepairModel | None = field(default=None, repr=False, compare=False)
 
     @property
@@ -73,6 +74,7 @@ class LexicographicResult:
             "solver_backend": self.solver_backend,
             "fallback_used": self.fallback_used,
             "message": self.message,
+            "preservation_cost_basis": self.preservation_cost_basis,
         }
 
 
@@ -84,9 +86,11 @@ class LexicographicRepairSolver:
         *,
         tolerances: ObjectiveTolerances | None = None,
         solver_backend: str = "enumeration",
+        use_plan_diff: bool = False,
     ) -> None:
         self.tolerances = tolerances or ObjectiveTolerances()
         self.solver_backend = solver_backend
+        self.use_plan_diff = use_plan_diff
 
     def solve(
         self,
@@ -98,6 +102,7 @@ class LexicographicRepairSolver:
             self.tolerances,
             candidate_solutions=tuple(candidate_solutions or ()),
             solver_backend=self.solver_backend,
+            use_plan_diff=self.use_plan_diff,
         )
 
     def to_planner_runs(self, result: LexicographicResult) -> tuple[PlannerRun, ...]:
@@ -110,10 +115,17 @@ def solve_lexicographically(
     *,
     candidate_solutions: tuple[RepairSolution, ...] | list[RepairSolution] | None = None,
     solver_backend: str = "enumeration",
+    use_plan_diff: bool = False,
 ) -> LexicographicResult:
-    """Solve model objective stages exactly over candidate solutions."""
+    """Select over supplied candidates, optionally scoring preservation by PlanDiff.
+
+    Full-diff mode retains the hard stage, tolerances, later objectives and
+    non-hard relaxation penalties. It adds no routes or independent feasibility
+    guarantee; callers must still evaluate the selected complete plan.
+    """
 
     tolerances = tolerances or ObjectiveTolerances()
+    basis = "plan_diff_plus_relaxation" if use_plan_diff else "change_variable_proxy"
     candidates = _candidate_pool(model, tuple(candidate_solutions or ()))
     valid_candidates: list[RepairSolution] = []
     invalid_count = 0
@@ -134,12 +146,33 @@ def solve_lexicographically(
             solver_backend=solver_backend,
             message="no feasible candidate satisfies fixed repair constraints",
             repair_model=model,
+            preservation_cost_basis=basis,
         )
 
+    diff_costs = (
+        {
+            _candidate_id(candidate): model.extract_plan(candidate).change_components["weighted_edit_cost"]
+            for candidate in valid_candidates
+        }
+        if use_plan_diff
+        else {}
+    )
+    preservation_values: dict[str, float] = {}
     active_candidates = tuple(valid_candidates)
     stage_results: list[LexicographicStageResult] = []
     for component in sorted(model.objective_components, key=lambda item: item.priority):
-        stage_values = [(candidate, component.evaluate(model.variable_values(candidate))) for candidate in active_candidates]
+        stage_values = []
+        for candidate in active_candidates:
+            values = model.variable_values(candidate)
+            value = component.evaluate(values)
+            if use_plan_diff and component.name == "ownership_weighted_change":
+                value = diff_costs[_candidate_id(candidate)] + sum(
+                    term.coefficient * values.get(term.variable_name, 0.0)
+                    for term in component.terms
+                    if term.component == "constraint_relaxation"
+                )
+                preservation_values[_candidate_id(candidate)] = value
+            stage_values.append((candidate, value))
         selected_solution, objective_value = _best_candidate(stage_values, component.sense)
         tolerance = tolerances.tolerance_for(component)
         fixed_limit = _fixed_limit(objective_value, tolerance, component.sense)
@@ -172,6 +205,7 @@ def solve_lexicographically(
                 solver_backend=solver_backend,
                 message=f"stage {component.name} eliminated all candidates",
                 repair_model=model,
+                preservation_cost_basis=basis,
             )
         stage_results.append(
             LexicographicStageResult(
@@ -188,17 +222,23 @@ def solve_lexicographically(
         )
 
     final_solution = active_candidates[0]
+    selected_components = model.export_components(final_solution)
+    if use_plan_diff:
+        selected_components["ownership_weighted_change_proxy"] = selected_components["ownership_weighted_change"]
+        selected_components["ownership_weighted_change"] = preservation_values[_candidate_id(final_solution)]
+        selected_components["weighted_edit_cost"] = diff_costs[_candidate_id(final_solution)]
     return LexicographicResult(
         model_id=model.model_id,
         request_id=model.request_id,
         status="OPTIMAL",
         stage_results=tuple(stage_results),
         selected_solution=final_solution,
-        selected_components=model.export_components(final_solution),
+        selected_components=selected_components,
         rejected_candidate_count=len(candidates) - len(active_candidates),
         invalid_candidate_count=invalid_count,
         solver_backend=solver_backend,
         repair_model=model,
+        preservation_cost_basis=basis,
     )
 
 
@@ -219,7 +259,10 @@ def planner_runs_from_lexicographic_result(result: LexicographicResult) -> tuple
     runs: list[PlannerRun] = []
     parent_run_id: str | None = None
     for index, stage in enumerate(result.stage_results):
-        run_id = f"run_{stable_content_hash({'model': result.model_id, 'stage': stage.stage, 'index': index})}"
+        run_seed = {"model": result.model_id, "stage": stage.stage, "index": index}
+        if result.preservation_cost_basis == "plan_diff_plus_relaxation":
+            run_seed["preservation_cost_basis"] = result.preservation_cost_basis
+        run_id = f"run_{stable_content_hash(run_seed)}"
         execution_status = "COMPLETED" if stage.status == "OPTIMAL" else "FAILED"
         runs.append(
             PlannerRun(
@@ -228,7 +271,11 @@ def planner_runs_from_lexicographic_result(result: LexicographicResult) -> tuple
                 planning_request_id=result.request_id,
                 catalog_snapshot_id=catalog_snapshot_id,
                 context_snapshot_id=context_snapshot_id,
-                planner_specification_id="repair-003-lexicographic-v1",
+                planner_specification_id=(
+                    "repair-003-plan-diff-lexicographic-v1"
+                    if result.preservation_cost_basis == "plan_diff_plus_relaxation"
+                    else "repair-003-lexicographic-v1"
+                ),
                 method_requested="lexicographic_repair",
                 method_executed=f"lexicographic_repair:{result.solver_backend}",
                 execution_status=execution_status,
@@ -359,8 +406,7 @@ def _parent_baseline_solution(model: RepairModel) -> RepairSolution:
     return RepairSolution(
         selected_stop_ids=tuple(model.metadata["ordered_stop_ids"][: len(parent.selected_stops)]),
         day_assignments={
-            str(stop_id): int(day)
-            for stop_id, day in model.metadata.get("parent_day_by_stop", {}).items()
+            str(stop_id): int(day) for stop_id, day in model.metadata.get("parent_day_by_stop", {}).items()
         },
         lodging_assignments={str(day): str(lodging) for day, lodging in parent.lodging_assignments.items()},
         route_ids_by_day={int(day): str(route_id) for day, route_id in parent.route_ids_by_day.items()},

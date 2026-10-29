@@ -1,0 +1,194 @@
+[
+  {
+    "path": "screenshots/01-01-private-seven-day-baseline.jpg",
+    "sha256": "ab5d9d2a064f12a9e7e72fc0b31ca32a31f3d97fad360ddd110cf2c5d27f36d7",
+    "build_id": "77681aefdcdefa1c",
+    "step": "01-private-seven-day-baseline"
+  },
+  {
+    "path": "screenshots/02-02-final-build-baseline.jpg",
+    "sha256": "ab5d9d2a064f12a9e7e72fc0b31ca32a31f3d97fad360ddd110cf2c5d27f36d7",
+    "build_id": "78d8c064370cbb0e",
+    "step": "02-final-build-baseline"
+  },
+  {
+    "path": "screenshots/03-03-long-replacement-ready-to-send.jpg",
+    "sha256": "2c99fe8929b30c0938ac1cfb87f14f9afd1e751d4c778d9696d0914ab4305ead",
+    "build_id": "78d8c064370cbb0e",
+    "step": "03-long-replacement-ready-to-send"
+  },
+  {
+    "path": "screenshots/04-04-long-replacement-submitted.jpg",
+    "sha256": "324b3bb1cb7004d4121e583c9d728f52ee279b4ada3d86ed5561d9c5b33bff2b",
+    "build_id": "78d8c064370cbb0e",
+    "step": "04-long-replacement-submitted"
+  },
+  {
+    "path": "screenshots/05-05-long-replacement-correct-proposal.jpg",
+    "sha256": "e8a8268f82c32a3436cecb99b5f725f7285f3b63613c8ff9a7c89d5560b204a0",
+    "build_id": "78d8c064370cbb0e",
+    "step": "05-long-replacement-correct-proposal"
+  },
+  {
+    "path": "screenshots/06-06-exact-replacement-staged.jpg",
+    "sha256": "5c36fb96da4e1e4e0354d667d32081ed82b0ce9e414439776456a3fffa418cbd",
+    "build_id": "78d8c064370cbb0e",
+    "step": "06-exact-replacement-staged"
+  },
+  {
+    "path": "screenshots/07-07-replacement-draft-confirmed.jpg",
+    "sha256": "2e42616f684630f24cc1e111cfbb71757ae814236667b61c5554827cc9e1fbc7",
+    "build_id": "78d8c064370cbb0e",
+    "step": "07-replacement-draft-confirmed"
+  },
+  {
+    "path": "screenshots/08-08-preview-requested.jpg",
+    "sha256": "6d66ab0cd7381297c6378eacaa8b5a60607e18b0d3ba046f75cec85b787a66bc",
+    "build_id": "78d8c064370cbb0e",
+    "step": "08-preview-requested"
+  },
+  {
+    "path": "screenshots/09-09-eligible-replacement-preview.jpg",
+    "sha256": "e392910dc51879d2c6e54cb41d4a96200ea468e1bab49676760a3c9b33c8bc0b",
+    "build_id": "78d8c064370cbb0e",
+    "step": "09-eligible-replacement-preview"
+  },
+  {
+    "path": "screenshots/10-10-conflicting-day-request.jpg",
+    "sha256": "d323bb8f4ba7a96916caee1dd5aa1d7eca5abdd3ff952f8f7d12f02d9b5a0650",
+    "build_id": "78d8c064370cbb0e",
+    "step": "10-conflicting-day-request"
+  },
+  {
+    "path": "screenshots/11-11-conflicting-day-result.jpg",
+    "sha256": "e5eaccfa63ce29711a99994c97bc21b4a5a341a77a50481c526583ee74f56a74",
+    "build_id": "78d8c064370cbb0e",
+    "step": "11-conflicting-day-result"
+  },
+  {
+    "path": "screenshots/12-12-conflicting-day-blocked.jpg",
+    "sha256": "475ec6bef8e25d6bf257285507bbba9c66f0e00bdb7d7f0f3d37fa519e0e1c2c",
+    "build_id": "78d8c064370cbb0e",
+    "step": "12-conflicting-day-blocked"
+  },
+  {
+    "path": "screenshots/13-13-mixed-preference-request.jpg",
+    "sha256": "43bb1d9363a703e204ddfc6d6c2cb7189f96af2914179d4e2156c756781d27f1",
+    "build_id": "78d8c064370cbb0e",
+    "step": "13-mixed-preference-request"
+  },
+  {
+    "path": "screenshots/14-14-mixed-preference-complete-clarification.jpg",
+    "sha256": "2094420d3221b3288008182735445c050950dca7904a30959d1c77173c219e77",
+    "build_id": "78d8c064370cbb0e",
+    "step": "14-mixed-preference-complete-clarification"
+  },
+  {
+    "path": "screenshots/15-15-quantified-personalized-request.jpg",
+    "sha256": "222e1aeb1138f25d53291c3485138911a7c6a4e2fd4ccc28684d118054d5ba4d",
+    "build_id": "78d8c064370cbb0e",
+    "step": "15-quantified-personalized-request"
+  },
+  {
+    "path": "screenshots/16-16-ten-days-nature-180-minute-proposal.jpg",
+    "sha256": "13dd3c74b05af9e5472c3d29a939e963c05d90da9f5d2d0d45a9f69b2a68f8e2",
+    "build_id": "78d8c064370cbb0e",
+    "step": "16-ten-days-nature-180-minute-proposal"
+  },
+  {
+    "path": "screenshots/17-17-fixed-day-insertion-request.jpg",
+    "sha256": "9c45dffb9eeda72360b6b2a6816e64ef81e3a149c28a48bb1b197177ce6a7f27",
+    "build_id": "78d8c064370cbb0e",
+    "step": "17-fixed-day-insertion-request"
+  },
+  {
+    "path": "screenshots/18-18-fixed-day-insertion-blocked.jpg",
+    "sha256": "a8f6bfd6aea25be8fd84e95a6f2b87760a61dd1403acbef4ab5a586d56b18b73",
+    "build_id": "78d8c064370cbb0e",
+    "step": "18-fixed-day-insertion-blocked"
+  },
+  {
+    "path": "screenshots/19-19-readonly-request-with-eligible-preview.jpg",
+    "sha256": "ebf156f1bac471eb7f9cd46bb295a2dc42fcfa70a07bf837ef33ec9d35c42efb",
+    "build_id": "78d8c064370cbb0e",
+    "step": "19-readonly-request-with-eligible-preview"
+  },
+  {
+    "path": "screenshots/20-20-readonly-preserves-eligible-preview.jpg",
+    "sha256": "e17388f2fe9f380bbd29ce6e6306d969bad72fe5ff3f2a7b8d4e34099060cd34",
+    "build_id": "78d8c064370cbb0e",
+    "step": "20-readonly-preserves-eligible-preview"
+  },
+  {
+    "path": "screenshots/21-01-final-source-baseline.jpg",
+    "sha256": "ab5d9d2a064f12a9e7e72fc0b31ca32a31f3d97fad360ddd110cf2c5d27f36d7",
+    "build_id": "683c8cf6cf38473e",
+    "step": "01-final-source-baseline"
+  },
+  {
+    "path": "screenshots/22-02-mandatory-total-driving-request.jpg",
+    "sha256": "2c99fe8929b30c0938ac1cfb87f14f9afd1e751d4c778d9696d0914ab4305ead",
+    "build_id": "683c8cf6cf38473e",
+    "step": "02-mandatory-total-driving-request"
+  },
+  {
+    "path": "screenshots/23-03-mandatory-comparison-clarified.jpg",
+    "sha256": "22b5e75562ab893b520485f9ed658d282910d77e3ef499a95f41921d9c44748f",
+    "build_id": "683c8cf6cf38473e",
+    "step": "03-mandatory-comparison-clarified"
+  },
+  {
+    "path": "screenshots/24-04-final-long-replacement-request.jpg",
+    "sha256": "598ec63cdd11157ff87df9d814c703068ac10e5738dc5bbd41b4d9fec45b53c8",
+    "build_id": "683c8cf6cf38473e",
+    "step": "04-final-long-replacement-request"
+  },
+  {
+    "path": "screenshots/25-05-final-paid-request-submitted.jpg",
+    "sha256": "f4fb172763a1beaa1c90b3260f0f69c27db44f39293ac7ca57666a3ea2e15c4e",
+    "build_id": "683c8cf6cf38473e",
+    "step": "05-final-paid-request-submitted"
+  },
+  {
+    "path": "screenshots/26-06-final-paid-replacement-correct.jpg",
+    "sha256": "80b951a4cf89991b97fdbe68fe299bc29c23d5a4d9835155113c8d6a624aa288",
+    "build_id": "683c8cf6cf38473e",
+    "step": "06-final-paid-replacement-correct"
+  },
+  {
+    "path": "screenshots/27-07-final-replacement-staging.jpg",
+    "sha256": "86b202fdcd421599ebaec4c61a3a329d4be863a86082833edaec4eba057400fa",
+    "build_id": "683c8cf6cf38473e",
+    "step": "07-final-replacement-staging"
+  },
+  {
+    "path": "screenshots/28-08-final-replacement-draft-confirmed.jpg",
+    "sha256": "78e3dd12d2aab59f8fa0ff95a5d77c667adae2e576697ef4da78c181f7ca096f",
+    "build_id": "683c8cf6cf38473e",
+    "step": "08-final-replacement-draft-confirmed"
+  },
+  {
+    "path": "screenshots/29-09-final-evaluation-requested.jpg",
+    "sha256": "bb813390b6d82eb3ac522f3ec14824f4d7bbdee4fe1756e62a49709b5140c45e",
+    "build_id": "683c8cf6cf38473e",
+    "step": "09-final-evaluation-requested"
+  },
+  {
+    "path": "screenshots/30-10-final-eligible-map-preview.jpg",
+    "sha256": "1bd1259dd581917b840c16d4f21762632bebb371bdacc453caa99f52e4d8bd65",
+    "build_id": "683c8cf6cf38473e",
+    "step": "10-final-eligible-map-preview"
+  },
+  {
+    "path": "screenshots/31-11-final-readonly-request.jpg",
+    "sha256": "044267b15f7428bfc69463a8c0f0904f6b257297367cdafe94a7ac86dbf28409",
+    "build_id": "683c8cf6cf38473e",
+    "step": "11-final-readonly-request"
+  },
+  {
+    "path": "screenshots/32-12-final-readonly-preserves-preview.jpg",
+    "sha256": "49cdbd6babfc7854e5663d951100cb6fd5a072c39204967798ea712c03bf235a",
+    "build_id": "683c8cf6cf38473e",
+    "step": "12-final-readonly-preserves-preview"
+  }
+]

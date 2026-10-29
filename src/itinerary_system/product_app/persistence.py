@@ -10,6 +10,7 @@ from __future__ import annotations
 import json
 import math
 import os
+import re
 import stat
 import threading
 import time
@@ -31,12 +32,16 @@ LAYOUT_DIRECTORIES = (
     "locks",
     "plan_repository",
     "workspaces",
+    "decisions",
+    "transactions",
+    "acceptance_snapshots",
     "sessions",
     "conversations",
     "migrations",
     "temporary",
 )
 SESSION_SNAPSHOT_SCHEMA_VERSION = "product-session-snapshot-v1"
+MUTATION_SNAPSHOT_SCHEMA_VERSION = "product-session-snapshot-v2"
 TOKEN_VERIFIER_ALGORITHM = "sha256-salted-v1"
 
 
@@ -302,7 +307,7 @@ class LocalStateLayout:
             self._write_json_file(temporary_path, payload, exclusive=True)
             if self._read_json_file(temporary_path) != payload:
                 raise _StateProbeError
-            os.replace(temporary_path, target_path)
+            self._replace_with_transient_retry(temporary_path, target_path)
             self._fsync_directory(temporary_dir)
             if self._read_json_file(target_path) != payload:
                 raise _StateProbeError
@@ -325,11 +330,22 @@ class LocalStateLayout:
         temporary = path.with_name(f".tmp-{uuid4().hex}.json")
         try:
             cls._write_json_file(temporary, payload, exclusive=True)
-            os.replace(temporary, path)
+            cls._replace_with_transient_retry(temporary, path)
             cls._fsync_directory(path.parent)
         finally:
             if temporary.exists():
                 temporary.unlink()
+
+    @staticmethod
+    def _replace_with_transient_retry(source: Path, destination: Path) -> None:
+        for attempt in range(3):
+            try:
+                os.replace(source, destination)
+                return
+            except OSError as exc:
+                if getattr(exc, "winerror", None) not in {5, 32, 33} or attempt == 2:
+                    raise
+                time.sleep(0.025 * (attempt + 1))
 
     @staticmethod
     def _write_json_file(path: Path, payload: dict[str, Any], *, exclusive: bool) -> None:
@@ -441,7 +457,7 @@ class ConversationFileStore:
                 handle.flush()
                 os.fsync(handle.fileno())
             validate(self.read(temporary))
-            os.replace(temporary, path)
+            LocalStateLayout._replace_with_transient_retry(temporary, path)
             LocalStateLayout._fsync_directory(self.root)
             validate(self.read(path))
         finally:
@@ -575,13 +591,14 @@ class SessionSnapshotStore:
             }
         )
         return {
-            "schema_version": SESSION_SNAPSHOT_SCHEMA_VERSION,
+            "schema_version": MUTATION_SNAPSHOT_SCHEMA_VERSION if session.mutation_receipts else SESSION_SNAPSHOT_SCHEMA_VERSION,
             "token_verifier": {
                 "algorithm": TOKEN_VERIFIER_ALGORITHM,
                 "salt": session.mutation_token_salt,
                 "digest": session.mutation_token_verifier,
             },
             "session": public,
+            **({"mutation_receipts": session.mutation_receipts} if session.mutation_receipts else {}),
         }
 
     @classmethod
@@ -590,9 +607,15 @@ class SessionSnapshotStore:
             raise SessionSnapshotError("session_snapshot_invalid")
         if not isinstance(payload, dict):
             raise SessionSnapshotError("session_snapshot_invalid")
-        if payload.get("schema_version") != SESSION_SNAPSHOT_SCHEMA_VERSION:
+        version = payload.get("schema_version")
+        fields = {"schema_version", "token_verifier", "session"}
+        if version == MUTATION_SNAPSHOT_SCHEMA_VERSION:
+            fields.add("mutation_receipts")
+            if not payload.get("mutation_receipts"):
+                raise SessionSnapshotError("session_snapshot_invalid")
+        elif version != SESSION_SNAPSHOT_SCHEMA_VERSION:
             raise SessionSnapshotError("session_snapshot_schema_unsupported")
-        if set(payload) != {"schema_version", "token_verifier", "session"}:
+        if set(payload) != fields:
             raise SessionSnapshotError("session_snapshot_invalid")
         verifier = payload.get("token_verifier")
         session = payload.get("session")
@@ -647,6 +670,7 @@ class SessionSnapshotStore:
         if proposal is not None and not isinstance(proposal, dict):
             raise SessionSnapshotError("session_snapshot_invalid")
         operations = [cls._decode_operation(item) for item in draft]
+        receipts = cls._decode_mutation_receipts(payload.get("mutation_receipts", []), revision)
         return ProductSession(
             session_id=expected_session_id,
             mutation_token_salt=salt,
@@ -664,9 +688,51 @@ class SessionSnapshotStore:
             proposal=proposal,
             permission_decisions=permissions,
             conversation_id=session["conversation_id"],
+            mutation_receipts=receipts,
             created_at=session["created_at"],
             last_accessed_at=session["last_accessed_at"],
         )
+
+    @classmethod
+    def _decode_mutation_receipts(cls, receipts: Any, revision: int) -> list[dict[str, Any]]:
+        fields = {"mutation_id", "action", "request_sha256", "expected_revision", "committed_revision", "result"}
+        if not isinstance(receipts, list) or len(receipts) > 256:
+            raise SessionSnapshotError("session_snapshot_invalid")
+        identifiers = set()
+        last_revision = 0
+        for receipt in receipts:
+            if not isinstance(receipt, dict) or set(receipt) != fields:
+                raise SessionSnapshotError("session_snapshot_invalid")
+            identity = receipt["mutation_id"]
+            before, after = receipt["expected_revision"], receipt["committed_revision"]
+            if (not isinstance(identity, str) or re.fullmatch(r"mutation_[0-9a-f]{32}", identity) is None
+                or identity in identifiers or not _valid_hex(receipt["request_sha256"], 64)
+                or isinstance(before, bool) or not isinstance(before, int) or before < 0
+                or isinstance(after, bool) or not isinstance(after, int) or after != before + 1 or after > revision or after <= last_revision):
+                raise SessionSnapshotError("session_snapshot_invalid")
+            identifiers.add(identity)
+            last_revision = after
+            result = receipt["result"]
+            if not isinstance(result, dict):
+                raise SessionSnapshotError("session_snapshot_invalid")
+            if receipt["action"] == "selection":
+                if result:
+                    raise SessionSnapshotError("session_snapshot_invalid")
+            elif receipt["action"] == "undo":
+                if set(result) != {"undone"}:
+                    raise SessionSnapshotError("session_snapshot_invalid")
+                cls._decode_operation(result["undone"])
+            elif receipt["action"] == "operations":
+                if set(result) == {"operation"}:
+                    cls._decode_operation(result["operation"])
+                elif set(result) == {"operations"} and isinstance(result["operations"], list) and 1 <= len(result["operations"]) <= 32:
+                    for operation in result["operations"]:
+                        cls._decode_operation(operation)
+                else:
+                    raise SessionSnapshotError("session_snapshot_invalid")
+            else:
+                raise SessionSnapshotError("session_snapshot_invalid")
+        return receipts
 
     @classmethod
     def _decode_operation(cls, payload: Any) -> DraftOperationV1:

@@ -1,6 +1,8 @@
-import { createGeographicMapController } from "./map-controller-v2.js?v=20260810-stability5";
+import { createGeographicMapController } from "./map-controller-v2.js?v=20260817-e2e3";
 
 let activeController = null;
+let activeViewKey = null;
+let retainedCamera = null;
 
 const CONFIRMED_PARAMETER_KEYS = new Set([
   "schema_version", "snap_preview_id", "waypoint_id", "name", "day", "role", "duration",
@@ -551,14 +553,15 @@ function activePlanId(geography, requestedPlanId) {
   if (requestedPlanId && plans.some((plan) => plan.plan_id === requestedPlanId)) {
     return requestedPlanId;
   }
-  return plans.find((plan) => plan.role === "registered_repair")?.plan_id
-    || plans.find((plan) => plan.role === "original")?.plan_id
+  return plans.find((plan) => plan.role === "original")?.plan_id
     || null;
 }
 
 export function disposeGeographicMap() {
   activeController?.dispose();
   activeController = null;
+  activeViewKey = null;
+  retainedCamera = null;
 }
 
 /**
@@ -583,16 +586,26 @@ export async function renderGeographicMap({
   poiCandidates = [],
   selectedCandidateId = null,
   showPoiCandidates = false,
+  interestRegions = null,
+  interestMassLevel = 0.8,
+  selectedInterestId = null,
   onSelectStop = () => {},
   onSelectRouteLeg = () => {},
   onSelectCandidate = () => {},
+  onSelectInterest = () => {},
   onSelectCustomWaypoint = () => {},
   onCustomWaypointDrag = () => {},
   onEmptyMapClick = () => {},
   onStatus = () => {},
 }) {
-  disposeGeographicMap();
   const planId = activePlanId(geography, selectedAlternativeId);
+  const plan = geography?.plans?.find(item => item.plan_id === planId);
+  const interestVisible = interestRegions?.exploration_plan_id === planId
+    && interestRegions?.exploration_plan_content_hash === plan?.content_hash
+    && interestRegions?.context?.day === selectedDay;
+  const viewKey = JSON.stringify([planId, plan?.content_hash, selectedDay, interestVisible, selectedInterestId]);
+  const initialCamera = viewKey === activeViewKey ? activeController?.camera() || retainedCamera : null;
+  disposeGeographicMap();
   if (!planId) {
     onStatus({ state: "failed", code: "active_plan_required" });
     return null;
@@ -605,6 +618,7 @@ export async function renderGeographicMap({
     onStopSelect: onSelectStop,
     onRouteLegSelect: onSelectRouteLeg,
     onCandidateSelect: onSelectCandidate,
+    onInterestSelect: onSelectInterest,
     onCustomWaypointSelect: onSelectCustomWaypoint,
     onCustomWaypointDrag,
     onGapSelect: (gap) => onStatus({
@@ -618,6 +632,8 @@ export async function renderGeographicMap({
     onStatus,
   });
   activeController = controller;
+  activeViewKey = viewKey;
+  retainedCamera = initialCamera;
   return controller.render({
     geography,
     activePlanId: planId,
@@ -631,5 +647,9 @@ export async function renderGeographicMap({
     poiCandidates,
     selectedCandidateId,
     showPoiCandidates,
+    interestRegions,
+    interestMassLevel,
+    selectedInterestId,
+    initialCamera,
   });
 }

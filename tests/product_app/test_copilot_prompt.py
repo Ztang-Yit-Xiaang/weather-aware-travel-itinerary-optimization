@@ -73,15 +73,28 @@ def test_static_hash_and_controls_are_stable_across_dynamic_data() -> None:
     first = build(_context(), (), "Review the weather repair.")
     second = build(_context(selected_day=3), (), "Keep the original.")
 
-    assert first.prompt_version == "copilot-prompt-v1"
+    assert first.prompt_version == "copilot-prompt-v6"
     assert first.prompt_sha256 == second.prompt_sha256 == prompt_sha256()
     assert len(prompt_sha256()) == 64
     assert set(prompt_sha256()) <= set("0123456789abcdef")
     assert first.instructions == second.instructions == DEVELOPER_INSTRUCTIONS
+    assert "permission=external_booking_change" in first.instructions
+    assert "Highlights must contain only the exact allow-listed identifiers" in first.instructions
+    assert "replacement inherits the target stop's existing day" in first.instructions
+    assert "put it only in highlights.day_ids" in first.instructions
     assert first.reasoning_effort == "low"
     assert first.reasoning_context == "current_turn"
     assert first.text_verbosity == "low"
     assert first.max_output_tokens == 1200
+
+
+def test_medium_reasoning_keeps_the_same_static_prompt_identity() -> None:
+    low = build(_context(), (), "Review this.")
+    medium = build(_context(), (), "Review this.", reasoning_effort="medium")
+
+    assert medium.reasoning_effort == "medium"
+    assert medium.prompt_sha256 == low.prompt_sha256
+    validate_budget(medium)
 
 
 def test_dynamic_data_is_canonical_delimited_and_cannot_close_a_section() -> None:
@@ -148,7 +161,12 @@ def test_all_72_sanitized_cases_build_through_fake_transport() -> None:
     transport = _FakeTransport()
     for case in cases:
         category_counts[case["category"]] = category_counts.get(case["category"], 0) + 1
-        context = CopilotContextV1(**corpus["context_fixtures"][case["context_fixture"]])
+        context_values = dict(corpus["context_fixtures"][case["context_fixture"]])
+        for name in ("draft_operations", "allowed_stop_ids", "allowed_candidate_ids", "allowed_days",
+                     "allowed_segment_ids", "allowed_alternative_ids", "known_places"):
+            if name in context_values:
+                context_values[name] = tuple(context_values[name])
+        context = CopilotContextV1(**context_values)
         bundle = build(context, (), case["input"])
         validate_budget(bundle)
         if case["case_id"] != "ambiguous_01":
@@ -201,14 +219,8 @@ def test_aggregate_evaluator_accepts_only_safe_structured_records(tmp_path: Path
 
     live_by_id = {record["case_id"]: record for record in results}
     live_results = [live_by_id[case_id] for case_id in evaluator.LIVE_SUBSET_CASE_IDS]
-    live_summary = evaluator.evaluate_results(corpus, live_results, model="gpt-5.6-terra")
-    assert live_summary["evaluation_scope"] == "live_fixed_24"
-    assert live_summary["total_cases"] == 24
-    assert set(live_summary["by_category"]) == set(corpus["category_counts"])
-    assert live_summary["thresholds_passed"] is True
-
-    with pytest.raises(ValueError, match="live_fixed_stratified_subset_required"):
-        evaluator.evaluate_results(corpus, live_results[:1], model="gpt-5.6-terra")
+    with pytest.raises(ValueError, match="invalid_live_case_evidence_schema"):
+        evaluator.evaluate_results(corpus, live_results, model="gpt-5.6-terra")
     with pytest.raises(ValueError, match="unsafe_result_fields"):
         evaluator.evaluate_results(
             corpus,

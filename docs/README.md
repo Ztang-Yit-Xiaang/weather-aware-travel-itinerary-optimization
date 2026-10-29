@@ -31,6 +31,7 @@ This directory is organized by the kind of question you are trying to answer.
 | W4 Copilot provider, prompt, transcript, and privacy contract | [planning/w4_copilot_provider_transcript_phase_plan.md](planning/w4_copilot_provider_transcript_phase_plan.md) |
 | Local Copilot launch, provider selection, and privacy instructions | [Repository README](../README.md#open-the-itinerary-repair-copilot) |
 | Current implementation status | [current/current_problem_manifest.md](current/current_problem_manifest.md) |
+| Current runtime progress, remaining concerns, exact file/LLM I/O | [October 7 checkpoint](reports/runtime_coherence_status_20261007.md) |
 | Product audit synthesis and baseline | [audits/product_audit_synthesis.md](audits/product_audit_synthesis.md) |
 | Verified W1M/G1 live runtime closeout | [audits/w1m_live_g1_verification_report.md](audits/w1m_live_g1_verification_report.md) and [manifest](audits/w1m_live_g1_evidence_manifest.json) |
 | Repair implementation contract | [planning/travel_itinerary_repair_technical_specification.md](planning/travel_itinerary_repair_technical_specification.md) |
@@ -42,6 +43,14 @@ This directory is organized by the kind of question you are trying to answer.
 
 - Process/audit notes, duplicate specs, and LaTeX build outputs were merged away so this index points only to durable docs.
 - `planning/travel_itinerary_repair_technical_specification.md` is the single canonical repair implementation contract.
-- W4 is implemented and its offline audits pass. G4 remains blocked until an
-  explicitly authorized live OpenAI smoke, fixed-24 evaluation, and
-  low-versus-medium comparison pass; W5 acceptance remains disabled meanwhile.
+- W4 is implemented and its offline audits pass. The first authorized G4 live
+  smoke and fixed-24 comparison passed aggregate thresholds but failed independent
+  provenance audit. V4 closed recomputability; the authorized v5 run now preserves
+  exact synthetic LLM input/output, complete file I/O, and matching 48-attempt SDK
+  and HTTP transport evidence. Three independent audits passed with zero blockers,
+  so G4 v5 verified its frozen source snapshot. The authorized 2026-08-13
+  current-source `gpt-5.4-mini` v6 run passed all 48 cases with exact file/LLM
+  input and output and matching SDK/HTTP attempt counts. Three independent
+  read-only reviews pass after audit-binding remediation, so current-source G4 v6
+  is verified. W5 is implemented with durable confirmed Accept/Keep/rollback;
+  G5 remains pending and W6 remains closed.

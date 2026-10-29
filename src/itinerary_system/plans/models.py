@@ -383,12 +383,30 @@ class PlanDiff:
                 weighted_edit_cost=self.weighted_edit_cost,
                 expected_changes=_v5_expected_change_rows(self),
             )
+        if self.schema_version == "plan-diff-v6" and (
+            sum(typed_presence) < 2 or self.attribute_ownership_evidence is not None
+        ):
+            raise ValueError("plan-diff-v6 requires multiple typed attribute families")
+        if self.schema_version == "plan-diff-v7":
+            base_changes = any((self.added_stops, self.deleted_stops, self.day_moves, self.time_shifts,
+                                self.reorder_changes, self.lodging_changes, self.road_changes))
+            if (sum(typed_presence) < 2 and not (self.role_changes and base_changes)) or not self.attribute_ownership_evidence:
+                raise ValueError("plan-diff-v7 requires mixed changes and ownership evidence")
+            _validate_v5_attribute_ownership_evidence(
+                self.attribute_ownership_evidence,
+                parent_plan_id=self.parent_plan_id,
+                weighted_edit_cost=self.weighted_edit_cost,
+                expected_changes=_v5_expected_change_rows(self),
+                include_role=True,
+            )
         if self.schema_version not in {
             "plan-diff-v1",
             "plan-diff-v2",
             "plan-diff-v3",
             "plan-diff-v4",
             "plan-diff-v5",
+            "plan-diff-v6",
+            "plan-diff-v7",
         }:
             raise ValueError("unsupported plan diff schema")
         record = {
@@ -412,6 +430,11 @@ class PlanDiff:
             record["time_window_changes"] = [change.to_record() for change in self.time_window_changes]
         elif self.schema_version == "plan-diff-v4":
             record["role_changes"] = [change.to_record() for change in self.role_changes]
+        elif self.schema_version in {"plan-diff-v6", "plan-diff-v7"}:
+            for name in ("duration_changes", "time_window_changes", "role_changes"):
+                changes = getattr(self, name)
+                if changes:
+                    record[name] = [change.to_record() for change in changes]
         elif self.schema_version == "plan-diff-v5":
             if self.duration_changes:
                 record["duration_changes"] = [
@@ -421,6 +444,7 @@ class PlanDiff:
                 record["time_window_changes"] = [
                     change.to_record() for change in self.time_window_changes
                 ]
+        if self.schema_version in {"plan-diff-v5", "plan-diff-v7"}:
             record["attribute_ownership_evidence"] = dict(
                 self.attribute_ownership_evidence or {}
             )
@@ -580,6 +604,17 @@ def _v5_expected_change_rows(diff: PlanDiff) -> list[dict[str, Any]]:
             delta_scale=1.0,
             cost=change.cost,
         )
+    for change in diff.role_changes:
+        append(
+            change_kind="role_change",
+            target_stop_id=change.stop_id,
+            attributes=("role",),
+            before_value={"role": change.from_role},
+            after_value={"role": change.to_role},
+            owner_strength=change.owner_strength,
+            delta_scale=1.0,
+            cost=change.cost,
+        )
     for change in diff.lodging_changes:
         append(
             change_kind="lodging_change",
@@ -637,6 +672,7 @@ def _validate_v5_attribute_ownership_evidence(
     parent_plan_id: str,
     weighted_edit_cost: float,
     expected_changes: list[dict[str, Any]],
+    include_role: bool = False,
 ) -> None:
     if not isinstance(value, dict) or set(value) != {
         "schema_version",
@@ -657,7 +693,7 @@ def _validate_v5_attribute_ownership_evidence(
     ownership_policy = value.get("ownership_policy")
     if (
         value.get("schema_version")
-        != "plan-diff-attribute-ownership-evidence-v1"
+        != f"plan-diff-attribute-ownership-evidence-v{2 if include_role else 1}"
         or value.get("parent_plan_id") != parent_plan_id
         or not isinstance(value.get("parent_plan_content_hash"), str)
         or re.fullmatch(
@@ -670,7 +706,7 @@ def _validate_v5_attribute_ownership_evidence(
             "permission_claim": "not_evaluated",
             "feasibility_claim": "not_evaluated",
             "cost_coverage": "all_listed_diff_changes",
-            "relation_specific_attributes": [
+            "relation_specific_attributes": sorted([
                 "day",
                 "duration",
                 "end_time",
@@ -678,7 +714,7 @@ def _validate_v5_attribute_ownership_evidence(
                 "order",
                 "start_time",
                 "time_window",
-            ],
+            ] + (["role"] if include_role else [])),
             "lodging_and_road_relations": "not_migrated",
         }
         or not isinstance(ownership_policy, dict)
@@ -729,7 +765,7 @@ def _validate_v5_attribute_ownership_evidence(
     constraint_ids = [row.get("constraint_id") for row in constraints]
     if (
         any(
-            not _valid_v5_constraint_row(row)
+            not _valid_v5_constraint_row(row, include_role=include_role)
             for row in constraints
         )
         or constraint_ids != sorted(constraint_ids)
@@ -756,6 +792,7 @@ def _validate_v5_attribute_ownership_evidence(
                 constraints_by_id=constraints_by_id,
                 ownership_policy=ownership_policy,
                 expected=expected_changes[index],
+                include_role=include_role,
             )
             for index, row in enumerate(changes)
         )
@@ -806,7 +843,7 @@ def _valid_v5_weight_map(value: Any) -> bool:
     )
 
 
-def _valid_v5_constraint_row(value: dict[str, Any]) -> bool:
+def _valid_v5_constraint_row(value: dict[str, Any], *, include_role: bool = False) -> bool:
     attribute = value.get("attribute")
     relation = str(value.get("relation") or "")
     relation_aliases = {
@@ -838,6 +875,8 @@ def _valid_v5_constraint_row(value: dict[str, Any]) -> bool:
         },
         "order": {"stop_order", "attribute:stop_order"},
     }
+    if include_role:
+        relation_aliases["role"] = {"role", "itinerary_role", "role_equals", "set_role", "attribute:role"}
     return (
         isinstance(value.get("constraint_id"), str)
         and bool(value["constraint_id"])
@@ -859,6 +898,11 @@ def _valid_v5_attribute_value(attribute: str, value: Any) -> bool:
     clock = re.compile(r"^(?:[01]\d|2[0-3]):[0-5]\d$")
     if attribute == "existence":
         return isinstance(value, bool)
+    if attribute == "role":
+        return isinstance(value, str) and value in {
+            "attraction", "activity", "meal", "lodging", "transport_hub", "rest_stop",
+            "scenic_stop", "route_waypoint", "origin", "destination",
+        }
     if attribute == "day":
         return isinstance(value, int) and not isinstance(value, bool) and 1 <= value <= 366
     if attribute == "order":
@@ -918,6 +962,7 @@ def _valid_v5_change_row(
     constraints_by_id: dict[str, dict[str, Any]],
     ownership_policy: dict[str, Any],
     expected: dict[str, Any],
+    include_role: bool = False,
 ) -> bool:
     change_kind = value.get("change_kind")
     allowed_kinds = {
@@ -931,6 +976,8 @@ def _valid_v5_change_row(
         "lodging_change",
         "road_change",
     }
+    if include_role:
+        allowed_kinds.add("role_change")
     attributes = value.get("attributes")
     before = value.get("before_value")
     after = value.get("after_value")
@@ -982,6 +1029,8 @@ def _valid_v5_change_row(
         "lodging",
         "road",
     }
+    if include_role:
+        supported.add("role")
     if any(attribute not in supported for attribute in attributes):
         return False
     for attribute in attributes:

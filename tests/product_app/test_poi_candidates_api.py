@@ -13,6 +13,7 @@ from itinerary_system.product_app.api import create_product_app
 
 ROOT = Path(__file__).resolve().parents[2]
 REGISTRY = ROOT / "configs" / "product_app_registry.json"
+RUN_ID = "california_coast_product_demo_v2"
 TRIP_ID = "california_coast_demo"
 INSERTION_LEG = "leg_stearns_wharf_surf_n_wear_s_beach_house"
 REPLACEMENT_LEG = "leg_hotel_milo_santa_barbara_golden_gate_bridge"
@@ -133,7 +134,7 @@ def candidate_app(tmp_path: Path) -> tuple[TestClient, Any, dict[str, Any], dict
     )
     client = TestClient(app)
     with client:
-        created = client.post("/api/sessions", json={})
+        created = client.post("/api/sessions", json={"run_id": RUN_ID})
         assert created.status_code == 200
         payload = created.json()
     runtime = app.state.product_runtime
@@ -147,7 +148,7 @@ def candidate_app(tmp_path: Path) -> tuple[TestClient, Any, dict[str, Any], dict
 
 
 def _append_candidate_cells(service: Any, cells: list[dict[str, Any]]) -> None:
-    run_id = service.registry.default.run_id
+    run_id = RUN_ID
     bundle = service._bundles[run_id]
     bundle.route_matrix["cells"].extend(deepcopy(cells))
     entity_ids = bundle.route_matrix["entity_ids"]
@@ -378,7 +379,7 @@ def test_every_exact_registered_replacement_is_evaluated_but_never_ranked(
     assert unknown.json() == {"detail": "invalid_selected_candidate"}
 
 
-def test_default_detour_exposes_both_hash_pinned_registered_replacements(
+def test_research_run_exposes_both_hash_pinned_registered_replacements(
     tmp_path: Path,
 ) -> None:
     app = create_product_app(
@@ -388,7 +389,9 @@ def test_default_detour_exposes_both_hash_pinned_registered_replacements(
         additional_allowed_authorities=("testserver",),
     )
     with TestClient(app) as client:
-        created = client.post("/api/sessions", json={}).json()
+        created = client.post(
+            "/api/sessions", json={"run_id": RUN_ID}
+        ).json()
         session = created["session"]
         headers = {"X-Session-Token": created["mutation_token"]}
         response = client.get(
@@ -561,7 +564,7 @@ def test_matrix_header_provenance_is_mandatory(
 ) -> None:
     client, service, session, headers, repository_root = candidate_app
     _write_catalog(repository_root, _catalog_record())
-    bundle = service._bundles[service.registry.default.run_id]
+    bundle = service._bundles[RUN_ID]
     bundle.route_matrix[field] = value
 
     response = _request(client, session, headers)
@@ -573,7 +576,7 @@ def test_matrix_header_provenance_is_mandatory(
 def test_unknown_matrix_top_level_field_is_rejected(candidate_app) -> None:
     client, service, session, headers, repository_root = candidate_app
     _write_catalog(repository_root, _catalog_record())
-    bundle = service._bundles[service.registry.default.run_id]
+    bundle = service._bundles[RUN_ID]
     bundle.route_matrix["unexpected_top_level"] = "ignored_before_remediation"
 
     response = _request(client, session, headers)
@@ -585,7 +588,7 @@ def test_unknown_matrix_top_level_field_is_rejected(candidate_app) -> None:
 def test_malformed_accepted_baseline_cell_fails_the_endpoint(candidate_app) -> None:
     client, service, session, headers, repository_root = candidate_app
     _write_catalog(repository_root, _catalog_record())
-    bundle = service._bundles[service.registry.default.run_id]
+    bundle = service._bundles[RUN_ID]
     baseline = next(
         cell
         for cell in bundle.route_matrix["cells"]

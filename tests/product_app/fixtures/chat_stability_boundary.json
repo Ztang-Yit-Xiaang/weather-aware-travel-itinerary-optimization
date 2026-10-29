@@ -1,0 +1,1493 @@
+[
+  {
+    "id": "B001",
+    "category": "additional_boundary_review",
+    "split": "development",
+    "message": "Set Griffith Observatory time window with latest departure 18:00 with earliest arrival 09:00.",
+    "expected_states": [
+      "proposal_ready"
+    ],
+    "expected_intents": [
+      {
+        "type": "set_stop_time_window",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "earliest_arrival": "09:00",
+          "latest_departure": "18:00"
+        }
+      }
+    ]
+  },
+  {
+    "id": "B002",
+    "category": "additional_boundary_review",
+    "split": "development",
+    "message": "Set Griffith Observatory time window with latest departure 09:00 with earliest arrival 18:00.",
+    "expected_states": [
+      "clarification_required",
+      "unsupported"
+    ],
+    "expected_intents": null
+  },
+  {
+    "id": "B003",
+    "category": "additional_boundary_review",
+    "split": "development",
+    "message": "Set Griffith Observatory earliest departure 09:00 with latest arrival 18:00.",
+    "expected_states": [
+      "clarification_required",
+      "unsupported"
+    ],
+    "expected_intents": null
+  },
+  {
+    "id": "B004",
+    "category": "additional_boundary_review",
+    "split": "development",
+    "message": "Set Griffith Observatory latest arrival to 10:00 and leave the other days alone.",
+    "expected_states": [
+      "clarification_required",
+      "unsupported"
+    ],
+    "expected_intents": null
+  },
+  {
+    "id": "B005",
+    "category": "additional_boundary_review",
+    "split": "development",
+    "message": "Set Griffith Observatory latest arrival 10:00 with departure 18:00.",
+    "expected_states": [
+      "clarification_required",
+      "unsupported"
+    ],
+    "expected_intents": null
+  },
+  {
+    "id": "B006",
+    "category": "additional_boundary_review",
+    "split": "development",
+    "message": "Set Griffith Observatory earliest departure to 09:00.",
+    "expected_states": [
+      "clarification_required",
+      "unsupported"
+    ],
+    "expected_intents": null
+  },
+  {
+    "id": "B007",
+    "category": "additional_boundary_review",
+    "split": "development",
+    "message": "Set Griffith Observatory time window to 09:00-18:00 with a 60 minute visit.",
+    "expected_states": [
+      "clarification_required",
+      "unsupported"
+    ],
+    "expected_intents": null
+  },
+  {
+    "id": "B008",
+    "category": "additional_boundary_review",
+    "split": "development",
+    "message": "Set Griffith Observatory earliest arrival 09:00 with latest departure 18:00 with arrival deadline 12:00.",
+    "expected_states": [
+      "clarification_required",
+      "unsupported"
+    ],
+    "expected_intents": null
+  },
+  {
+    "id": "B009",
+    "category": "additional_boundary_review",
+    "split": "development",
+    "message": "Set Griffith Observatory earliest arrival 09:00 with latest departure 18:00.",
+    "expected_states": [
+      "proposal_ready"
+    ],
+    "expected_intents": [
+      {
+        "type": "set_stop_time_window",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "earliest_arrival": "09:00",
+          "latest_departure": "18:00"
+        }
+      }
+    ]
+  },
+  {
+    "id": "B010",
+    "category": "additional_boundary_review",
+    "split": "development",
+    "message": "Set Griffith Observatory earliest arrival to 09:00.",
+    "expected_states": [
+      "proposal_ready"
+    ],
+    "expected_intents": [
+      {
+        "type": "set_stop_time_window",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "earliest_arrival": "09:00",
+          "latest_departure": null
+        }
+      }
+    ]
+  },
+  {
+    "id": "B011",
+    "category": "additional_boundary_review",
+    "split": "development",
+    "message": "Set Griffith Observatory latest departure to 18:00.",
+    "expected_states": [
+      "proposal_ready"
+    ],
+    "expected_intents": [
+      {
+        "type": "set_stop_time_window",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "earliest_arrival": null,
+          "latest_departure": "18:00"
+        }
+      }
+    ]
+  },
+  {
+    "id": "B012",
+    "category": "additional_boundary_review",
+    "split": "development",
+    "message": "Move Kings Canyon National Park to position 1 or 2 on day 4.",
+    "expected_states": [
+      "clarification_required",
+      "unsupported"
+    ],
+    "expected_intents": null
+  },
+  {
+    "id": "B013",
+    "category": "additional_boundary_review",
+    "split": "development",
+    "message": "Move Kings Canyon National Park to position 1-2 on day 4.",
+    "expected_states": [
+      "clarification_required",
+      "unsupported"
+    ],
+    "expected_intents": null
+  },
+  {
+    "id": "B014",
+    "category": "additional_boundary_review",
+    "split": "development",
+    "message": "Move Kings Canyon National Park to position 1.5 on day 4.",
+    "expected_states": [
+      "clarification_required",
+      "unsupported"
+    ],
+    "expected_intents": null
+  },
+  {
+    "id": "B015",
+    "category": "additional_boundary_review",
+    "split": "development",
+    "message": "Move Kings Canyon National Park to position 1 on day 4 and position 2 on day 4.",
+    "expected_states": [
+      "clarification_required",
+      "unsupported"
+    ],
+    "expected_intents": null
+  },
+  {
+    "id": "B016",
+    "category": "additional_boundary_review",
+    "split": "development",
+    "message": "Instead of 45 minutes give Griffith Observatory 75 minutes.",
+    "expected_states": [
+      "proposal_ready"
+    ],
+    "expected_intents": [
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 75,
+            "minimum_minutes": 75,
+            "maximum_minutes": 75
+          }
+        }
+      }
+    ]
+  },
+  {
+    "id": "B017",
+    "category": "additional_boundary_review",
+    "split": "development",
+    "message": "Move Kings Canyon National Park to position -1 on day 4.",
+    "expected_states": [
+      "clarification_required",
+      "unsupported"
+    ],
+    "expected_intents": null
+  },
+  {
+    "id": "B018",
+    "category": "additional_boundary_review",
+    "split": "development",
+    "message": "Move Kings Canyon National Park to position 1 on day 4 at 10:00.",
+    "expected_states": [
+      "clarification_required",
+      "unsupported"
+    ],
+    "expected_intents": null
+  },
+  {
+    "id": "B019",
+    "category": "additional_boundary_review",
+    "split": "development",
+    "message": "Set Griffith Observatory earliest arrival 09:00 and latest departure 18:00.",
+    "expected_states": [
+      "proposal_ready"
+    ],
+    "expected_intents": [
+      {
+        "type": "set_stop_time_window",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "earliest_arrival": "09:00",
+          "latest_departure": "18:00"
+        }
+      }
+    ]
+  },
+  {
+    "id": "B020",
+    "category": "additional_boundary_review",
+    "split": "development",
+    "message": "Set Griffith Observatory time window to 25:00-26:00.",
+    "expected_states": [
+      "clarification_required",
+      "unsupported"
+    ],
+    "expected_intents": null
+  },
+  {
+    "id": "T001",
+    "message": "Set Griffith Observatory departure not before 18:00.",
+    "expected_states": [
+      "clarification_required",
+      "unsupported"
+    ],
+    "expected_intents": null
+  },
+  {
+    "id": "T002",
+    "message": "Set Griffith Observatory earliest arrival 09:00 with departure not before 18:00.",
+    "expected_states": [
+      "clarification_required",
+      "unsupported"
+    ],
+    "expected_intents": null
+  },
+  {
+    "id": "T003",
+    "message": "Set Griffith Observatory departure not before 18:00 with earliest arrival 09:00.",
+    "expected_states": [
+      "clarification_required",
+      "unsupported"
+    ],
+    "expected_intents": null
+  },
+  {
+    "id": "T004",
+    "message": "Set Griffith Observatory latest departure not before 18:00.",
+    "expected_states": [
+      "clarification_required",
+      "unsupported"
+    ],
+    "expected_intents": null
+  },
+  {
+    "id": "T005",
+    "message": "Set Griffith Observatory departure by 18:00.",
+    "expected_states": [
+      "proposal_ready"
+    ],
+    "expected_intents": [
+      {
+        "type": "set_stop_time_window",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "earliest_arrival": null,
+          "latest_departure": "18:00"
+        }
+      }
+    ]
+  },
+  {
+    "id": "T006",
+    "message": "Set Griffith Observatory earliest arrival 09:00 with departure by 18:00.",
+    "expected_states": [
+      "proposal_ready"
+    ],
+    "expected_intents": [
+      {
+        "type": "set_stop_time_window",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "earliest_arrival": "09:00",
+          "latest_departure": "18:00"
+        }
+      }
+    ]
+  },
+  {
+    "id": "T007",
+    "message": "Set Griffith Observatory arrival not before 09:00.",
+    "expected_states": [
+      "proposal_ready"
+    ],
+    "expected_intents": [
+      {
+        "type": "set_stop_time_window",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "earliest_arrival": "09:00",
+          "latest_departure": null
+        }
+      }
+    ]
+  },
+  {
+    "id": "T008",
+    "message": "Set Griffith Observatory arrival not before 09:00 with departure by 18:00.",
+    "expected_states": [
+      "proposal_ready"
+    ],
+    "expected_intents": [
+      {
+        "type": "set_stop_time_window",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "earliest_arrival": "09:00",
+          "latest_departure": "18:00"
+        }
+      }
+    ]
+  },
+  {
+    "id": "U001",
+    "message": "Set Griffith Observatory time window: depart not before 18:00.",
+    "expected_states": [
+      "clarification_required",
+      "unsupported"
+    ],
+    "expected_intents": null
+  },
+  {
+    "id": "U002",
+    "message": "Set Griffith Observatory time window: leave not before 18:00.",
+    "expected_states": [
+      "clarification_required",
+      "unsupported"
+    ],
+    "expected_intents": null
+  },
+  {
+    "id": "U003",
+    "message": "Set Griffith Observatory time window: not before 18:00 for departure.",
+    "expected_states": [
+      "clarification_required",
+      "unsupported"
+    ],
+    "expected_intents": null
+  },
+  {
+    "id": "U004",
+    "message": "Set Griffith Observatory time window: departure earliest 18:00.",
+    "expected_states": [
+      "clarification_required",
+      "unsupported"
+    ],
+    "expected_intents": null
+  },
+  {
+    "id": "U005",
+    "message": "Set Griffith Observatory time window: depart no earlier than 18:00.",
+    "expected_states": [
+      "clarification_required",
+      "unsupported"
+    ],
+    "expected_intents": null
+  },
+  {
+    "id": "U006",
+    "message": "Set Griffith Observatory time window: leave no earlier than 18:00.",
+    "expected_states": [
+      "clarification_required",
+      "unsupported"
+    ],
+    "expected_intents": null
+  },
+  {
+    "id": "U007",
+    "message": "Set Griffith Observatory time window: no earlier than 18:00 for departure.",
+    "expected_states": [
+      "clarification_required",
+      "unsupported"
+    ],
+    "expected_intents": null
+  },
+  {
+    "id": "U008",
+    "message": "Set Griffith Observatory time window: earliest departure 18:00.",
+    "expected_states": [
+      "clarification_required",
+      "unsupported"
+    ],
+    "expected_intents": null
+  },
+  {
+    "id": "U009",
+    "message": "Set Griffith Observatory time window: arrival not before 09:00.",
+    "expected_states": [
+      "proposal_ready"
+    ],
+    "expected_intents": [
+      {
+        "type": "set_stop_time_window",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "earliest_arrival": "09:00",
+          "latest_departure": null
+        }
+      }
+    ]
+  },
+  {
+    "id": "U010",
+    "message": "Set Griffith Observatory time window: arrive not before 09:00.",
+    "expected_states": [
+      "proposal_ready"
+    ],
+    "expected_intents": [
+      {
+        "type": "set_stop_time_window",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "earliest_arrival": "09:00",
+          "latest_departure": null
+        }
+      }
+    ]
+  },
+  {
+    "id": "U011",
+    "message": "Set Griffith Observatory time window: leave by 18:00.",
+    "expected_states": [
+      "proposal_ready"
+    ],
+    "expected_intents": [
+      {
+        "type": "set_stop_time_window",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "earliest_arrival": null,
+          "latest_departure": "18:00"
+        }
+      }
+    ]
+  },
+  {
+    "id": "U012",
+    "message": "Set Griffith Observatory time window: arrive not before 09:00, leave by 18:00.",
+    "expected_states": [
+      "proposal_ready"
+    ],
+    "expected_intents": [
+      {
+        "type": "set_stop_time_window",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "earliest_arrival": "09:00",
+          "latest_departure": "18:00"
+        }
+      }
+    ]
+  },
+  {
+    "id": "U013",
+    "message": "Set Griffith Observatory time window: arrive not before 09:00, leave by 18:00, and skip Yosemite National Park.",
+    "expected_states": [
+      "clarification_required",
+      "unsupported"
+    ],
+    "expected_intents": null
+  },
+  {
+    "id": "U014",
+    "message": "Set Griffith Observatory time window: arrive not before 09:00, leave by 18:00, and make lunch free.",
+    "expected_states": [
+      "clarification_required",
+      "unsupported"
+    ],
+    "expected_intents": null
+  },
+  {
+    "id": "U015",
+    "message": "Do not set Griffith Observatory time window: arrive not before 09:00, leave by 18:00.",
+    "expected_states": [
+      "clarification_required",
+      "unsupported"
+    ],
+    "expected_intents": null
+  },
+  {
+    "id": "U016",
+    "message": "Set Griffith Observatory time window: arrive not before 09:00, leave by 18:00 at Bixby Creek Bridge.",
+    "expected_states": [
+      "clarification_required",
+      "unsupported"
+    ],
+    "expected_intents": null
+  },
+  {
+    "id": "conditional_condition-if-prefix",
+    "category": "conditional_edit",
+    "split": "development",
+    "message": "If it rains give Griffith Observatory 75 minutes.",
+    "reason": "Weather condition has not been evaluated.",
+    "expected_states": [
+      "clarification_required"
+    ],
+    "expected_intents": null
+  },
+  {
+    "id": "conditional_condition-if-suffix",
+    "category": "conditional_edit",
+    "split": "development",
+    "message": "Give Griffith Observatory 75 minutes if it rains.",
+    "reason": "Duration depends on an unevaluated weather condition.",
+    "expected_states": [
+      "clarification_required"
+    ],
+    "expected_intents": null
+  },
+  {
+    "id": "conditional_condition-only-if",
+    "category": "conditional_edit",
+    "split": "development",
+    "message": "Only if it rains give Griffith Observatory 75 minutes.",
+    "reason": "Only-if condition cannot become an unconditional edit.",
+    "expected_states": [
+      "clarification_required"
+    ],
+    "expected_intents": null
+  },
+  {
+    "id": "conditional_condition-unless",
+    "category": "conditional_edit",
+    "split": "development",
+    "message": "Give Griffith Observatory 75 minutes unless it rains.",
+    "reason": "Exception condition cannot be discarded.",
+    "expected_states": [
+      "clarification_required"
+    ],
+    "expected_intents": null
+  },
+  {
+    "id": "conditional_condition-when",
+    "category": "conditional_edit",
+    "split": "development",
+    "message": "When it rains give Griffith Observatory 75 minutes.",
+    "reason": "Weather trigger cannot be discarded.",
+    "expected_states": [
+      "clarification_required"
+    ],
+    "expected_intents": null
+  },
+  {
+    "id": "conditional_condition-provided",
+    "category": "conditional_edit",
+    "split": "development",
+    "message": "Give Griffith Observatory 75 minutes provided that the weather is clear.",
+    "reason": "Weather prerequisite cannot be discarded.",
+    "expected_states": [
+      "clarification_required"
+    ],
+    "expected_intents": null
+  },
+  {
+    "id": "conditional_condition-as-long-as",
+    "category": "conditional_edit",
+    "split": "development",
+    "message": "Give Griffith Observatory 75 minutes as long as the weather is clear.",
+    "reason": "Weather prerequisite cannot be discarded.",
+    "expected_states": [
+      "clarification_required"
+    ],
+    "expected_intents": null
+  },
+  {
+    "id": "conditional_condition-in-case",
+    "category": "conditional_edit",
+    "split": "development",
+    "message": "In case of rain give Griffith Observatory 75 minutes.",
+    "reason": "Contingency cannot become an unconditional edit.",
+    "expected_states": [
+      "clarification_required"
+    ],
+    "expected_intents": null
+  },
+  {
+    "id": "conditional_condition-after-event",
+    "category": "conditional_edit",
+    "split": "development",
+    "message": "After the storm passes give Griffith Observatory 75 minutes.",
+    "reason": "Event trigger is not an evaluated stop time window.",
+    "expected_states": [
+      "clarification_required"
+    ],
+    "expected_intents": null
+  },
+  {
+    "id": "conditional_condition-before-event",
+    "category": "conditional_edit",
+    "split": "development",
+    "message": "Before the storm arrives give Griffith Observatory 75 minutes.",
+    "reason": "Event deadline is not an evaluated stop time window.",
+    "expected_states": [
+      "clarification_required"
+    ],
+    "expected_intents": null
+  },
+  {
+    "id": "conditional_condition-on-condition",
+    "category": "conditional_edit",
+    "split": "development",
+    "message": "Give Griffith Observatory 75 minutes on condition that the weather is clear.",
+    "reason": "Prerequisite cannot be discarded.",
+    "expected_states": [
+      "clarification_required"
+    ],
+    "expected_intents": null
+  },
+  {
+    "id": "conditional_condition-if-comma",
+    "category": "conditional_edit",
+    "split": "development",
+    "message": "If it rains, give Griffith Observatory 75 minutes.",
+    "reason": "Punctuation does not remove the weather condition.",
+    "expected_states": [
+      "clarification_required"
+    ],
+    "expected_intents": null
+  },
+  {
+    "id": "conditional_condition-replacement-prefix",
+    "category": "conditional_edit",
+    "split": "development",
+    "message": "If it rains replace Bixby Creek Bridge with Pfeiffer Big Sur State Park.",
+    "reason": "Replacement is conditional on weather.",
+    "expected_states": [
+      "clarification_required"
+    ],
+    "expected_intents": null
+  },
+  {
+    "id": "conditional_condition-replacement-suffix",
+    "category": "conditional_edit",
+    "split": "development",
+    "message": "Replace Bixby Creek Bridge with Pfeiffer Big Sur State Park unless the weather clears.",
+    "reason": "Replacement has an exception.",
+    "expected_states": [
+      "clarification_required"
+    ],
+    "expected_intents": null
+  },
+  {
+    "id": "conditional_condition-role",
+    "category": "conditional_edit",
+    "split": "development",
+    "message": "Treat Stearns Wharf as a scenic stop if the weather is clear.",
+    "reason": "Role change is conditional.",
+    "expected_states": [
+      "clarification_required"
+    ],
+    "expected_intents": null
+  },
+  {
+    "id": "conditional_condition-chinese",
+    "category": "conditional_edit",
+    "split": "development",
+    "message": "如果下雨，請在 Griffith Observatory 停留 75 分鐘。",
+    "reason": "Chinese weather condition must not be discarded.",
+    "expected_states": [
+      "clarification_required"
+    ],
+    "expected_intents": null
+  },
+  {
+    "id": "conditional_condition-can-see-rain",
+    "category": "conditional_edit",
+    "split": "development",
+    "message": "Give Griffith Observatory 75 minutes if you can see rain outside.",
+    "reason": "An observation prerequisite is not a capability courtesy.",
+    "expected_states": [
+      "clarification_required"
+    ],
+    "expected_intents": null
+  },
+  {
+    "id": "conditional_condition-can-confirm",
+    "category": "conditional_edit",
+    "split": "development",
+    "message": "Give Griffith Observatory 75 minutes if you can confirm the road is open.",
+    "reason": "Road-status prerequisite must not be discarded.",
+    "expected_states": [
+      "clarification_required"
+    ],
+    "expected_intents": null
+  },
+  {
+    "id": "conditional_condition-flight",
+    "category": "conditional_edit",
+    "split": "development",
+    "message": "Give Griffith Observatory 75 minutes when the flight is delayed.",
+    "reason": "External event trigger cannot be evaluated here.",
+    "expected_states": [
+      "clarification_required"
+    ],
+    "expected_intents": null
+  },
+  {
+    "id": "conditional_condition-drive",
+    "category": "conditional_edit",
+    "split": "development",
+    "message": "Give Griffith Observatory 75 minutes unless that increases the drive.",
+    "reason": "Conditional driving constraint cannot become an unconditional duration.",
+    "expected_states": [
+      "clarification_required"
+    ],
+    "expected_intents": null
+  },
+  {
+    "id": "conditional_condition-risk",
+    "category": "conditional_edit",
+    "split": "development",
+    "message": "Give Griffith Observatory 75 minutes only if that lowers the weather risk.",
+    "reason": "Conditional risk constraint needs clarification rather than dropped semantics.",
+    "expected_states": [
+      "clarification_required"
+    ],
+    "expected_intents": null
+  },
+  {
+    "id": "conditional_condition-before-checkin",
+    "category": "conditional_edit",
+    "split": "development",
+    "message": "Before hotel check-in give Griffith Observatory 75 minutes.",
+    "reason": "Unspecified external event deadline cannot be represented.",
+    "expected_states": [
+      "clarification_required"
+    ],
+    "expected_intents": null
+  },
+  {
+    "id": "conditional_condition-after-opening",
+    "category": "conditional_edit",
+    "split": "development",
+    "message": "Give Griffith Observatory 75 minutes after the road reopens.",
+    "reason": "Unspecified external event trigger cannot be represented.",
+    "expected_states": [
+      "clarification_required"
+    ],
+    "expected_intents": null
+  },
+  {
+    "id": "typed-action-id-like-if",
+    "category": "typed_action_clause_boundary",
+    "split": "development",
+    "message": "I'd like 75 minutes at Griffith Observatory only if the weather is dry.",
+    "expected_states": [
+      "clarification_required"
+    ],
+    "expected_intents": null,
+    "expected_fake_calls": 0
+  },
+  {
+    "id": "typed-action-id-like-unless",
+    "category": "typed_action_clause_boundary",
+    "split": "development",
+    "message": "I'd like 75 minutes at Griffith Observatory unless it rains.",
+    "expected_states": [
+      "clarification_required"
+    ],
+    "expected_intents": null,
+    "expected_fake_calls": 0
+  },
+  {
+    "id": "typed-action-id-like-when",
+    "category": "typed_action_clause_boundary",
+    "split": "development",
+    "message": "I'd like 75 minutes at Griffith Observatory when the fog clears.",
+    "expected_states": [
+      "clarification_required"
+    ],
+    "expected_intents": null,
+    "expected_fake_calls": 0
+  },
+  {
+    "id": "typed-action-id-like-provided",
+    "category": "typed_action_clause_boundary",
+    "split": "development",
+    "message": "I'd like 75 minutes at Griffith Observatory provided the road is open.",
+    "expected_states": [
+      "clarification_required"
+    ],
+    "expected_intents": null,
+    "expected_fake_calls": 0
+  },
+  {
+    "id": "typed-action-id-like-booking",
+    "category": "typed_action_clause_boundary",
+    "split": "development",
+    "message": "I'd like 75 minutes at Griffith Observatory and book me a hotel in Los Angeles.",
+    "expected_states": [
+      "clarification_required"
+    ],
+    "expected_intents": null,
+    "expected_fake_calls": 0
+  },
+  {
+    "id": "typed-action-id-like-email",
+    "category": "typed_action_clause_boundary",
+    "split": "development",
+    "message": "I'd like 75 minutes at Griffith Observatory and email the itinerary to me.",
+    "expected_states": [
+      "clarification_required"
+    ],
+    "expected_intents": null,
+    "expected_fake_calls": 0
+  },
+  {
+    "id": "typed-action-id-like-preference",
+    "category": "typed_action_clause_boundary",
+    "split": "development",
+    "message": "I'd like 75 minutes at Griffith Observatory and I prefer nature.",
+    "expected_states": [
+      "clarification_required"
+    ],
+    "expected_intents": null,
+    "expected_fake_calls": 0
+  },
+  {
+    "id": "typed-action-id-like-exact",
+    "category": "typed_action_clause_boundary",
+    "split": "development",
+    "message": "I'd like 75 minutes at Griffith Observatory.",
+    "expected_states": [
+      "proposal_ready"
+    ],
+    "expected_intents": [
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 75,
+            "minimum_minutes": 75,
+            "maximum_minutes": 75
+          }
+        }
+      }
+    ],
+    "expected_fake_calls": 1
+  },
+  {
+    "id": "typed-action-id-like-courtesy-leading",
+    "category": "typed_action_clause_boundary",
+    "split": "development",
+    "message": "If possible, I'd like 75 minutes at Griffith Observatory.",
+    "expected_states": [
+      "proposal_ready"
+    ],
+    "expected_intents": [
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 75,
+            "minimum_minutes": 75,
+            "maximum_minutes": 75
+          }
+        }
+      }
+    ],
+    "expected_fake_calls": 1
+  },
+  {
+    "id": "typed-action-id-like-courtesy-trailing",
+    "category": "typed_action_clause_boundary",
+    "split": "development",
+    "message": "I'd like 75 minutes at Griffith Observatory, if you can.",
+    "expected_states": [
+      "proposal_ready"
+    ],
+    "expected_intents": [
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 75,
+            "minimum_minutes": 75,
+            "maximum_minutes": 75
+          }
+        }
+      }
+    ],
+    "expected_fake_calls": 1
+  },
+  {
+    "id": "typed-action-would-like-if",
+    "category": "typed_action_clause_boundary",
+    "split": "development",
+    "message": "I would like 75 minutes at Griffith Observatory only if the weather is dry.",
+    "expected_states": [
+      "clarification_required"
+    ],
+    "expected_intents": null,
+    "expected_fake_calls": 0
+  },
+  {
+    "id": "typed-action-would-like-unless",
+    "category": "typed_action_clause_boundary",
+    "split": "development",
+    "message": "I would like 75 minutes at Griffith Observatory unless it rains.",
+    "expected_states": [
+      "clarification_required"
+    ],
+    "expected_intents": null,
+    "expected_fake_calls": 0
+  },
+  {
+    "id": "typed-action-would-like-when",
+    "category": "typed_action_clause_boundary",
+    "split": "development",
+    "message": "I would like 75 minutes at Griffith Observatory when the fog clears.",
+    "expected_states": [
+      "clarification_required"
+    ],
+    "expected_intents": null,
+    "expected_fake_calls": 0
+  },
+  {
+    "id": "typed-action-would-like-provided",
+    "category": "typed_action_clause_boundary",
+    "split": "development",
+    "message": "I would like 75 minutes at Griffith Observatory provided the road is open.",
+    "expected_states": [
+      "clarification_required"
+    ],
+    "expected_intents": null,
+    "expected_fake_calls": 0
+  },
+  {
+    "id": "typed-action-would-like-booking",
+    "category": "typed_action_clause_boundary",
+    "split": "development",
+    "message": "I would like 75 minutes at Griffith Observatory and book me a hotel in Los Angeles.",
+    "expected_states": [
+      "clarification_required"
+    ],
+    "expected_intents": null,
+    "expected_fake_calls": 0
+  },
+  {
+    "id": "typed-action-would-like-email",
+    "category": "typed_action_clause_boundary",
+    "split": "development",
+    "message": "I would like 75 minutes at Griffith Observatory and email the itinerary to me.",
+    "expected_states": [
+      "clarification_required"
+    ],
+    "expected_intents": null,
+    "expected_fake_calls": 0
+  },
+  {
+    "id": "typed-action-would-like-preference",
+    "category": "typed_action_clause_boundary",
+    "split": "development",
+    "message": "I would like 75 minutes at Griffith Observatory and I prefer nature.",
+    "expected_states": [
+      "clarification_required"
+    ],
+    "expected_intents": null,
+    "expected_fake_calls": 0
+  },
+  {
+    "id": "typed-action-would-like-exact",
+    "category": "typed_action_clause_boundary",
+    "split": "development",
+    "message": "I would like 75 minutes at Griffith Observatory.",
+    "expected_states": [
+      "proposal_ready"
+    ],
+    "expected_intents": [
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 75,
+            "minimum_minutes": 75,
+            "maximum_minutes": 75
+          }
+        }
+      }
+    ],
+    "expected_fake_calls": 1
+  },
+  {
+    "id": "typed-action-would-like-courtesy-leading",
+    "category": "typed_action_clause_boundary",
+    "split": "development",
+    "message": "If possible, I would like 75 minutes at Griffith Observatory.",
+    "expected_states": [
+      "proposal_ready"
+    ],
+    "expected_intents": [
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 75,
+            "minimum_minutes": 75,
+            "maximum_minutes": 75
+          }
+        }
+      }
+    ],
+    "expected_fake_calls": 1
+  },
+  {
+    "id": "typed-action-would-like-courtesy-trailing",
+    "category": "typed_action_clause_boundary",
+    "split": "development",
+    "message": "I would like 75 minutes at Griffith Observatory, if you can.",
+    "expected_states": [
+      "proposal_ready"
+    ],
+    "expected_intents": [
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 75,
+            "minimum_minutes": 75,
+            "maximum_minutes": 75
+          }
+        }
+      }
+    ],
+    "expected_fake_calls": 1
+  },
+  {
+    "id": "typed-action-visit-if",
+    "category": "typed_action_clause_boundary",
+    "split": "development",
+    "message": "Visit Griffith Observatory for 75 minutes only if the weather is dry.",
+    "expected_states": [
+      "clarification_required"
+    ],
+    "expected_intents": null,
+    "expected_fake_calls": 0
+  },
+  {
+    "id": "typed-action-visit-unless",
+    "category": "typed_action_clause_boundary",
+    "split": "development",
+    "message": "Visit Griffith Observatory for 75 minutes unless it rains.",
+    "expected_states": [
+      "clarification_required"
+    ],
+    "expected_intents": null,
+    "expected_fake_calls": 0
+  },
+  {
+    "id": "typed-action-visit-when",
+    "category": "typed_action_clause_boundary",
+    "split": "development",
+    "message": "Visit Griffith Observatory for 75 minutes when the fog clears.",
+    "expected_states": [
+      "clarification_required"
+    ],
+    "expected_intents": null,
+    "expected_fake_calls": 0
+  },
+  {
+    "id": "typed-action-visit-provided",
+    "category": "typed_action_clause_boundary",
+    "split": "development",
+    "message": "Visit Griffith Observatory for 75 minutes provided the road is open.",
+    "expected_states": [
+      "clarification_required"
+    ],
+    "expected_intents": null,
+    "expected_fake_calls": 0
+  },
+  {
+    "id": "typed-action-visit-booking",
+    "category": "typed_action_clause_boundary",
+    "split": "development",
+    "message": "Visit Griffith Observatory for 75 minutes and book me a hotel in Los Angeles.",
+    "expected_states": [
+      "clarification_required"
+    ],
+    "expected_intents": null,
+    "expected_fake_calls": 0
+  },
+  {
+    "id": "typed-action-visit-email",
+    "category": "typed_action_clause_boundary",
+    "split": "development",
+    "message": "Visit Griffith Observatory for 75 minutes and email the itinerary to me.",
+    "expected_states": [
+      "clarification_required"
+    ],
+    "expected_intents": null,
+    "expected_fake_calls": 0
+  },
+  {
+    "id": "typed-action-visit-preference",
+    "category": "typed_action_clause_boundary",
+    "split": "development",
+    "message": "Visit Griffith Observatory for 75 minutes and I prefer nature.",
+    "expected_states": [
+      "clarification_required"
+    ],
+    "expected_intents": null,
+    "expected_fake_calls": 0
+  },
+  {
+    "id": "typed-action-visit-exact",
+    "category": "typed_action_clause_boundary",
+    "split": "development",
+    "message": "Visit Griffith Observatory for 75 minutes.",
+    "expected_states": [
+      "proposal_ready"
+    ],
+    "expected_intents": [
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 75,
+            "minimum_minutes": 75,
+            "maximum_minutes": 75
+          }
+        }
+      }
+    ],
+    "expected_fake_calls": 1
+  },
+  {
+    "id": "typed-action-visit-courtesy-leading",
+    "category": "typed_action_clause_boundary",
+    "split": "development",
+    "message": "If possible, Visit Griffith Observatory for 75 minutes.",
+    "expected_states": [
+      "proposal_ready"
+    ],
+    "expected_intents": [
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 75,
+            "minimum_minutes": 75,
+            "maximum_minutes": 75
+          }
+        }
+      }
+    ],
+    "expected_fake_calls": 1
+  },
+  {
+    "id": "typed-action-visit-courtesy-trailing",
+    "category": "typed_action_clause_boundary",
+    "split": "development",
+    "message": "Visit Griffith Observatory for 75 minutes, if you can.",
+    "expected_states": [
+      "proposal_ready"
+    ],
+    "expected_intents": [
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 75,
+            "minimum_minutes": 75,
+            "maximum_minutes": 75
+          }
+        }
+      }
+    ],
+    "expected_fake_calls": 1
+  },
+  {
+    "id": "typed-action-please-visit-if",
+    "category": "typed_action_clause_boundary",
+    "split": "development",
+    "message": "Please visit Griffith Observatory for 75 minutes only if the weather is dry.",
+    "expected_states": [
+      "clarification_required"
+    ],
+    "expected_intents": null,
+    "expected_fake_calls": 0
+  },
+  {
+    "id": "typed-action-please-visit-unless",
+    "category": "typed_action_clause_boundary",
+    "split": "development",
+    "message": "Please visit Griffith Observatory for 75 minutes unless it rains.",
+    "expected_states": [
+      "clarification_required"
+    ],
+    "expected_intents": null,
+    "expected_fake_calls": 0
+  },
+  {
+    "id": "typed-action-please-visit-when",
+    "category": "typed_action_clause_boundary",
+    "split": "development",
+    "message": "Please visit Griffith Observatory for 75 minutes when the fog clears.",
+    "expected_states": [
+      "clarification_required"
+    ],
+    "expected_intents": null,
+    "expected_fake_calls": 0
+  },
+  {
+    "id": "typed-action-please-visit-provided",
+    "category": "typed_action_clause_boundary",
+    "split": "development",
+    "message": "Please visit Griffith Observatory for 75 minutes provided the road is open.",
+    "expected_states": [
+      "clarification_required"
+    ],
+    "expected_intents": null,
+    "expected_fake_calls": 0
+  },
+  {
+    "id": "typed-action-please-visit-booking",
+    "category": "typed_action_clause_boundary",
+    "split": "development",
+    "message": "Please visit Griffith Observatory for 75 minutes and book me a hotel in Los Angeles.",
+    "expected_states": [
+      "clarification_required"
+    ],
+    "expected_intents": null,
+    "expected_fake_calls": 0
+  },
+  {
+    "id": "typed-action-please-visit-email",
+    "category": "typed_action_clause_boundary",
+    "split": "development",
+    "message": "Please visit Griffith Observatory for 75 minutes and email the itinerary to me.",
+    "expected_states": [
+      "clarification_required"
+    ],
+    "expected_intents": null,
+    "expected_fake_calls": 0
+  },
+  {
+    "id": "typed-action-please-visit-preference",
+    "category": "typed_action_clause_boundary",
+    "split": "development",
+    "message": "Please visit Griffith Observatory for 75 minutes and I prefer nature.",
+    "expected_states": [
+      "clarification_required"
+    ],
+    "expected_intents": null,
+    "expected_fake_calls": 0
+  },
+  {
+    "id": "typed-action-please-visit-exact",
+    "category": "typed_action_clause_boundary",
+    "split": "development",
+    "message": "Please visit Griffith Observatory for 75 minutes.",
+    "expected_states": [
+      "proposal_ready"
+    ],
+    "expected_intents": [
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 75,
+            "minimum_minutes": 75,
+            "maximum_minutes": 75
+          }
+        }
+      }
+    ],
+    "expected_fake_calls": 1
+  },
+  {
+    "id": "typed-action-please-visit-courtesy-leading",
+    "category": "typed_action_clause_boundary",
+    "split": "development",
+    "message": "If possible, Please visit Griffith Observatory for 75 minutes.",
+    "expected_states": [
+      "proposal_ready"
+    ],
+    "expected_intents": [
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 75,
+            "minimum_minutes": 75,
+            "maximum_minutes": 75
+          }
+        }
+      }
+    ],
+    "expected_fake_calls": 1
+  },
+  {
+    "id": "typed-action-please-visit-courtesy-trailing",
+    "category": "typed_action_clause_boundary",
+    "split": "development",
+    "message": "Please visit Griffith Observatory for 75 minutes, if you can.",
+    "expected_states": [
+      "proposal_ready"
+    ],
+    "expected_intents": [
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 75,
+            "minimum_minutes": 75,
+            "maximum_minutes": 75
+          }
+        }
+      }
+    ],
+    "expected_fake_calls": 1
+  },
+  {
+    "id": "typed-action-negated-visit-1",
+    "category": "typed_action_clause_boundary",
+    "split": "development",
+    "message": "Do not visit Griffith Observatory for 75 minutes.",
+    "expected_states": [
+      "clarification_required"
+    ],
+    "expected_intents": null,
+    "expected_fake_calls": 0
+  },
+  {
+    "id": "typed-action-negated-visit-2",
+    "category": "typed_action_clause_boundary",
+    "split": "development",
+    "message": "Please do not visit Griffith Observatory for 75 minutes.",
+    "expected_states": [
+      "clarification_required"
+    ],
+    "expected_intents": null,
+    "expected_fake_calls": 0
+  },
+  {
+    "id": "typed-action-negated-visit-3",
+    "category": "typed_action_clause_boundary",
+    "split": "development",
+    "message": "Never visit Griffith Observatory for 75 minutes.",
+    "expected_states": [
+      "clarification_required"
+    ],
+    "expected_intents": null,
+    "expected_fake_calls": 0
+  },
+  {
+    "id": "typed-action-negated-visit-4",
+    "category": "typed_action_clause_boundary",
+    "split": "development",
+    "message": "Do not want to visit Griffith Observatory for 75 minutes.",
+    "expected_states": [
+      "clarification_required"
+    ],
+    "expected_intents": null,
+    "expected_fake_calls": 0
+  },
+  {
+    "id": "typed-action-hypothetical-exact",
+    "category": "typed_action_clause_boundary",
+    "split": "development",
+    "message": "What if I want to visit Griffith Observatory for 75 minutes?",
+    "expected_states": [
+      "proposal_ready"
+    ],
+    "expected_intents": [
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 75,
+            "minimum_minutes": 75,
+            "maximum_minutes": 75
+          }
+        }
+      }
+    ],
+    "expected_fake_calls": 1
+  },
+  {
+    "id": "typed-action-hypothetical-condition",
+    "category": "typed_action_clause_boundary",
+    "split": "development",
+    "message": "What if I want to visit Griffith Observatory for 75 minutes only if the weather is dry?",
+    "expected_states": [
+      "clarification_required"
+    ],
+    "expected_intents": null,
+    "expected_fake_calls": 0
+  },
+  {
+    "id": "typed-action-hypothetical-booking",
+    "category": "typed_action_clause_boundary",
+    "split": "development",
+    "message": "What if I want to visit Griffith Observatory for 75 minutes and book me a hotel?",
+    "expected_states": [
+      "clarification_required"
+    ],
+    "expected_intents": null,
+    "expected_fake_calls": 0
+  }
+]

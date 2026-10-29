@@ -80,6 +80,13 @@ def test_deterministic_states_are_safe_and_explicit() -> None:
             message="Cancel reservation",
         )
     )
+    removal = asyncio.run(
+        adapter.interpret(
+            context=context(),
+            history=(),
+            message="I do not want to go to Stearns Wharf.",
+        )
+    )
     too_large = asyncio.run(
         adapter.interpret(
             context=context(),
@@ -94,6 +101,9 @@ def test_deterministic_states_are_safe_and_explicit() -> None:
     assert booking.permission == "external_booking_change"
     assert booking.intents == (CopilotIntentV1(type="external_action_not_supported"),)
     assert "will not be executed" in booking.assistant_message
+    assert removal.state == "unsupported"
+    assert removal.intents == (CopilotIntentV1(type="unsupported_request"),)
+    assert "Removing or excluding" in removal.assistant_message
     assert too_large.state == "failed"
     assert too_large.intents == ()
 
@@ -148,6 +158,69 @@ def test_deterministic_operations_are_typed_without_activation(
     assert result.state == "proposal_ready"
     assert result.intents == (expected,)
     assert "nothing was activated automatically" in result.assistant_message
+
+
+def test_named_operation_highlights_resolved_stop_instead_of_prior_selection() -> None:
+    named_context = replace(
+        context(),
+        known_places=({
+            "place_id": "stop_b", "name": "Stearns Wharf", "aliases": (),
+            "categories": ("itinerary_stop",), "region_id": "santa_barbara",
+            "route_status": "accepted_stop",
+        },),
+    )
+
+    result = asyncio.run(DeterministicCopilotAdapter().interpret(
+        context=named_context, history=(), message="Keep Stearns Wharf.",
+    ))
+
+    assert result.intents == (CopilotIntentV1(type="keep_stop", target_stop_id="stop_b"),)
+    assert result.highlights == CopilotHighlightsV1(stop_ids=("stop_b",))
+
+
+def test_deterministic_named_replacement_resolves_only_catalog_bound_entities() -> None:
+    named_context = replace(
+        context(),
+        selected_stop_id=None,
+        selected_candidate_id=None,
+        allowed_stop_ids=("bixby_creek_bridge_viewpoint",),
+        allowed_candidate_ids=("pfeiffer_big_sur_state_park",),
+        known_places=(
+            {
+                "place_id": "bixby_creek_bridge_viewpoint",
+                "name": "Bixby Creek Bridge Viewpoint",
+                "aliases": ("Bixby Creek Bridge",),
+                "categories": ("itinerary_stop",),
+                "region_id": "big_sur",
+                "route_status": "accepted_stop",
+            },
+            {
+                "place_id": "pfeiffer_big_sur_state_park",
+                "name": "Pfeiffer Big Sur State Park",
+                "aliases": ("Pfeiffer Big Sur",),
+                "categories": ("registered_candidate",),
+                "region_id": "big_sur",
+                "route_status": "registered_route_candidate",
+            },
+        ),
+    )
+
+    result = asyncio.run(
+        DeterministicCopilotAdapter().interpret(
+            context=named_context,
+            history=(),
+            message="Replace Bixby Creek Bridge with Pfeiffer Big Sur State Park",
+        )
+    )
+
+    assert result.state == "proposal_ready"
+    assert result.intents == (
+        CopilotIntentV1(
+            type="replace_nearby",
+            target_stop_id="bixby_creek_bridge_viewpoint",
+            candidate_id="pfeiffer_big_sur_state_park",
+        ),
+    )
 
 
 @pytest.mark.parametrize(

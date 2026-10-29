@@ -1,0 +1,7 @@
+{
+  "decision_eligible": true,
+  "ranking_eligible": true,
+  "role": "low_driving",
+  "schema_version": "product-demo-metrics-v1",
+  "weighted_edit_cost": 6.0
+}

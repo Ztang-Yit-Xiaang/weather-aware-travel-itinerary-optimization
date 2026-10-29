@@ -39,12 +39,12 @@ def create_session(test_client: TestClient) -> tuple[dict, dict[str, str]]:
 def test_registry_has_one_pinned_valid_default() -> None:
     registry = ProductRunRegistry(ROOT, REGISTRY)
 
-    assert registry.default.run_id == "california_coast_product_demo_v2"
-    assert registry.default.relative_path == "runs/california-coast-product-demo-v2"
+    assert registry.default.run_id == "california_coast_coherent_demo_v1"
+    assert registry.default.relative_path == "runs/california-coast-coherent-demo-v1"
     assert len(registry.default.manifest_hash) == 64
-    assert registry.default.trip_id == "california_coast_demo"
+    assert registry.default.trip_id == "california_coast_approved_seven_day"
     assert "multi_plan_product_demo" in registry.default.capabilities
-    assert "local_acceptance" not in registry.default.capabilities
+    assert "local_acceptance" in registry.default.capabilities
 
 
 def test_registry_does_not_require_the_frozen_legacy_dashboard(tmp_path: Path) -> None:
@@ -181,8 +181,14 @@ def test_authenticated_session_restore_survives_application_restart(tmp_path: Pa
     )
 
 
-def test_session_token_revision_draft_preview_and_acceptance_is_deferred(tmp_path: Path) -> None:
-    parent_path = ROOT / "runs" / "e3ux-weather-repair-demo-v6" / "plans" / "plan_e1c4f803691e3188.json"
+def test_session_token_revision_replacement_preview_and_acceptance_persists(tmp_path: Path) -> None:
+    parent_path = (
+        ROOT
+        / "runs"
+        / "california-coast-coherent-demo-v1"
+        / "plans"
+        / "plan_359968d255ff9288.json"
+    )
     parent_hash_before = sha256(parent_path.read_bytes()).hexdigest()
 
     with client(tmp_path) as test_client:
@@ -192,14 +198,14 @@ def test_session_token_revision_draft_preview_and_acceptance_is_deferred(tmp_pat
 
         missing_token = test_client.post(
             f"/api/sessions/{session_id}/selection",
-            json={"expected_revision": 0, "selected_day": 7},
+            json={"expected_revision": 0, "selected_day": 5},
         )
         assert missing_token.status_code == 403
 
         selected = test_client.post(
             f"/api/sessions/{session_id}/selection",
             headers=headers,
-            json={"expected_revision": 0, "selected_day": 7, "selected_stop_id": "bixby_creek_bridge_viewpoint"},
+            json={"expected_revision": 0, "selected_day": 5, "selected_stop_id": "bixby_creek_bridge_viewpoint"},
         )
         assert selected.status_code == 200
         session = selected.json()["session"]
@@ -210,9 +216,9 @@ def test_session_token_revision_draft_preview_and_acceptance_is_deferred(tmp_pat
             headers=headers,
             json={
                 "expected_revision": 0,
-                "type": "route_feedback",
-                "target": "selected_route",
-                "parameters": {"preference": "reduce_contextual_risk"},
+                "type": "replace_nearby",
+                "target": "bixby_creek_bridge_viewpoint",
+                "parameters": {"candidate_id": "pfeiffer_big_sur_state_park"},
             },
         )
         assert stale.status_code == 409
@@ -223,11 +229,12 @@ def test_session_token_revision_draft_preview_and_acceptance_is_deferred(tmp_pat
             headers=headers,
             json={
                 "expected_revision": 1,
-                "type": "route_feedback",
-                "target": "selected_route",
-                "parameters": {"preference": "reduce_contextual_risk"},
+                "type": "replace_nearby",
+                "target": "bixby_creek_bridge_viewpoint",
+                "parameters": {"candidate_id": "pfeiffer_big_sur_state_park"},
             },
         )
+        assert drafted.status_code == 200
         session = drafted.json()["session"]
         assert len(session["draft"]) == 1
 
@@ -240,24 +247,30 @@ def test_session_token_revision_draft_preview_and_acceptance_is_deferred(tmp_pat
         payload = previewed.json()
         assert payload["proposal"]["state"] == "eligible"
         session = payload["session"]
+        assert session["accepted_plan_id"] == parent_plan_id
+        assert payload["proposal"]["child_plan_id"] != parent_plan_id
 
         accepted = test_client.post(
             f"/api/sessions/{session_id}/accept",
             headers=headers,
-            json={"expected_revision": session["revision"]},
+            json={
+                "expected_revision": session["revision"],
+                "confirmation": "accept_evaluated_repair",
+                "idempotency_key": "product-app-accept-0001",
+            },
         )
-        assert accepted.status_code == 409
-        assert accepted.json() == {"detail": "acceptance_not_enabled_until_w5"}
-        assert not (tmp_path / "state" / "workspace_pointer.json").exists()
-        assert not (tmp_path / "state" / "decisions").exists()
+        assert accepted.status_code == 200
+        accepted_session = accepted.json()["session"]
+        assert accepted_session["accepted_plan_id"] == payload["proposal"]["child_plan_id"]
+        assert (tmp_path / "state" / "decisions").is_dir()
 
         restored, _ = create_session(test_client)
-        assert restored["accepted_plan_id"] == parent_plan_id
+        assert restored["accepted_plan_id"] == accepted_session["accepted_plan_id"]
 
     assert sha256(parent_path.read_bytes()).hexdigest() == parent_hash_before
 
 
-def test_infeasible_move_day_preview_cannot_be_accepted(tmp_path: Path) -> None:
+def test_unsupported_legacy_move_day_cannot_preview_or_be_accepted(tmp_path: Path) -> None:
     with client(tmp_path) as test_client:
         session, headers = create_session(test_client)
         session_id = session["session_id"]
@@ -276,16 +289,20 @@ def test_infeasible_move_day_preview_cannot_be_accepted(tmp_path: Path) -> None:
             f"/api/sessions/{session_id}/preview",
             headers=headers,
             json={"expected_revision": drafted["revision"]},
-        ).json()
-        assert previewed["proposal"]["state"] == "ineligible"
-        assert previewed["proposal"]["reason"] == "no_feasible_evaluated_child"
+        )
+        assert previewed.status_code == 409
+        assert previewed.json()["detail"] == "draft_optimizer_mapping_unsupported"
+        assert "proposal" not in previewed.json()
 
         rejected = test_client.post(
             f"/api/sessions/{session_id}/accept",
             headers=headers,
-            json={"expected_revision": previewed["session"]["revision"]},
+            json={"expected_revision": drafted["revision"], "confirmation": "accept_evaluated_repair", "idempotency_key": "product-unsupported-0001"},
         )
         assert rejected.status_code == 409
+        restored = test_client.get(f"/api/sessions/{session_id}", headers=headers).json()["session"]
+        assert restored["accepted_plan_id"] == session["accepted_plan_id"]
+        assert restored["proposal"] is None
 
 
 def test_origin_guard_evidence_allowlist_and_keep_original(tmp_path: Path) -> None:
@@ -301,11 +318,15 @@ def test_origin_guard_evidence_allowlist_and_keep_original(tmp_path: Path) -> No
         kept = test_client.post(
             f"/api/sessions/{session['session_id']}/keep-original",
             headers=headers,
-            json={"expected_revision": 0},
+            json={
+                "expected_revision": 0,
+                "confirmation": "keep_original_plan",
+                "idempotency_key": "product-keep-original-0001",
+            },
         )
-        assert kept.status_code == 409
-        assert kept.json() == {"detail": "acceptance_not_enabled_until_w5"}
-        assert not (tmp_path / "state" / "decisions").exists()
+        assert kept.status_code == 200
+        assert kept.json()["result"]["decision"]["decision_type"] == "keep_original"
+        assert (tmp_path / "state" / "decisions").is_dir()
 
         bundle = test_client.get("/api/runs/e3ux_weather_repair_demo_v6/evidence-bundle")
         assert bundle.status_code == 200

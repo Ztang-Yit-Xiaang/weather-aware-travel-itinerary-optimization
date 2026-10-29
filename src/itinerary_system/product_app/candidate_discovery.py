@@ -9,12 +9,16 @@ artifact exists.
 
 from __future__ import annotations
 
+import hashlib
+import json
 import math
 import re
 from collections.abc import Mapping
 from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any
+
+from pydantic_core import SchemaValidator, core_schema
 
 from ..routing.matrix import RouteMatrix, RouteMatrixCell, RouteMatrixError
 from .candidate_burden import (
@@ -57,6 +61,22 @@ ALLOWED_ROLES = frozenset(
 )
 
 _TRIP_ID = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$")
+_ROUTE_GEOMETRY_VALIDATOR = SchemaValidator(core_schema.chain_schema([
+    core_schema.is_instance_schema((list, tuple)),
+    core_schema.list_schema(core_schema.chain_schema([
+        core_schema.is_instance_schema((list, tuple)),
+        core_schema.tuple_schema([
+            core_schema.chain_schema([
+                core_schema.is_instance_schema((int, float)),
+                core_schema.float_schema(strict=True, allow_inf_nan=False, ge=-90, le=90),
+            ]),
+            core_schema.chain_schema([
+                core_schema.is_instance_schema((int, float)),
+                core_schema.float_schema(strict=True, allow_inf_nan=False, ge=-180, le=180),
+            ]),
+        ]),
+    ]), min_length=2),
+]))
 _QUERY_HASH = re.compile(r"^[0-9a-f]{16}$")
 _MATRIX_ID = re.compile(r"^route_matrix_[0-9a-f]{16}$")
 _ROUTE_BUNDLE_ID = re.compile(r"^route_bundle_[0-9a-f]{16}$")
@@ -148,6 +168,7 @@ def discover_poi_candidates(
     role: str | None = None,
     maximum_detour_minutes: float = DEFAULT_MAX_DETOUR_MINUTES,
     limit: int = DEFAULT_LIMIT,
+    _complete_universe: bool = False,
 ) -> dict[str, Any]:
     """Return a bounded read-only discovery response for one exact route slot."""
 
@@ -165,7 +186,29 @@ def discover_poi_candidates(
     if isinstance(limit, bool) or not isinstance(limit, int) or not 1 <= limit <= MAX_LIMIT:
         raise POICandidateDiscoveryError("poi_candidate_limit_invalid", 422)
 
-    matrix = _route_matrix(route_matrix_record)
+    catalog = None
+    required_pairs = None
+    if _complete_universe:
+        catalog = _catalog(repository_root, trip_id)
+        catalog_matches = tuple(sorted(
+            (place for place in catalog.places if place.has_road_validated_access
+             and (role is None or role in place.place_categories)),
+            key=lambda place: (place.name.casefold(), place.place_id),
+        ))
+        selected_plan = _accepted_geography_plan(geography, accepted_plan_id)
+        day_pairs = {
+            (feature["properties"].get("origin_id"), feature["properties"].get("destination_id"))
+            for feature in (selected_plan.get("validated_legs") or {}).get("features") or ()
+            if isinstance(feature, Mapping) and isinstance(feature.get("properties"), Mapping)
+            and feature["properties"].get("day") == day
+        }
+        # Every baseline leg and either insertion direction for this day's slots
+        # still receives the exact geometry/provenance checks below.
+        required_pairs = day_pairs | {
+            pair for origin, destination in day_pairs for place in catalog_matches
+            for pair in ((origin, place.place_id), (place.place_id, destination))
+        }
+    matrix = _route_matrix(route_matrix_record, required_pairs=required_pairs, allow_runtime_routes=_complete_universe)
     plan = _accepted_geography_plan(geography, accepted_plan_id)
     context = _route_context(
         plan=plan,
@@ -174,17 +217,17 @@ def discover_poi_candidates(
         route_leg_id=route_leg_id,
         replacement_target_id=replacement_target_id,
     )
-    catalog = _catalog(repository_root, trip_id)
+    catalog = catalog or _catalog(repository_root, trip_id)
     sources = {source.source_id: source for source in catalog.sources}
     precheck = FastFeasibilityPrecheckV1(status="unavailable")
 
     burden_by_id: dict[str, CandidateInsertionBurdenV1] = {}
     records_by_id: dict[str, dict[str, Any]] = {}
-    for place in catalog.search(
-        categories=(role,) if role else (),
-        require_road_access=True,
-        limit=50,
-    ):
+    if not _complete_universe:
+        catalog_matches = catalog.search(
+            categories=(role,) if role else (), require_road_access=True, limit=50,
+        )
+    for place in catalog_matches:
         if place.place_id in {
             context.predecessor_id,
             context.successor_id,
@@ -248,9 +291,11 @@ def discover_poi_candidates(
             context=context,
             registered=registered,
         )
+        if _complete_universe and len(records_by_id) > 500:
+            raise POICandidateDiscoveryError("interest_candidate_universe_limit_exceeded")
 
     selected = select_bounded_candidate_top_k(tuple(burden_by_id.values()), limit=limit)
-    return {
+    result = {
         "schema_version": SCHEMA_VERSION,
         "session_id": session_id,
         "session_revision": session_revision,
@@ -278,8 +323,16 @@ def discover_poi_candidates(
             "road_validated_only": True,
             "fallback_allowed": False,
         },
-        "candidates": [records_by_id[row.candidate_id] for row in selected],
+        "candidates": ([records_by_id[key] for key in sorted(records_by_id)] if _complete_universe
+                       else [records_by_id[row.candidate_id] for row in selected]),
     }
+    if _complete_universe:
+        result["candidate_universe"] = {
+            "count": len(records_by_id), "catalog_match_count": len(catalog_matches), "truncated": False,
+            "sha256": hashlib.sha256(json.dumps(result["candidates"], sort_keys=True,
+                                               separators=(",", ":")).encode()).hexdigest(),
+        }
+    return result
 
 
 def _catalog(repository_root: Path, trip_id: str) -> ProductPOICatalogV1:
@@ -296,7 +349,10 @@ def _catalog(repository_root: Path, trip_id: str) -> ProductPOICatalogV1:
         raise POICandidateDiscoveryError(code) from exc
 
 
-def _route_matrix(record: Mapping[str, Any]) -> RouteMatrix:
+def _route_matrix(
+    record: Mapping[str, Any], *, required_pairs: set[tuple[str, str]] | None = None,
+    allow_runtime_routes: bool = False,
+) -> RouteMatrix:
     matrix_id = record.get("matrix_id")
     context_snapshot_id = record.get("context_snapshot_id")
     source_bundle_id = record.get("source_bundle_id")
@@ -345,10 +401,12 @@ def _route_matrix(record: Mapping[str, Any]) -> RouteMatrix:
                 raise ValueError("duplicate route cell")
             seen_pairs.add(pair)
             referenced_entities.update(pair)
+            if required_pairs is not None and pair not in required_pairs:
+                continue
             # Malformed individual cells are omitted.  If one belongs to the
             # accepted baseline, route-context resolution fails the endpoint;
             # if it belongs only to a candidate, that candidate is excluded.
-            if not _raw_route_cell_is_exact(raw, context_snapshot_id):
+            if not _raw_route_cell_is_exact(raw, context_snapshot_id, allow_runtime_routes=allow_runtime_routes):
                 continue
             item = dict(raw)
             item["geometry"] = tuple(tuple(point) for point in item.get("geometry") or ())
@@ -371,11 +429,29 @@ def _route_matrix(record: Mapping[str, Any]) -> RouteMatrix:
     return matrix
 
 
-def _raw_route_cell_is_exact(raw: Mapping[str, Any], context_snapshot_id: str) -> bool:
+def _raw_route_cell_is_exact(
+    raw: Mapping[str, Any], context_snapshot_id: str, *, allow_runtime_routes: bool = False,
+) -> bool:
     distance_m = raw.get("distance_m")
     duration_s = raw.get("duration_s")
     query_hash = raw.get("query_hash")
     geometry = raw.get("geometry")
+    cached_route = (
+        isinstance(query_hash, str) and _QUERY_HASH.fullmatch(query_hash)
+        and raw.get("provider") == "cached_osrm" and raw.get("routing_status") == "osrm_live"
+        and raw.get("geometry_source") == "cached_osrm_route_geometry"
+        and raw.get("distance_source") == "cached_osrm_route_distance"
+        and raw.get("duration_source") == "cached_osrm_route_duration"
+    )
+    runtime_route = (
+        allow_runtime_routes and isinstance(query_hash, str) and _SHA256.fullmatch(query_hash)
+        and raw.get("provider") == "runtime_osrm"
+        and (raw.get("routing_status"), raw.get("geometry_source")) in {
+            ("osrm_route_validated", "runtime_osrm_geojson"),
+            ("osrm_waypoint_detour_validated", "runtime_osrm_geojson_via_highway_101"),
+        }
+        and raw.get("distance_source") == raw.get("duration_source") == "runtime_osrm_route"
+    )
     if (
         set(raw) != _ROUTE_CELL_FIELDS
         or isinstance(distance_m, bool)
@@ -386,14 +462,8 @@ def _raw_route_cell_is_exact(raw: Mapping[str, Any], context_snapshot_id: str) -
         or not isinstance(duration_s, (int, float))
         or not math.isfinite(float(duration_s))
         or float(duration_s) <= 0
-        or not isinstance(query_hash, str)
-        or not _QUERY_HASH.fullmatch(query_hash)
-        or raw.get("provider") != "cached_osrm"
+        or not (cached_route or runtime_route)
         or raw.get("routing_profile") != "driving"
-        or raw.get("routing_status") != "osrm_live"
-        or raw.get("geometry_source") != "cached_osrm_route_geometry"
-        or raw.get("distance_source") != "cached_osrm_route_distance"
-        or raw.get("duration_source") != "cached_osrm_route_duration"
         or raw.get("context_snapshot_id") != context_snapshot_id
         or raw.get("road_validated") is not True
         or raw.get("fallback_used") is not False
@@ -407,24 +477,7 @@ def _raw_route_cell_is_exact(raw: Mapping[str, Any], context_snapshot_id: str) -
 
 
 def _valid_route_geometry(value: Any) -> bool:
-    if not isinstance(value, (list, tuple)) or len(value) < 2:
-        return False
-    for point in value:
-        if not isinstance(point, (list, tuple)) or len(point) != 2:
-            return False
-        latitude, longitude = point
-        if (
-            isinstance(latitude, bool)
-            or not isinstance(latitude, (int, float))
-            or not math.isfinite(float(latitude))
-            or not -90 <= float(latitude) <= 90
-            or isinstance(longitude, bool)
-            or not isinstance(longitude, (int, float))
-            or not math.isfinite(float(longitude))
-            or not -180 <= float(longitude) <= 180
-        ):
-            return False
-    return True
+    return _ROUTE_GEOMETRY_VALIDATOR.isinstance_python(value)
 
 
 def _accepted_geography_plan(

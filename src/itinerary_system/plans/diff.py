@@ -4,11 +4,12 @@ from __future__ import annotations
 
 import math
 import re
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
 from typing import Any
 
 from ..research_artifacts import PlanArtifactV2, stable_content_hash
 from .attribute_ownership import (
+    attribute_ownership_rows,
     build_attribute_ownership_evidence,
     ownership_change_evidence,
     resolve_attribute_ownership,
@@ -71,9 +72,11 @@ class PlanDiffBuilder:
         ownership_policy: OwnershipPolicy | None = None,
         *,
         default_visit_minutes: float | None = None,
+        allow_snapshot_transition: bool = False,
     ) -> None:
         if default_visit_minutes is not None and not _valid_duration_number(default_visit_minutes):
             raise ValueError("default_visit_minutes must be a finite number from 15 to 480")
+        self.allow_snapshot_transition = allow_snapshot_transition
         self.ownership_policy = ownership_policy or OwnershipPolicy()
         self.default_visit_minutes = (
             float(default_visit_minutes) if default_visit_minutes is not None else None
@@ -85,6 +88,7 @@ class PlanDiffBuilder:
             child,
             self.ownership_policy,
             default_visit_minutes=self.default_visit_minutes,
+            allow_snapshot_transition=self.allow_snapshot_transition,
         )
 
     def weighted_cost(self, diff: PlanDiff) -> float:
@@ -94,12 +98,43 @@ class PlanDiffBuilder:
         return diff.unchanged_days
 
 
+def build_attribute_diff_context(
+    parent: PlanArtifactV2, *, default_visit_minutes: float,
+) -> dict[str, Any]:
+    """Project the accepted artifact through the same normalization as its diff.
+
+    This is renderer validation input, not a second plan or permission verdict.
+    """
+    policy = OwnershipPolicy()
+    stops = _plan_stop_index(parent)
+    constraints = attribute_ownership_rows(parent.owned_constraints, include_role=True)
+    payload = {
+        "schema_version": "accepted-attribute-diff-context-v1",
+        "parent_plan_id": parent.plan_id,
+        "parent_plan_content_hash": parent.content_hash,
+        "owned_constraints": list(parent.owned_constraints),
+        "attribute_constraints": sorted(
+            (row for rows in constraints.values() for row in rows),
+            key=lambda row: row["constraint_id"],
+        ),
+        "stops": [asdict(stops[key]) for key in sorted(stops)],
+        "route_ids_by_day": {str(day): route for day, route in _route_by_day(parent, stops).items()},
+        "default_visit_minutes": float(default_visit_minutes),
+        "ownership_policy": {
+            "change_type_weights": dict(policy.change_type_weights),
+            "constraint_strength_weights": dict(policy.constraint_strength_weights),
+        },
+    }
+    return {**payload, "content_hash": stable_content_hash(payload)}
+
+
 def compute_plan_diff(
     parent: PlanArtifactV2,
     child: PlanArtifactV2,
     policy: OwnershipPolicy | None = None,
     *,
     default_visit_minutes: float | None = None,
+    allow_snapshot_transition: bool = False,
 ) -> PlanDiff:
     """Compute added/deleted stops, moves, ordering, lodging, and road changes."""
 
@@ -108,7 +143,12 @@ def compute_plan_diff(
         raise ValueError("default_visit_minutes must be a finite number from 15 to 480")
     if default_visit_minutes is not None:
         default_visit_minutes = float(default_visit_minutes)
-    _validate_compatible(parent, child)
+    if allow_snapshot_transition:
+        if child.parent_plan_id != parent.plan_id or not all((parent.catalog_snapshot_id, child.catalog_snapshot_id,
+                parent.context_snapshot_id, child.context_snapshot_id)):
+            raise ValueError("snapshot transition requires explicit parent-child lineage")
+    else:
+        _validate_compatible(parent, child)
     parent_stops = _plan_stop_index(parent)
     child_stops = _plan_stop_index(child)
     changed_attribute_keys = _changed_attribute_keys(parent_stops, child_stops)
@@ -294,10 +334,10 @@ def compute_plan_diff(
             or parent_stop.itinerary_role_source
             != child_stop.itinerary_role_source
         ):
-            role_owner_strength = _owner_strength(
-                stop_id,
-                {**parent_role_strengths, **child_role_strengths},
-                policy,
+            role_owner_strength = (
+                attribute_ownership.strength_for(stop_id, ("role",), policy)
+                if attribute_ownership.activated
+                else _owner_strength(stop_id, {**parent_role_strengths, **child_role_strengths}, policy)
             )
             cost = _change_cost("role_change", role_owner_strength, policy)
             role_changes.append(
@@ -568,6 +608,23 @@ def compute_plan_diff(
                 after_value={"road": change.to_route_id},
             )
         )
+    for change in role_changes:
+        attribute_cost_changes.append(
+            ownership_change_evidence(
+                change_kind="role_change",
+                target_stop_id=change.stop_id,
+                attributes=("role",),
+                resolution=attribute_ownership,
+                policy=policy,
+                delta_scale=1.0,
+                before_value={"role": change.from_role},
+                after_value={"role": change.to_role},
+            )
+        )
+    combined_attributes = sum(
+        bool(changes) for changes in (duration_changes, time_window_changes, role_changes)
+    ) > 1
+    mixed_ownership = attribute_ownership.activated and (combined_attributes or bool(role_changes))
     attribute_cost_changes.sort(
         key=lambda row: (
             str(row["change_kind"]),
@@ -580,11 +637,8 @@ def compute_plan_diff(
         resolution=attribute_ownership,
         changes=tuple(attribute_cost_changes),
         policy=policy,
+        mixed_attributes=mixed_ownership,
     )
-    if attribute_ownership_evidence is not None and role_changes:
-        raise ValueError(
-            "combined role and relation-specific attribute diff is not supported"
-        )
     if attribute_ownership_evidence is not None:
         derived_costs = {
             (
@@ -607,6 +661,7 @@ def compute_plan_diff(
                 for row in time_window_changes
             },
             **{("order_change", row.stop_id): row.cost for row in reorder_changes},
+            **{("role_change", row.stop_id): row.cost for row in role_changes},
             **{
                 ("lodging_change", f"lodging:{row.day}"): row.cost
                 for row in lodging_changes
@@ -645,11 +700,6 @@ def compute_plan_diff(
         diff_payload["attribute_ownership_evidence"] = (
             attribute_ownership_evidence
         )
-    if sum(
-        bool(changes)
-        for changes in (duration_changes, time_window_changes, role_changes)
-    ) > 1:
-        raise ValueError("combined typed attribute diff is not supported")
     return PlanDiff(
         diff_id=f"diff_{stable_content_hash(diff_payload)}",
         parent_plan_id=parent.plan_id,
@@ -668,7 +718,11 @@ def compute_plan_diff(
         role_changes=tuple(role_changes),
         attribute_ownership_evidence=attribute_ownership_evidence,
         schema_version=(
-            "plan-diff-v5"
+            "plan-diff-v7"
+            if mixed_ownership
+            else "plan-diff-v6"
+            if combined_attributes
+            else "plan-diff-v5"
             if attribute_ownership_evidence is not None
             else "plan-diff-v4"
             if role_changes
@@ -689,8 +743,17 @@ def _validate_compatible(parent: PlanArtifactV2, child: PlanArtifactV2) -> None:
 
 
 def _plan_stop_index(plan: PlanArtifactV2) -> dict[str, _PlanStop]:
-    sequence_order = {str(stop_id): index for index, stop_id in enumerate(plan.sequence, start=1)}
     day_assignments = {str(stop_id): day for stop_id, day in plan.day_assignments.items()}
+    raw_days = {_stop_id(stop, index): _coerce_int(stop.get("day")) for index, stop in enumerate(plan.selected_stops, 1)}
+    sequence_order: dict[str, int] = {}
+    day_counts: dict[int | None, int] = {}
+    for stop_id in plan.sequence:
+        key = str(stop_id)
+        day = raw_days.get(key)
+        if day is None:
+            day = _coerce_int(day_assignments.get(key))
+        day_counts[day] = day_counts.get(day, 0) + 1
+        sequence_order[key] = day_counts[day]
     stops: dict[str, _PlanStop] = {}
     for index, raw_stop in enumerate(plan.selected_stops, start=1):
         stop = dict(raw_stop)
@@ -919,6 +982,8 @@ def _changed_attribute_keys(
             keys.add((stop_id, "time_window"))
         if parent.order != child.order:
             keys.add((stop_id, "order"))
+        if parent.itinerary_role != child.itinerary_role or parent.itinerary_role_source != child.itinerary_role_source:
+            keys.add((stop_id, "role"))
     return frozenset(keys)
 
 

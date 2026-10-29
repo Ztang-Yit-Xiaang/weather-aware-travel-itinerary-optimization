@@ -27,7 +27,24 @@
         "fixture_copilot",
         "typed_drafts",
         "registered_preview",
-        "multi_plan_product_demo"
+        "multi_plan_product_demo",
+        "local_acceptance"
+      ],
+      "default": false
+    },
+    {
+      "run_id": "california_coast_coherent_demo_v1",
+      "trip_id": "california_coast_approved_seven_day",
+      "label": "California Coast · San Francisco to Los Angeles · v1",
+      "relative_path": "runs/california-coast-coherent-demo-v1",
+      "manifest_sha256": "82d405c5e57cdc45b25552106127e4be33977306f669f98fa98d6c709850d480",
+      "capabilities": [
+        "read_only_artifacts",
+        "fixture_copilot",
+        "typed_drafts",
+        "registered_preview",
+        "multi_plan_product_demo",
+        "local_acceptance"
       ],
       "default": true
     }

@@ -19,6 +19,7 @@ const runtimeState = {
     draft_capabilities: actual.draft_capabilities,
     map_edit_capabilities: actual.map_edit_capabilities,
     timeline: actual.timeline,
+    geography: actual.geography,
   },
   session: actual.before_session,
 };
@@ -62,6 +63,7 @@ for (const [name, impact] of [
 ]) {
   assert.equal(mixedNormalizers.normalizeDraftImpactPreview(impact), null, name);
 }
+
 
 const withProposal = (patch = {}, sessionPatch = {}) => {
   const proposal = { ...actual.preview.proposal, ...patch };
@@ -151,7 +153,7 @@ const forgeries = [
       },
     },
   })],
-  ["eligible_state", () => withProposal({ state: "ineligible", eligibility: "ineligible" })],
+  ["eligible_state", () => withProposal({ state: "eligible", eligibility: "eligible" })],
 ];
 for (const [name, build] of forgeries) {
   const forged = build();

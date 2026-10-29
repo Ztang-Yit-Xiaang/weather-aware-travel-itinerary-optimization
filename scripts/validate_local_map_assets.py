@@ -28,8 +28,10 @@ from itinerary_system.product_app.map_asset_contract import (  # noqa: E402
     required_fontstacks,
     valid_provenance,
 )
+from itinerary_system.product_app.product_demo import load_product_demo_package  # noqa: E402
 from itinerary_system.product_app.registry import ProductRunRegistry  # noqa: E402
-from itinerary_system.product_app.service import ProductService  # noqa: E402
+from itinerary_system.product_dashboard_adapter import load_product_dashboard_source  # noqa: E402
+from itinerary_system.product_dashboard_view_models import build_product_dashboard_view_model  # noqa: E402
 
 REQUIRED_LICENSES = frozenset(
     {"BSD-3-Clause", "CC0-1.0", "OFL-1.1", "MIT", "ODbL-1.0", "Protomaps-Data-Notices"}
@@ -105,10 +107,17 @@ def _workspace_coordinates(repository_root: Path) -> list[tuple[float, float]]:
     registry = ProductRunRegistry(
         repository_root, repository_root / "configs" / "product_app_registry.json"
     )
-    service = ProductService(registry, repository_root / ".product_app_state")
     coordinates: list[tuple[float, float]] = []
     for record in registry.all():
-        workspace = service.workspace_view(record.run_id)
+        # Asset coverage concerns immutable registered plans, not accepted user
+        # state. Historical runs may intentionally share a trip identifier.
+        run_dir = registry.run_dir(record.run_id)
+        bundle = (
+            load_product_demo_package(repository_root, run_dir).primary_bundle
+            if "multi_plan_product_demo" in record.capabilities
+            else load_product_dashboard_source(run_dir)
+        )
+        workspace = build_product_dashboard_view_model(bundle)
         for plan_name in ("parent", "child"):
             plan_map = workspace["map"][plan_name]
             for stop in plan_map["stops"]:

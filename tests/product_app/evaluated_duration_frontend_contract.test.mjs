@@ -88,13 +88,13 @@ assert.deepEqual(actualProposal.route_validation_identity, {
   source_content_sha256: routeValidation.source_content_sha256,
 });
 assert.ok(normalizers.sameJson(actualProposal.evidence.route_validation, routeValidation));
-assert.equal(actualProposal.repair.changed.affected_day_count, actualProposal.schedule_impact.affected_days.length);
+assert.equal(new Set(planDiff.duration_changes.map((change) => change.day)).size, actualProposal.schedule_impact.affected_days.length);
 const fullPreview = await normalizers.normalizeEvaluatedPreviewResponse(
   structuredClone(actual.preview), structuredClone(actual.expected),
 );
 assert.ok(fullPreview);
 assert.equal(fullPreview.proposal.repair.tradeoffs.utility_retained, null);
-assert.equal(fullPreview.proposal.repair.tradeoffs.weather_risk_delta, null);
+assert.equal(fullPreview.proposal.repair.tradeoffs.weather_risk_delta, 0);
 
 const ineligiblePreview = await normalizers.normalizeEvaluatedPreviewResponse(
   structuredClone(actual.ineligible.preview), structuredClone(actual.ineligible.expected),
@@ -107,11 +107,13 @@ assert.equal(ineligibleProposal.evaluation_status, "FAILED");
 assert.equal(ineligibleProposal.decision_eligible, false);
 assert.equal(ineligibleProposal.ranking_eligible, false);
 assert.equal(ineligibleProposal.acceptance_eligible, false);
-assert.equal(ineligibleProposal.acceptance_blocking_code, "acceptance_not_enabled_until_w5");
+assert.equal(ineligibleProposal.acceptance_blocking_code, "proposal_not_eligible");
 assert.equal(ineligibleProposal.repair.tradeoffs.utility_retained, null);
-assert.equal(ineligibleProposal.repair.tradeoffs.weather_risk_delta, null);
+assert.equal(ineligibleProposal.repair.tradeoffs.weather_risk_delta, 0);
 assert.deepEqual(ineligibleProposal.schedule_impact.child.blocking_codes, ["day_time_exceeded"]);
-assert.deepEqual(ineligibleProposal.certificate_schedule_evidence.failure_codes, ["day_time_exceeded"]);
+assert.deepEqual(ineligibleProposal.certificate_schedule_evidence.failure_codes, [
+  "weather_infeasible", "day_time_exceeded",
+]);
 assert.ok(ineligibleProposal.schedule_impact.child.metrics.day_4_overrun_minutes > 0);
 
 for (const [name, row] of [
@@ -131,10 +133,8 @@ assert.deepEqual(actual.preferred.impact.summary, {
   can_run_evaluated_preview: false,
   blocking_codes: ["duration_mode_evaluation_not_supported"],
 });
-assert.equal(actual.mixed.impact.summary.can_run_evaluated_preview, false);
-assert.ok(actual.mixed.impact.summary.blocking_codes.includes(
-  "draft_evaluated_operation_combination_unsupported",
-));
+assert.equal(actual.mixed.impact.summary.can_run_evaluated_preview, true);
+assert.deepEqual(actual.mixed.impact.summary.blocking_codes, []);
 
 const forge = (mutate) => {
   const payload = structuredClone(actual.preview);
@@ -184,9 +184,9 @@ const forgeries = [
   ["arbitrary_from_constraint", (proposal) => { duration(proposal).from_constraint = { mode: "exact", arbitrary: 45 }; }],
   ["to_constraint", (proposal) => { duration(proposal).to_constraint.preferred_minutes += 15; }],
   ["fallback_minutes", (proposal) => { duration(proposal).accounting_from_minutes += 5; }],
-  ["raw_source_minutes", (proposal) => { duration(proposal).from_minutes = 45; }],
-  ["raw_source", (proposal) => { duration(proposal).from_source = "visit_duration_minutes"; }],
-  ["accounting_source", (proposal) => { duration(proposal).accounting_from_source = "visit_duration_minutes"; }],
+  ["raw_source_minutes", (proposal) => { duration(proposal).from_minutes = 46; }],
+  ["raw_source", (proposal) => { duration(proposal).from_source = "duration_minutes"; }],
+  ["accounting_source", (proposal) => { duration(proposal).accounting_from_source = "configured_evaluator_default"; }],
   ["time_shift_smuggling", (proposal) => { proposal.plan_diff.time_shifts.push({ forged: true }); }],
   ["road_change_smuggling", (proposal) => { proposal.plan_diff.road_changes.push({ forged: true }); }],
   ["diff_schema_removed", (proposal) => { delete proposal.plan_diff.schema_version; }],
@@ -199,7 +199,7 @@ const forgeries = [
   ["schedule_hash", (proposal) => { proposal.schedule_impact.content_hash = "0".repeat(16); }],
   ["schedule_identity", (proposal) => { proposal.schedule_impact_identity.route_matrix_id = `route_matrix_${"1".repeat(16)}`; }],
   ["certificate_identity", (proposal) => { proposal.certificate_identity.content_hash = "2".repeat(16); }],
-  ["missing_risk_as_zero", (proposal) => { proposal.repair.tradeoffs.weather_risk_delta = 0; }],
+  ["weather_risk_mismatch", (proposal) => { proposal.repair.tradeoffs.weather_risk_delta = 1; }],
   ["compiled_duration", (proposal) => { proposal.compiled_request.operations[0].parameters.duration.maximum_minutes += 15; }],
   ["child_route", (proposal) => {
     proposal.geography_plan.validated_legs.features[firstLegIndex].properties.duration_s += 1;
@@ -222,8 +222,8 @@ const coherentForgeries = [
     duration(proposal).from_constraint = { mode: "exact", arbitrary: 45 };
   }, rehashPlanDiff],
   ["rehashed_raw_source", actual.preview, actual.expected, (proposal) => {
-    duration(proposal).from_minutes = 45;
-    duration(proposal).from_source = "visit_duration_minutes";
+    duration(proposal).from_minutes = 46;
+    duration(proposal).from_source = "duration_minutes";
   }, rehashPlanDiff],
   ["rehashed_owner_cost", actual.preview, actual.expected, (proposal) => {
     duration(proposal).owner_strength = "soft";
@@ -255,7 +255,7 @@ const coherentForgeries = [
     await rehashCertificateSchedule(proposal);
   }],
   ["coherent_proposal_binding", actual.preview, actual.expected, (proposal) => {
-    proposal.decision_eligible = false;
+    proposal.decision_eligible = true;
   }, async () => {}],
 ];
 for (const [name, basePreview, expected, mutate, rehash] of coherentForgeries) {
@@ -297,10 +297,37 @@ for (const [name, metric] of Object.entries(waitingMetrics)) {
   waitingProposal.certificate_schedule_evidence.schedule_metrics[name] = metric;
 }
 await rehashCertificateSchedule(waitingProposal);
+assert.equal(await normalizers.normalizeCertificateScheduleEvidence(
+  waitingProposal.certificate_schedule_evidence, waitingProposal, waitingImpact,
+), null, "changed schedule summary cannot contradict the preserved exact certificate");
+// Synthetic coherent metric fixture only: not a claim that an evaluator ran.
+const waitingRecord = waitingProposal.certificate_schedule_evidence.certificate_record;
+Object.assign(waitingRecord.metrics, waitingMetrics);
+const waitingRecordPayload = {...waitingRecord};
+delete waitingRecordPayload.content_hash;
+waitingRecord.content_hash = await normalizers.computedStableContentHash(waitingRecordPayload);
+waitingProposal.certificate_content_hash = waitingRecord.content_hash;
+waitingProposal.certificate_identity.content_hash = waitingRecord.content_hash;
+waitingProposal.certificate_schedule_evidence.certificate_content_hash = waitingRecord.content_hash;
+await rehashCertificateSchedule(waitingProposal);
 assert.ok(await normalizers.normalizeCertificateScheduleEvidence(
   waitingProposal.certificate_schedule_evidence,
   waitingProposal,
   waitingImpact,
-), "certificate schedule permits evaluator-owned waiting changes");
+), "synthetic coherent certificate and schedule permit matching waiting changes");
+
+for (const [name, change] of [
+  ["foreign_plan", record => {record.plan_id = "plan_other";}],
+  ["foreign_hash", record => {record.plan_content_hash = "0000000000000000";}],
+  ["changed_timestamp", record => {record.evaluated_at = "2020-01-01T00:00:00Z";}],
+  ["missing_record", (_record, evidence) => {delete evidence.certificate_record;}],
+]) {
+  const forged = structuredClone(actualProposal);
+  change(forged.certificate_schedule_evidence.certificate_record, forged.certificate_schedule_evidence);
+  await rehashCertificateSchedule(forged);
+  assert.equal(await normalizers.normalizeCertificateScheduleEvidence(
+    forged.certificate_schedule_evidence, forged, forged.schedule_impact,
+  ), null, `exact certificate rejects ${name} even with a rehashed summary`);
+}
 
 console.log("evaluated duration frontend contract and forgeries passed");

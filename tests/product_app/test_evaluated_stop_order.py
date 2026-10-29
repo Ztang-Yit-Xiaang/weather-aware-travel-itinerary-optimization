@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from copy import deepcopy
+from dataclasses import replace
 from hashlib import sha256
 from pathlib import Path
 
@@ -132,6 +133,58 @@ def test_semantically_identical_order_edits_are_deterministic() -> None:
     assert first.certificate["certificate_id"] == second.certificate["certificate_id"]
 
 
+@pytest.mark.parametrize("reverse", [False, True])
+def test_order_batch_accepts_positions_already_satisfied_by_another_row(reverse) -> None:
+    compiler = _compiler()
+    operations = [_operation(), _operation("stearns_wharf", sequence_index=1)]
+    if reverse:
+        operations.reverse()
+    compiled = compiler.compile(operations, accepted_plan_id=PARENT_ID)
+    assert compiled.state == "eligible"
+    assert next(day["stop_ids"] for day in compiled.child_plan["ordered_days"] if day["day"] == 4) == [
+        "surf_n_wear_s_beach_house", "stearns_wharf",
+    ]
+
+
+def test_order_batch_rejects_two_stops_in_the_same_position() -> None:
+    with pytest.raises(WorkspaceError, match="draft_conflicting_stop_order"):
+        _compiler().compile([_operation(), _operation("stearns_wharf")], accepted_plan_id=PARENT_ID)
+
+
+def test_same_day_reorder_preserves_complete_untouched_stop_records_and_constraints() -> None:
+    compiler = _compiler()
+    stops = deepcopy(compiler._parent_artifact.selected_stops)
+    for stop in stops:
+        if stop["day"] == 5:
+            stop["stop_order"] = 6  # Real accepted-replacement artifact shape.
+        if stop["day"] == 6:
+            stop["time_window_constraint"] = {
+                "schema_version": "stop-time-window-constraint-v1", "earliest_arrival": "10:00",
+                "latest_departure": None, "early_arrival_policy": "wait_until_earliest_arrival",
+                "latest_departure_semantics": "departure_after_visit",
+            }
+        if stop["day"] == 7:
+            stop["visit_duration_minutes"] = 60
+            stop["duration_constraint"] = {"mode": "exact", "preferred_minutes": 60,
+                "minimum_minutes": 60, "maximum_minutes": 60}
+    parent = replace(compiler._parent_artifact, selected_stops=stops).to_record()
+    original = deepcopy(parent)
+    compiled = compiler.for_parent(parent).compile([_operation()], accepted_plan_id=parent["plan_id"])
+    assert compiled.certificate["plan_content_hash"] == compiled.child_plan["content_hash"]
+    assert compiled.certificate["comparison_eligibility"] == "eligible"
+    assert [row for row in compiled.child_plan["selected_stops"] if row["day"] != 4] == [
+        row for row in parent["selected_stops"] if row["day"] != 4]
+    assert {row["day"] for row in compiled.diff["reorder_changes"]} == {4}
+    assert len(compiled.diff["reorder_changes"]) == 2
+    assert 5 in compiled.diff["unchanged_days"]
+    assert compiled.diff["weighted_edit_cost"] == 4.0
+    assert {day: value for day, value in compiled.child_plan["route_ids_by_day"].items() if str(day) != "4"} == {
+        day: value for day, value in parent["route_ids_by_day"].items() if str(day) != "4"}
+    assert [row for row in compiled.route_legs if row["day"] != 4] == [
+        row for row in compiled.parent_route_legs if row["day"] != 4]
+    assert parent == original
+
+
 @pytest.mark.parametrize(
     ("operation", "code"),
     [
@@ -227,7 +280,7 @@ def test_preview_api_binds_revision_draft_lineage_evidence_and_geography(tmp_pat
             json={
                 "expected_revision": 0,
                 "type": "set_stop_order",
-                "target": "surf_n_wear_s_beach_house",
+                "target": "kings_canyon_national_park",
                 "parameters": {"day": 4, "sequence_index": 0},
                 "source": "typed_stop_editor",
                 "evidence_refs": [],
@@ -254,7 +307,7 @@ def test_preview_api_binds_revision_draft_lineage_evidence_and_geography(tmp_pat
     assert proposal["session_revision"] == 2
     assert proposal["draft_operation_ids"] == [operation_id]
     assert len(proposal["draft_content_hash"]) == 16
-    assert proposal["parent_plan_id"] == PARENT_ID
+    assert proposal["parent_plan_id"] == session["accepted_plan_id"]
     assert proposal["parent_plan_content_hash"]
     assert proposal["child_plan_id"] == proposal["diff_identity"]["child_plan_id"]
     assert proposal["parent_plan_id"] == proposal["diff_identity"]["parent_plan_id"]
@@ -280,14 +333,14 @@ def test_preview_api_binds_revision_draft_lineage_evidence_and_geography(tmp_pat
     geography = proposal["geography_plan"]
     assert geography["plan_id"] == proposal["child_plan_id"]
     assert geography["content_hash"] == proposal["child_plan_content_hash"]
-    assert geography["coverage"]["required_leg_count"] == 16
-    assert geography["coverage"]["road_validated_leg_count"] == 16
+    assert geography["coverage"]["required_leg_count"] == 15
+    assert geography["coverage"]["road_validated_leg_count"] == 15
     assert geography["coverage"]["gap_count"] == 0
     route_path = [
         feature["properties"]["node_id"]
         for feature in geography["route_path"]["features"]
     ]
-    assert route_path.index("surf_n_wear_s_beach_house") < route_path.index("stearns_wharf")
+    assert route_path.index("kings_canyon_national_park") < route_path.index("sequoia_national_park")
     assert stable_content_hash(proposal["compiled_request"]["operations"]) != ""
     restored_session = restored.json()["session"]
     assert restored_session["revision"] == proposal["session_revision"]
@@ -325,7 +378,7 @@ def test_invalid_order_append_writes_nothing(
             json={
                 "expected_revision": 0,
                 "type": "set_stop_order",
-                "target": "surf_n_wear_s_beach_house",
+                "target": "kings_canyon_national_park",
                 "parameters": parameters,
                 "source": "typed_stop_editor",
                 "evidence_refs": [],
@@ -361,7 +414,7 @@ def test_mixed_order_impact_matches_compiler_rejection(tmp_path: Path) -> None:
             json={
                 "expected_revision": 0,
                 "type": "set_stop_order",
-                "target": "surf_n_wear_s_beach_house",
+                "target": "kings_canyon_national_park",
                 "parameters": {"day": 4, "sequence_index": 0},
                 "source": "typed_stop_editor",
                 "evidence_refs": [],
@@ -396,10 +449,10 @@ def test_mixed_order_impact_matches_compiler_rejection(tmp_path: Path) -> None:
     summary = impact.json()["summary"]
     assert summary == {
         "operation_count": 2,
-        "evaluated_executable_count": 2,
-        "draft_only_count": 0,
+        "evaluated_executable_count": 1,
+        "draft_only_count": 1,
         "can_run_evaluated_preview": False,
-        "blocking_codes": ["draft_evaluated_operation_combination_unsupported"],
+        "blocking_codes": ["unsupported_optimizer_mapping", "draft_evaluated_operation_combination_unsupported"],
     }
     assert preview.status_code == 409
     assert preview.json() == {
@@ -419,3 +472,89 @@ def test_order_preview_does_not_mutate_frozen_product_artifacts(tmp_path: Path) 
     compiler.compile([_operation()], accepted_plan_id=PARENT_ID)
 
     assert {path: sha256(path.read_bytes()).hexdigest() for path in paths} == before
+
+@pytest.mark.parametrize("duration_first", [False, True])
+def test_current_order_plus_duration_survives_preview_reload_and_sequential_undo(tmp_path, duration_first):
+    order = [{"type": "set_stop_order", "target": target,
+              "parameters": {"day": 4, "sequence_index": index}, "source": "copilot", "evidence_refs": []}
+             for index, target in enumerate(("sequoia_national_park", "kings_canyon_national_park"))]
+    duration = {"type": "set_stop_duration", "target": "griffith_observatory", "source": "copilot", "evidence_refs": [],
+                "parameters": {"duration": {"mode": "exact", "preferred_minutes": 75, "minimum_minutes": 75, "maximum_minutes": 75}}}
+    operations = [duration, *order] if duration_first else [*order, duration]
+    with TestClient(create_product_app(repository_root=ROOT, registry_path=REGISTRY,
+                    state_root=tmp_path / "state", additional_allowed_authorities=("testserver",))) as client:
+        created = client.post("/api/sessions", json={}).json()
+        session_id = created["session"]["session_id"]
+        accepted = created["session"]["accepted_plan_id"]
+        headers = {"X-Session-Token": created["mutation_token"]}
+        base = f"/api/sessions/{session_id}"
+        staged = client.post(base + "/draft/operations", headers=headers, json={"expected_revision": 0, "operations": operations})
+        assert staged.status_code == 200, staged.text
+        assert staged.json()["session"]["revision"] == 1
+        assert len(staged.json()["session"]["draft"]) == 3
+        preview = client.post(base + "/preview", headers=headers, json={"expected_revision": 1})
+        assert preview.status_code == 200, preview.text
+        proposal = preview.json()["proposal"]
+        assert proposal["child_plan_id"] != accepted
+        assert proposal["certificate_identity"]["plan_id"] == proposal["child_plan_id"]
+        assert proposal["certificate_identity"]["plan_content_hash"] == proposal["child_plan_content_hash"]
+        restored = client.get(base, headers=headers)
+        assert restored.status_code == 200, restored.text
+        assert restored.json()["session"]["proposal"] == proposal
+        for index in range(3):
+            revision = 2 + index
+            undone = client.post(base + "/draft/undo", headers=headers, json={"expected_revision": revision})
+            assert undone.status_code == 200, undone.text
+            recovered = client.get(base, headers=headers)
+            assert recovered.status_code == 200, recovered.text
+            current = recovered.json()["session"]
+            assert current["accepted_plan_id"] == accepted
+            assert current["revision"] == revision + 1
+            assert len(current["draft"]) == 2 - index
+            assert current["proposal"] is None
+            if index == 0 and not duration_first:
+                unchanged_order = client.post(base + "/preview", headers=headers, json={"expected_revision": revision + 1})
+                assert unchanged_order.status_code == 409
+                assert unchanged_order.json()["detail"] == "draft_no_effect"
+                after_refusal = client.get(base, headers=headers)
+                assert after_refusal.status_code == 200
+                assert after_refusal.json()["session"] == current
+
+
+def test_wholly_current_order_batch_is_rejected_before_persistence(tmp_path):
+    operations = [{"type": "set_stop_order", "target": target,
+                   "parameters": {"day": 4, "sequence_index": index}, "source": "copilot", "evidence_refs": []}
+                  for index, target in enumerate(("sequoia_national_park", "kings_canyon_national_park"))]
+    with TestClient(create_product_app(repository_root=ROOT, registry_path=REGISTRY,
+                    state_root=tmp_path / "state", additional_allowed_authorities=("testserver",))) as client:
+        created = client.post("/api/sessions", json={}).json()
+        session_id = created["session"]["session_id"]
+        headers = {"X-Session-Token": created["mutation_token"]}
+        response = client.post(f"/api/sessions/{session_id}/draft/operations", headers=headers,
+                               json={"expected_revision": 0, "operations": operations})
+        assert response.status_code == 409
+        assert response.json()["detail"] == "draft_no_effect"
+        recovered = client.get(f"/api/sessions/{session_id}", headers=headers)
+        assert recovered.status_code == 200
+        assert recovered.json()["session"]["revision"] == 0
+        assert recovered.json()["session"]["draft"] == []
+
+
+def test_redundant_order_rows_cannot_mask_invalid_duration_in_atomic_batch(tmp_path):
+    operations = [{"type": "set_stop_order", "target": target,
+                   "parameters": {"day": 4, "sequence_index": index}, "source": "copilot", "evidence_refs": []}
+                  for index, target in enumerate(("sequoia_national_park", "kings_canyon_national_park"))]
+    operations.append({"type": "set_stop_duration", "target": "griffith_observatory", "source": "copilot", "evidence_refs": [],
+                       "parameters": {"duration": {"mode": "exact", "preferred_minutes": 75, "minimum_minutes": 45, "maximum_minutes": 75}}})
+    with TestClient(create_product_app(repository_root=ROOT, registry_path=REGISTRY,
+                    state_root=tmp_path / "state", additional_allowed_authorities=("testserver",))) as client:
+        created = client.post("/api/sessions", json={}).json()
+        session_id = created["session"]["session_id"]
+        headers = {"X-Session-Token": created["mutation_token"]}
+        response = client.post(f"/api/sessions/{session_id}/draft/operations", headers=headers,
+                               json={"expected_revision": 0, "operations": operations})
+        assert response.status_code == 422, response.text
+        recovered = client.get(f"/api/sessions/{session_id}", headers=headers)
+        assert recovered.status_code == 200
+        assert recovered.json()["session"]["revision"] == 0
+        assert recovered.json()["session"]["draft"] == []

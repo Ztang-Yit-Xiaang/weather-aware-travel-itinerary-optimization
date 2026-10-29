@@ -360,7 +360,13 @@ def _candidate_sequences(
             sequences.append(sequence)
         if candidate_id not in parent_day_sequence:
             sequences.append((*parent_day_sequence, candidate_id))
-    return _dedupe_sequences(tuple(sequences))
+    # A generated sequence forbidden by confirmed selection constraints does
+    # not need route evidence. Required cells for admissible routes stay strict.
+    excluded = set(model.metadata.get("context_excluded_stop_ids", ()))
+    return _dedupe_sequences(tuple(
+        sequence for sequence in sequences
+        if not excluded.intersection(sequence)
+    ))
 
 
 def _solution_for_sequence(

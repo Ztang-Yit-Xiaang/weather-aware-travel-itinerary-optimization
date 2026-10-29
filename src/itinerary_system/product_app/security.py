@@ -30,13 +30,22 @@ class ProductSecurityBoundary:
         if origin is not None and origin not in self.config.allowed_origins:
             raise HTTPException(status_code=403, detail="origin_not_allowed")
 
+    def validate_browser_build(self, request: Request, build_id: str) -> None:
+        if not request.url.path.startswith("/api/"):
+            return
+        supplied = request.headers.get("x-product-build-id")
+        browser_request = any(name.startswith("sec-fetch-") for name in request.headers)
+        # Coherence only: programmatic clients still need normal origin/token/revision checks.
+        if (browser_request or supplied is not None) and supplied != build_id:
+            raise HTTPException(status_code=409, detail="product_client_build_mismatch")
+
     def apply_headers(self, request: Request, response: Response) -> Response:
         map_origin = self.config.map_base_url
         response.headers["Content-Security-Policy"] = (
             "default-src 'self'; "
             f"script-src 'self' {map_origin}; "
             f"style-src 'self' {map_origin}; "
-            f"img-src 'self' data: blob: {map_origin}; "
+            f"img-src 'self' data: blob: {map_origin} https://www.nps.gov/yose/ https://www.nps.gov/common/uploads/; "
             f"font-src 'self' {map_origin}; "
             f"connect-src 'self' {map_origin}; "
             "worker-src 'self' blob:; manifest-src 'self'; object-src 'none'; "
@@ -52,7 +61,7 @@ class ProductSecurityBoundary:
             or request.url.path.startswith("/app/")
             or request.url.path.startswith("/static/")
         ):
-            response.headers["Cache-Control"] = "no-cache"
+            response.headers["Cache-Control"] = "no-store"
         return response
 
     async def read_bounded_json(self, request: Request, limit: int = MAX_JSON_BODY_BYTES) -> dict[str, Any]:

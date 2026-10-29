@@ -1,0 +1,50 @@
+{
+  "affected_stop_id": "bixby_creek_bridge_viewpoint",
+  "certificate_content_hash": "8cb632da57d176b8",
+  "child_plan_id": "plan_8ae77712483a709e",
+  "claims": [
+    {
+      "claim_id": "claim_recommended_replacement",
+      "claim_type": "repair_change",
+      "confidence": "artifact_backed",
+      "evidence_refs": [
+        "weather_day_5_bixby",
+        "route_recommended_day_5"
+      ],
+      "rendered_text": "Day 5 replaces Bixby Creek Bridge Viewpoint with Pfeiffer Big Sur State Park.",
+      "unsupported": false
+    },
+    {
+      "claim_id": "claim_recommended_preservation",
+      "claim_type": "preservation",
+      "confidence": "artifact_backed",
+      "evidence_refs": [
+        "route_recommended_day_5"
+      ],
+      "rendered_text": "The San Francisco, Stanford, Yosemite, Sequoia/Kings Canyon, Santa Barbara, and Los Angeles days remain unchanged.",
+      "unsupported": false
+    }
+  ],
+  "diff_id": "diff_389154fa22f977e9",
+  "evidence_records": [
+    {
+      "field_path": "confirmed_constraints.affected_stop_id",
+      "record_hash": "e0a09b0a0a4cdde2",
+      "ref_id": "weather_day_5_bixby",
+      "source_id": "weather_repair_bixby_day_5_v1",
+      "source_type": "registered_product_fixture"
+    },
+    {
+      "field_path": "route_validation.day_5",
+      "record_hash": "6a5e3cafd448fcbf",
+      "ref_id": "route_recommended_day_5",
+      "source_id": "route_0307bc920061ff9e",
+      "source_type": "route_matrix"
+    }
+  ],
+  "explanation_id": "explanation_3e2bf3863a34e775",
+  "parent_plan_id": "plan_359968d255ff9288",
+  "replacement_stop_id": "pfeiffer_big_sur_state_park",
+  "schema_version": "product-repair-explanation-v1",
+  "summary": "Replace the weather-infeasible Day 5 Bixby stop with Pfeiffer Big Sur State Park while preserving Days 1-4 and 6-7."
+}

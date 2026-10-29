@@ -1,0 +1,59 @@
+{
+  "phase": "request_completeness_repair",
+  "verified_utc": "2026-10-29T05:31:13.597930+00:00",
+  "build_id": "683c8cf6cf38473e",
+  "source_inputs_checked": 374,
+  "source_drift": [],
+  "final_checks": {
+    "tests": 339,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "new_request_checks": 39,
+  "website_turns": 9,
+  "paid_calls": 2,
+  "locally_handled_turns": 7,
+  "usage": {
+    "input_tokens": 14763,
+    "cached_input_tokens": 5248,
+    "output_tokens": 409
+  },
+  "preview_protection": [
+    {
+      "build_id": "78d8c064370cbb0e",
+      "all_13_fields_equal": true,
+      "preview_state": "eligible",
+      "evaluation_status": "PASSED",
+      "certificate_id": "cert_8cc00a48b9423d8b",
+      "accepted_parent": "plan_359968d255ff9288",
+      "child_plan_id": "plan_bc13d7ed8c7ec60b",
+      "child_content_hash": "7fcedb8c498459fc",
+      "map_ready": true,
+      "loaded_tile_coverage": 1,
+      "accepted": false
+    },
+    {
+      "build_id": "683c8cf6cf38473e",
+      "all_13_fields_equal": true,
+      "preview_state": "eligible",
+      "evaluation_status": "PASSED",
+      "certificate_id": "cert_8cc00a48b9423d8b",
+      "accepted_parent": "plan_359968d255ff9288",
+      "child_plan_id": "plan_bc13d7ed8c7ec60b",
+      "child_content_hash": "7fcedb8c498459fc",
+      "map_ready": true,
+      "loaded_tile_coverage": 1,
+      "accepted": false
+    }
+  ],
+  "limits": [
+    "This is finite request-completeness acceptance, not general natural-language or production-release acceptance.",
+    "Fixed-day insertion without exact directed road evidence remains blocked. Whole-trip replanning cannot pin an arbitrary stop to a specific day.",
+    "A daily driving cap does not establish lower total driving than the prior trip. Mandatory comparative reduction clarifies rather than inventing a guarantee.",
+    "Short cap-only follow-ups do not retain a complete trip-request slot; the clarification explicitly asks for complete restatement. Slash notation such as 3 hours/day remains deferred clarification.",
+    "The ten-day/nature/180-minute browser case verified proposal parameters and preview-conflict protection; it was not staged, solved or accepted in this phase.",
+    "The 339 tests cover the six listed related modules. The previous 468-case execution and broader historical language findings remain separate evidence; no replacement all-green full repository/release claim is made."
+  ],
+  "publication_scope": "Portable checkpoint of retained local evidence. Raw provider payloads, private sessions, machine metadata, state backups and temporary test trees remain local. The 339-case result belongs to the recorded local build; this is not a full-repository/release pass."
+}

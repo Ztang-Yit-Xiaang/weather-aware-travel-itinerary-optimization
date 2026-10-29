@@ -1,5 +1,15 @@
 # Travel Itinerary Repair Technical Specification for Codex
 
+Latest editor checkpoint: 11 actual browser journeys pass, including native
+duration/window controls and protected-rule rejection. Corrected post-run reader
+matches canonical artifacts; its original manifest remains rejected, not relabeled.
+The next full frozen gate must include the new 68-case/22-suite inventory.
+Separate current-build GPT website proof passes with one attempt. Exact I/O,
+reader source boundary and open requirements are in the current runtime report;
+no phase or research status advances.
+
+October 7 corrective runtime checkpoint: standalone owned duration/window chat edits now reuse the full canonical-child/evaluation/map path, without treating ownership cost as permission or weakening unrelated feasibility. Four new API/Node cases, 12 mixed regressions, seven owned browser journeys and independently rebuilt exact artifacts pass. A separate one-attempt GPT website journey passes on this source using the normal synthetic demo. Full evidence, exact file/API/LLM I/O and remaining boundaries are in `docs/reports/runtime_coherence_status_20261007.md`; E2E-1/CP-010/R12/R20 remain in progress and no research or G5/W6-W8 status changes.
+
 **Status:** Draft implementation contract  
 **Repository:** `Ztang-Yit-Xiaang/weather-aware-travel-itinerary-optimization`  
 **Author:** Yit Xiaang Ztang  
@@ -342,7 +352,45 @@ class PlanDiff:
     road_changes: tuple[RoadChange, ...]
     unchanged_days: tuple[int, ...]
     weighted_edit_cost: float
+    duration_changes: tuple[DurationChange, ...] = ()
+    time_window_changes: tuple[TimeWindowChange, ...] = ()
+    role_changes: tuple[RoleChange, ...] = ()
+    attribute_ownership_evidence: dict[str, Any] | None = None
+    schema_version: str = "plan-diff-v1"
 ```
+
+Serialization is versioned, not inferred by discarding fields: v1 is the base
+diff; v2, v3 and v4 add duration, trip-specific time-window and role changes,
+respectively. V5 binds a single non-role typed family or base-attribute changes
+to accepted-parent relation-specific ownership-cost evidence. V6 carries
+multiple typed families without that evidence. V7 carries mixed owned changes,
+including role changes when combined with another changed attribute, and uses
+`plan-diff-attribute-ownership-evidence-v2`. Existing v5/v6 records retain their
+strict shapes; a v7 record must not be relabeled as either to pass a consumer.
+
+Owned change evidence binds the parent ID/content hash, applicable constraint
+IDs, exact before/after values, satisfaction, attribute-specific strength,
+policy weights and every listed change's cost. It is a **cost derivation**, not
+permission or feasibility: both claims are explicitly `not_evaluated`.
+Lodging/road ownership remains outside this migration. The independent evaluator
+must enforce the immutable parent's active rules against the actual child.
+
+The product must remain fail-closed for a new diff version until the compiler,
+permission checks, independently evaluated certificate, frontend normalization,
+accepted-parent evidence and real browser/map journey are connected and tested.
+Successful domain serialization alone cannot enable Preview or Apply.
+
+For atomic v5/v7 product previews, `accepted-attribute-diff-context-v1` is a
+read-only renderer-validation projection, not a second plan or approval. It binds
+the accepted parent ID/hash, immutable ownership records, normalized active
+attribute rules/stops/routes, configured default visit duration and canonical
+cost policy. Its normalization must be the same as the domain diff's. The backend
+recomputes the complete diff from the actual accepted parent and generated child
+and verifies the independently produced evaluator-v2 certificate and route
+identity. The frontend binds the projection to its accepted parent, preserves
+constraint identity, verifies applicable rules, exact changed values and costs,
+and rejects format downgrades or invented permission/feasibility claims.
+Eligibility still comes from independent evaluation; acceptance revalidates it.
 
 ---
 
@@ -1890,6 +1938,21 @@ The system is paper-ready only when all statements below are true:
 The local Itinerary Repair Copilot is additive. Its registry uses explicit safe
 relative run paths and one pinned default. Browser code may present but may not
 recompute plan, diff, route, evaluator, or certificate truth.
+
+### Mandatory product runtime integration gate
+
+Phase E2E-1, specified in
+`e2e_1_vertical_slice_integration_runtime_truth_phase_plan.md`, is mandatory for
+every enabled product interaction. A feature is not integrated merely because
+its schema, API, backend service, or component test passes. The production-like
+browser must render the exact backend child plan that passed independent
+evaluation, and itinerary, metrics, Compare, Evidence, route geography, and map
+acknowledgement must bind the same plan ID and content hash. Staging, eligible
+preview, map render completion, and durable acceptance are separate states.
+Unsupported semantics must remain unsupported, stale responses must fail closed,
+and screenshots supplement rather than replace structural identity assertions.
+No later UI-complete, user-study-ready, or product-demo claim may bypass this
+gate.
 
 Selections, typed drafts, fixture interpretations, permissions, and decisions
 use server-authoritative sessions with expected-revision checks. Acceptance

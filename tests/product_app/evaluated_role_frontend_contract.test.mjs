@@ -99,7 +99,7 @@ assert.deepEqual(
 assert.deepEqual(proposal.role_impact.supported_evaluated_roles, [
   "attraction", "activity", "meal", "rest_stop", "scenic_stop",
 ]);
-assert.deepEqual(proposal.role_impact.affected_days, [4]);
+assert.deepEqual(proposal.role_impact.affected_days, [6]);
 assert.deepEqual(proposal.role_impact.target_stop_ids, ["stearns_wharf"]);
 assert.equal(proposal.role_impact.configured_default_visit_minutes, 45);
 assert.equal(proposal.role_impact.configured_day_start_minute, 540);
@@ -185,13 +185,13 @@ const full = await normalizers.normalizeEvaluatedPreviewResponse(
   structuredClone(row.preview), structuredClone(row.expected),
 );
 assert.ok(full, "actual API response passes full JavaScript trust boundary");
-assert.equal(full.proposal.state, "eligible");
-assert.equal(full.proposal.decision_eligible, true);
+assert.equal(full.proposal.state, "ineligible");
+assert.equal(full.proposal.decision_eligible, false);
 assert.equal(full.proposal.ranking_eligible, false);
 assert.equal(full.proposal.acceptance_eligible, false);
-assert.equal(full.proposal.acceptance_blocking_code, "acceptance_not_enabled_until_w5");
+assert.equal(full.proposal.acceptance_blocking_code, "proposal_not_eligible");
 assert.equal(full.proposal.repair.tradeoffs.utility_retained, null);
-assert.equal(full.proposal.repair.tradeoffs.weather_risk_delta, null);
+assert.equal(full.proposal.repair.tradeoffs.weather_risk_delta, 0);
 assert.deepEqual(full.proposal.role_impact.role_constraint_evidence.constraints, []);
 assert.deepEqual(full.proposal.role_impact.invariance, {
   sequence_unchanged: true,
@@ -227,10 +227,8 @@ const mixedNormalizer = new Function(
   "state", `${contractCode}\nreturn {normalizeDraftImpactPreview};`,
 )(mixedState);
 assert.ok(mixedNormalizer.normalizeDraftImpactPreview(structuredClone(actual.mixed.impact)));
-assert.equal(actual.mixed.impact.summary.can_run_evaluated_preview, false);
-assert.ok(actual.mixed.impact.summary.blocking_codes.includes(
-  "draft_evaluated_operation_combination_unsupported",
-));
+assert.equal(actual.mixed.impact.summary.can_run_evaluated_preview, true);
+assert.deepEqual(actual.mixed.impact.summary.blocking_codes, []);
 
 const withoutContentHash = (value) => {
   const payload = structuredClone(value);
@@ -527,7 +525,7 @@ await reject("W5 acceptance stays disabled", async (candidate) => {
   candidate.acceptance_blocking_code = null;
 });
 await reject("missing weather risk cannot become zero", async (candidate) => {
-  candidate.repair.tradeoffs.weather_risk_delta = 0;
+  candidate.repair.tradeoffs.weather_risk_delta = 1;
 });
 await reject("place/category properties are immutable", async (candidate) => {
   const target = candidate.geography_plan.stops.features

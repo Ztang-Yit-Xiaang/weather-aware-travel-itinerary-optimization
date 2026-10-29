@@ -3,8 +3,10 @@
 **Track:** Parallel non-publication product prototype  
 **Product:** Itinerary Repair Copilot  
 **Entrypoint:** `OPEN_ITINERARY_COPILOT.cmd` -> `/app`  
-**Current product action:** implement W4R direct-interaction remediation, then verify G4R before resuming G4  
+**Current product action:** implement and independently verify the mandatory E2E-1 vertical-slice gate, then run G5; keep W6 closed until both pass
 **Research boundary:** Product work cannot advance E3.1, E3.3, E4, E3.UX5, or E5.
+
+**Current checkpoint (October 7, 2026):** the fresh real website GPT-to-repair/evaluator/map journey and exact-output replay pass; the complete E2E-1 gate remains in progress. See [the concise status and R01–R24 register](../reports/runtime_coherence_status_20261007.md). Full regression, the fresh aggregate after today's shared-test repair, cross-family composition, native mobile-keyboard evidence and phase audit remain open. Historical claims below are source-bound; G5 and W6-W8 have not advanced.
 
 ## 1. Executive Summary
 
@@ -50,22 +52,25 @@ The FastAPI shell and partial product UI exist; CP-010 is therefore
 | Registry/runtime readiness | W1 implemented; W1M/G1 verified with the live local MapLibre/PMTiles package |
 | Desktop shell | Corrected-v2 W2/G2 verified |
 | Geographic map | Continuous v2 MapLibre/PMTiles route verified |
-| Controlled edits | Corrected-v2 W3/G3 verified within the registered candidate universe; direct drag, empty-map creation, runtime snapping, and route-segment editing remain W4R gaps |
-| Repair preview | Corrected-v2 W3/G3 verified for supported compiled operations; dynamic waypoints, route overlays, and expanded operation compilation remain W4R gaps |
+| Controlled edits | W4R implemented: server-owned snap previews, confirmed waypoints, registered POI replacement, and typed stop/route edits; G4R verified |
+| Repair preview | W4R implemented for the registered operation boundary, including evaluated typed edits and exact route evidence; G4R verified |
 | Fixture Copilot | Implemented; explicit demo/test only |
-| OpenAI Copilot | W4 implemented offline; G4 live smoke and fixed-24 evaluation remain blocked |
-| Compare / Evidence | Corrected-v2 artifact-backed read-only flow verified; exact selected-option resolution, active-preview comparison, and dual map controllers remain W4R gaps |
-| `PlanRepository` acceptance | Not implemented; Accept and Keep remain fail-closed until W5 |
-| Mobile / PWA | Not implemented |
+| OpenAI Copilot | W4 implemented; August v6 corpus evidence is historical. October 7's bounded `gpt-5.4-mini` real website journey and exact-output replay independently pass; this does not prove arbitrary prompts or close E2E-1 |
+| Compare / Evidence | W4R implemented with exact selected-option resolution, synchronized dual map controllers, active-preview evidence, and user-oriented defaults; G4R verified |
+| `PlanRepository` acceptance | W5 implemented; confirmed Accept/Keep/rollback, immutable repository, ledger, pointer CAS, recovery and idempotency are present. Continued acceptance has September browser evidence; the complete E2E-1 gate and G5 remain open |
+| Mobile / PWA | Responsive web and touch journeys have bounded browser evidence. Native OS keyboard remains untested; installable PWA work remains planned, not implemented |
 | AUD-0 | Verified: three broad and nine specialist audits are durable |
 | W0 / G0 | Verified: traceability, evidence metadata, and independent sign-offs pass |
 | W1 / W1M / G1 | W1 implemented; W1M/G1 verified by live, offline-local, browser-shell, regression, and six-auditor evidence |
 | W2 / G2 | Corrected-v2 W2/G2 verified by seven independent audit roles |
 | W3 / G3 | Corrected-v2 W3/G3 verified by preview, persistence, integrity, and user-journey evidence |
 | W4 | Implemented offline; not provider-verified |
-| W4R / G4R | W4R in progress; G4R planned and not verified |
-| G4 | Blocked on a newly authorized post-fix live smoke, fixed-24 evaluation, and prescribed reasoning comparison |
-| W5-W8 | Planned; W5 remains closed until G4 passes |
+| W4R / G4R | W4R implemented; G4R verified after independent remediation re-audit |
+| G4 | Current-source v6 verified / passed after three independent read-only reviews |
+| W5 | Implemented; decision/persistence mechanics remain subject to G5 |
+| E2E-1 | In progress; six deterministic journeys pass; bounded billed website-chat journey authorized and pending before G5 |
+| G5 | Blocked behind E2E-1 |
+| W6-W8 | Planned and closed behind E2E-1/G5-G7 |
 | CP-010 | In progress until G8 |
 
 Research status is unchanged: E1, E2, E3.0, E3.M, E3.2, E3.C1-C4, and
@@ -75,7 +80,7 @@ Historical v1 G2/G3 verdicts remain preserved. The v2 continuity correction has 
 revision-safe undo, compilation into typed repair requests, independent
 repair/evaluator preview, and exact proposal geography/evidence while the
 accepted parent remains immutable. The W4 implementation-ready phase plan was
-approved and W4 deterministic implementation passed independent audits on 2026-08-05; G4 is blocked on authorized live evidence.
+approved and W4 deterministic implementation passed independent audits on 2026-08-05. Historical G4 aggregates failed provenance audit; v4 closed recomputability, and the authorized v5 exact-I/O/transport run plus three independent audits verified its frozen source. The authorized 2026-08-13 current-source v6 run passes the same fixed-24 comparison at low and medium reasoning with exact file/LLM I/O; three independent read-only reviews pass after the audit-binding defect was repaired.
 
 The v2 correction record is
 [`../audits/w2_route_continuity_correction_report.md`](../audits/w2_route_continuity_correction_report.md).
@@ -175,7 +180,7 @@ never research evidence. Auditors are read-only.
 | Explicit W0 authorization | Satisfied on 2026-08-03; AUD-0/W0 verified |
 | Pinned MapLibre/PMTiles/style assets, archive provenance/coverage, Linux Docker engine, digest/disk/port preflight | Satisfied at W1M/G1 |
 | Atlas entitlement/license | Optional backup provider gate only; not on the product critical path |
-| OpenAI key/model access | W4 live verification |
+| OpenAI key/model access | Available locally; every fresh billed G4 run still requires explicit user authorization |
 | Three-plan route-validated demo | W2-W5 |
 | Frozen shared contracts | W2-W5 |
 | User visual approval | G8 |
@@ -383,18 +388,20 @@ approval is the final visual gate.
 | W1M | Verified | MapLibre-primary/provider-neutral v2 contracts and static boundary | G1 passed with closed assets, live/offline-local checks, and six audits |
 | W2 | Verified | Continuous v2 three-plan demo and geographic map | Corrected G2 passed |
 | W3 | Verified | Persistent controlled drafts and real preview inside the registered operation/candidate boundary | Corrected G3 passed; preserve its evidence |
-| W4 | Implemented offline | OpenAI adapter, versioned prompt/eval contract, transcripts, synchronization | Preserve implementation evidence; G4 remains separate and blocked |
-| W4R | In progress | Direct map/list/timeline interaction, complete route-leg accounting, runtime snap/route overlay, route-aware POIs, stop/route editing, contextual Copilot proposals, exact Compare/Evidence selection | Code and deterministic checks pass without claiming G4R verification |
-| G4R | Planned, not verified | Independent map/route/accessibility/UI/content/visual/security/status/black-box review | Every required audit passes; findings are not averaged |
-| G4 | Blocked | Newly authorized post-fix provider smoke, fixed-24 evaluation, reasoning comparison, sanitized manifest, and independent provider audits | G4 verified; only then may W5 open |
-| W5 | Planned | Distinct Compare, progressive Evidence, repository/ledger/pointer acceptance and Keep current | G5 decision gate |
+| W4 | Implemented offline | OpenAI adapter, versioned prompt/eval contract, transcripts, synchronization | Preserve implementation evidence; G4 is separately verified by the v5 exact-I/O gate |
+| W4R | Implemented | Direct map/list/timeline interaction, complete route-leg accounting, runtime snap/route overlay, route-aware POIs, stop/route editing, contextual Copilot proposals, exact Compare/Evidence selection, and stability/coherence remediation | Preserve the implementation report as history and the later G4R remediation/re-audit as the current gate verdict |
+| G4R | Verified / passed | Preserve `../audits/g4r_remediation_final_reaudit_20260811.md` and the full-size timestamped evidence | Every required audit passed; findings were not averaged |
+| G4 | Current-source v6 verified / passed | Preserve the v6 exact-I/O evidence, repaired five-file audit binding, and three independent PASS reviews; no additional provider call is required | W5 entry satisfied |
+| W5 | Implemented | Distinct Compare/Evidence, fresh proposal revalidation, repository/ledger/pointer acceptance, Keep original, rollback, restart/concurrency/idempotency, and confirmed UI | E2E-1 mandatory runtime gate |
+| E2E-1 | In progress; E2E-1L live chat pending before G5 | Preserve the six deterministic journeys and add the authorized actual website chatbox -> OpenAI -> typed proposal -> Copilot draft -> preview -> evaluated child/map path with exact I/O, attempts, usage, cost, and privacy evidence | Independent E2E-1 pass; then G5 |
+| G5 | Blocked behind E2E-1 | Independently verify the complete runtime slice plus W5 decision/persistence integrity | G5 decision gate |
 | W6 | Planned | Mobile, PWA, accessibility | G6 mobile gate |
 | W7 | Planned | Launcher, legacy isolation, documentation | G7 launch gate |
 | W8 | Planned | Full regressions, audits, black-box, visual approval | G8 replacement gate |
 
 Each phase starts only after its entry gate. W4R follows the completed offline W4
 implementation, G4R independently verifies W4R, and G4 then closes the provider
-evidence boundary. W5 remains closed until G4 is verified.
+evidence boundary. G4 is verified and W5 is implemented. E2E-1 must verify the complete browser-to-artifact-to-map slice before G5 may verify W5; W6 remains closed until both pass.
 
 ## 33. Multi-Agent Assignments
 
@@ -452,7 +459,7 @@ browser profiles remain untracked.
 research: D1 -> E3.1 -> E3.3 -> E4 -> E5
 product:  AUD-0 -> W0/G0 -> W1 -> W1M/G1 -> W2/G2 -> W3/G3
                                       -> W4 implemented -> W4R -> G4R
-                                      -> G4 -> W5/G5 -> W6/G6
+                                      -> G4 -> W5 -> E2E-1 -> G5 -> W6/G6
                                       -> W7/G7 -> W8/G8 + user approval
 ```
 
@@ -477,7 +484,8 @@ Late contract changes reopen dependent gates.
 | G3 Draft | Operations, persistence, undo, real preview, immutability | UIUX, Web, Map, Acceptance |
 | G4R Interaction | Typed direct actions, required-leg coverage/gaps, route-aware POIs, exact Compare/Evidence, responsive equivalents | Map Journey, Route Artifact, Accessibility, UIUX, Content, Visual, Security, Status, Black-Box |
 | G4 Copilot | Post-fix provider smoke, fixed-24 evaluation, reasoning comparison, schemas, permission, context, retention | Provider, Prompt Quality, Content, Security, Web, Status |
-| G5 Decision | Distinct plans, Evidence, certificate, repository/CAS/restart | Artifact, Acceptance, Content, Web |
+| E2E-1 Runtime truth | Real browser action, exact child/diff/evaluation/geography identities, panel/map agreement, map acknowledgement, stale-response rejection, accepted refresh, exact API/file/LLM I/O | Integration, Map Journey, Artifact, Acceptance, Content, Security, Black-Box |
+| G5 Decision | E2E-1 PASS plus distinct plans, Evidence, certificate, repository/CAS/restart | Artifact, Acceptance, Content, Web |
 | G6 Mobile | Screens, keyboard, PWA/cache, accessibility | UIUX, Mobile, Accessibility, Visual |
 | G7 Launch | Clean Windows, deep readiness, no fallback, shutdown | Web, Journey, Status |
 | G8 Replacement | Full regressions, audits, black-box, user visual approval | Entire audit pool + Integration Review |
@@ -556,9 +564,9 @@ backup and is not on the W3 critical path. The frozen v6 artifact, CP-010
 
 ## 45. Approved W4R Direct-Interaction Remediation
 
-W4R starts with the status/contract correction in this document. That planning
-edit makes W4R `in-progress`; it does not prove any runtime behavior. G4R remains
-planned and unverified.
+W4R started with the status/contract correction in this document and is now
+implemented with root-run stability/coherence evidence. That evidence does not
+prove G4R by itself; the later remediation and fresh independent closeout verified G4R.
 
 Current blocking defects:
 
@@ -569,8 +577,9 @@ Current blocking defects:
 - the current Compare path needs exact selected-option state, active evaluated
   preview support, dual instance-owned map controllers, and exact Evidence
   resolution; and
-- Accept/Keep are unavailable by design until W5 and must remain visibly
-  fail-closed rather than appear broken or imply a decision was recorded.
+- Accept is available only for a current eligible evaluated proposal and Keep
+  original is available as an explicit confirmed durable decision; both remain
+  fail-closed on stale, malformed, unauthorized, or conflicting state.
 
 W4R implementation order:
 
@@ -582,8 +591,10 @@ W4R implementation order:
 6. W4R.5 - extend contextual Copilot proposals without direct mutation.
 7. W4R.6 - correct Compare/Evidence and close responsive behavior.
 8. G4R - run independent interaction audits.
-9. G4 - run newly authorized post-fix live-provider evidence.
-10. W5 - only after G4, implement durable Accept/Keep decisions.
+9. G4 - current-source v6 is verified after the statewide-POI/name-aware change and three independent read-only reviews.
+10. W5 - implemented; preserve the decision/persistence mechanics.
+11. E2E-1 - implement and independently verify the mandatory vertical slice in `e2e_1_vertical_slice_integration_runtime_truth_phase_plan.md`.
+12. G5 - run only after E2E-1 passes; keep W6 closed until G5 passes.
 
 The research path remains separately blocked in the order
 `D1 -> E3.1 -> E3.3 -> E4`; W4R/G4R cannot advance it.

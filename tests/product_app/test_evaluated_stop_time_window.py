@@ -273,16 +273,20 @@ def test_time_window_preview_api_exposes_exact_bound_evidence_and_w5_block(
         accept = client.post(
             f"/api/sessions/{session_id}/accept",
             headers=headers,
-            json={"expected_revision": 2},
+            json={
+                "expected_revision": 2,
+                "confirmation": "accept_evaluated_repair",
+                "idempotency_key": "time-window-decision-0001",
+            },
         )
 
     assert impact.json()["summary"]["can_run_evaluated_preview"] is True
     assert response.status_code == 200
     proposal = response.json()["proposal"]
-    assert proposal["decision_eligible"] is True
+    assert proposal["decision_eligible"] is False
     assert proposal["ranking_eligible"] is False
     assert proposal["acceptance_eligible"] is False
-    assert proposal["acceptance_blocking_code"] == "acceptance_not_enabled_until_w5"
+    assert proposal["acceptance_blocking_code"] == "proposal_not_eligible"
     assert proposal["plan_diff"]["schema_version"] == "plan-diff-v3"
     assert proposal["diff_identity"]["content_hash"] == stable_content_hash(
         proposal["plan_diff"]
@@ -300,13 +304,13 @@ def test_time_window_preview_api_exposes_exact_bound_evidence_and_w5_block(
         "evaluated-time-window-certificate-schedule-evidence-v1"
     )
     assert evidence["warning_codes"] == ["opening_window_evidence_missing"]
-    assert evidence["failure_codes"] == []
+    assert evidence["failure_codes"] == ["weather_infeasible"]
     assert proposal["repair"]["tradeoffs"]["utility_retained"] is None
-    assert proposal["repair"]["tradeoffs"]["weather_risk_delta"] is None
-    assert proposal["route_validation"]["required_leg_count"] == 16
-    assert proposal["route_validation"]["road_validated_leg_count"] == 16
+    assert proposal["repair"]["tradeoffs"]["weather_risk_delta"] == 0.0
+    assert proposal["route_validation"]["required_leg_count"] == 15
+    assert proposal["route_validation"]["road_validated_leg_count"] == 15
     assert accept.status_code == 409
-    assert accept.json() == {"detail": "acceptance_not_enabled_until_w5"}
+    assert accept.json() == {"detail": "acceptance_proposal_invalid"}
 
 
 def test_ineligible_time_window_api_preserves_failed_evidence_and_w5_block(
@@ -332,7 +336,11 @@ def test_ineligible_time_window_api_preserves_failed_evidence_and_w5_block(
         accept = client.post(
             f"/api/sessions/{session_id}/accept",
             headers=headers,
-            json={"expected_revision": 2},
+            json={
+                "expected_revision": 2,
+                "confirmation": "accept_evaluated_repair",
+                "idempotency_key": "time-window-decision-0001",
+            },
         )
 
     assert response.status_code == 200
@@ -353,13 +361,14 @@ def test_ineligible_time_window_api_preserves_failed_evidence_and_w5_block(
     assert evidence["evaluation_status"] == "FAILED"
     assert evidence["comparison_eligibility"] == "ineligible"
     assert evidence["failure_codes"] == [
-        "stop_time_window_latest_departure_exceeded"
+        "weather_infeasible",
+        "stop_time_window_latest_departure_exceeded",
     ]
     assert evidence["warning_codes"] == ["opening_window_evidence_missing"]
-    assert proposal["route_validation"]["required_leg_count"] == 16
-    assert proposal["route_validation"]["road_validated_leg_count"] == 16
+    assert proposal["route_validation"]["required_leg_count"] == 15
+    assert proposal["route_validation"]["road_validated_leg_count"] == 15
     assert accept.status_code == 409
-    assert accept.json() == {"detail": "acceptance_not_enabled_until_w5"}
+    assert accept.json() == {"detail": "acceptance_proposal_invalid"}
 
 
 @pytest.mark.parametrize(
@@ -424,7 +433,7 @@ def test_stale_wrong_target_and_duplicate_target_fail_without_extra_write(
             session_id,
             headers,
             revision=0,
-            target="surf_n_wear_s_beach_house",
+            target="griffith_observatory",
         )
         duplicate_target = _append(
             client,

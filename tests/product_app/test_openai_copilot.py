@@ -13,7 +13,7 @@ from pydantic import ValidationError
 
 from itinerary_system.product_app import openai_copilot
 from itinerary_system.product_app.copilot import CopilotContractError
-from itinerary_system.product_app.models import CopilotContextV1, CopilotTurnV1
+from itinerary_system.product_app.models import CopilotContextV1, CopilotIntentV1, CopilotTurnV1
 from itinerary_system.product_app.openai_copilot import (
     OpenAICopilotAdapter,
     OpenAICopilotError,
@@ -150,7 +150,26 @@ def test_valid_structured_response_uses_safe_responses_payload() -> None:
     assert "verbosity" not in payload
     assert "conversation" not in payload
     assert "previous_response_id" not in payload
-    assert "accepted" not in payload["instructions"].lower().split("occurred")[-1]
+    assert "Never claim that an action, repair, evaluation, permission, booking, or" in payload["instructions"]
+    assert "acceptance occurred" in payload["instructions"]
+    assert "proposed_preferences are requests for consideration, never accepted constraints" in payload["instructions"]
+
+
+def test_medium_reasoning_is_an_explicit_provider_control() -> None:
+    client = _FakeClient(_parsed_response())
+    adapter = OpenAICopilotAdapter(
+        model="gpt-5.6-terra",
+        api_key="not-used-by-injected-client",
+        reasoning_effort="medium",
+        client=client,
+    )
+
+    _run(adapter)
+
+    assert client.responses.calls[0]["reasoning"] == {
+        "effort": "medium",
+        "context": "current_turn",
+    }
 
 
 def test_refusal_is_typed_and_does_not_expose_provider_text() -> None:
@@ -241,6 +260,142 @@ def test_provider_prose_is_replaced_by_canonical_local_copy(provider_claim: str)
     assert provider_claim not in result.assistant_message
 
 
+def test_removal_request_cannot_be_rewritten_as_mark_flexible() -> None:
+    client = _FakeClient(
+        _parsed_response(
+            intents=[
+                OpenAIIntentSchemaV1(
+                    type="mark_flexible",
+                    target_stop_id="stop_a",
+                )
+            ],
+            highlights=OpenAIHighlightsSchemaV1(stop_ids=["stop_a"]),
+        )
+    )
+
+    result = _run(
+        OpenAICopilotAdapter(model="gpt-5.6-terra", api_key="unused", client=client),
+        message="I do not want to go to stop A",
+    )
+
+    assert result.state == "unsupported"
+    assert [intent.type for intent in result.intents] == ["unsupported_request"]
+    assert result.highlights.stop_ids == ()
+    assert "Removing or excluding" in result.assistant_message
+    assert client.responses.calls == []
+
+
+@pytest.mark.parametrize(
+    "message",
+    [
+        "I do not want to go to the Stearns Wharf",
+        "Skip stop A",
+        "Exclude stop A from this trip",
+    ],
+)
+def test_removal_language_is_rejected_before_provider_call(message: str) -> None:
+    client = _FakeClient(_parsed_response())
+
+    result = _run(
+        OpenAICopilotAdapter(model="gpt-5.6-terra", api_key="unused", client=client),
+        message=message,
+    )
+
+    assert result.state == "unsupported"
+    assert [intent.type for intent in result.intents] == ["unsupported_request"]
+    assert client.responses.calls == []
+
+
+def test_staged_point_removal_returns_specific_undo_guidance_without_provider_call() -> None:
+    context = replace(
+        _context(),
+        draft_operations=(
+            {
+                "type": "add_custom_waypoint",
+                "target": "waypoint_user_1",
+                "parameters": {"name": "Added point"},
+            },
+        ),
+    )
+    client = _FakeClient(_parsed_response())
+
+    result = asyncio.run(
+        OpenAICopilotAdapter(
+            model="gpt-5.4-mini", api_key="unused", client=client
+        ).interpret(
+            context=context,
+            history=(),
+            message="remove the added point",
+        )
+    )
+
+    assert result.state == "unsupported"
+    assert [intent.type for intent in result.intents] == ["unsupported_request"]
+    assert "staged draft" in result.assistant_message
+    assert "Remove this draft waypoint" in result.assistant_message
+    assert "Undo latest draft" in result.assistant_message
+    assert client.responses.calls == []
+
+
+def test_human_bixby_inclusion_resolves_to_exact_accepted_stop_without_provider_call() -> None:
+    stop_id = "bixby_creek_bridge_viewpoint"
+    context = replace(
+        _context(),
+        selected_stop_id=None,
+        allowed_stop_ids=(stop_id,),
+        known_places=(
+            {
+                "place_id": stop_id,
+                "name": "Bixby Creek Bridge Viewpoint",
+                "aliases": ("Bixby Creek Bridge",),
+                "categories": ("itinerary_stop",),
+                "region_id": "big_sur",
+                "route_status": "accepted_stop",
+            },
+        ),
+    )
+    client = _FakeClient(_parsed_response())
+
+    result = asyncio.run(
+        OpenAICopilotAdapter(
+            model="gpt-5.4-mini", api_key="unused", client=client
+        ).interpret(
+            context=context,
+            history=(),
+            message="I want to go to Bixby Creek Bridge",
+        )
+    )
+
+    assert result.state == "proposal_ready"
+    assert result.intents == (CopilotIntentV1(type="keep_stop", target_stop_id=stop_id),)
+    assert result.highlights.stop_ids == (stop_id,)
+    assert "already in the accepted itinerary" in result.assistant_message
+    assert client.responses.calls == []
+
+
+def test_explicit_replacement_language_still_reaches_typed_provider_boundary() -> None:
+    client = _FakeClient(
+        _parsed_response(
+            intents=[
+                OpenAIIntentSchemaV1(
+                    type="replace_nearby",
+                    target_stop_id="stop_a",
+                    candidate_id="candidate_b",
+                )
+            ]
+        )
+    )
+
+    result = _run(
+        OpenAICopilotAdapter(model="gpt-5.6-terra", api_key="unused", client=client),
+        message="Remove stop A and replace it with candidate B",
+    )
+
+    assert result.state == "proposal_ready"
+    assert [intent.type for intent in result.intents] == ["replace_nearby"]
+    assert len(client.responses.calls) == 1
+
+
 def test_provider_clarification_prose_is_replaced_before_persistence_boundary() -> None:
     provider_claim = "Great news - your tickets are secured."
     client = _FakeClient(
@@ -272,29 +427,27 @@ def test_provider_clarification_prose_is_replaced_before_persistence_boundary() 
     ("status", "final_code"),
     [(429, "openai_rate_limited"), (500, "openai_provider_unavailable")],
 )
-def test_transient_status_retries_exactly_once(status: int, final_code: str) -> None:
+def test_transient_status_does_not_silently_retry(status: int, final_code: str) -> None:
     success_client = _FakeClient(_StatusError(status), _parsed_response())
-    success = _run(
-        OpenAICopilotAdapter(model="gpt-5.6-terra", api_key="unused", client=success_client)
-    )
-    assert success.state == "proposal_ready"
-    assert len(success_client.responses.calls) == 2
+    with pytest.raises(OpenAICopilotError) as raised:
+        _run(OpenAICopilotAdapter(model="gpt-5.6-terra", api_key="unused", client=success_client))
+    assert raised.value.code == final_code
+    assert len(success_client.responses.calls) == 1
 
     failed_client = _FakeClient(_StatusError(status), _StatusError(status))
     with pytest.raises(OpenAICopilotError) as raised:
         _run(OpenAICopilotAdapter(model="gpt-5.6-terra", api_key="unused", client=failed_client))
     assert raised.value.code == final_code
-    assert len(failed_client.responses.calls) == 2
+    assert len(failed_client.responses.calls) == 1
 
 
-def test_transient_network_failure_retries_exactly_once() -> None:
+def test_transient_network_failure_does_not_silently_retry() -> None:
     request = httpx.Request("POST", "https://api.openai.com/v1/responses")
     client = _FakeClient(APIConnectionError(request=request), _parsed_response())
 
-    result = _run(OpenAICopilotAdapter(model="gpt-5.6-terra", api_key="unused", client=client))
-
-    assert result.state == "proposal_ready"
-    assert len(client.responses.calls) == 2
+    with pytest.raises(OpenAICopilotError, match="openai_provider_unavailable"):
+        _run(OpenAICopilotAdapter(model="gpt-5.6-terra", api_key="unused", client=client))
+    assert len(client.responses.calls) == 1
 
 
 @pytest.mark.parametrize("status", [400, 401, 403, 404, 422])
@@ -476,3 +629,51 @@ def test_invalid_context_is_rejected_before_provider_call() -> None:
     with pytest.raises(CopilotContractError):
         asyncio.run(adapter.interpret(context=invalid_context, history=(), message="Move it"))
     assert client.responses.calls == []
+
+def test_known_statewide_place_gets_specific_local_clarification_without_action() -> None:
+    context = replace(
+        _context(),
+        selected_stop_id=None,
+        selected_candidate_id=None,
+        known_places=(
+            {
+                "place_id": "ca_region_redwood",
+                "name": "Redwood National and State Parks",
+                "aliases": ("Redwood", "Redwoods", "Red Wood"),
+                "categories": ("statewide_discovery",),
+                "region_id": "redwood",
+                "route_status": "discovery_only_route_validation_required",
+            },
+        ),
+    )
+    response = _parsed_response(
+        state="clarification_required",
+        intents=[
+            OpenAIIntentSchemaV1(
+                type="request_clarification",
+                clarification_question="Which place?",
+            )
+        ],
+        highlights=OpenAIHighlightsSchemaV1(),
+    )
+    adapter = OpenAICopilotAdapter(
+        model="gpt-5.6-terra", api_key="unused", client=_FakeClient(response)
+    )
+
+    result = asyncio.run(
+        adapter.interpret(
+            context=context,
+            history=(),
+            message="what if I want to visit red wood",
+        )
+    )
+
+    assert result.state == "clarification_required"
+    assert result.highlights.day_ids == ()
+    assert result.highlights.stop_ids == ()
+    assert result.highlights.candidate_ids == ()
+    assert "Redwood National and State Parks" in result.assistant_message
+    assert "not validated for this trip" in result.assistant_message
+    assert result.intents[0].type == "request_clarification"
+    assert "which day should I check" in result.intents[0].clarification_question
+    assert "typed suggestion" not in result.assistant_message

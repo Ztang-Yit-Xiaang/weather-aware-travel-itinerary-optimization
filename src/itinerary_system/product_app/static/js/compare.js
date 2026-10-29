@@ -1,7 +1,7 @@
 import {
   createGeographicMapController,
   synchronizeMapCameras,
-} from "./map-controller-v2.js?v=20260810-stability5";
+} from "./map-controller-v2.js?v=20260817-e2e3";
 
 let activeCompare = null;
 let compareGeneration = 0;
@@ -24,9 +24,24 @@ function displayMetric(value, suffix = "") {
 }
 
 function exactBaseline(workspace, session) {
-  const originals = (workspace?.geography?.plans || []).filter((plan) => plan.role === "original");
-  if (originals.length !== 1) return null;
-  return originals[0].plan_id === session?.accepted_plan_id ? originals[0] : null;
+  const matches = (workspace?.geography?.plans || []).filter((plan) => plan.plan_id === session?.accepted_plan_id);
+  if (matches.length !== 1) return null;
+  const pointer = workspace?.accepted_plan_pointer;
+  if (pointer && (pointer.accepted_plan_id !== session?.accepted_plan_id
+      || pointer.accepted_plan_content_hash !== matches[0].content_hash)) return null;
+  return matches[0];
+}
+
+function routeMinutes(plan) {
+  if (plan?.coverage?.complete !== true || plan.coverage.gap_count !== 0) return null;
+  const legs = plan.validated_legs?.features;
+  if (!Array.isArray(legs) || legs.length !== plan.coverage.required_leg_count
+      || legs.length !== plan.coverage.road_validated_leg_count
+      || legs.some((leg) => leg.properties?.plan_id !== plan.plan_id
+        || leg.properties?.road_validated !== true || leg.properties?.fallback_used !== false
+        || typeof leg.properties.duration_s !== "number"
+        || !Number.isFinite(leg.properties.duration_s) || leg.properties.duration_s < 0)) return null;
+  return legs.reduce((sum, leg) => sum + leg.properties.duration_s / 60, 0);
 }
 
 /** Resolve only the explicitly selected, exact alternative. Never choose a fallback option. */
@@ -56,7 +71,9 @@ export function resolveCompareSelection(workspace, session) {
   const evidenceExact = Boolean(
     evidence
     && evidence.plan_id === selectedId
-    && evidence.plan_content_hash === option.plan_content_hash,
+    && evidence.plan_content_hash === option.plan_content_hash
+    && evidence.certificate?.plan_id === selectedId
+    && evidence.certificate?.plan_content_hash === option.plan_content_hash,
   );
   return Object.freeze({
     state: "selected",
@@ -86,10 +103,10 @@ function optionCard(option, selectedId) {
 
 function selectedMetricsTable(baseline, resolution) {
   const option = resolution.state === "selected" ? resolution.option : null;
-  const baselineRouteState = baseline?.coverage?.status === "complete" ? "Validated" : "Unavailable";
+  const baselineRouteState = routeMinutes(baseline) !== null ? "Validated" : "Unavailable";
   const rows = [
     ["Independent eligibility", "required", "Current accepted baseline", option?.display_status || option?.status || "Unavailable"],
-    ["Strict route time", "lower", "Unavailable", displayMetric(option?.route_total_minutes, option?.route_total_minutes == null ? "" : " minutes")],
+    ["Strict route time", "lower", displayMetric(routeMinutes(baseline), " minutes"), displayMetric(routeMinutes(resolution.plan), " minutes")],
     ["Ownership-weighted edit cost", "lower", "0 (reference)", displayMetric(option?.weighted_edit_cost)],
     ["Road-validated route", "required", baselineRouteState, option ? (option.route_validated ? "Validated" : "Unavailable") : "Unavailable"],
     ["Primary tradeoff", "review", "Keep the current trip", option ? `${displayMetric(option.route_total_minutes, " route minutes")} with ${displayMetric(option.weighted_edit_cost, " edit cost")}` : "Unavailable"],
@@ -133,11 +150,15 @@ function setPaneStatus(pane, payload) {
     ? `Map unavailable (${payload.code}). Use the text route evidence in this pane.`
     : payload.state === "ready_with_gaps"
       ? "Map ready with explicit unvalidated route gaps."
-      : "Map ready with road-validated route evidence.";
+      : payload.state === "ready"
+        ? "Map ready with road-validated route evidence."
+        : "Loading or rechecking map tiles and route layers…";
   status.setAttribute("role", payload.state === "failed" ? "alert" : "status");
-  if (payload.state === "ready" || payload.state === "ready_with_gaps") {
-    requestAnimationFrame(() => window.dispatchEvent(new Event("resize")));
-  }
+  status.dataset.mapState = payload.state;
+  status.dataset.mapStatusCode = payload.code || "";
+  status.dataset.tileCoverageRatio = String(payload.tileCoverageRatio ?? "");
+  // Readiness is an observation, not a layout event. Resizing here invalidates
+  // both ready maps, whose next ready event would resize them again forever.
 }
 
 function mapPane(kind, title, plan, unavailableCode = null) {
@@ -256,6 +277,7 @@ export function renderCompareWorkspace({
   mapConfig,
   onBack,
   onSelectAlternative,
+  onChooseAlternative,
   onOpenEvidence,
 }) {
   disposeCompareWorkspace();
@@ -264,21 +286,21 @@ export function renderCompareWorkspace({
   const selectedId = resolution.state === "selected" ? resolution.option.plan_id : null;
   const baselineUnavailable = baseline ? null : "compare_baseline_identity_mismatch";
   container.innerHTML = `<div class="route-view" data-compare-workspace>
-    <header class="route-heading"><div><span class="eyebrow">Trip choices</span><h2>Compare repairs</h2><p>Review the current trip and one repair side by side. The recommended eligible repair is selected automatically when Compare opens. Ineligible options remain inspectable but cannot be chosen.</p></div><button class="secondary" id="compare-back" type="button">Back to trip</button></header>
+    <header class="route-heading"><div><span class="eyebrow">Trip choices</span><h2>Compare repairs</h2><p>Review the current trip and one repair side by side. When no option is selected, an eligible recommended repair is selected automatically. Accepting a repair still requires an eligible evaluated preview and confirmation.</p></div><button class="secondary" id="compare-back" type="button">Back to trip</button></header>
     <div class="action-stack" data-compare-mobile-toggle hidden aria-label="Compare map view">
       <button type="button" data-compare-mobile-view="baseline" aria-pressed="false">Baseline map</button>
       <button type="button" data-compare-mobile-view="option" aria-pressed="true">Option map</button>
     </div>
     <div class="evidence-grid" data-compare-map-grid>
-      ${mapPane("baseline", "Original route", baseline, baselineUnavailable)}
+      ${mapPane("baseline", "Current trip route", baseline, baselineUnavailable)}
       ${mapPane("option", "Selected repair route", resolution.state === "selected" ? resolution.plan : null, resolution.code)}
     </div>
     <div class="alternative-grid">
-      <article class="alternative-card"><span class="status-pill">Current trip</span><h3>Keep original</h3><p>The current accepted itinerary, shown as the reference route.</p><button type="button" disabled>Baseline map shown</button></article>
+      <article class="alternative-card"><span class="status-pill">Current trip</span><h3>Current accepted trip</h3><p>The current accepted itinerary, shown as the reference route.</p><button type="button" disabled>Baseline map shown</button></article>
       ${(workspace?.alternatives || []).map((option) => optionCard(option, selectedId)).join("")}
     </div>
     <div class="action-stack compare-actions">
-      <button type="button" id="compare-choose" disabled title="Acceptance remains disabled until W5">Choose option (not enabled)</button>
+      <button type="button" id="compare-choose" ${resolution.state === "selected" ? "" : "disabled"} title="Selects this option for Trip preview; durable acceptance requires a current eligible evaluated preview and confirmation">Choose option for Trip preview</button>
       <button type="button" id="compare-evidence" ${resolution.evidenceExact ? "" : "disabled"}>View advanced Evidence</button>
     </div>
     ${diffSummary(resolution)}
@@ -287,6 +309,13 @@ export function renderCompareWorkspace({
   container.querySelector("#compare-back").addEventListener("click", onBack);
   container.querySelectorAll("[data-compare-option]").forEach((button) => {
     button.addEventListener("click", () => onSelectAlternative(button.dataset.compareOption));
+  });
+  const chooseButton = container.querySelector("#compare-choose");
+  chooseButton.addEventListener("click", async () => {
+    if (resolution.state !== "selected") return;
+    await onSelectAlternative(resolution.option.plan_id);
+    onChooseAlternative(resolution.option.plan_id);
+    onBack();
   });
   const evidenceButton = container.querySelector("#compare-evidence");
   evidenceButton.addEventListener("click", () => {

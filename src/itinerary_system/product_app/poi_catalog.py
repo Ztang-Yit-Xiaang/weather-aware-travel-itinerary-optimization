@@ -83,6 +83,8 @@ class PlaceEntityV1:
     official_url: str | None
     informational_urls: tuple[str, ...]
     source_refs: tuple[str, ...]
+    aliases: tuple[str, ...]
+    region_id: str | None
     source_freshness: str | None
     opening_hours_evidence_ref: str | None
     recommended_visit_minutes: int | None
@@ -329,6 +331,8 @@ def _parse_place(value: Any, *, source_ids: set[str]) -> PlaceEntityV1:
         "source_refs",
     }
     optional = {
+        "aliases",
+        "region_id",
         "description",
         "official_url",
         "informational_urls",
@@ -367,6 +371,8 @@ def _parse_place(value: Any, *, source_ids: set[str]) -> PlaceEntityV1:
         official_url=official_url,
         informational_urls=informational_urls,
         source_refs=source_refs,
+        aliases=_text_tuple(data.get("aliases", []), "place_aliases_invalid", maximum=32),
+        region_id=_optional_identifier(data.get("region_id"), "place_region_id_invalid"),
         source_freshness=_timestamp(
             data.get("source_freshness"), "place_source_freshness_invalid"
         ),
@@ -627,11 +633,14 @@ def _lexical_match_rank(place: PlaceEntityV1, normalized_query: str) -> int | No
         return 4
     name = " ".join(place.name.casefold().split())
     categories = tuple(" ".join(item.casefold().split()) for item in place.place_categories)
-    if name == normalized_query:
+    aliases = tuple(" ".join(item.casefold().split()) for item in place.aliases)
+    if name == normalized_query or normalized_query in aliases:
         return 0
     if name.startswith(normalized_query):
         return 1
     if normalized_query in name:
+        return 2
+    if any(alias.startswith(normalized_query) or normalized_query in alias for alias in aliases):
         return 2
     if any(normalized_query in category for category in categories):
         return 3

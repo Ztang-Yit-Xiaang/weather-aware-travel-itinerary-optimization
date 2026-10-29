@@ -1,4 +1,4 @@
-"""Relation-specific ownership evidence for non-role plan attributes."""
+"""Relation-specific ownership evidence for canonical plan attributes."""
 
 from __future__ import annotations
 
@@ -41,6 +41,11 @@ _RELATION_TO_ATTRIBUTE = {
     for attribute, relations in _ATTRIBUTE_RELATIONS.items()
     for relation in relations
 }
+_ROLE_RELATIONS = frozenset({"role", "itinerary_role", "role_equals", "set_role", "attribute:role"})
+_ROLES = frozenset({
+    "attraction", "activity", "meal", "lodging", "transport_hub", "rest_stop",
+    "scenic_stop", "route_waypoint", "origin", "destination",
+})
 _STOP_SCOPES = frozenset({"stop", "poi"})
 _CLOCK_PATTERN = re.compile(r"^(?:[01]\d|2[0-3]):[0-5]\d$")
 _OWNED_CONSTRAINT_FIELDS = frozenset(
@@ -103,8 +108,8 @@ def resolve_attribute_ownership(
 
     if not changed_keys:
         return AttributeOwnershipResolution(rows_by_key={}, activated=False)
-    parent_rows = _applicable_rows(parent.owned_constraints, changed_keys)
-    child_rows = _applicable_rows(child.owned_constraints, changed_keys)
+    parent_rows = attribute_ownership_rows(parent.owned_constraints, changed_keys)
+    child_rows = attribute_ownership_rows(child.owned_constraints, changed_keys)
     activated = bool(parent_rows or child_rows)
     if not activated:
         return AttributeOwnershipResolution(rows_by_key={}, activated=False)
@@ -114,6 +119,9 @@ def resolve_attribute_ownership(
         raise ValueError(
             "child owned constraints must exactly match accepted parent constraints"
         )
+    if any(attribute == "role" for _, attribute in changed_keys):
+        parent_rows = attribute_ownership_rows(parent.owned_constraints, changed_keys, include_role=True)
+        child_rows = attribute_ownership_rows(child.owned_constraints, changed_keys, include_role=True)
     if child_rows != parent_rows:
         raise ValueError(
             "child attribute ownership evidence must exactly match accepted parent"
@@ -127,8 +135,9 @@ def build_attribute_ownership_evidence(
     resolution: AttributeOwnershipResolution,
     changes: tuple[dict[str, Any], ...],
     policy: OwnershipPolicy,
+    mixed_attributes: bool = False,
 ) -> dict[str, Any] | None:
-    """Build a deterministic, hash-bound v5 ownership-cost evidence object."""
+    """Build deterministic, hash-bound ownership-cost evidence for the full diff."""
 
     if not resolution.activated:
         return None
@@ -154,7 +163,7 @@ def build_attribute_ownership_evidence(
         for row in rows
     }
     payload = {
-        "schema_version": "plan-diff-attribute-ownership-evidence-v1",
+        "schema_version": f"plan-diff-attribute-ownership-evidence-v{2 if mixed_attributes else 1}",
         "parent_plan_id": parent.plan_id,
         "parent_plan_content_hash": parent.content_hash,
         "semantic_scope": {
@@ -162,7 +171,7 @@ def build_attribute_ownership_evidence(
             "permission_claim": "not_evaluated",
             "feasibility_claim": "not_evaluated",
             "cost_coverage": "all_listed_diff_changes",
-            "relation_specific_attributes": sorted(_ATTRIBUTE_RELATIONS),
+            "relation_specific_attributes": sorted(set(_ATTRIBUTE_RELATIONS) | ({"role"} if mixed_attributes else set())),
             "lodging_and_road_relations": "not_migrated",
         },
         "ownership_policy": {
@@ -261,10 +270,13 @@ def ownership_change_evidence(
     }
 
 
-def _applicable_rows(
+def attribute_ownership_rows(
     raw_constraints: tuple[dict[str, Any], ...],
-    changed_keys: frozenset[tuple[str, str]],
+    changed_keys: frozenset[tuple[str, str]] | None = None,
+    *,
+    include_role: bool = False,
 ) -> dict[tuple[str, str], tuple[dict[str, Any], ...]]:
+    """Validate active relation-specific rows, optionally scoped to a diff."""
     rows_by_key: dict[tuple[str, str], list[dict[str, Any]]] = {}
     values_by_key: dict[tuple[str, str], Any] = {}
     seen_ids: set[str] = set()
@@ -273,17 +285,21 @@ def _applicable_rows(
             continue
         relation = str(raw.get("relation") or "").strip().lower()
         attribute = _RELATION_TO_ATTRIBUTE.get(relation)
+        if include_role and relation in _ROLE_RELATIONS:
+            attribute = "role"
         if attribute is None:
             continue
         target_id = str(raw.get("target_id") or "").strip()
         key = (target_id, attribute)
-        if key not in changed_keys:
+        if changed_keys is not None and key not in changed_keys:
             continue
         confirmed = raw.get("confirmed")
         if not isinstance(confirmed, bool):
             raise ValueError("active attribute constraint confirmation must be boolean")
         if not confirmed:
             continue
+        if set(raw) != _OWNED_CONSTRAINT_FIELDS or raw.get("schema_version") != "owned-constraint-v1":
+            raise ValueError("owned constraint record is malformed")
         try:
             constraint = OwnedConstraint.from_record(raw)
         except Exception as exc:
@@ -298,7 +314,7 @@ def _applicable_rows(
             or not target_id
         ):
             raise ValueError("active attribute constraint identity or scope is invalid")
-        canonical_value = _canonical_value(attribute, constraint.value)
+        canonical_value = canonical_attribute_value(attribute, constraint.value)
         if relation == "must_keep" and canonical_value is not True:
             raise ValueError("must_keep constraint value must be true")
         if key in values_by_key and values_by_key[key] != canonical_value:
@@ -345,7 +361,8 @@ def _normalized_constraints(
     return tuple(sorted(normalized, key=lambda row: str(row["constraint_id"])))
 
 
-def _canonical_value(attribute: str, value: Any) -> Any:
+def canonical_attribute_value(attribute: str, value: Any) -> Any:
+    """Use the same exact attribute value contract for diff and evaluation."""
     if attribute == "existence":
         if not isinstance(value, bool):
             raise ValueError("attribute existence value must be boolean")
@@ -362,14 +379,18 @@ def _canonical_value(attribute: str, value: Any) -> Any:
         return _canonical_duration(value)
     if attribute == "time_window":
         return _canonical_time_window(value)
+    if attribute == "role":
+        if not isinstance(value, str) or value not in _ROLES:
+            raise ValueError("attribute role value must use the closed itinerary-role vocabulary")
+        return value
     raise ValueError("unsupported attribute ownership relation")
 
 
 def _canonical_observed_value(attribute: str, value: Any) -> Any:
     if value is None:
         return None
-    if attribute in _ATTRIBUTE_RELATIONS:
-        return _canonical_value(attribute, value)
+    if attribute in _ATTRIBUTE_RELATIONS or attribute == "role":
+        return canonical_attribute_value(attribute, value)
     if attribute in {"lodging", "road"}:
         if not isinstance(value, str) or not value:
             raise ValueError("legacy base-cost identity must be nonempty or null")

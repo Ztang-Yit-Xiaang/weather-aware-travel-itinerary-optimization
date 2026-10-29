@@ -1,0 +1,2692 @@
+[
+  {
+    "id": "V001",
+    "category": "duration",
+    "split": "development",
+    "message": "Set Griffith Observatory duration to 60 minutes.",
+    "expected_intents": [
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 60,
+            "minimum_minutes": 60,
+            "maximum_minutes": 60
+          }
+        }
+      }
+    ],
+    "expected_states": [
+      "proposal_ready"
+    ]
+  },
+  {
+    "id": "V002",
+    "category": "duration",
+    "split": "development",
+    "message": "Set Griffith Observatory duration to 90 minutes.",
+    "expected_intents": [
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 90,
+            "minimum_minutes": 90,
+            "maximum_minutes": 90
+          }
+        }
+      }
+    ],
+    "expected_states": [
+      "proposal_ready"
+    ]
+  },
+  {
+    "id": "V003",
+    "category": "duration",
+    "split": "development",
+    "message": "Spend 60 minutes at Griffith Observatory.",
+    "expected_intents": [
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 60,
+            "minimum_minutes": 60,
+            "maximum_minutes": 60
+          }
+        }
+      }
+    ],
+    "expected_states": [
+      "proposal_ready"
+    ]
+  },
+  {
+    "id": "V004",
+    "category": "duration",
+    "split": "development",
+    "message": "Spend 90 minutes at Griffith Observatory.",
+    "expected_intents": [
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 90,
+            "minimum_minutes": 90,
+            "maximum_minutes": 90
+          }
+        }
+      }
+    ],
+    "expected_states": [
+      "proposal_ready"
+    ]
+  },
+  {
+    "id": "V005",
+    "category": "duration",
+    "split": "development",
+    "message": "Give Griffith Observatory 60 minutes.",
+    "expected_intents": [
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 60,
+            "minimum_minutes": 60,
+            "maximum_minutes": 60
+          }
+        }
+      }
+    ],
+    "expected_states": [
+      "proposal_ready"
+    ]
+  },
+  {
+    "id": "V006",
+    "category": "duration",
+    "split": "development",
+    "message": "Give Griffith Observatory 90 minutes.",
+    "expected_intents": [
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 90,
+            "minimum_minutes": 90,
+            "maximum_minutes": 90
+          }
+        }
+      }
+    ],
+    "expected_states": [
+      "proposal_ready"
+    ]
+  },
+  {
+    "id": "V007",
+    "category": "duration",
+    "split": "reserved",
+    "message": "I'd like 60 minutes at Griffith Observatory instead of 45.",
+    "expected_intents": [
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 60,
+            "minimum_minutes": 60,
+            "maximum_minutes": 60
+          }
+        }
+      }
+    ],
+    "expected_states": [
+      "proposal_ready"
+    ]
+  },
+  {
+    "id": "V008",
+    "category": "duration",
+    "split": "reserved",
+    "message": "I'd like 90 minutes at Griffith Observatory instead of 45.",
+    "expected_intents": [
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 90,
+            "minimum_minutes": 90,
+            "maximum_minutes": 90
+          }
+        }
+      }
+    ],
+    "expected_states": [
+      "proposal_ready"
+    ]
+  },
+  {
+    "id": "V009",
+    "category": "duration",
+    "split": "development",
+    "message": "Set Stearns Wharf duration to 60 minutes.",
+    "expected_intents": [
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "stearns_wharf",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 60,
+            "minimum_minutes": 60,
+            "maximum_minutes": 60
+          }
+        }
+      }
+    ],
+    "expected_states": [
+      "proposal_ready"
+    ]
+  },
+  {
+    "id": "V010",
+    "category": "duration",
+    "split": "development",
+    "message": "Set Stearns Wharf duration to 90 minutes.",
+    "expected_intents": [
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "stearns_wharf",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 90,
+            "minimum_minutes": 90,
+            "maximum_minutes": 90
+          }
+        }
+      }
+    ],
+    "expected_states": [
+      "proposal_ready"
+    ]
+  },
+  {
+    "id": "V011",
+    "category": "duration",
+    "split": "development",
+    "message": "Spend 60 minutes at Stearns Wharf.",
+    "expected_intents": [
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "stearns_wharf",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 60,
+            "minimum_minutes": 60,
+            "maximum_minutes": 60
+          }
+        }
+      }
+    ],
+    "expected_states": [
+      "proposal_ready"
+    ]
+  },
+  {
+    "id": "V012",
+    "category": "duration",
+    "split": "development",
+    "message": "Spend 90 minutes at Stearns Wharf.",
+    "expected_intents": [
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "stearns_wharf",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 90,
+            "minimum_minutes": 90,
+            "maximum_minutes": 90
+          }
+        }
+      }
+    ],
+    "expected_states": [
+      "proposal_ready"
+    ]
+  },
+  {
+    "id": "V013",
+    "category": "duration",
+    "split": "development",
+    "message": "Give Stearns Wharf 60 minutes.",
+    "expected_intents": [
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "stearns_wharf",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 60,
+            "minimum_minutes": 60,
+            "maximum_minutes": 60
+          }
+        }
+      }
+    ],
+    "expected_states": [
+      "proposal_ready"
+    ]
+  },
+  {
+    "id": "V014",
+    "category": "duration",
+    "split": "development",
+    "message": "Give Stearns Wharf 90 minutes.",
+    "expected_intents": [
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "stearns_wharf",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 90,
+            "minimum_minutes": 90,
+            "maximum_minutes": 90
+          }
+        }
+      }
+    ],
+    "expected_states": [
+      "proposal_ready"
+    ]
+  },
+  {
+    "id": "V015",
+    "category": "duration",
+    "split": "reserved",
+    "message": "I'd like 60 minutes at Stearns Wharf instead of 45.",
+    "expected_intents": [
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "stearns_wharf",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 60,
+            "minimum_minutes": 60,
+            "maximum_minutes": 60
+          }
+        }
+      }
+    ],
+    "expected_states": [
+      "proposal_ready"
+    ]
+  },
+  {
+    "id": "V016",
+    "category": "duration",
+    "split": "reserved",
+    "message": "I'd like 90 minutes at Stearns Wharf instead of 45.",
+    "expected_intents": [
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "stearns_wharf",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 90,
+            "minimum_minutes": 90,
+            "maximum_minutes": 90
+          }
+        }
+      }
+    ],
+    "expected_states": [
+      "proposal_ready"
+    ]
+  },
+  {
+    "id": "V017",
+    "category": "duration",
+    "split": "development",
+    "message": "Set Golden Gate Bridge duration to 60 minutes.",
+    "expected_intents": [
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "golden_gate_bridge",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 60,
+            "minimum_minutes": 60,
+            "maximum_minutes": 60
+          }
+        }
+      }
+    ],
+    "expected_states": [
+      "proposal_ready"
+    ]
+  },
+  {
+    "id": "V018",
+    "category": "duration",
+    "split": "development",
+    "message": "Set Golden Gate Bridge duration to 90 minutes.",
+    "expected_intents": [
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "golden_gate_bridge",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 90,
+            "minimum_minutes": 90,
+            "maximum_minutes": 90
+          }
+        }
+      }
+    ],
+    "expected_states": [
+      "proposal_ready"
+    ]
+  },
+  {
+    "id": "V019",
+    "category": "duration",
+    "split": "development",
+    "message": "Spend 60 minutes at Golden Gate Bridge.",
+    "expected_intents": [
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "golden_gate_bridge",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 60,
+            "minimum_minutes": 60,
+            "maximum_minutes": 60
+          }
+        }
+      }
+    ],
+    "expected_states": [
+      "proposal_ready"
+    ]
+  },
+  {
+    "id": "V020",
+    "category": "duration",
+    "split": "development",
+    "message": "Spend 90 minutes at Golden Gate Bridge.",
+    "expected_intents": [
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "golden_gate_bridge",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 90,
+            "minimum_minutes": 90,
+            "maximum_minutes": 90
+          }
+        }
+      }
+    ],
+    "expected_states": [
+      "proposal_ready"
+    ]
+  },
+  {
+    "id": "V021",
+    "category": "duration",
+    "split": "development",
+    "message": "Give Golden Gate Bridge 60 minutes.",
+    "expected_intents": [
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "golden_gate_bridge",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 60,
+            "minimum_minutes": 60,
+            "maximum_minutes": 60
+          }
+        }
+      }
+    ],
+    "expected_states": [
+      "proposal_ready"
+    ]
+  },
+  {
+    "id": "V022",
+    "category": "duration",
+    "split": "development",
+    "message": "Give Golden Gate Bridge 90 minutes.",
+    "expected_intents": [
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "golden_gate_bridge",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 90,
+            "minimum_minutes": 90,
+            "maximum_minutes": 90
+          }
+        }
+      }
+    ],
+    "expected_states": [
+      "proposal_ready"
+    ]
+  },
+  {
+    "id": "V023",
+    "category": "duration",
+    "split": "reserved",
+    "message": "I'd like 60 minutes at Golden Gate Bridge instead of 45.",
+    "expected_intents": [
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "golden_gate_bridge",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 60,
+            "minimum_minutes": 60,
+            "maximum_minutes": 60
+          }
+        }
+      }
+    ],
+    "expected_states": [
+      "proposal_ready"
+    ]
+  },
+  {
+    "id": "V024",
+    "category": "duration",
+    "split": "reserved",
+    "message": "I'd like 90 minutes at Golden Gate Bridge instead of 45.",
+    "expected_intents": [
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "golden_gate_bridge",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 90,
+            "minimum_minutes": 90,
+            "maximum_minutes": 90
+          }
+        }
+      }
+    ],
+    "expected_states": [
+      "proposal_ready"
+    ]
+  },
+  {
+    "id": "V025",
+    "category": "duration",
+    "split": "development",
+    "message": "Set Sequoia National Park duration to 60 minutes.",
+    "expected_intents": [
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "sequoia_national_park",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 60,
+            "minimum_minutes": 60,
+            "maximum_minutes": 60
+          }
+        }
+      }
+    ],
+    "expected_states": [
+      "proposal_ready"
+    ]
+  },
+  {
+    "id": "V026",
+    "category": "duration",
+    "split": "development",
+    "message": "Set Sequoia National Park duration to 90 minutes.",
+    "expected_intents": [
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "sequoia_national_park",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 90,
+            "minimum_minutes": 90,
+            "maximum_minutes": 90
+          }
+        }
+      }
+    ],
+    "expected_states": [
+      "proposal_ready"
+    ]
+  },
+  {
+    "id": "V027",
+    "category": "duration",
+    "split": "development",
+    "message": "Spend 60 minutes at Sequoia National Park.",
+    "expected_intents": [
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "sequoia_national_park",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 60,
+            "minimum_minutes": 60,
+            "maximum_minutes": 60
+          }
+        }
+      }
+    ],
+    "expected_states": [
+      "proposal_ready"
+    ]
+  },
+  {
+    "id": "V028",
+    "category": "duration",
+    "split": "development",
+    "message": "Spend 90 minutes at Sequoia National Park.",
+    "expected_intents": [
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "sequoia_national_park",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 90,
+            "minimum_minutes": 90,
+            "maximum_minutes": 90
+          }
+        }
+      }
+    ],
+    "expected_states": [
+      "proposal_ready"
+    ]
+  },
+  {
+    "id": "V029",
+    "category": "duration",
+    "split": "development",
+    "message": "Give Sequoia National Park 60 minutes.",
+    "expected_intents": [
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "sequoia_national_park",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 60,
+            "minimum_minutes": 60,
+            "maximum_minutes": 60
+          }
+        }
+      }
+    ],
+    "expected_states": [
+      "proposal_ready"
+    ]
+  },
+  {
+    "id": "V030",
+    "category": "duration",
+    "split": "development",
+    "message": "Give Sequoia National Park 90 minutes.",
+    "expected_intents": [
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "sequoia_national_park",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 90,
+            "minimum_minutes": 90,
+            "maximum_minutes": 90
+          }
+        }
+      }
+    ],
+    "expected_states": [
+      "proposal_ready"
+    ]
+  },
+  {
+    "id": "V031",
+    "category": "duration",
+    "split": "reserved",
+    "message": "I'd like 60 minutes at Sequoia National Park instead of 45.",
+    "expected_intents": [
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "sequoia_national_park",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 60,
+            "minimum_minutes": 60,
+            "maximum_minutes": 60
+          }
+        }
+      }
+    ],
+    "expected_states": [
+      "proposal_ready"
+    ]
+  },
+  {
+    "id": "V032",
+    "category": "duration",
+    "split": "reserved",
+    "message": "I'd like 90 minutes at Sequoia National Park instead of 45.",
+    "expected_intents": [
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "sequoia_national_park",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 90,
+            "minimum_minutes": 90,
+            "maximum_minutes": 90
+          }
+        }
+      }
+    ],
+    "expected_states": [
+      "proposal_ready"
+    ]
+  },
+  {
+    "id": "V033",
+    "category": "role",
+    "split": "development",
+    "message": "Set Griffith Observatory role to meal.",
+    "expected_intents": [
+      {
+        "type": "set_stop_role",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "role": "meal"
+        }
+      }
+    ],
+    "expected_states": [
+      "proposal_ready"
+    ]
+  },
+  {
+    "id": "V034",
+    "category": "role",
+    "split": "development",
+    "message": "Set Griffith Observatory role to scenic stop.",
+    "expected_intents": [
+      {
+        "type": "set_stop_role",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "role": "scenic_stop"
+        }
+      }
+    ],
+    "expected_states": [
+      "proposal_ready"
+    ]
+  },
+  {
+    "id": "V035",
+    "category": "role",
+    "split": "development",
+    "message": "Classify Griffith Observatory as a meal.",
+    "expected_intents": [
+      {
+        "type": "set_stop_role",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "role": "meal"
+        }
+      }
+    ],
+    "expected_states": [
+      "proposal_ready"
+    ]
+  },
+  {
+    "id": "V036",
+    "category": "role",
+    "split": "development",
+    "message": "Classify Griffith Observatory as a scenic stop.",
+    "expected_intents": [
+      {
+        "type": "set_stop_role",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "role": "scenic_stop"
+        }
+      }
+    ],
+    "expected_states": [
+      "proposal_ready"
+    ]
+  },
+  {
+    "id": "V037",
+    "category": "role",
+    "split": "development",
+    "message": "Treat Griffith Observatory as a meal.",
+    "expected_intents": [
+      {
+        "type": "set_stop_role",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "role": "meal"
+        }
+      }
+    ],
+    "expected_states": [
+      "proposal_ready"
+    ]
+  },
+  {
+    "id": "V038",
+    "category": "role",
+    "split": "development",
+    "message": "Treat Griffith Observatory as a scenic stop.",
+    "expected_intents": [
+      {
+        "type": "set_stop_role",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "role": "scenic_stop"
+        }
+      }
+    ],
+    "expected_states": [
+      "proposal_ready"
+    ]
+  },
+  {
+    "id": "V039",
+    "category": "role",
+    "split": "reserved",
+    "message": "Treat Griffith Observatory as a meal instead of an activity.",
+    "expected_intents": [
+      {
+        "type": "set_stop_role",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "role": "meal"
+        }
+      }
+    ],
+    "expected_states": [
+      "proposal_ready"
+    ]
+  },
+  {
+    "id": "V040",
+    "category": "role",
+    "split": "reserved",
+    "message": "Treat Griffith Observatory as a scenic stop instead of an activity.",
+    "expected_intents": [
+      {
+        "type": "set_stop_role",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "role": "scenic_stop"
+        }
+      }
+    ],
+    "expected_states": [
+      "proposal_ready"
+    ]
+  },
+  {
+    "id": "V041",
+    "category": "role",
+    "split": "development",
+    "message": "Set Stearns Wharf role to meal.",
+    "expected_intents": [
+      {
+        "type": "set_stop_role",
+        "target_stop_id": "stearns_wharf",
+        "parameters": {
+          "role": "meal"
+        }
+      }
+    ],
+    "expected_states": [
+      "proposal_ready"
+    ]
+  },
+  {
+    "id": "V042",
+    "category": "role",
+    "split": "development",
+    "message": "Set Stearns Wharf role to scenic stop.",
+    "expected_intents": [
+      {
+        "type": "set_stop_role",
+        "target_stop_id": "stearns_wharf",
+        "parameters": {
+          "role": "scenic_stop"
+        }
+      }
+    ],
+    "expected_states": [
+      "proposal_ready"
+    ]
+  },
+  {
+    "id": "V043",
+    "category": "role",
+    "split": "development",
+    "message": "Classify Stearns Wharf as a meal.",
+    "expected_intents": [
+      {
+        "type": "set_stop_role",
+        "target_stop_id": "stearns_wharf",
+        "parameters": {
+          "role": "meal"
+        }
+      }
+    ],
+    "expected_states": [
+      "proposal_ready"
+    ]
+  },
+  {
+    "id": "V044",
+    "category": "role",
+    "split": "development",
+    "message": "Classify Stearns Wharf as a scenic stop.",
+    "expected_intents": [
+      {
+        "type": "set_stop_role",
+        "target_stop_id": "stearns_wharf",
+        "parameters": {
+          "role": "scenic_stop"
+        }
+      }
+    ],
+    "expected_states": [
+      "proposal_ready"
+    ]
+  },
+  {
+    "id": "V045",
+    "category": "role",
+    "split": "development",
+    "message": "Treat Stearns Wharf as a meal.",
+    "expected_intents": [
+      {
+        "type": "set_stop_role",
+        "target_stop_id": "stearns_wharf",
+        "parameters": {
+          "role": "meal"
+        }
+      }
+    ],
+    "expected_states": [
+      "proposal_ready"
+    ]
+  },
+  {
+    "id": "V046",
+    "category": "role",
+    "split": "development",
+    "message": "Treat Stearns Wharf as a scenic stop.",
+    "expected_intents": [
+      {
+        "type": "set_stop_role",
+        "target_stop_id": "stearns_wharf",
+        "parameters": {
+          "role": "scenic_stop"
+        }
+      }
+    ],
+    "expected_states": [
+      "proposal_ready"
+    ]
+  },
+  {
+    "id": "V047",
+    "category": "role",
+    "split": "reserved",
+    "message": "Treat Stearns Wharf as a meal instead of an activity.",
+    "expected_intents": [
+      {
+        "type": "set_stop_role",
+        "target_stop_id": "stearns_wharf",
+        "parameters": {
+          "role": "meal"
+        }
+      }
+    ],
+    "expected_states": [
+      "proposal_ready"
+    ]
+  },
+  {
+    "id": "V048",
+    "category": "role",
+    "split": "reserved",
+    "message": "Treat Stearns Wharf as a scenic stop instead of an activity.",
+    "expected_intents": [
+      {
+        "type": "set_stop_role",
+        "target_stop_id": "stearns_wharf",
+        "parameters": {
+          "role": "scenic_stop"
+        }
+      }
+    ],
+    "expected_states": [
+      "proposal_ready"
+    ]
+  },
+  {
+    "id": "V049",
+    "category": "role",
+    "split": "development",
+    "message": "Set Sequoia National Park role to meal.",
+    "expected_intents": [
+      {
+        "type": "set_stop_role",
+        "target_stop_id": "sequoia_national_park",
+        "parameters": {
+          "role": "meal"
+        }
+      }
+    ],
+    "expected_states": [
+      "proposal_ready"
+    ]
+  },
+  {
+    "id": "V050",
+    "category": "role",
+    "split": "development",
+    "message": "Set Sequoia National Park role to scenic stop.",
+    "expected_intents": [
+      {
+        "type": "set_stop_role",
+        "target_stop_id": "sequoia_national_park",
+        "parameters": {
+          "role": "scenic_stop"
+        }
+      }
+    ],
+    "expected_states": [
+      "proposal_ready"
+    ]
+  },
+  {
+    "id": "V051",
+    "category": "role",
+    "split": "development",
+    "message": "Classify Sequoia National Park as a meal.",
+    "expected_intents": [
+      {
+        "type": "set_stop_role",
+        "target_stop_id": "sequoia_national_park",
+        "parameters": {
+          "role": "meal"
+        }
+      }
+    ],
+    "expected_states": [
+      "proposal_ready"
+    ]
+  },
+  {
+    "id": "V052",
+    "category": "role",
+    "split": "development",
+    "message": "Classify Sequoia National Park as a scenic stop.",
+    "expected_intents": [
+      {
+        "type": "set_stop_role",
+        "target_stop_id": "sequoia_national_park",
+        "parameters": {
+          "role": "scenic_stop"
+        }
+      }
+    ],
+    "expected_states": [
+      "proposal_ready"
+    ]
+  },
+  {
+    "id": "V053",
+    "category": "role",
+    "split": "development",
+    "message": "Treat Sequoia National Park as a meal.",
+    "expected_intents": [
+      {
+        "type": "set_stop_role",
+        "target_stop_id": "sequoia_national_park",
+        "parameters": {
+          "role": "meal"
+        }
+      }
+    ],
+    "expected_states": [
+      "proposal_ready"
+    ]
+  },
+  {
+    "id": "V054",
+    "category": "role",
+    "split": "development",
+    "message": "Treat Sequoia National Park as a scenic stop.",
+    "expected_intents": [
+      {
+        "type": "set_stop_role",
+        "target_stop_id": "sequoia_national_park",
+        "parameters": {
+          "role": "scenic_stop"
+        }
+      }
+    ],
+    "expected_states": [
+      "proposal_ready"
+    ]
+  },
+  {
+    "id": "V055",
+    "category": "role",
+    "split": "reserved",
+    "message": "Treat Sequoia National Park as a meal instead of an activity.",
+    "expected_intents": [
+      {
+        "type": "set_stop_role",
+        "target_stop_id": "sequoia_national_park",
+        "parameters": {
+          "role": "meal"
+        }
+      }
+    ],
+    "expected_states": [
+      "proposal_ready"
+    ]
+  },
+  {
+    "id": "V056",
+    "category": "role",
+    "split": "reserved",
+    "message": "Treat Sequoia National Park as a scenic stop instead of an activity.",
+    "expected_intents": [
+      {
+        "type": "set_stop_role",
+        "target_stop_id": "sequoia_national_park",
+        "parameters": {
+          "role": "scenic_stop"
+        }
+      }
+    ],
+    "expected_states": [
+      "proposal_ready"
+    ]
+  },
+  {
+    "id": "V057",
+    "category": "time_window",
+    "split": "development",
+    "message": "Set Griffith Observatory time window to 09:00-18:00.",
+    "expected_intents": [
+      {
+        "type": "set_stop_time_window",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "earliest_arrival": "09:00",
+          "latest_departure": "18:00"
+        }
+      }
+    ],
+    "expected_states": [
+      "proposal_ready"
+    ]
+  },
+  {
+    "id": "V058",
+    "category": "time_window",
+    "split": "development",
+    "message": "Set Griffith Observatory time window to 10:00-16:00.",
+    "expected_intents": [
+      {
+        "type": "set_stop_time_window",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "earliest_arrival": "10:00",
+          "latest_departure": "16:00"
+        }
+      }
+    ],
+    "expected_states": [
+      "proposal_ready"
+    ]
+  },
+  {
+    "id": "V059",
+    "category": "time_window",
+    "split": "development",
+    "message": "Change Griffith Observatory time window to 09:00-18:00.",
+    "expected_intents": [
+      {
+        "type": "set_stop_time_window",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "earliest_arrival": "09:00",
+          "latest_departure": "18:00"
+        }
+      }
+    ],
+    "expected_states": [
+      "proposal_ready"
+    ]
+  },
+  {
+    "id": "V060",
+    "category": "time_window",
+    "split": "development",
+    "message": "Change Griffith Observatory time window to 10:00-16:00.",
+    "expected_intents": [
+      {
+        "type": "set_stop_time_window",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "earliest_arrival": "10:00",
+          "latest_departure": "16:00"
+        }
+      }
+    ],
+    "expected_states": [
+      "proposal_ready"
+    ]
+  },
+  {
+    "id": "V061",
+    "category": "time_window",
+    "split": "development",
+    "message": "For Griffith Observatory, set the time window to 09:00-18:00.",
+    "expected_intents": [
+      {
+        "type": "set_stop_time_window",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "earliest_arrival": "09:00",
+          "latest_departure": "18:00"
+        }
+      }
+    ],
+    "expected_states": [
+      "proposal_ready"
+    ]
+  },
+  {
+    "id": "V062",
+    "category": "time_window",
+    "split": "development",
+    "message": "For Griffith Observatory, set the time window to 10:00-16:00.",
+    "expected_intents": [
+      {
+        "type": "set_stop_time_window",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "earliest_arrival": "10:00",
+          "latest_departure": "16:00"
+        }
+      }
+    ],
+    "expected_states": [
+      "proposal_ready"
+    ]
+  },
+  {
+    "id": "V063",
+    "category": "time_window",
+    "split": "development",
+    "message": "Set Griffith Observatory time window between 09:00 and 18:00.",
+    "expected_intents": [
+      {
+        "type": "set_stop_time_window",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "earliest_arrival": "09:00",
+          "latest_departure": "18:00"
+        }
+      }
+    ],
+    "expected_states": [
+      "proposal_ready"
+    ]
+  },
+  {
+    "id": "V064",
+    "category": "time_window",
+    "split": "development",
+    "message": "Set Griffith Observatory time window between 10:00 and 16:00.",
+    "expected_intents": [
+      {
+        "type": "set_stop_time_window",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "earliest_arrival": "10:00",
+          "latest_departure": "16:00"
+        }
+      }
+    ],
+    "expected_states": [
+      "proposal_ready"
+    ]
+  },
+  {
+    "id": "V065",
+    "category": "time_window",
+    "split": "reserved",
+    "message": "Set Griffith Observatory earliest arrival to 09:00 and latest departure to 18:00.",
+    "expected_intents": [
+      {
+        "type": "set_stop_time_window",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "earliest_arrival": "09:00",
+          "latest_departure": "18:00"
+        }
+      }
+    ],
+    "expected_states": [
+      "proposal_ready"
+    ]
+  },
+  {
+    "id": "V066",
+    "category": "time_window",
+    "split": "reserved",
+    "message": "Set Griffith Observatory earliest arrival to 10:00 and latest departure to 16:00.",
+    "expected_intents": [
+      {
+        "type": "set_stop_time_window",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "earliest_arrival": "10:00",
+          "latest_departure": "16:00"
+        }
+      }
+    ],
+    "expected_states": [
+      "proposal_ready"
+    ]
+  },
+  {
+    "id": "V067",
+    "category": "time_window",
+    "split": "development",
+    "message": "Set Stearns Wharf time window to 09:00-18:00.",
+    "expected_intents": [
+      {
+        "type": "set_stop_time_window",
+        "target_stop_id": "stearns_wharf",
+        "parameters": {
+          "earliest_arrival": "09:00",
+          "latest_departure": "18:00"
+        }
+      }
+    ],
+    "expected_states": [
+      "proposal_ready"
+    ]
+  },
+  {
+    "id": "V068",
+    "category": "time_window",
+    "split": "development",
+    "message": "Set Stearns Wharf time window to 10:00-16:00.",
+    "expected_intents": [
+      {
+        "type": "set_stop_time_window",
+        "target_stop_id": "stearns_wharf",
+        "parameters": {
+          "earliest_arrival": "10:00",
+          "latest_departure": "16:00"
+        }
+      }
+    ],
+    "expected_states": [
+      "proposal_ready"
+    ]
+  },
+  {
+    "id": "V069",
+    "category": "time_window",
+    "split": "development",
+    "message": "Change Stearns Wharf time window to 09:00-18:00.",
+    "expected_intents": [
+      {
+        "type": "set_stop_time_window",
+        "target_stop_id": "stearns_wharf",
+        "parameters": {
+          "earliest_arrival": "09:00",
+          "latest_departure": "18:00"
+        }
+      }
+    ],
+    "expected_states": [
+      "proposal_ready"
+    ]
+  },
+  {
+    "id": "V070",
+    "category": "time_window",
+    "split": "development",
+    "message": "Change Stearns Wharf time window to 10:00-16:00.",
+    "expected_intents": [
+      {
+        "type": "set_stop_time_window",
+        "target_stop_id": "stearns_wharf",
+        "parameters": {
+          "earliest_arrival": "10:00",
+          "latest_departure": "16:00"
+        }
+      }
+    ],
+    "expected_states": [
+      "proposal_ready"
+    ]
+  },
+  {
+    "id": "V071",
+    "category": "time_window",
+    "split": "development",
+    "message": "For Stearns Wharf, set the time window to 09:00-18:00.",
+    "expected_intents": [
+      {
+        "type": "set_stop_time_window",
+        "target_stop_id": "stearns_wharf",
+        "parameters": {
+          "earliest_arrival": "09:00",
+          "latest_departure": "18:00"
+        }
+      }
+    ],
+    "expected_states": [
+      "proposal_ready"
+    ]
+  },
+  {
+    "id": "V072",
+    "category": "time_window",
+    "split": "development",
+    "message": "For Stearns Wharf, set the time window to 10:00-16:00.",
+    "expected_intents": [
+      {
+        "type": "set_stop_time_window",
+        "target_stop_id": "stearns_wharf",
+        "parameters": {
+          "earliest_arrival": "10:00",
+          "latest_departure": "16:00"
+        }
+      }
+    ],
+    "expected_states": [
+      "proposal_ready"
+    ]
+  },
+  {
+    "id": "V073",
+    "category": "time_window",
+    "split": "development",
+    "message": "Set Stearns Wharf time window between 09:00 and 18:00.",
+    "expected_intents": [
+      {
+        "type": "set_stop_time_window",
+        "target_stop_id": "stearns_wharf",
+        "parameters": {
+          "earliest_arrival": "09:00",
+          "latest_departure": "18:00"
+        }
+      }
+    ],
+    "expected_states": [
+      "proposal_ready"
+    ]
+  },
+  {
+    "id": "V074",
+    "category": "time_window",
+    "split": "development",
+    "message": "Set Stearns Wharf time window between 10:00 and 16:00.",
+    "expected_intents": [
+      {
+        "type": "set_stop_time_window",
+        "target_stop_id": "stearns_wharf",
+        "parameters": {
+          "earliest_arrival": "10:00",
+          "latest_departure": "16:00"
+        }
+      }
+    ],
+    "expected_states": [
+      "proposal_ready"
+    ]
+  },
+  {
+    "id": "V075",
+    "category": "time_window",
+    "split": "reserved",
+    "message": "Set Stearns Wharf earliest arrival to 09:00 and latest departure to 18:00.",
+    "expected_intents": [
+      {
+        "type": "set_stop_time_window",
+        "target_stop_id": "stearns_wharf",
+        "parameters": {
+          "earliest_arrival": "09:00",
+          "latest_departure": "18:00"
+        }
+      }
+    ],
+    "expected_states": [
+      "proposal_ready"
+    ]
+  },
+  {
+    "id": "V076",
+    "category": "time_window",
+    "split": "reserved",
+    "message": "Set Stearns Wharf earliest arrival to 10:00 and latest departure to 16:00.",
+    "expected_intents": [
+      {
+        "type": "set_stop_time_window",
+        "target_stop_id": "stearns_wharf",
+        "parameters": {
+          "earliest_arrival": "10:00",
+          "latest_departure": "16:00"
+        }
+      }
+    ],
+    "expected_states": [
+      "proposal_ready"
+    ]
+  },
+  {
+    "id": "V077",
+    "category": "replacement",
+    "split": "development",
+    "message": "Replace Bixby Creek Bridge with Pfeiffer Big Sur State Park.",
+    "expected_intents": [
+      {
+        "type": "replace_nearby",
+        "target_stop_id": "bixby_creek_bridge_viewpoint",
+        "candidate_id": "pfeiffer_big_sur_state_park"
+      }
+    ],
+    "expected_states": [
+      "proposal_ready"
+    ]
+  },
+  {
+    "id": "V078",
+    "category": "replacement",
+    "split": "development",
+    "message": "Replace Bixby Creek Bridge with Pfeiffer Big Sur State Park and keep the other days unchanged.",
+    "expected_intents": [
+      {
+        "type": "replace_nearby",
+        "target_stop_id": "bixby_creek_bridge_viewpoint",
+        "candidate_id": "pfeiffer_big_sur_state_park"
+      }
+    ],
+    "expected_states": [
+      "proposal_ready"
+    ]
+  },
+  {
+    "id": "V079",
+    "category": "replacement",
+    "split": "development",
+    "message": "Replace Bixby Creek Bridge with Pfeiffer Big Sur State Park and leave the other days alone.",
+    "expected_intents": [
+      {
+        "type": "replace_nearby",
+        "target_stop_id": "bixby_creek_bridge_viewpoint",
+        "candidate_id": "pfeiffer_big_sur_state_park"
+      }
+    ],
+    "expected_states": [
+      "proposal_ready"
+    ]
+  },
+  {
+    "id": "V080",
+    "category": "replacement",
+    "split": "development",
+    "message": "The coast looks stormy. Replace Bixby Creek Bridge with Pfeiffer Big Sur State Park.",
+    "expected_intents": [
+      {
+        "type": "replace_nearby",
+        "target_stop_id": "bixby_creek_bridge_viewpoint",
+        "candidate_id": "pfeiffer_big_sur_state_park"
+      }
+    ],
+    "expected_states": [
+      "proposal_ready"
+    ]
+  },
+  {
+    "id": "V081",
+    "category": "replacement",
+    "split": "development",
+    "message": "Swap the Bixby stop for Pfeiffer Big Sur State Park.",
+    "expected_intents": [
+      {
+        "type": "replace_nearby",
+        "target_stop_id": "bixby_creek_bridge_viewpoint",
+        "candidate_id": "pfeiffer_big_sur_state_park"
+      }
+    ],
+    "expected_states": [
+      "proposal_ready"
+    ]
+  },
+  {
+    "id": "V082",
+    "category": "replacement",
+    "split": "development",
+    "message": "Swap the Bixby stop for Pfeiffer Big Sur State Park and keep the other days unchanged.",
+    "expected_intents": [
+      {
+        "type": "replace_nearby",
+        "target_stop_id": "bixby_creek_bridge_viewpoint",
+        "candidate_id": "pfeiffer_big_sur_state_park"
+      }
+    ],
+    "expected_states": [
+      "proposal_ready"
+    ]
+  },
+  {
+    "id": "V083",
+    "category": "replacement",
+    "split": "development",
+    "message": "Swap the Bixby stop for Pfeiffer Big Sur State Park and leave the other days alone.",
+    "expected_intents": [
+      {
+        "type": "replace_nearby",
+        "target_stop_id": "bixby_creek_bridge_viewpoint",
+        "candidate_id": "pfeiffer_big_sur_state_park"
+      }
+    ],
+    "expected_states": [
+      "proposal_ready"
+    ]
+  },
+  {
+    "id": "V084",
+    "category": "replacement",
+    "split": "development",
+    "message": "The coast looks stormy. Swap the Bixby stop for Pfeiffer Big Sur State Park.",
+    "expected_intents": [
+      {
+        "type": "replace_nearby",
+        "target_stop_id": "bixby_creek_bridge_viewpoint",
+        "candidate_id": "pfeiffer_big_sur_state_park"
+      }
+    ],
+    "expected_states": [
+      "proposal_ready"
+    ]
+  },
+  {
+    "id": "V085",
+    "category": "replacement",
+    "split": "development",
+    "message": "Substitute Bixby Creek Bridge with Pfeiffer Big Sur State Park.",
+    "expected_intents": [
+      {
+        "type": "replace_nearby",
+        "target_stop_id": "bixby_creek_bridge_viewpoint",
+        "candidate_id": "pfeiffer_big_sur_state_park"
+      }
+    ],
+    "expected_states": [
+      "proposal_ready"
+    ]
+  },
+  {
+    "id": "V086",
+    "category": "replacement",
+    "split": "development",
+    "message": "Substitute Bixby Creek Bridge with Pfeiffer Big Sur State Park and keep the other days unchanged.",
+    "expected_intents": [
+      {
+        "type": "replace_nearby",
+        "target_stop_id": "bixby_creek_bridge_viewpoint",
+        "candidate_id": "pfeiffer_big_sur_state_park"
+      }
+    ],
+    "expected_states": [
+      "proposal_ready"
+    ]
+  },
+  {
+    "id": "V087",
+    "category": "replacement",
+    "split": "development",
+    "message": "Substitute Bixby Creek Bridge with Pfeiffer Big Sur State Park and leave the other days alone.",
+    "expected_intents": [
+      {
+        "type": "replace_nearby",
+        "target_stop_id": "bixby_creek_bridge_viewpoint",
+        "candidate_id": "pfeiffer_big_sur_state_park"
+      }
+    ],
+    "expected_states": [
+      "proposal_ready"
+    ]
+  },
+  {
+    "id": "V088",
+    "category": "replacement",
+    "split": "development",
+    "message": "The coast looks stormy. Substitute Bixby Creek Bridge with Pfeiffer Big Sur State Park.",
+    "expected_intents": [
+      {
+        "type": "replace_nearby",
+        "target_stop_id": "bixby_creek_bridge_viewpoint",
+        "candidate_id": "pfeiffer_big_sur_state_park"
+      }
+    ],
+    "expected_states": [
+      "proposal_ready"
+    ]
+  },
+  {
+    "id": "V089",
+    "category": "replacement",
+    "split": "reserved",
+    "message": "Please replace Bixby Creek Bridge with Pfeiffer Big Sur State Park.",
+    "expected_intents": [
+      {
+        "type": "replace_nearby",
+        "target_stop_id": "bixby_creek_bridge_viewpoint",
+        "candidate_id": "pfeiffer_big_sur_state_park"
+      }
+    ],
+    "expected_states": [
+      "proposal_ready"
+    ]
+  },
+  {
+    "id": "V090",
+    "category": "replacement",
+    "split": "reserved",
+    "message": "Please replace Bixby Creek Bridge with Pfeiffer Big Sur State Park and keep the other days unchanged.",
+    "expected_intents": [
+      {
+        "type": "replace_nearby",
+        "target_stop_id": "bixby_creek_bridge_viewpoint",
+        "candidate_id": "pfeiffer_big_sur_state_park"
+      }
+    ],
+    "expected_states": [
+      "proposal_ready"
+    ]
+  },
+  {
+    "id": "V091",
+    "category": "replacement",
+    "split": "reserved",
+    "message": "Please replace Bixby Creek Bridge with Pfeiffer Big Sur State Park and leave the other days alone.",
+    "expected_intents": [
+      {
+        "type": "replace_nearby",
+        "target_stop_id": "bixby_creek_bridge_viewpoint",
+        "candidate_id": "pfeiffer_big_sur_state_park"
+      }
+    ],
+    "expected_states": [
+      "proposal_ready"
+    ]
+  },
+  {
+    "id": "V092",
+    "category": "replacement",
+    "split": "reserved",
+    "message": "The coast looks stormy. Please replace Bixby Creek Bridge with Pfeiffer Big Sur State Park.",
+    "expected_intents": [
+      {
+        "type": "replace_nearby",
+        "target_stop_id": "bixby_creek_bridge_viewpoint",
+        "candidate_id": "pfeiffer_big_sur_state_park"
+      }
+    ],
+    "expected_states": [
+      "proposal_ready"
+    ]
+  },
+  {
+    "id": "V093",
+    "category": "combined",
+    "split": "development",
+    "message": "Set Griffith Observatory duration to 60 minutes; replace Bixby Creek Bridge with Pfeiffer Big Sur State Park.",
+    "expected_intents": [
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 60,
+            "minimum_minutes": 60,
+            "maximum_minutes": 60
+          }
+        }
+      },
+      {
+        "type": "replace_nearby",
+        "target_stop_id": "bixby_creek_bridge_viewpoint",
+        "candidate_id": "pfeiffer_big_sur_state_park"
+      }
+    ],
+    "expected_states": [
+      "proposal_ready"
+    ]
+  },
+  {
+    "id": "V094",
+    "category": "combined",
+    "split": "development",
+    "message": "Set Griffith Observatory duration to 60 minutes, and replace Bixby Creek Bridge with Pfeiffer Big Sur State Park.",
+    "expected_intents": [
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 60,
+            "minimum_minutes": 60,
+            "maximum_minutes": 60
+          }
+        }
+      },
+      {
+        "type": "replace_nearby",
+        "target_stop_id": "bixby_creek_bridge_viewpoint",
+        "candidate_id": "pfeiffer_big_sur_state_park"
+      }
+    ],
+    "expected_states": [
+      "proposal_ready"
+    ]
+  },
+  {
+    "id": "V095",
+    "category": "combined",
+    "split": "development",
+    "message": "Set Griffith Observatory duration to 60 minutes and replace Bixby Creek Bridge with Pfeiffer Big Sur State Park.",
+    "expected_intents": [
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 60,
+            "minimum_minutes": 60,
+            "maximum_minutes": 60
+          }
+        }
+      },
+      {
+        "type": "replace_nearby",
+        "target_stop_id": "bixby_creek_bridge_viewpoint",
+        "candidate_id": "pfeiffer_big_sur_state_park"
+      }
+    ],
+    "expected_states": [
+      "proposal_ready"
+    ]
+  },
+  {
+    "id": "V096",
+    "category": "combined",
+    "split": "development",
+    "message": "Set Griffith Observatory duration to 60 minutes then replace Bixby Creek Bridge with Pfeiffer Big Sur State Park.",
+    "expected_intents": [
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 60,
+            "minimum_minutes": 60,
+            "maximum_minutes": 60
+          }
+        }
+      },
+      {
+        "type": "replace_nearby",
+        "target_stop_id": "bixby_creek_bridge_viewpoint",
+        "candidate_id": "pfeiffer_big_sur_state_park"
+      }
+    ],
+    "expected_states": [
+      "proposal_ready"
+    ]
+  },
+  {
+    "id": "V097",
+    "category": "combined",
+    "split": "development",
+    "message": "Spend 60 minutes at Griffith Observatory; replace Bixby Creek Bridge with Pfeiffer Big Sur State Park.",
+    "expected_intents": [
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 60,
+            "minimum_minutes": 60,
+            "maximum_minutes": 60
+          }
+        }
+      },
+      {
+        "type": "replace_nearby",
+        "target_stop_id": "bixby_creek_bridge_viewpoint",
+        "candidate_id": "pfeiffer_big_sur_state_park"
+      }
+    ],
+    "expected_states": [
+      "proposal_ready"
+    ]
+  },
+  {
+    "id": "V098",
+    "category": "combined",
+    "split": "development",
+    "message": "Spend 60 minutes at Griffith Observatory, and replace Bixby Creek Bridge with Pfeiffer Big Sur State Park.",
+    "expected_intents": [
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 60,
+            "minimum_minutes": 60,
+            "maximum_minutes": 60
+          }
+        }
+      },
+      {
+        "type": "replace_nearby",
+        "target_stop_id": "bixby_creek_bridge_viewpoint",
+        "candidate_id": "pfeiffer_big_sur_state_park"
+      }
+    ],
+    "expected_states": [
+      "proposal_ready"
+    ]
+  },
+  {
+    "id": "V099",
+    "category": "combined",
+    "split": "development",
+    "message": "Spend 60 minutes at Griffith Observatory and replace Bixby Creek Bridge with Pfeiffer Big Sur State Park.",
+    "expected_intents": [
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 60,
+            "minimum_minutes": 60,
+            "maximum_minutes": 60
+          }
+        }
+      },
+      {
+        "type": "replace_nearby",
+        "target_stop_id": "bixby_creek_bridge_viewpoint",
+        "candidate_id": "pfeiffer_big_sur_state_park"
+      }
+    ],
+    "expected_states": [
+      "proposal_ready"
+    ]
+  },
+  {
+    "id": "V100",
+    "category": "combined",
+    "split": "development",
+    "message": "Spend 60 minutes at Griffith Observatory then replace Bixby Creek Bridge with Pfeiffer Big Sur State Park.",
+    "expected_intents": [
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 60,
+            "minimum_minutes": 60,
+            "maximum_minutes": 60
+          }
+        }
+      },
+      {
+        "type": "replace_nearby",
+        "target_stop_id": "bixby_creek_bridge_viewpoint",
+        "candidate_id": "pfeiffer_big_sur_state_park"
+      }
+    ],
+    "expected_states": [
+      "proposal_ready"
+    ]
+  },
+  {
+    "id": "V101",
+    "category": "combined",
+    "split": "development",
+    "message": "Give Griffith Observatory 60 minutes; replace Bixby Creek Bridge with Pfeiffer Big Sur State Park.",
+    "expected_intents": [
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 60,
+            "minimum_minutes": 60,
+            "maximum_minutes": 60
+          }
+        }
+      },
+      {
+        "type": "replace_nearby",
+        "target_stop_id": "bixby_creek_bridge_viewpoint",
+        "candidate_id": "pfeiffer_big_sur_state_park"
+      }
+    ],
+    "expected_states": [
+      "proposal_ready"
+    ]
+  },
+  {
+    "id": "V102",
+    "category": "combined",
+    "split": "development",
+    "message": "Give Griffith Observatory 60 minutes, and replace Bixby Creek Bridge with Pfeiffer Big Sur State Park.",
+    "expected_intents": [
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 60,
+            "minimum_minutes": 60,
+            "maximum_minutes": 60
+          }
+        }
+      },
+      {
+        "type": "replace_nearby",
+        "target_stop_id": "bixby_creek_bridge_viewpoint",
+        "candidate_id": "pfeiffer_big_sur_state_park"
+      }
+    ],
+    "expected_states": [
+      "proposal_ready"
+    ]
+  },
+  {
+    "id": "V103",
+    "category": "combined",
+    "split": "development",
+    "message": "Give Griffith Observatory 60 minutes and replace Bixby Creek Bridge with Pfeiffer Big Sur State Park.",
+    "expected_intents": [
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 60,
+            "minimum_minutes": 60,
+            "maximum_minutes": 60
+          }
+        }
+      },
+      {
+        "type": "replace_nearby",
+        "target_stop_id": "bixby_creek_bridge_viewpoint",
+        "candidate_id": "pfeiffer_big_sur_state_park"
+      }
+    ],
+    "expected_states": [
+      "proposal_ready"
+    ]
+  },
+  {
+    "id": "V104",
+    "category": "combined",
+    "split": "development",
+    "message": "Give Griffith Observatory 60 minutes then replace Bixby Creek Bridge with Pfeiffer Big Sur State Park.",
+    "expected_intents": [
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 60,
+            "minimum_minutes": 60,
+            "maximum_minutes": 60
+          }
+        }
+      },
+      {
+        "type": "replace_nearby",
+        "target_stop_id": "bixby_creek_bridge_viewpoint",
+        "candidate_id": "pfeiffer_big_sur_state_park"
+      }
+    ],
+    "expected_states": [
+      "proposal_ready"
+    ]
+  },
+  {
+    "id": "V105",
+    "category": "combined",
+    "split": "reserved",
+    "message": "I'd like 60 minutes at Griffith Observatory instead of 45; replace Bixby Creek Bridge with Pfeiffer Big Sur State Park.",
+    "expected_intents": [
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 60,
+            "minimum_minutes": 60,
+            "maximum_minutes": 60
+          }
+        }
+      },
+      {
+        "type": "replace_nearby",
+        "target_stop_id": "bixby_creek_bridge_viewpoint",
+        "candidate_id": "pfeiffer_big_sur_state_park"
+      }
+    ],
+    "expected_states": [
+      "proposal_ready"
+    ]
+  },
+  {
+    "id": "V106",
+    "category": "combined",
+    "split": "reserved",
+    "message": "I'd like 60 minutes at Griffith Observatory instead of 45, and replace Bixby Creek Bridge with Pfeiffer Big Sur State Park.",
+    "expected_intents": [
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 60,
+            "minimum_minutes": 60,
+            "maximum_minutes": 60
+          }
+        }
+      },
+      {
+        "type": "replace_nearby",
+        "target_stop_id": "bixby_creek_bridge_viewpoint",
+        "candidate_id": "pfeiffer_big_sur_state_park"
+      }
+    ],
+    "expected_states": [
+      "proposal_ready"
+    ]
+  },
+  {
+    "id": "V107",
+    "category": "combined",
+    "split": "reserved",
+    "message": "I'd like 60 minutes at Griffith Observatory instead of 45 and replace Bixby Creek Bridge with Pfeiffer Big Sur State Park.",
+    "expected_intents": [
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 60,
+            "minimum_minutes": 60,
+            "maximum_minutes": 60
+          }
+        }
+      },
+      {
+        "type": "replace_nearby",
+        "target_stop_id": "bixby_creek_bridge_viewpoint",
+        "candidate_id": "pfeiffer_big_sur_state_park"
+      }
+    ],
+    "expected_states": [
+      "proposal_ready"
+    ]
+  },
+  {
+    "id": "V108",
+    "category": "combined",
+    "split": "reserved",
+    "message": "I'd like 60 minutes at Griffith Observatory instead of 45 then replace Bixby Creek Bridge with Pfeiffer Big Sur State Park.",
+    "expected_intents": [
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 60,
+            "minimum_minutes": 60,
+            "maximum_minutes": 60
+          }
+        }
+      },
+      {
+        "type": "replace_nearby",
+        "target_stop_id": "bixby_creek_bridge_viewpoint",
+        "candidate_id": "pfeiffer_big_sur_state_park"
+      }
+    ],
+    "expected_states": [
+      "proposal_ready"
+    ]
+  },
+  {
+    "id": "V109",
+    "category": "guard",
+    "split": "development",
+    "message": "Set the arrival window for Griffith Observatory to 09:00-18:00.",
+    "expected_intents": null,
+    "expected_states": [
+      "clarification_required",
+      "unsupported"
+    ]
+  },
+  {
+    "id": "V110",
+    "category": "guard",
+    "split": "development",
+    "message": "Arrive at Griffith Observatory by 18:00.",
+    "expected_intents": null,
+    "expected_states": [
+      "clarification_required",
+      "unsupported"
+    ]
+  },
+  {
+    "id": "V111",
+    "category": "guard",
+    "split": "development",
+    "message": "Replace that place with somewhere better.",
+    "expected_intents": null,
+    "expected_states": [
+      "clarification_required",
+      "unsupported"
+    ]
+  },
+  {
+    "id": "V112",
+    "category": "guard",
+    "split": "reserved",
+    "message": "Set Griffith Observatory duration to 60 minutes and also to exactly 90 minutes.",
+    "expected_intents": null,
+    "expected_states": [
+      "clarification_required",
+      "unsupported"
+    ]
+  },
+  {
+    "id": "V113",
+    "category": "guard",
+    "split": "development",
+    "message": "Do not spend 90 minutes at Stearns Wharf.",
+    "expected_intents": null,
+    "expected_states": [
+      "clarification_required",
+      "unsupported"
+    ]
+  },
+  {
+    "id": "V114",
+    "category": "guard",
+    "split": "development",
+    "message": "Set Stearns Wharf duration to 900 minutes.",
+    "expected_intents": null,
+    "expected_states": [
+      "clarification_required",
+      "unsupported"
+    ]
+  },
+  {
+    "id": "V115",
+    "category": "guard",
+    "split": "development",
+    "message": "Set Stearns Wharf role to lodging.",
+    "expected_intents": null,
+    "expected_states": [
+      "clarification_required",
+      "unsupported"
+    ]
+  },
+  {
+    "id": "V116",
+    "category": "guard",
+    "split": "reserved",
+    "message": "Move Kings Canyon National Park to position 1 on day 3.",
+    "expected_intents": null,
+    "expected_states": [
+      "clarification_required",
+      "unsupported"
+    ]
+  },
+  {
+    "id": "V117",
+    "category": "guard",
+    "split": "development",
+    "message": "Set Stearns Wharf duration to 60.5 minutes.",
+    "expected_intents": null,
+    "expected_states": [
+      "clarification_required",
+      "unsupported"
+    ]
+  },
+  {
+    "id": "V118",
+    "category": "guard",
+    "split": "development",
+    "message": "Spend 1 hour and 30 minutes at Stearns Wharf.",
+    "expected_intents": null,
+    "expected_states": [
+      "clarification_required",
+      "unsupported"
+    ]
+  },
+  {
+    "id": "V119",
+    "category": "guard",
+    "split": "development",
+    "message": "Set Stearns Wharf duration to 90 minutes; set Stearns Wharf duration to 120 minutes.",
+    "expected_intents": null,
+    "expected_states": [
+      "clarification_required",
+      "unsupported"
+    ]
+  },
+  {
+    "id": "V120",
+    "category": "guard",
+    "split": "reserved",
+    "message": "Replace Bixby Creek Bridge with Pfeiffer Big Sur State Park and book me a hotel in Los Angeles.",
+    "expected_intents": null,
+    "expected_states": [
+      "clarification_required",
+      "unsupported"
+    ]
+  },
+  {
+    "id": "conditional_control-duration",
+    "category": "courtesy",
+    "split": "development",
+    "message": "Give Griffith Observatory 75 minutes.",
+    "reason": "Unconditional exact duration.",
+    "expected_states": [
+      "proposal_ready"
+    ],
+    "expected_intents": [
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 75,
+            "minimum_minutes": 75,
+            "maximum_minutes": 75
+          }
+        }
+      }
+    ]
+  },
+  {
+    "id": "conditional_control-courtesy",
+    "category": "courtesy",
+    "split": "development",
+    "message": "Could you please give Griffith Observatory 75 minutes?",
+    "reason": "Question form is a polite direct edit request.",
+    "expected_states": [
+      "proposal_ready"
+    ],
+    "expected_intents": [
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 75,
+            "minimum_minutes": 75,
+            "maximum_minutes": 75
+          }
+        }
+      }
+    ]
+  },
+  {
+    "id": "conditional_control-if-you-can",
+    "category": "courtesy",
+    "split": "development",
+    "message": "If you can give Griffith Observatory 75 minutes.",
+    "reason": "Courtesy qualification, with the normal evaluation gate still required.",
+    "expected_states": [
+      "proposal_ready"
+    ],
+    "expected_intents": [
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 75,
+            "minimum_minutes": 75,
+            "maximum_minutes": 75
+          }
+        }
+      }
+    ]
+  },
+  {
+    "id": "conditional_control-if-possible",
+    "category": "courtesy",
+    "split": "development",
+    "message": "Give Griffith Observatory 75 minutes if possible.",
+    "reason": "Feasibility qualification is handled by the normal preview gate.",
+    "expected_states": [
+      "proposal_ready"
+    ],
+    "expected_intents": [
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 75,
+            "minimum_minutes": 75,
+            "maximum_minutes": 75
+          }
+        }
+      }
+    ]
+  },
+  {
+    "id": "conditional_control-weather-rationale",
+    "category": "courtesy",
+    "split": "development",
+    "message": "Because it may rain give Griffith Observatory 75 minutes.",
+    "reason": "Weather is a rationale for an unconditional request.",
+    "expected_states": [
+      "proposal_ready"
+    ],
+    "expected_intents": [
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 75,
+            "minimum_minutes": 75,
+            "maximum_minutes": 75
+          }
+        }
+      }
+    ]
+  },
+  {
+    "id": "conditional_control-now",
+    "category": "courtesy",
+    "split": "development",
+    "message": "Give Griffith Observatory 75 minutes now.",
+    "reason": "No future or weather trigger.",
+    "expected_states": [
+      "proposal_ready"
+    ],
+    "expected_intents": [
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 75,
+            "minimum_minutes": 75,
+            "maximum_minutes": 75
+          }
+        }
+      }
+    ]
+  },
+  {
+    "id": "conditional_control-replacement",
+    "category": "courtesy",
+    "split": "development",
+    "message": "Replace Bixby Creek Bridge with Pfeiffer Big Sur State Park.",
+    "reason": "Unconditional exact replacement.",
+    "expected_states": [
+      "proposal_ready"
+    ],
+    "expected_intents": [
+      {
+        "type": "replace_nearby",
+        "target_stop_id": "bixby_creek_bridge_viewpoint",
+        "candidate_id": "pfeiffer_big_sur_state_park"
+      }
+    ]
+  },
+  {
+    "id": "conditional_control-chinese",
+    "category": "courtesy",
+    "split": "development",
+    "expected_fake_calls": 0,
+    "message": "請在 Griffith Observatory 停留 75 分鐘。",
+    "reason": "Unconditional Chinese exact duration.",
+    "expected_states": [
+      "proposal_ready"
+    ],
+    "expected_intents": [
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 75,
+            "minimum_minutes": 75,
+            "maximum_minutes": 75
+          }
+        }
+      }
+    ]
+  },
+  {
+    "id": "conditional_control-possible-prefix",
+    "category": "courtesy",
+    "split": "development",
+    "message": "If possible give Griffith Observatory 75 minutes.",
+    "reason": "Direct edit with a feasibility courtesy.",
+    "expected_states": [
+      "proposal_ready"
+    ],
+    "expected_intents": [
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 75,
+            "minimum_minutes": 75,
+            "maximum_minutes": 75
+          }
+        }
+      }
+    ]
+  },
+  {
+    "id": "conditional_control-possible-comma",
+    "category": "courtesy",
+    "split": "development",
+    "message": "If possible, give Griffith Observatory 75 minutes.",
+    "reason": "Punctuation does not change the courtesy into an event trigger.",
+    "expected_states": [
+      "proposal_ready"
+    ],
+    "expected_intents": [
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 75,
+            "minimum_minutes": 75,
+            "maximum_minutes": 75
+          }
+        }
+      }
+    ]
+  },
+  {
+    "id": "conditional_control-can-suffix",
+    "category": "courtesy",
+    "split": "development",
+    "message": "Give Griffith Observatory 75 minutes if you can.",
+    "reason": "Capability courtesy without an observation prerequisite.",
+    "expected_states": [
+      "proposal_ready"
+    ],
+    "expected_intents": [
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 75,
+            "minimum_minutes": 75,
+            "maximum_minutes": 75
+          }
+        }
+      }
+    ]
+  },
+  {
+    "id": "conditional_control-can-please",
+    "category": "courtesy",
+    "split": "development",
+    "message": "If you can please give Griffith Observatory 75 minutes.",
+    "reason": "Polite direct edit, still subject to normal evaluation.",
+    "expected_states": [
+      "proposal_ready"
+    ],
+    "expected_intents": [
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 75,
+            "minimum_minutes": 75,
+            "maximum_minutes": 75
+          }
+        }
+      }
+    ]
+  },
+  {
+    "id": "conditional_control-can-comma",
+    "category": "courtesy",
+    "split": "development",
+    "message": "If you can, please give Griffith Observatory 75 minutes.",
+    "reason": "Polite direct edit, punctuation variant.",
+    "expected_states": [
+      "proposal_ready"
+    ],
+    "expected_intents": [
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 75,
+            "minimum_minutes": 75,
+            "maximum_minutes": 75
+          }
+        }
+      }
+    ]
+  }
+]

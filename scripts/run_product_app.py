@@ -149,6 +149,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--open", action="store_true", help="Open /app after the health check passes.")
     parser.add_argument("--enable-legacy", action="store_true", help="Enable labeled debug-only legacy routes.")
     parser.add_argument("--state-root", type=Path, default=REPOSITORY_ROOT / ".product_app_state")
+    parser.add_argument("--registry", type=Path, default=None, help="Use an explicit local run registry.")
     return parser.parse_args()
 
 
@@ -298,6 +299,7 @@ def main() -> int:
     try:
         app = create_product_app(
             repository_root=REPOSITORY_ROOT,
+            registry_path=args.registry,
             state_root=args.state_root,
             enable_legacy=args.enable_legacy,
             application_host=args.host,

@@ -29,7 +29,9 @@ Travel plans break when weather, closures, travel time, or booking constraints c
 - Presents the result in desktop and mobile trip, repair, comparison, and evidence views.
 - Offers a local deterministic Copilot; an OpenAI-backed mode is optional and explicit.
 
-> **Prototype status:** `/app` is an experimental research interface, not a booking product. Repair acceptance remains disabled until the repository transaction workflow is implemented and verified.
+> **Current checkpoint — 29 October 2026:** Individualized planning and the read-only/request-completeness repairs are included. The latest related regression has **339 passing checks**, with two actual paid OpenAI replacement tests across retained source epochs and 32 original screenshots. See the [checkpoint report](docs/reports/copilot_checkpoint_20261029/README.md) and [screenshot gallery](docs/reports/copilot_checkpoint_20261029/review.html). Quantitative risk-model gaps remain open; no nonlinear optimizer extension is claimed.
+>
+> **Prototype status:** `/app` is an experimental research interface, not a booking product. Explicit acceptance of an eligible evaluated preview is implemented with persistent lineage and rollback. Full stability, integration and release acceptance remain in progress; the [earlier integration status](docs/reports/runtime_coherence_status_20261007.md) preserves its separate evidence and remaining limits.
 
 ## Product walkthrough
 
@@ -116,9 +118,9 @@ flowchart LR
 | Dimension | Included in the current demo |
 | --- | --- |
 | Scenario | Weather-aware California coast itinerary repair |
-| Corridor | Los Angeles to San Francisco |
-| Trip | 7 days, 9 recorded stops, 1 affected day |
-| Candidate catalog | 228 city/place candidates across seven California regions |
+| Corridor | San Francisco to Los Angeles |
+| Trip | 7 days, 8 recorded stops, Day 5 Bixby disruption |
+| Candidate catalog | 41 source-backed California discovery places; two registered demo replacement candidates. Discovery is not executable route evidence or exhaustive statewide coverage. |
 | Repair signals | Contextual risk, preservation, edit cost, eligibility, and route evidence |
 | Route variants | 7-day, 9-day, and 12-day research artifacts |
 | Interfaces | Trip, map edit, repairs, compare, evidence, settings, and Copilot |
@@ -150,10 +152,10 @@ The Copilot starts in **Deterministic demo** mode. Requests stay on the computer
 ```dotenv
 PRODUCT_COPILOT_ADAPTER=openai
 OPENAI_API_KEY=replace-with-your-local-key
-OPENAI_COPILOT_MODEL=gpt-5.6-terra
+OPENAI_COPILOT_MODEL=gpt-5.4-mini
 ```
 
-The provider receives the visible itinerary context, current message, and a bounded recent conversation window. It has no tools and cannot directly change a plan, booking, permission, or acceptance decision. Local transcripts expire after 30 days and can be deleted from Copilot settings. Never place an API key in a tracked file, screenshot, issue, or chat message.
+The provider receives the visible itinerary context, current message, and a bounded recent conversation window. It has no tools and cannot directly change a plan, booking, permission, or acceptance decision. Local transcripts expire 30 days after the conversation's last activity and can be deleted from Copilot settings; separately retained audit evidence is not deleted by transcript deletion. Never place an API key in a tracked file, screenshot, issue, or chat message.
 
 Inspect the selected provider without making a billed request:
 
@@ -194,6 +196,21 @@ Focused product-app checks:
 python -m pytest tests/product_app -q
 python -m ruff check src/itinerary_system/product_app tests/product_app scripts/run_product_app.py
 ```
+
+Real-browser integration gate (not a mocked API test):
+
+```powershell
+python scripts/run_e2e1_vertical_slice.py --browser-test aggregate
+```
+
+Stop the normal local app first so port 8127 is free. The runner uses disposable
+state, explicitly blocks provider calls, and checks the exact registered browser
+journeys and artifact identities. The current inventory is 68 cases in 22 suites;
+that inventory is not a completion claim. For just the 11 owned-rule chat/editor
+journeys, use `--browser-test owned-edits`. Each run retains exact inputs, outputs,
+source hashes, screenshots and an independently checked evidence manifest under
+`results/e2e/`. Live GPT connectivity is a separate, explicitly authorized billed
+website test and cannot be inferred from this deterministic gate.
 
 ## Research and documentation
 

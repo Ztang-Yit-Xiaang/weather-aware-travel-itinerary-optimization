@@ -63,7 +63,7 @@ def build_product_dashboard_view_model(bundle: ProductDashboardSourceBundle) -> 
         },
         "issue": _issue_summary(request, parent),
         "timeline": timeline,
-        "repair": _repair_summary(bundle, affected_days),
+        "repair": _repair_summary(bundle),
         "comparison": comparison,
         "evidence": _evidence_view(bundle.explanations),
         "alternatives": _alternative_rows(bundle),
@@ -127,7 +127,7 @@ def _timeline(
     child_days = _stops_by_day(child or parent)
     affected = set(_affected_days(request, diff))
     changed = set(affected)
-    changed.update(int(item.get("day") or 0) for item in _all_diff_changes(diff))
+    changed.update(_diff_changed_days(diff))
     unchanged = {int(day) for day in diff.get("unchanged_days") or []}
     ownership = _ownership_by_target(child or parent)
     days = sorted(set(parent_days) | set(child_days))
@@ -171,9 +171,7 @@ def _timeline(
     return result
 
 
-def _repair_summary(
-    bundle: ProductDashboardSourceBundle, affected_days: list[int]
-) -> dict[str, Any]:
+def _repair_summary(bundle: ProductDashboardSourceBundle) -> dict[str, Any]:
     diff = bundle.diff or {}
     certificate = bundle.certificate or {}
     changes = _all_diff_changes(diff)
@@ -193,7 +191,7 @@ def _repair_summary(
         "changed": {
             "added": added,
             "removed": removed,
-            "affected_day_count": len(affected_days),
+            "affected_day_count": len(_diff_changed_days(diff)),
             "road_change_count": len(diff.get("road_changes") or []),
             "lodging_change_count": len(diff.get("lodging_changes") or []),
         },
@@ -631,14 +629,14 @@ def _affected_days(request: dict[str, Any], diff: dict[str, Any]) -> list[int]:
         for day in (request.get("confirmed_constraints") or {}).get("affected_days") or []
     ]
     if not days:
-        days = sorted(
-            {
-                int(item.get("day") or 0)
-                for item in _all_diff_changes(diff)
-                if int(item.get("day") or 0) > 0
-            }
-        )
+        days = _diff_changed_days(diff)
     return list(dict.fromkeys(days))
+
+
+def _diff_changed_days(diff: dict[str, Any]) -> list[int]:
+    return sorted({day for item in _all_diff_changes(diff)
+        for field in ("day", "from_day", "to_day")
+        if type(day := item.get(field)) is int and day > 0})
 
 
 def _all_diff_changes(diff: dict[str, Any]) -> list[dict[str, Any]]:
@@ -650,6 +648,9 @@ def _all_diff_changes(diff: dict[str, Any]) -> list[dict[str, Any]]:
         "reorder_changes",
         "lodging_changes",
         "road_changes",
+        "duration_changes",
+        "time_window_changes",
+        "role_changes",
     )
     return [item for key in keys for item in diff.get(key) or [] if isinstance(item, dict)]
 

@@ -1,0 +1,239 @@
+{
+  "catalog_snapshot_id": "california_coherent_product_catalog_v1",
+  "certificate_id": null,
+  "change_components": {},
+  "content_hash": "750dae617fc4c1e3",
+  "context_exposure_components": {},
+  "context_snapshot_id": "context_coherent_california_demo_2026_08",
+  "created_at": "2026-08-11T00:00:00+00:00",
+  "day_assignments": {
+    "bixby_creek_bridge_viewpoint": 5,
+    "golden_gate_bridge": 1,
+    "griffith_observatory": 7,
+    "kings_canyon_national_park": 4,
+    "sequoia_national_park": 4,
+    "stanford_university_main_quad": 2,
+    "stearns_wharf": 6,
+    "yosemite_national_park": 3
+  },
+  "lodging_assignments": {
+    "1": "hotel_zephyr_san_francisco",
+    "2": "best_western_yosemite_way_station",
+    "3": "yosemite_southgate_hotel",
+    "4": "comfort_inn_sequoia_kings_canyon",
+    "5": "portola_hotel_monterey",
+    "6": "hotel_milo_santa_barbara",
+    "7": "the_line_la"
+  },
+  "modeled_metrics": {
+    "selected_attractions": 8.0
+  },
+  "ordered_days": [
+    {
+      "day": 1,
+      "stop_ids": [
+        "golden_gate_bridge"
+      ]
+    },
+    {
+      "day": 2,
+      "stop_ids": [
+        "stanford_university_main_quad"
+      ]
+    },
+    {
+      "day": 3,
+      "stop_ids": [
+        "yosemite_national_park"
+      ]
+    },
+    {
+      "day": 4,
+      "stop_ids": [
+        "sequoia_national_park",
+        "kings_canyon_national_park"
+      ]
+    },
+    {
+      "day": 5,
+      "stop_ids": [
+        "bixby_creek_bridge_viewpoint"
+      ]
+    },
+    {
+      "day": 6,
+      "stop_ids": [
+        "stearns_wharf"
+      ]
+    },
+    {
+      "day": 7,
+      "stop_ids": [
+        "griffith_observatory"
+      ]
+    }
+  ],
+  "owned_constraints": [],
+  "parent_plan_id": null,
+  "plan_id": "plan_359968d255ff9288",
+  "planning_request_id": "weather_repair_bixby_day_5_v1",
+  "route_ids_by_day": {
+    "1": "route_0a4738ad38707262",
+    "2": "route_871dd82b00c89b9d",
+    "3": "route_2d6a8989c24bf215",
+    "4": "route_d573bd80ccb9c903",
+    "5": "route_be2570615745809e",
+    "6": "route_78aa57127c1d7057",
+    "7": "route_f5292b1ac3005945"
+  },
+  "schema_version": "plan-artifact-v2",
+  "selected_stops": [
+    {
+      "attraction_name": "Golden Gate Bridge",
+      "city": "San Francisco",
+      "day": 1,
+      "itinerary_role": null,
+      "itinerary_role_source": "unavailable",
+      "latitude": 37.8199,
+      "lodging_id": "hotel_zephyr_san_francisco",
+      "longitude": -122.4783,
+      "poi_id": "golden_gate_bridge",
+      "source_confidence": 1.0,
+      "source_list": "repository_curated_product_fixture",
+      "stop_order": 1,
+      "visit_duration_minutes": 45,
+      "weather_feasible": true,
+      "weather_risk": 0.2
+    },
+    {
+      "attraction_name": "Stanford University Main Quad",
+      "city": "Stanford",
+      "day": 2,
+      "itinerary_role": null,
+      "itinerary_role_source": "unavailable",
+      "latitude": 37.4275,
+      "lodging_id": "best_western_yosemite_way_station",
+      "longitude": -122.1697,
+      "poi_id": "stanford_university_main_quad",
+      "source_confidence": 1.0,
+      "source_list": "repository_curated_product_fixture",
+      "stop_order": 1,
+      "visit_duration_minutes": 45,
+      "weather_feasible": true,
+      "weather_risk": 0.2
+    },
+    {
+      "attraction_name": "Yosemite National Park",
+      "city": "Yosemite Valley",
+      "day": 3,
+      "itinerary_role": null,
+      "itinerary_role_source": "unavailable",
+      "latitude": 37.8651,
+      "lodging_id": "yosemite_southgate_hotel",
+      "longitude": -119.5383,
+      "poi_id": "yosemite_national_park",
+      "source_confidence": 1.0,
+      "source_list": "repository_curated_product_fixture",
+      "stop_order": 1,
+      "visit_duration_minutes": 45,
+      "weather_feasible": true,
+      "weather_risk": 0.2
+    },
+    {
+      "attraction_name": "Sequoia National Park",
+      "city": "Three Rivers",
+      "day": 4,
+      "itinerary_role": null,
+      "itinerary_role_source": "unavailable",
+      "latitude": 36.4864,
+      "lodging_id": "comfort_inn_sequoia_kings_canyon",
+      "longitude": -118.5658,
+      "poi_id": "sequoia_national_park",
+      "source_confidence": 1.0,
+      "source_list": "repository_curated_product_fixture",
+      "stop_order": 1,
+      "visit_duration_minutes": 45,
+      "weather_feasible": true,
+      "weather_risk": 0.2
+    },
+    {
+      "attraction_name": "Kings Canyon National Park",
+      "city": "Three Rivers",
+      "day": 4,
+      "itinerary_role": null,
+      "itinerary_role_source": "unavailable",
+      "latitude": 36.8879,
+      "lodging_id": "comfort_inn_sequoia_kings_canyon",
+      "longitude": -118.5551,
+      "poi_id": "kings_canyon_national_park",
+      "source_confidence": 1.0,
+      "source_list": "repository_curated_product_fixture",
+      "stop_order": 2,
+      "visit_duration_minutes": 45,
+      "weather_feasible": true,
+      "weather_risk": 0.2
+    },
+    {
+      "attraction_name": "Bixby Creek Bridge Viewpoint",
+      "city": "Big Sur",
+      "day": 5,
+      "itinerary_role": null,
+      "itinerary_role_source": "unavailable",
+      "latitude": 36.371479,
+      "lodging_id": "portola_hotel_monterey",
+      "longitude": -121.901894,
+      "poi_id": "bixby_creek_bridge_viewpoint",
+      "source_confidence": 1.0,
+      "source_list": "repository_curated_product_fixture",
+      "stop_order": 1,
+      "visit_duration_minutes": 45,
+      "weather_feasible": false,
+      "weather_risk": 0.86
+    },
+    {
+      "attraction_name": "Stearns Wharf",
+      "city": "Santa Barbara",
+      "day": 6,
+      "itinerary_role": null,
+      "itinerary_role_source": "unavailable",
+      "latitude": 34.4100137734,
+      "lodging_id": "hotel_milo_santa_barbara",
+      "longitude": -119.6855497819,
+      "poi_id": "stearns_wharf",
+      "source_confidence": 1.0,
+      "source_list": "repository_curated_product_fixture",
+      "stop_order": 1,
+      "visit_duration_minutes": 45,
+      "weather_feasible": true,
+      "weather_risk": 0.2
+    },
+    {
+      "attraction_name": "Griffith Observatory",
+      "city": "Los Angeles",
+      "day": 7,
+      "itinerary_role": null,
+      "itinerary_role_source": "unavailable",
+      "latitude": 34.1184,
+      "lodging_id": "the_line_la",
+      "longitude": -118.3004,
+      "poi_id": "griffith_observatory",
+      "source_confidence": 1.0,
+      "source_list": "repository_curated_product_fixture",
+      "stop_order": 1,
+      "visit_duration_minutes": 45,
+      "weather_feasible": true,
+      "weather_risk": 0.2
+    }
+  ],
+  "sequence": [
+    "golden_gate_bridge",
+    "stanford_university_main_quad",
+    "yosemite_national_park",
+    "sequoia_national_park",
+    "kings_canyon_national_park",
+    "bixby_creek_bridge_viewpoint",
+    "stearns_wharf",
+    "griffith_observatory"
+  ],
+  "source_run_id": "california_coast_coherent_demo_v1_parent"
+}

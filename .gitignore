@@ -67,3 +67,11 @@ docker/maplibre/assets/
 .product_app_state/
 .env.local
 .codex_backups/
+
+# Machine-local sessions, audit state, disposable fixtures and dependencies.
+.env.*
+!.env.example
+.product_app_state*/
+tmp/
+node_modules/
+results/repairs/

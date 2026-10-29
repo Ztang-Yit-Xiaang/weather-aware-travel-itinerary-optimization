@@ -29,6 +29,11 @@ class ProductDemoPackage:
 
 def load_product_demo_package(repository_root: Path, package_dir: Path) -> ProductDemoPackage:
     manifest = _json(package_dir / "manifest.json")
+    if manifest.get("schema_version") == "product-demo-package-v2":
+        from .coherent_product_demo import load_coherent_product_demo_package
+
+        return load_coherent_product_demo_package(package_dir)
+
     if (
         manifest.get("schema_version") != "product-demo-package-v1"
         or manifest.get("run_id") != "california_coast_product_demo_v2"

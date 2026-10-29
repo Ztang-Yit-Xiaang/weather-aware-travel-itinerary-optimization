@@ -12,6 +12,7 @@ from itinerary_system.product_app.product_demo import load_product_demo_package
 from itinerary_system.product_app.registry import ProductRunRegistry
 from itinerary_system.product_app.service import ProductService
 from itinerary_system.product_app.workspace import WorkspaceError
+from itinerary_system.research_artifacts import stable_content_hash
 
 ROOT = Path(__file__).resolve().parents[2]
 RUN = ROOT / "runs" / "california-coast-product-demo-v2"
@@ -144,10 +145,10 @@ def test_semantically_identical_drafts_are_idempotent_across_session_metadata() 
 @pytest.mark.parametrize(
     ("draft", "expected_state", "expected_reason"),
     [
-        ([operation("keep_stop", "griffith_observatory")], "ineligible", "no_feasible_evaluated_child"),
-        ([operation("lock_stop", "griffith_observatory")], "ineligible", "no_feasible_evaluated_child"),
+        ([operation("keep_stop", "griffith_observatory")], "not_evaluated", "no_feasible_local_candidate"),
+        ([operation("lock_stop", "griffith_observatory")], "not_evaluated", "no_feasible_local_candidate"),
         ([operation("mark_flexible", "golden_gate_bridge")], "eligible", None),
-        ([operation("move_day", "griffith_observatory", {"day": 4})], "ineligible", "no_feasible_evaluated_child"),
+        ([operation("move_day", "griffith_observatory", {"day": 4})], "not_evaluated", "no_feasible_local_candidate"),
         ([operation("route_feedback", "selected_route", {"preference": "reduce_driving"})], "eligible", None),
         ([operation("replace_nearby", "golden_gate_bridge", {"candidate_id": "bixby_creek_bridge_viewpoint"})], "eligible", None),
         ([operation("add_candidate", "bixby_creek_bridge_viewpoint", {"day": 7})], "eligible", None),
@@ -239,6 +240,48 @@ def test_candidate_certificate_and_diff_are_reverified_not_merely_looked_up() ->
         )
 
 
+def test_product_replacement_evaluates_route_context_without_using_registered_certificate() -> None:
+    package = load_product_demo_package(
+        ROOT,
+        ROOT / "runs" / "california-coast-coherent-demo-v1",
+    )
+    child_plan_id = "plan_8ae77712483a709e"
+    recommended = package.evidence_bundles[child_plan_id]
+    damaged_certificate = {
+        **recommended.certificate,
+        "route_validation": {
+            **recommended.certificate["route_validation"],
+            "context_snapshot_id": "context_tampered",
+        },
+    }
+    certificate_payload = dict(damaged_certificate)
+    certificate_payload.pop("content_hash")
+    damaged_certificate["content_hash"] = stable_content_hash(certificate_payload)
+    compiler = FrozenDraftCompiler(
+        package.primary_bundle.parent_plan,
+        {
+            child_plan_id: replace(
+                recommended,
+                certificate=damaged_certificate,
+            )
+        },
+        repository_root=ROOT,
+    )
+
+    compiled = compiler.compile(
+        [operation(
+            "replace_nearby", "bixby_creek_bridge_viewpoint",
+            {"candidate_id": "pfeiffer_big_sur_state_park"},
+        )],
+        accepted_plan_id="plan_359968d255ff9288",
+    )
+
+    assert compiled.state == "eligible"
+    assert compiled.child_plan["plan_id"] != child_plan_id
+    assert compiled.certificate["route_validation"]["context_snapshot_id"] == recommended.route_matrix["context_snapshot_id"]
+    assert compiled.runtime_execution["evaluation_executed"] is True
+
+
 def test_service_preview_binds_revision_and_draft_without_mutating_artifacts_or_pointer(
     tmp_path: Path,
 ) -> None:
@@ -324,6 +367,11 @@ def test_route_feedback_preview_reuses_only_projection_equivalent_route_evidence
         feature["properties"]["plan_id"] == proposal["child_plan_id"]
         and feature["properties"]["content_hash"] == proposal["child_plan_content_hash"]
         for collection in ("stops", "route_path", "validated_legs", "gaps")
+        for feature in geography[collection]["features"]
+    )
+    assert all(
+        feature["properties"]["requirement_id"].startswith(f"{proposal['child_plan_id']}:required-leg:")
+        for collection in ("validated_legs", "gaps")
         for feature in geography[collection]["features"]
     )
 

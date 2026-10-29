@@ -3,22 +3,38 @@ import {
   normalizePoiCandidateResponse,
   reduceConfirmedMapDraftOperations,
   renderGeographicMap,
-} from "./map.js?v=20260810-stability5";
-import { createCopilotController } from "./copilot.js?v=20260805-w4-copilot1";
+} from "./map.js?v=20260817-e2e3";
+import {
+  copilotOperationForIntent,
+  createCopilotController,
+  sameCopilotDraftOperation,
+} from "./copilot.js?v=20260904-hci1";
 import {
   disposeCompareWorkspace,
   renderCompareWorkspace,
   resolveCompareSelection,
-} from "./compare.js?v=20260810-stability5";
+} from "./compare.js?v=20260813-w5-accept1";
+
+import { createMutationRecovery } from "./mutation-recovery.js";
+import { interestPlacesInRegion, normalizeInterestResponse } from "./interest-regions.js";
 
 const state = {
+  clientBuildId: document.querySelector('meta[name="product-build-id"]')?.content || "",
+  buildRecovery: null,
   health: null,
   mapConfig: null,
   workspace: null,
   session: null,
   token: null,
+  undoPending: false,
+  workspaceConflict: null,
+  workspaceSyncPending: false,
+  sessionRecoveryNotice: null,
+  mutationRecovery: { status: "idle", blocked: false, message: "" },
   registry: null,
   route: normalizeRoute(location.pathname),
+  tripPreviewPlanId: null,
+  acknowledgedPreviewPlanId: null,
   mapInteraction: {
     mode: "select",
     selectionKind: null,
@@ -40,15 +56,32 @@ const state = {
     limit: 5,
     error: null,
   },
+  interestRegions: {
+    enabled: false, status: "idle", response: null, error: null,
+    naturePreference: 0, massLevel: 0.8, selectedId: null, generation: 0, controller: null,
+    placeSearch: "", placeScope: "all",
+  },
   typedImpact: {
+    request: null,
     status: "idle",
     response: null,
     error: null,
   },
+  previewRuntime: {
+    epoch: 0,
+    status: "PARENT_RENDERED",
+    requestId: null,
+  },
 };
 let pendingSelection = null;
+let workspaceChannel = null;
+let workspaceRefreshQueued = false;
+let workspaceRefreshTimer = null;
+let workspaceNoticeEpoch = 0;
 
 const SESSION_STORAGE_KEY = "itinerary-repair-copilot.session.v1";
+const PENDING_MUTATION_KEY = "itinerary-repair-copilot.pending-mutation.v1";
+const PENDING_INPUT_KEY = "itinerary-repair-copilot.pending-input.v1";
 
 const $ = (selector, root = document) => root.querySelector(selector);
 const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
@@ -56,13 +89,280 @@ const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
 const copilot = createCopilotController({
   getState: () => state,
   api,
+  streamMessage: streamCopilotMessage,
   selectContext,
   addDraft: addCopilotDraft,
   previewDraft,
+  getPreviewState: copilotPreviewState,
+  getSelectedStop: findSelectedStop,
   navigate,
   toast,
   renderAll,
+  syncPreviewRuntime: syncPreviewRuntimeFromSession,
+  onIdle: flushQueuedWorkspaceRefresh,
 });
+
+const mutationRecovery = createMutationRecovery({
+  api: (path, options = {}) => api(path, {...options, pendingMutation: true}),
+  storage: {
+    getItem: key => sessionStorage.getItem(key),
+    setItem: (key, value) => sessionStorage.setItem(key, value),
+    removeItem: key => sessionStorage.removeItem(key),
+  },
+  key: PENDING_MUTATION_KEY,
+  getSession: () => state.session,
+  onChange: value => {
+    state.mutationRecovery = value;
+    if (value.blocked) savePendingMutationInput();
+    if (state.session && !$("#app-shell").hidden) renderAll();
+  },
+});
+
+function savePendingMutationInput() {
+  if (!state.session) return;
+  try {
+    sessionStorage.setItem(PENDING_INPUT_KEY, JSON.stringify({
+      session_id: state.session.session_id, text: $("#copilot-input")?.value || "",
+    }));
+  } catch {
+    toast("This unsent message could not be saved for reload.", true);
+  }
+}
+
+function restorePendingMutationInput() {
+  try {
+    const saved = JSON.parse(sessionStorage.getItem(PENDING_INPUT_KEY) || "null");
+    if (saved?.session_id === state.session.session_id && typeof saved.text === "string" && saved.text.length <= 20_000) {
+      $("#copilot-input").value = saved.text;
+    }
+  } catch {
+    toast("The unsent message could not be restored.", true);
+  }
+}
+
+function restoreMutationControls() {
+  $$("[data-pending-mutation-disabled]").forEach(control => {
+    control.disabled = false;
+    delete control.dataset.pendingMutationDisabled;
+  });
+}
+
+function renderMutationRecovery() {
+  let banner = $("#mutation-recovery-banner");
+  if (!banner) {
+    banner = document.createElement("section");
+    banner.id = "mutation-recovery-banner";
+    banner.className = "runtime-banner";
+    banner.setAttribute("role", "status");
+    $("#runtime-banner").after(banner);
+    new ResizeObserver(updateMutationRecoveryLayout).observe(banner);
+  }
+  const recovery = state.mutationRecovery;
+  const blocked = recovery.blocked || Boolean(state.workspaceConflict) || state.workspaceSyncPending;
+  banner.hidden = !blocked;
+  $("#app-shell").classList.toggle("has-mutation-recovery", blocked);
+  updateMutationRecoveryLayout();
+  if (!blocked) return;
+  const checking = recovery.status === "checking";
+  if (!recovery.blocked && (state.workspaceConflict || state.workspaceSyncPending)) {
+    const conflict = state.workspaceConflict || { refreshing: true, message: "The trip changed in another tab. Waiting for the current action to finish before loading the saved workspace." };
+    banner.innerHTML = `<strong>${conflict.refreshing ? "Refreshing current workspace" : "Workspace changed"}</strong>
+      <span>${escapeHtml(conflict.message)}</span>
+      <button type="button" class="secondary" data-refresh-current-workspace ${conflict.refreshing ? "disabled" : ""}>Refresh current workspace</button>`;
+    banner.querySelector("[data-refresh-current-workspace]").addEventListener("click", () => refreshStaleWorkspace());
+  } else if (recovery.unreadable) {
+    banner.innerHTML = `<strong>${checking ? "Refreshing protected workspace" : "Saved action unavailable"}</strong>
+      <span>${escapeHtml(recovery.message)} Already saved changes will be kept. A protected refresh blocks unfinished edits based on the previous workspace version; their original outcome may remain unknown.</span>
+      <button type="button" class="secondary" data-repair-pending-mutation ${checking ? "disabled" : ""}>Refresh protected workspace</button>`;
+    banner.querySelector("[data-repair-pending-mutation]").addEventListener("click", () => recoverPendingMutation(false, false, true));
+  } else {
+    banner.innerHTML = `<strong>${checking ? "Confirming saved action" : "Action awaiting confirmation"}</strong>
+      <span>${escapeHtml(recovery.message || "Check the saved action before making another edit. Your message has not been sent.")} Cancellation leaves any already saved changes in place.</span>
+      <button type="button" class="secondary" data-check-pending-mutation ${checking ? "disabled" : ""}>Check saved action</button>
+      <button type="button" class="secondary" data-retry-pending-mutation ${checking ? "disabled" : ""}>Retry saved action</button>
+      <button type="button" class="secondary" data-cancel-pending-mutation ${checking ? "disabled" : ""}>Cancel pending action</button>`;
+    banner.querySelector("[data-check-pending-mutation]").addEventListener("click", () => recoverPendingMutation(false));
+    banner.querySelector("[data-retry-pending-mutation]").addEventListener("click", () => recoverPendingMutation(true));
+    banner.querySelector("[data-cancel-pending-mutation]").addEventListener("click", () => recoverPendingMutation(false, true));
+  }
+  updateMutationRecoveryLayout();
+  $$(".flow button, #map-edit-dialog button, #typed-edit-surface button, .copilot-proposal-actions button, [data-accept-action], #inline-undo, #inline-preview, #accept-repair, #copilot-submit[data-mode=send]")
+    .filter(control => !control.disabled).forEach(control => {
+      control.dataset.pendingMutationDisabled = "true";
+      control.disabled = true;
+    });
+}
+
+function updateMutationRecoveryLayout() {
+  const banner = $("#mutation-recovery-banner");
+  if (banner && !banner.hidden) {
+    $("#app-shell").style.setProperty("--mutation-recovery-bottom", `${banner.getBoundingClientRect().bottom}px`);
+  } else {
+    $("#app-shell").style.removeProperty("--mutation-recovery-bottom");
+  }
+}
+
+async function recoverPendingMutation(retry = false, cancel = false, repair = false) {
+  try {
+    const payload = await (repair ? mutationRecovery.repair() : cancel ? mutationRecovery.cancel() : retry ? mutationRecovery.retry() : mutationRecovery.check());
+    installDraftMutationSession(payload.session, payload);
+    syncPreviewRuntimeFromSession();
+    state.tripPreviewPlanId = null;
+    state.acknowledgedPreviewPlanId = null;
+    resetPoiDiscovery({ keepReplacementTarget: false });
+    if (state.mapInteraction.selectedWaypointId && !selectedDraftWaypoint()) {
+      state.mapInteraction.selectionKind = null;
+      state.mapInteraction.selectedWaypointId = null;
+    }
+    savePendingMutationInput();
+    const impact = loadDraftImpactPreview({ render: false });
+    renderAll();
+    toast(payload.recovery_outcome === "refreshed"
+      ? "Protected workspace refreshed. Saved changes were kept and unfinished edits from the previous workspace version are blocked. Review the current draft before continuing."
+      : payload.recovery_outcome === "applied"
+      ? (state.session.draft?.length && !state.session.proposal
+        ? "Saved action confirmed. Your draft is staged; select Preview repair to evaluate it and update the map."
+        : "Saved action confirmed. The current workspace has been refreshed.")
+      : "That action was not applied. Saved draft changes were kept; review the refreshed workspace before continuing.");
+    await impact;
+    renderAll();
+    await copilot.restore();
+    return true;
+  } catch (error) {
+    toast(error.message, true);
+    renderAll();
+    return false;
+  }
+}
+
+function flushQueuedWorkspaceRefresh() {
+  if (!workspaceRefreshQueued || workspaceRefreshTimer !== null) return;
+  workspaceRefreshTimer = setTimeout(async () => {
+    workspaceRefreshTimer = null;
+    if (!state.session || state.mutationRecovery.blocked || state.workspaceConflict
+        || state.undoPending || pendingSelection || copilot.isBusy()
+        || state.previewRuntime.status === "PREVIEW_RUNNING") return;
+    workspaceRefreshQueued = false;
+    await refreshStaleWorkspace(null, true);
+  }, 0);
+}
+
+function requestWorkspaceRefresh() {
+  workspaceRefreshQueued = true;
+  flushQueuedWorkspaceRefresh();
+}
+
+function bindWorkspaceSynchronization() {
+  const receive = ({ data }) => {
+    if (!data || typeof data !== "object" || Array.isArray(data)
+        || Object.keys(data).sort().join("|") !== "conversation_id|revision|schema_version|session_id"
+        || data.schema_version !== "product-workspace-invalidation-v1"
+        || data.session_id !== state.session?.session_id
+        || !Number.isSafeInteger(data.revision) || data.revision < state.session.revision
+        || !(data.conversation_id === null || typeof data.conversation_id === "string")) return;
+    if (data.revision > state.session.revision || data.conversation_id !== state.session.conversation_id) {
+      workspaceNoticeEpoch += 1;
+      state.workspaceSyncPending = true;
+      renderAll();
+      requestWorkspaceRefresh();
+    }
+  };
+  try {
+    if (typeof BroadcastChannel === "function") {
+      workspaceChannel = new BroadcastChannel("itinerary-repair-copilot.workspace.v1");
+      workspaceChannel.addEventListener("message", receive);
+    }
+  } catch { workspaceChannel = null; }
+  window.addEventListener("focus", requestWorkspaceRefresh);
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible") requestWorkspaceRefresh();
+  });
+}
+
+function announceWorkspaceChange(payload) {
+  const session = payload?.session;
+  if (!session || typeof session.session_id !== "string" || !Number.isSafeInteger(session.revision)) return;
+  try {
+    workspaceChannel?.postMessage({ schema_version: "product-workspace-invalidation-v1",
+      session_id: session.session_id, revision: session.revision, conversation_id: session.conversation_id ?? null });
+  } catch { workspaceChannel = null; }
+}
+
+async function refreshStaleWorkspace(error = null, automatic = false) {
+  if (error && (error.status !== 409 || error.code !== "stale_session_revision")) return false;
+  if (state.mutationRecovery.blocked || !state.session) return false;
+  if (state.workspaceConflict?.refreshing) return true;
+  automatic ||= state.workspaceConflict?.automatic === true;
+  const noticeEpoch = workspaceNoticeEpoch;
+  const origin = { ...state.session };
+  const invalidatePreview = () => {
+    state.previewRuntime = { epoch: state.previewRuntime.epoch + 1, status: "PREVIEW_FAILED", requestId: null, message: "The saved workspace needs to be checked before this preview can be used." };
+    state.tripPreviewPlanId = null;
+    state.acknowledgedPreviewPlanId = null;
+  };
+  state.workspaceConflict = { refreshing: true, automatic, message: automatic
+    ? "Checking the saved workspace for changes. Your message draft will be kept."
+    : "The trip changed in another action. Reading the saved workspace; your rejected action will not be retried automatically." };
+  if (!automatic) { state.workspaceSyncPending = true; invalidatePreview(); }
+  if (!automatic || state.workspaceSyncPending) {
+    renderAll();
+    copilot.previewStateChanged();
+  }
+  const controller = new AbortController();
+  let deadline;
+  try {
+    const expired = new Promise((_resolve, reject) => {
+      deadline = setTimeout(() => {
+        reject(new Error("The saved workspace did not respond in time."));
+        controller.abort();
+      }, 20000);
+    });
+    const payload = await Promise.race([api(`/api/sessions/${encodeURIComponent(origin.session_id)}`, { signal: controller.signal }), expired]);
+    clearTimeout(deadline);
+    const owns = session => session && ["session_id", "trip_id", "run_id"].every(key => session[key] === origin[key]);
+    if (!owns(state.session) || !owns(payload?.session)
+        || !Number.isSafeInteger(payload.session.revision) || payload.session.revision < state.session.revision
+        || !payload.workspace || !payload.registry) throw new Error("The refreshed workspace did not match the current trip.");
+    if (workspaceNoticeEpoch !== noticeEpoch) {
+      state.workspaceConflict = null;
+      renderAll();
+      return true;
+    }
+    if (automatic && !state.workspaceSyncPending && ["revision", "accepted_plan_id", "conversation_id"].every(key => payload.session[key] === state.session[key])) {
+      state.workspaceConflict = null;
+      state.workspaceSyncPending = false;
+      return true;
+    }
+    if (automatic) invalidatePreview();
+    installDraftMutationSession(payload.session, payload);
+    syncPreviewRuntimeFromSession();
+    resetPoiDiscovery({ keepReplacementTarget: false });
+    if (state.mapInteraction.selectedWaypointId && !selectedDraftWaypoint()) {
+      state.mapInteraction.selectionKind = null;
+      state.mapInteraction.selectedWaypointId = null;
+    }
+    state.workspaceConflict = null;
+    state.workspaceSyncPending = false;
+    const impact = loadDraftImpactPreview({ render: false });
+    renderAll();
+    toast(automatic ? "Workspace updated from another action. Review the current draft before continuing."
+      : "Workspace refreshed. The rejected action was not applied. Review the current draft before trying again.");
+    await impact;
+    renderAll();
+    await copilot.restore();
+  } catch (refreshError) {
+    if (state.session?.session_id === origin.session_id) {
+      invalidatePreview();
+      state.workspaceSyncPending = true;
+      state.workspaceConflict = { refreshing: false, automatic, message: "The current workspace could not be loaded. Check the connection and refresh before making another change." };
+      renderAll();
+      toast(state.workspaceConflict.message, true);
+    }
+  } finally {
+    clearTimeout(deadline);
+  }
+  return true;
+}
 
 function escapeHtml(value) {
   return String(value ?? "")
@@ -117,6 +417,8 @@ function normalizeTypedEditCapabilities(value) {
   )) return null;
   if (!exactKeys(value.operations, TYPED_EDIT_OPERATIONS)) return null;
   for (const [name, capability] of Object.entries(value.operations)) {
+    const combinable = state.workspace?.draft_capabilities?.executable_combinations
+      ?.find((combination) => combination.operations.includes(name))?.operations || [name];
     const protectedOperation = ["set_stop_commitment", "set_attribute_constraint"].includes(name);
     const orderOperation = name === "set_stop_order";
     const roleOperation = name === "set_stop_role";
@@ -149,7 +451,14 @@ function normalizeTypedEditCapabilities(value) {
     const expectedBlockingCode = name === "change_route_preference"
       ? "route_preference_not_supported"
       : "full_evaluation_not_supported";
-    const expectedSemantics = ["set_stop_day", "set_stop_order", "set_stop_time_window"].includes(name)
+    const optimizerMappingUnsupported = name === "set_stop_day"
+      && capability.blocking_code === "unsupported_optimizer_mapping";
+    const acceptedReadOnly = capability.blocking_code === "accepted_plan_requires_new_repair_baseline";
+    const expectedSemantics = acceptedReadOnly
+      ? [false, capability.feedback_tier, false, false, "accepted_plan_requires_new_repair_baseline"]
+      : optimizerMappingUnsupported
+      ? [false, "draft_only", false, false, "unsupported_optimizer_mapping"]
+      : ["set_stop_day", "set_stop_order", "set_stop_time_window"].includes(name)
       ? [true, "evaluated", true, true, null]
       : (durationOperation || roleOperation)
         ? [true, "conditional", true, true, null]
@@ -178,7 +487,7 @@ function normalizeTypedEditCapabilities(value) {
           || capability.typed_plan_field !== "itinerary_role"
           || capability.typed_source_field !== "itinerary_role_source"
           || capability.typed_source_value !== "user_declared_itinerary_role"
-          || !exactStringArray(capability.combinable_operation_types, ["set_stop_role"]))) return null;
+          || !exactStringArray(capability.combinable_operation_types, combinable))) return null;
     if (durationOperation
         && (!exactStringArray(capability.supported_evaluated_modes, ["exact"])
           || !exactStringArray(capability.draft_only_modes, ["preferred", "minimum", "maximum", "range"])
@@ -190,9 +499,25 @@ function normalizeTypedEditCapabilities(value) {
           || capability.constraint_schema_version !== "stop-time-window-constraint-v1"
           || capability.early_arrival_policy !== "wait_until_earliest_arrival"
           || capability.latest_departure_semantics !== "departure_after_visit"
-          || !exactStringArray(capability.combinable_operation_types, ["set_stop_time_window"]))) return null;
+          || !exactStringArray(capability.combinable_operation_types, combinable))) return null;
   }
   return value;
+}
+
+function draftCombinationBlocker(draft) {
+  const directTypes = new Set([
+    "set_stop_order", "set_stop_role", "set_stop_duration", "set_stop_time_window",
+  ]);
+  const present = new Set(draft.map(operation => operation.type).filter(type => directTypes.has(type)));
+  const modes = new Set(draft.filter(operation => operation.type === "set_stop_duration")
+    .map(operation => operation.parameters?.duration?.mode).filter(Boolean));
+  const mixed = present.size > 0 && (present.size !== 1 || draft.some(operation => !present.has(operation.type)));
+  const combination = state.workspace?.draft_capabilities?.executable_combinations?.some(
+    (row) => draft.length <= row.cardinality && draft.every((operation) => row.operations.includes(operation.type)),
+  );
+  return (mixed && (!combination || [...modes].some((mode) => mode !== "exact")))
+    || (modes.has("exact") && modes.size > 1)
+    ? "draft_evaluated_operation_combination_unsupported" : null;
 }
 
 function normalizeDraftImpactPreview(value) {
@@ -259,6 +584,17 @@ function normalizeDraftImpactPreview(value) {
     const mapCapability = state.workspace?.map_edit_capabilities?.operations?.[row.type];
     const durationMode = draftOperation?.parameters?.duration?.mode;
     const requestedRole = draftOperation?.parameters?.role;
+    const additionReadiness = row.type === "add_candidate"
+      ? legacyCapability?.candidate_day_readiness?.find(item => item.candidate_id === row.target
+        && item.day === draftOperation?.parameters?.day
+        && item.parent_plan_id === value.parent_plan_id
+        && item.parent_plan_content_hash === value.parent_plan_content_hash) : null;
+    const additionSemantics = additionReadiness ? {
+      feedback_tier: additionReadiness.preview_executable ? "evaluated" : "draft_only",
+      preview_executable: additionReadiness.preview_executable,
+      evaluated_repair: additionReadiness.preview_executable,
+      blocking_codes: additionReadiness.preview_executable ? [] : [additionReadiness.status],
+    } : null;
     const typedRoleSemantics = row.type === "set_stop_role" && typedCapability
       ? typedCapability.supported_evaluated_roles.includes(requestedRole)
         ? { feedback_tier: "evaluated", preview_executable: true, evaluated_repair: true, blocking_codes: [] }
@@ -283,7 +619,7 @@ function normalizeDraftImpactPreview(value) {
           }
           : null
       : null;
-    const expected = typedDurationSemantics || typedRoleSemantics || (typedCapability
+    const expected = additionSemantics || typedDurationSemantics || typedRoleSemantics || (typedCapability
       && !["set_stop_duration", "set_stop_role"].includes(row.type)
       ? {
         feedback_tier: typedCapability.feedback_tier,
@@ -293,6 +629,9 @@ function normalizeDraftImpactPreview(value) {
       }
       : legacyCapability?.enabled === true && legacyCapability.preview_executable === true
         ? { feedback_tier: "evaluated", preview_executable: true, evaluated_repair: true, blocking_codes: [] }
+        : legacyCapability?.enabled === false && legacyCapability.status === "unsupported_optimizer_mapping"
+          ? { feedback_tier: "draft_only", preview_executable: false, evaluated_repair: false,
+            blocking_codes: [legacyCapability.status] }
         : mapCapability?.enabled === true && mapCapability.preview_executable === false
           ? {
             feedback_tier: "draft_only",
@@ -314,16 +653,8 @@ function normalizeDraftImpactPreview(value) {
   const evaluatedCount = value.operations.filter((row) => row.preview_executable).length;
   const draftOnlyCount = value.operations.length - evaluatedCount;
   const blockingCodes = [...new Set(value.operations.flatMap((row) => row.blocking_codes))];
-  const directTypes = new Set([
-    "set_stop_order", "set_stop_role", "set_stop_duration", "set_stop_time_window",
-  ]);
-  const presentDirectTypes = new Set(draft.map((operation) => operation.type).filter((type) => directTypes.has(type)));
-  if (presentDirectTypes.size > 0 && (
-    presentDirectTypes.size !== 1
-      || draft.some((operation) => !presentDirectTypes.has(operation.type))
-  )) {
-    blockingCodes.push("draft_evaluated_operation_combination_unsupported");
-  }
+  const combinationBlocker = draftCombinationBlocker(draft);
+  if (combinationBlocker) blockingCodes.push(combinationBlocker);
   if (value.summary.evaluated_executable_count !== evaluatedCount
       || value.summary.draft_only_count !== draftOnlyCount
       || value.summary.can_run_evaluated_preview !== (
@@ -344,7 +675,42 @@ function canonicalJson(value) {
 }
 
 function sameJson(left, right) {
-  return JSON.stringify(left) === JSON.stringify(right);
+  return canonicalJson(left) === canonicalJson(right);
+}
+
+function previewStateForSession(session = state.session) {
+  const proposal = session?.proposal;
+  if (proposal?.schema_version === "draft-preview-v1" && proposal.state === "eligible") {
+    return "PREVIEW_DATA_READY";
+  }
+  if (proposal?.schema_version === "draft-preview-v1" && proposal.state === "ineligible") {
+    return "PREVIEW_INELIGIBLE";
+  }
+  if (proposal?.schema_version === "draft-preview-v1") {
+    if (proposal.state === "blocked") return "PREVIEW_BLOCKED";
+    if (proposal.state === "not_evaluated") return "PREVIEW_NOT_EVALUATED";
+    if (proposal.state === "failed") return "PREVIEW_FAILED";
+  }
+  return "PARENT_RENDERED";
+}
+
+function syncPreviewRuntimeFromSession({ invalidate = true } = {}) {
+  if (invalidate) state.previewRuntime.epoch += 1;
+  state.previewRuntime.status = previewStateForSession();
+  state.previewRuntime.requestId = state.session?.proposal?.compiled_request?.source_request_id || null;
+  state.previewRuntime.message = null;
+}
+
+function previewRequestIsCurrent(epoch, expected) {
+  return epoch === state.previewRuntime.epoch
+    && state.session?.session_id === expected.session_id
+    && state.session?.trip_id === expected.trip_id
+    && state.session?.run_id === expected.run_id
+    && state.session?.revision === expected.revision
+    && state.session?.accepted_plan_id === expected.accepted_plan_id
+    && sameJson(state.session?.draft, expected.draft)
+    && sameJson(state.session?.permission_decisions, expected.permission_decisions)
+    && state.session?.conversation_id === expected.conversation_id;
 }
 
 function draftHashRecords(draft) {
@@ -371,10 +737,11 @@ const STABLE_FLOAT_FIELDS = new Set([
   "configured_day_start_minute", "duration_minutes", "incoming_travel_minutes",
   "base_change_cost", "road_arrival_minute", "opening_start_minute", "opening_end_minute",
   "opening_wait_minutes", "required_window_wait_minutes", "service_start_minute",
-  "visit_minutes", "departure_minute", "latest_departure_overrun_minutes",
-  "distance_m", "preservation_rate",
+  "visit_minutes", "visit_duration_minutes", "departure_minute", "latest_departure_overrun_minutes",
+  "distance_m", "duration_s", "preservation_rate", "weather_risk_delta", "weather_risk", "source_confidence",
+  "base_change_weight", "strength_multiplier", "delta_scale", "default_visit_minutes",
 ]);
-const STABLE_FLOAT_OBJECTS = new Set(["metrics", "constraint_strength_weights", "schedule_metrics"]);
+const STABLE_FLOAT_OBJECTS = new Set(["metrics", "constraint_strength_weights", "change_type_weights", "schedule_metrics"]);
 
 function pythonStableJson(value, parentKey = null) {
   if (value === null) return "null";
@@ -995,11 +1362,53 @@ async function normalizeDurationScheduleImpact(value, identity, proposal, planDi
   return value;
 }
 
+async function normalizeDirectCertificateRecord(record, proposal, evidence = null) {
+  // Order edits have no schedule envelope; their full record is still hash/identity bound.
+  evidence ||= {evaluator_version: record?.evaluator_version,
+    failure_codes: repairCertificateFailureCodes(proposal),
+    warning_codes: (record?.warnings || []).map(finding => finding?.code), schedule_metrics: {}};
+  if (!exactKeys(record, [
+    "certificate_id", "evaluation_id", "plan_id", "source_run_id", "plan_content_hash",
+    "evaluator_version", "artifact_grounding_status", "hard_feasibility_status",
+    "evaluation_status", "comparison_eligibility", "eligible", "reward_eligibility",
+    "failures", "warnings", "failure_count", "warning_count", "blocking_warning_count",
+    "nonblocking_warning_count", "metrics", "route_validation", "evaluated_at",
+    "schema_version", "content_hash",
+  ]) || record.schema_version !== "plan-evaluation-certificate-v1"
+      || record.certificate_id !== proposal.certificate_id
+      || record.evaluation_id !== proposal.certificate_id
+      || record.plan_id !== proposal.child_plan_id
+      || record.plan_content_hash !== proposal.child_plan_content_hash
+      || record.content_hash !== proposal.certificate_content_hash
+      || record.content_hash !== proposal.certificate_identity.content_hash
+      || record.evaluator_version !== evidence.evaluator_version
+      || record.artifact_grounding_status !== proposal.evidence.artifact_grounding_status
+      || record.hard_feasibility_status !== proposal.evidence.hard_feasibility_status
+      || record.evaluation_status !== proposal.evaluation_status
+      || record.comparison_eligibility !== proposal.eligibility
+      || record.eligible !== (proposal.eligibility === "eligible")
+      || record.reward_eligibility !== record.eligible
+      || typeof record.source_run_id !== "string" || !record.source_run_id
+      || !Array.isArray(record.failures) || !Array.isArray(record.warnings)
+      || record.failure_count !== record.failures.length || record.warning_count !== record.warnings.length
+      || record.blocking_warning_count !== record.failure_count
+      || record.nonblocking_warning_count !== record.warning_count
+      || !exactStringArray(record.failures.map((finding) => finding?.code), evidence.failure_codes)
+      || !exactStringArray(record.warnings.map((finding) => finding?.code), evidence.warning_codes)
+      || !record.metrics || !Object.values(record.metrics).every(Number.isFinite)
+      || Object.entries(evidence.schedule_metrics).some(([key, value]) => record.metrics[key] !== value)
+      || !sameJson(record.route_validation, proposal.route_validation)
+      || typeof record.evaluated_at !== "string" || !Number.isFinite(Date.parse(record.evaluated_at))) return null;
+  const payload = {...record};
+  delete payload.content_hash;
+  return await computedStableContentHash(payload) === record.content_hash ? record : null;
+}
+
 async function normalizeCertificateScheduleEvidence(value, proposal, scheduleImpact) {
   if (!exactKeys(value, [
     "schema_version", "certificate_id", "certificate_content_hash", "plan_id",
     "plan_content_hash", "evaluator_version", "evaluation_status", "comparison_eligibility",
-    "warning_codes", "failure_codes", "schedule_metrics", "content_hash",
+    "warning_codes", "failure_codes", "schedule_metrics", "certificate_record", "content_hash",
   ])
       || value.schema_version !== "evaluated-duration-certificate-schedule-evidence-v1"
       || value.certificate_id !== proposal.certificate_id
@@ -1017,19 +1426,22 @@ async function normalizeCertificateScheduleEvidence(value, proposal, scheduleImp
         ...durationScheduleMetricKeys(), "schedule_missing_opening_window_count",
       ])
       || !Object.values(value.schedule_metrics).every((metric) => Number.isFinite(metric) && metric >= 0)) return null;
+  if (!await normalizeDirectCertificateRecord(value.certificate_record, proposal, value)) return null;
   const child = scheduleImpact.child;
   for (const [name, metric] of Object.entries(child.metrics)) {
     if (value.schedule_metrics[name] !== metric) return null;
   }
   const missingCount = child.missing_opening_window_stop_ids.length;
   const expectedWarnings = missingCount > 0 ? ["opening_window_evidence_missing"] : [];
-  const expectedFailures = child.blocking_codes;
-  const expectedEvaluation = child.status === "failed"
+  const expectedFailures = repairCertificateFailureCodes(proposal);
+  if (expectedFailures === null
+      || !child.blocking_codes.every((code) => expectedFailures.includes(code))) return null;
+  const expectedEvaluation = expectedFailures.length
     ? "FAILED"
     : child.status === "incomplete_evidence"
       ? "PASSED_WITH_WARNINGS"
       : "PASSED";
-  const expectedEligibility = child.status === "failed" ? "ineligible" : "eligible";
+  const expectedEligibility = expectedFailures.length ? "ineligible" : "eligible";
   if (value.schedule_metrics.schedule_missing_opening_window_count !== missingCount
       || !exactStringArray(value.warning_codes, expectedWarnings)
       || !exactStringArray(value.failure_codes, expectedFailures)
@@ -1039,8 +1451,8 @@ async function normalizeCertificateScheduleEvidence(value, proposal, scheduleImp
       || proposal.eligibility !== expectedEligibility
       || proposal.decision_eligible !== (expectedEligibility === "eligible")
       || proposal.ranking_eligible !== false
-      || proposal.acceptance_eligible !== false
-      || proposal.acceptance_blocking_code !== "acceptance_not_enabled_until_w5"
+      || proposal.acceptance_eligible !== (expectedEligibility === "eligible")
+      || proposal.acceptance_blocking_code !== (expectedEligibility === "eligible" ? null : "proposal_not_eligible")
       || proposal.repair.certificate.failure_count !== value.failure_codes.length) return null;
   const payload = { ...value };
   delete payload.content_hash;
@@ -1127,6 +1539,9 @@ function acceptedPlanTimeWindowTraceStops() {
   const path = [...(parentPlan?.route_path?.features || [])].sort(
     (left, right) => left.properties?.occurrence_index - right.properties?.occurrence_index,
   );
+  const stopFeatures = new Map((parentPlan?.stops?.features || []).map(
+    (feature) => [feature.properties?.stop_id, feature],
+  ));
   const sequenceByDay = new Map();
   const stops = [];
   for (const feature of path) {
@@ -1135,8 +1550,22 @@ function acceptedPlanTimeWindowTraceStops() {
     const day = properties.arrival_day;
     if (typeof properties.node_id !== "string" || !properties.node_id
         || !Number.isInteger(day) || day <= 0) return null;
+    const stopProperties = stopFeatures.get(properties.node_id)?.properties;
+    const visitMinutes = stopProperties?.visit_duration_minutes;
+    const visitSource = stopProperties?.visit_duration_source;
+    const visitMissing = visitMinutes === null;
+    if ((!visitMissing && (
+      !Number.isFinite(visitMinutes) || visitMinutes < 15 || visitMinutes > 480
+        || !["visit_duration_minutes", "duration_minutes", "service_minutes", "dwell_minutes"].includes(visitSource)
+    )) || (visitMissing && visitSource !== "unavailable")) return null;
     const sequenceIndex = sequenceByDay.get(day) || 0;
-    stops.push({ stop_id: properties.node_id, day, sequence_index: sequenceIndex });
+    stops.push({
+      stop_id: properties.node_id,
+      day,
+      sequence_index: sequenceIndex,
+      visit_duration_minutes: visitMinutes,
+      visit_duration_source: visitSource,
+    });
     sequenceByDay.set(day, sequenceIndex + 1);
   }
   const stopUniverse = new Set((parentPlan?.stops?.features || []).map(
@@ -1172,8 +1601,6 @@ function normalizeTimeWindowTrace(
       || !validFiniteOrNull(value.required_window_wait_minutes)
       || !Number.isFinite(value.service_start_minute) || value.service_start_minute < 0
       || !Number.isFinite(value.visit_minutes) || value.visit_minutes < 15 || value.visit_minutes > 480
-      || value.visit_duration_source !== "configured_evaluator_default"
-      || value.visit_minutes !== configuredDefaultVisitMinutes
       || !Number.isFinite(value.departure_minute) || value.departure_minute < 0
       || !["not_set", "satisfied", "violated"].includes(value.latest_departure_status)
       || !validFiniteOrNull(value.latest_departure_overrun_minutes)
@@ -1191,10 +1618,18 @@ function normalizeTimeWindowTrace(
       ))
       || (openingMissing && value.opening_window_source !== "unavailable")
       || (!openingMissing && !value.opening_window_source.startsWith("plan_stop_fields:"))) return null;
+  const expectedVisitMinutes = expected?.visit_duration_minutes === null
+    ? configuredDefaultVisitMinutes
+    : expected?.visit_duration_minutes;
+  const expectedVisitSource = expected?.visit_duration_minutes === null
+    ? "configured_evaluator_default"
+    : expected?.visit_duration_source;
   if (expected && (
     value.stop_id !== expected.stop_id
       || value.day !== expected.day
       || value.sequence_index !== expected.sequence_index
+      || value.visit_minutes !== expectedVisitMinutes
+      || value.visit_duration_source !== expectedVisitSource
   )) return null;
   if (incoming && (
     value.incoming_origin_id !== incoming.origin_id
@@ -1376,7 +1811,7 @@ async function normalizeTimeWindowScheduleImpact(value, identity, proposal, plan
       || typeof value.evaluator_version !== "string" || !value.evaluator_version
       || value.route_matrix_id !== routeValidation.matrix_id
       || value.configured_default_visit_minutes !== 45
-      || value.configured_day_start_minute !== 540
+      || value.configured_day_start_minute !== 480
       || !normalizeTimeWindowCostPolicy(value.time_window_cost_policy)
       || !exactKeys(identity, [
         "content_hash", "evaluator_version", "route_matrix_id", "parent_plan_id",
@@ -1416,11 +1851,6 @@ async function normalizeTimeWindowScheduleImpact(value, identity, proposal, plan
     if (parentTrace.stop_id !== childTrace.stop_id
         || parentTrace.day !== childTrace.day
         || parentTrace.sequence_index !== childTrace.sequence_index
-        || parentTrace.time_window_constraint !== null
-        || parentTrace.time_window_source !== null
-        || parentTrace.required_window_wait_minutes !== null
-        || parentTrace.latest_departure_status !== "not_set"
-        || parentTrace.latest_departure_overrun_minutes !== null
         || parentTrace.opening_start_minute !== childTrace.opening_start_minute
         || parentTrace.opening_end_minute !== childTrace.opening_end_minute
         || parentTrace.opening_window_source !== childTrace.opening_window_source
@@ -1480,7 +1910,7 @@ async function normalizeTimeWindowCertificateScheduleEvidence(value, proposal, s
   if (!exactKeys(value, [
     "schema_version", "certificate_id", "certificate_content_hash", "plan_id",
     "plan_content_hash", "evaluator_version", "evaluation_status", "comparison_eligibility",
-    "warning_codes", "failure_codes", "schedule_metrics", "content_hash",
+    "warning_codes", "failure_codes", "schedule_metrics", "certificate_record", "content_hash",
   ])
       || value.schema_version !== "evaluated-time-window-certificate-schedule-evidence-v1"
       || value.certificate_id !== proposal.certificate_id
@@ -1494,26 +1924,30 @@ async function normalizeTimeWindowCertificateScheduleEvidence(value, proposal, s
         ...durationScheduleMetricKeys(), "schedule_missing_opening_window_count",
       ])
       || !Object.values(value.schedule_metrics).every((metric) => Number.isFinite(metric) && metric >= 0)) return null;
+  if (!await normalizeDirectCertificateRecord(value.certificate_record, proposal, value)) return null;
   const child = scheduleImpact.child;
   for (const [name, metric] of Object.entries(child.metrics)) {
     if (value.schedule_metrics[name] !== metric) return null;
   }
   const missingCount = child.missing_opening_window_stop_ids.length;
   const expectedWarnings = missingCount > 0 ? ["opening_window_evidence_missing"] : [];
-  const expectedEvaluation = child.status === "failed"
+  const expectedFailures = repairCertificateFailureCodes(proposal);
+  if (expectedFailures === null
+      || !child.blocking_codes.every((code) => expectedFailures.includes(code))) return null;
+  const expectedEvaluation = expectedFailures.length
     ? "FAILED"
     : child.status === "incomplete_evidence" ? "PASSED_WITH_WARNINGS" : "PASSED";
-  const expectedEligibility = child.status === "failed" ? "ineligible" : "eligible";
+  const expectedEligibility = expectedFailures.length ? "ineligible" : "eligible";
   if (value.schedule_metrics.schedule_missing_opening_window_count !== missingCount
       || !exactStringArray(value.warning_codes, expectedWarnings)
-      || !exactStringArray(value.failure_codes, child.blocking_codes)
+      || !exactStringArray(value.failure_codes, expectedFailures)
       || value.evaluation_status !== expectedEvaluation
       || value.comparison_eligibility !== expectedEligibility
       || proposal.state !== expectedEligibility || proposal.eligibility !== expectedEligibility
       || proposal.decision_eligible !== (expectedEligibility === "eligible")
       || proposal.ranking_eligible !== false
-      || proposal.acceptance_eligible !== false
-      || proposal.acceptance_blocking_code !== "acceptance_not_enabled_until_w5"
+      || proposal.acceptance_eligible !== (expectedEligibility === "eligible")
+      || proposal.acceptance_blocking_code !== (expectedEligibility === "eligible" ? null : "proposal_not_eligible")
       || proposal.repair.certificate.failure_count !== value.failure_codes.length) return null;
   const payload = { ...value };
   delete payload.content_hash;
@@ -1589,7 +2023,8 @@ function normalizeRoleGeography(value, planDiff, roleImpact) {
   const parentPlan = state.workspace?.geography?.plans?.find(
     (plan) => plan.plan_id === state.session?.accepted_plan_id,
   );
-  if (!parentPlan || !durationRouteEvidenceUnchanged(value)) return null;
+  if (!parentPlan || !["original", "accepted"].includes(parentPlan.role)
+      || !durationRouteEvidenceUnchanged(value)) return null;
   const parentByStop = new Map(parentPlan.stops.features.map(
     (feature) => [feature.properties?.stop_id, feature],
   ));
@@ -1607,7 +2042,7 @@ function normalizeRoleGeography(value, planDiff, roleImpact) {
     const change = changes.get(stopId);
     if (!childFeature || !parentState || !childState
         || !sameJson(parentFeature.geometry, childFeature.geometry)
-        || parentFeature.properties?.role !== "original"
+        || parentFeature.properties?.role !== parentPlan.role
         || childFeature.properties?.role !== "draft_preview"
         || parentFeature.properties?.itinerary_role !== parentState.itinerary_role
         || parentFeature.properties?.itinerary_role_source !== parentState.itinerary_role_source
@@ -1642,7 +2077,7 @@ async function normalizeRoleImpact(value, identity, proposal, planDiff, routeVal
       || typeof value.evaluator_version !== "string" || !value.evaluator_version
       || value.route_matrix_id !== routeValidation.matrix_id
       || value.configured_default_visit_minutes !== 45
-      || value.configured_day_start_minute !== 540
+      || value.configured_day_start_minute !== 480
       || !exactStringArray(value.supported_evaluated_roles, EVALUATED_STOP_ROLES)
       || !sameJson(value.semantic_scope, ROLE_SEMANTIC_SCOPE)
       || !exactKeys(identity, [
@@ -1747,13 +2182,17 @@ async function normalizeRoleCertificateRecord(
       || !sameJson(value.warnings, expectedWarningRecords)
       || !exactKeys(value.metrics, [
         "selected_stop_count", "sequence_stop_count", "preserved_stop_count", "preservation_rate",
-        ...durationScheduleMetricKeys(), "schedule_missing_opening_window_count",
+        ...(Object.hasOwn(value.metrics || {}, "weather_risk_delta") ? ["weather_risk_delta"] : []),
+        ...durationScheduleMetricKeys(),
+        "schedule_missing_opening_window_count",
       ])
       || !Object.values(value.metrics).every((metric) => Number.isFinite(metric) && metric >= 0)
       || value.metrics.selected_stop_count !== roleImpact.child_role_states.length
       || value.metrics.sequence_stop_count !== roleImpact.child_role_states.length
       || value.metrics.preserved_stop_count !== roleImpact.child_role_states.length
       || value.metrics.preservation_rate !== 1
+      || (value.metrics.weather_risk_delta !== undefined && value.metrics.weather_risk_delta !== 0)
+      || proposal.repair.tradeoffs.weather_risk_delta !== (value.metrics.weather_risk_delta ?? null)
       || !sameJson(value.route_validation, proposal.route_validation)
       || typeof value.evaluated_at !== "string"
       || !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})$/.test(value.evaluated_at)) return null;
@@ -1829,7 +2268,9 @@ async function normalizeRoleCertificateEvidence(value, proposal, roleImpact, pla
       evidence_refs: child.missing_opening_window_stop_ids,
     }] : []),
   ];
-  const expectedFailures = child.blocking_codes;
+  const expectedFailures = repairCertificateFailureCodes(proposal);
+  if (expectedFailures === null
+      || !child.blocking_codes.every((code) => expectedFailures.includes(code))) return null;
   const expectedEvaluation = expectedFailures.length
     ? "FAILED"
     : expectedWarnings.length ? "PASSED_WITH_WARNINGS" : "PASSED";
@@ -1842,8 +2283,8 @@ async function normalizeRoleCertificateEvidence(value, proposal, roleImpact, pla
       || proposal.state !== expectedEligibility || proposal.eligibility !== expectedEligibility
       || proposal.decision_eligible !== (expectedEligibility === "eligible")
       || proposal.ranking_eligible !== false
-      || proposal.acceptance_eligible !== false
-      || proposal.acceptance_blocking_code !== "acceptance_not_enabled_until_w5"
+      || proposal.acceptance_eligible !== (expectedEligibility === "eligible")
+      || proposal.acceptance_blocking_code !== (expectedEligibility === "eligible" ? null : "proposal_not_eligible")
       || proposal.repair.certificate.failure_count !== expectedFailures.length) return null;
   const certificateRecord = await normalizeRoleCertificateRecord(
     value.certificate_record, proposal, roleImpact, expectedWarningRecords, expectedFailures,
@@ -1874,10 +2315,16 @@ function normalizeRouteValidation(value) {
     value.required_leg_count, value.present_leg_count, value.road_validated_leg_count,
     value.fallback_leg_count, value.invalid_value_count, value.missing_leg_count,
   ];
-  if (!/^route_matrix_[0-9a-f]{16}$/.test(value.matrix_id)
+  const originalIdentity = /^route_matrix_[0-9a-f]{16}$/.test(value.matrix_id)
+    && /^route_bundle_[0-9a-f]{16}$/.test(value.source_bundle_id);
+  const deltaPrefix = /^[0-9a-f]{64}$/.test(value.source_content_sha256)
+    ? value.source_content_sha256.slice(0, 16) : null;
+  const compositeIdentity = deltaPrefix !== null
+    && value.matrix_id === `route_matrix_delta_${deltaPrefix}`
+    && value.source_bundle_id === `route_bundle_composite_${deltaPrefix}`;
+  if ((!originalIdentity && !compositeIdentity)
       || typeof value.context_snapshot_id !== "string"
       || !value.context_snapshot_id || value.context_snapshot_id.length > 128
-      || !/^route_bundle_[0-9a-f]{16}$/.test(value.source_bundle_id)
       || !/^[0-9a-f]{64}$/.test(value.source_content_sha256)
       || !counts.every((count) => Number.isInteger(count) && count >= 0)
       || value.required_leg_count === 0
@@ -1890,6 +2337,174 @@ function normalizeRouteValidation(value) {
       || !Array.isArray(value.errors) || value.errors.length !== 0
       || !Array.isArray(value.warnings)
       || !value.warnings.every((item) => typeof item === "string")) return null;
+  return value;
+}
+
+function repairCertificateFailureCodes(proposal) {
+  const failures = proposal?.repair?.certificate?.failures;
+  if (!Array.isArray(failures)
+      || failures.some((finding) => !exactKeys(finding, [
+        "code", "message", "severity", "category", "evidence_refs",
+      ])
+        || typeof finding.code !== "string" || !finding.code
+        || typeof finding.message !== "string" || !finding.message
+        || finding.severity !== "failure"
+        || typeof finding.category !== "string" || !finding.category
+        || !Array.isArray(finding.evidence_refs)
+        || !finding.evidence_refs.every((ref) => typeof ref === "string" && ref))) return null;
+  return failures.map((finding) => finding.code);
+}
+
+function diffChangedDays(diff) {
+  if (!diff || typeof diff !== "object") return null;
+  const days = new Set();
+  for (const key of ["added_stops", "deleted_stops", "day_moves", "time_shifts", "reorder_changes",
+    "lodging_changes", "road_changes", "duration_changes", "time_window_changes", "role_changes"]) {
+    const changes = diff[key] ?? [];
+    if (!Array.isArray(changes)) return null;
+    for (const change of changes) {
+      if (!change || typeof change !== "object") return null;
+      for (const field of ["day", "from_day", "to_day"]) {
+        const day = change[field];
+        if (day === undefined || day === null) continue;
+        if (!Number.isInteger(day) || day <= 0) return null;
+        days.add(day);
+      }
+    }
+  }
+  return [...days].sort((left, right) => left - right);
+}
+
+function planningCanonicalText(value) {
+  if (value === null || typeof value === "boolean" || typeof value === "string") return JSON.stringify(value);
+  if (typeof value === "number") {
+    if (!Number.isFinite(value)) return null;
+    const buffer = new ArrayBuffer(8);
+    new DataView(buffer).setFloat64(0, value, false);
+    return "#" + [...new Uint8Array(buffer)].map(byte => byte.toString(16).padStart(2, "0")).join("");
+  }
+  if (Array.isArray(value)) {
+    const parts = value.map(planningCanonicalText);
+    return parts.includes(null) ? null : `[${parts.join(",")}]`;
+  }
+  if (!value || typeof value !== "object") return null;
+  const parts = Object.keys(value).sort().map(key => {
+    const part = planningCanonicalText(value[key]);
+    return part === null ? null : `${JSON.stringify(key)}:${part}`;
+  });
+  return parts.includes(null) ? null : `{${parts.join(",")}}`;
+}
+
+async function normalizeTripPlanningExecution(value, proposal, draft) {
+  const bundle = value?.planning_bundle;
+  if (value?.schema_version !== "trip-planning-execution-v1" || !bundle
+      || bundle.schema_version !== "trip-planning-bundle-v1"
+      || draft.length !== 1 || draft[0].type !== "replan_trip"
+      || !sameJson(bundle.parameters, draft[0].parameters)
+      || bundle.parent_plan_id !== proposal.parent_plan_id
+      || bundle.parent_content_hash !== proposal.parent_plan_content_hash
+      || bundle.plan?.plan_id !== proposal.child_plan_id
+      || bundle.plan?.content_hash !== proposal.child_plan_content_hash
+      || !["OPTIMAL", "FEASIBLE"].includes(bundle.solver?.status)
+      || bundle.plan?.parent_plan_id !== proposal.parent_plan_id
+      || value.plan_diff?.parent_plan_id !== proposal.parent_plan_id
+      || value.plan_diff?.child_plan_id !== proposal.child_plan_id
+      || await computedStableContentHash(value.plan_diff) !== proposal.diff_content_hash
+      || !await normalizeDirectCertificateRecord(value.evaluation_certificate, proposal)
+      || !Array.isArray(bundle.official_sources)) return null;
+  const sources = new Map([
+    ["big_sur_park", "https://www.parks.ca.gov/?page_id=570"],
+    ["highway_1", "https://roads.dot.ca.gov/roadscell.php?roadnumber=1"],
+    ["hearst_castle", "https://hearstcastle.org/plan/faqs/"],
+  ]);
+  if (bundle.plan.sequence.includes("redwood_national_park")) {
+    sources.set("redwood_lodging", "https://www.nps.gov/redw/planyourvisit/lodging.htm");
+    sources.set("redwood_walk", "https://www.nps.gov/thingstodo/lbjgrove.htm");
+    sources.set("redwood_conditions", "https://www.nps.gov/redw/planyourvisit/conditions.htm");
+    const stops = bundle.plan.selected_stops.filter(s => (s.poi_id || s.stop_id) === "redwood_national_park");
+    const conditions = bundle.official_sources.find(s => s.source_id === "redwood_conditions");
+    if (stops.length !== 1 || stops[0].visit_duration_minutes !== 90
+        || stops[0].latitude !== 41.304183 || stops[0].longitude !== -124.018552
+        || !["open", "open_with_hazards"].includes(conditions?.park_access)) return null;
+  }
+  if (bundle.parameters.additional_yosemite_days !== undefined) {
+    if (bundle.parameters.additional_yosemite_days !== 3 || bundle.days?.length !== 10) return null;
+    const groups = [["yosemite_lower_fall","yosemite_cooks_meadow"],["yosemite_glacier_point","yosemite_sentinel_dome"],["yosemite_mariposa_grove","yosemite_wawona_history"]];
+    const urls = YOSEMITE_SOURCE_URLS;
+    Object.entries(urls).forEach(([id,url])=>sources.set(id,url));
+    const original = bundle.plan.selected_stops.find(s=>s.poi_id==="yosemite_national_park");
+    if (!original || bundle.official_sources.find(s=>s.source_id==="yosemite_conditions")?.park_access!=="open_with_hazards") return null;
+    for (const [offset,ids] of groups.entries()) {
+      const day=original.day+offset+1;
+      const stops=bundle.plan.selected_stops.filter(s=>ids.includes(s.poi_id));
+      if (stops.length!==2 || new Set(stops.map(s=>s.poi_id)).size!==2 || stops.some(s=>s.day!==day || !validYosemiteGuide(s.guide))) return null;
+      const route=bundle.days.find(d=>d.day===day);
+      if (!route || !sameJson([...route.stop_ids].sort(),[...ids].sort())) return null;
+    }
+  }
+  if (bundle.parameters.total_days !== undefined) {
+    const count = bundle.parameters.total_days;
+    const effective = bundle.effective_parameters || bundle.parameters;
+    const limit = {relaxed: 2, balanced: 3, active: 4}[effective.pace];
+    if (!Number.isInteger(count) || count < 1 || count > 21 || !limit
+        || effective.total_days !== count
+        || (bundle.parameters.profile_updates || []).some(key => !sameJson(effective[key], bundle.parameters[key]))
+        || bundle.days?.length !== count
+        || bundle.days.some((day, index) => day.day !== index + 1 || day.stop_ids.length > limit)
+        || new Set(bundle.plan.selected_stops.map(stop => stop.day)).size !== count) return null;
+  }
+  const hasIsland = bundle.plan.sequence.includes("channel_islands");
+  if (hasIsland) {
+    sources.set("channel_islands_nps", "https://www.nps.gov/chis/planyourvisit/directions.htm");
+    sources.set("channel_islands_operator", "https://www.islandpackers.com/santa-cruz-island/");
+    const stop = bundle.plan.selected_stops.find(s => (s.poi_id || s.stop_id) === "channel_islands");
+    const excursion = stop?.excursion;
+    const routes = proposal.geography_plan?.marine_routes?.features;
+    const islands = proposal.geography_plan?.offshore_stops?.features;
+    if (!excursion || stop.visit_duration_minutes !== 480 || excursion.planning_minutes !== 480
+        || excursion.travel_mode !== "passenger_ferry" || excursion.round_trip !== true
+        || excursion.geometry_kind !== "schematic_not_navigation"
+        || excursion.schedule_status !== "not_verified" || excursion.reservation_status !== "not_verified"
+        || !sameJson(excursion.departure_coordinates, [stop.longitude, stop.latitude])
+        || !sameJson(excursion.destination_coordinates, [-119.5562112, 34.0493266])
+        || !sameJson(excursion.time_allowance, {check_in_minutes:45, boat_each_way_minutes:90, island_minutes:210, contingency_minutes:45})
+        || routes?.length !== 1 || islands?.length !== 1
+        || !sameJson(routes[0].geometry, {type:"LineString", coordinates:[excursion.departure_coordinates, excursion.destination_coordinates]})
+        || !sameJson(islands[0].geometry, {type:"Point", coordinates:excursion.destination_coordinates})
+        || [routes[0], islands[0]].some(f => f.properties?.plan_id !== bundle.plan.plan_id
+          || f.properties?.content_hash !== bundle.plan.content_hash || f.properties?.day !== stop.day
+          || f.properties?.source_stop_id !== "channel_islands" || f.properties?.road_validated !== false
+          || f.properties?.geometry_source !== "schematic_port_to_island"
+          || f.properties?.schedule_verified !== false || f.properties?.reservation_verified !== false
+          || f.properties?.travel_mode !== "passenger_ferry" || f.properties?.round_trip !== true)) return null;
+  } else if ((proposal.geography_plan?.marine_routes?.features || []).length
+      || (proposal.geography_plan?.offshore_stops?.features || []).length) return null;
+  if (bundle.official_sources.length !== sources.size
+      || new Set(bundle.official_sources.map(row => row.source_id)).size !== sources.size
+      || bundle.official_sources.some(row => sources.get(row.source_id) !== row.url
+        || row.status !== "retrieved" || !Number.isFinite(Date.parse(row.retrieved_at))
+        || typeof row.excerpt !== "string")) return null;
+  const bundlePayload = { ...bundle };
+  delete bundlePayload.content_hash;
+  for (const [payload, expected] of [[bundlePayload, bundle.content_hash],
+    [bundle.route_matrix?.cells, bundle.route_matrix?.source_content_sha256]]) {
+    const serialized = planningCanonicalText(payload);
+    if (serialized === null || typeof expected !== "string" || !/^[0-9a-f]{64}$/.test(expected)) return null;
+    const bytes = new TextEncoder().encode(serialized);
+    const digest = await crypto.subtle.digest("SHA-256", bytes);
+    const actual = [...new Uint8Array(digest)].map(item => item.toString(16).padStart(2, "0")).join("");
+    if (actual !== expected) return null;
+  }
+  const cells = new Map(bundle.route_matrix.cells.map(cell => [JSON.stringify([cell.origin_id, cell.destination_id]), cell]));
+  for (const feature of proposal.geography_plan?.validated_legs?.features || []) {
+    const props = feature.properties;
+    const cell = cells.get(JSON.stringify([props.origin_id, props.destination_id]));
+    if (!cell || props.distance_m !== cell.distance_m || props.duration_s !== cell.duration_s
+        || props.geometry_source !== cell.geometry_source
+        || !sameJson(feature.geometry.coordinates, cell.geometry.map(([lat, lon]) => [lon, lat]))) return null;
+  }
+  if (bundle.parameters.required_place_ids.some(id => !bundle.plan.sequence.includes(id))
+      || bundle.parameters.excluded_place_ids.some(id => bundle.plan.sequence.includes(id))) return null;
   return value;
 }
 
@@ -1927,13 +2542,19 @@ function normalizePreviewRepair(value, proposal) {
       || typeof value.permissions.permission_required !== "boolean"
       || typeof value.permissions.message !== "string"
       || !Object.values(value.tradeoffs).every(validFiniteOrNull)
-      || !Array.isArray(value.certificate.failures)
+      || repairCertificateFailureCodes({ repair: value }) === null
       || value.certificate.failure_count !== value.certificate.failures.length
       || value.certificate.id !== proposal.certificate_id
       || value.certificate.evaluation_status !== proposal.evaluation_status
       || value.certificate.eligible !== (proposal.state === "eligible")
       || typeof value.result !== "string"
       || value.primary_action !== "Review evidence") return null;
+  const diff = proposal.plan_diff || proposal.runtime_execution?.plan_diff;
+  if (diff) {
+    const changedDays = diffChangedDays(diff);
+    if (!changedDays || value.changed.affected_day_count !== changedDays.length
+        || !sameJson(value.unchanged.days, diff.unchanged_days)) return null;
+  }
   return value;
 }
 
@@ -1967,7 +2588,7 @@ function lineDistanceMeters(coordinates) {
   return total;
 }
 
-function routeChainMatchesEvidence(value, routeValidation) {
+function routeChainMatchesEvidence(value, routeValidation, planning = false) {
   const path = [...value.route_path.features].sort(
     (left, right) => left.properties?.occurrence_index - right.properties?.occurrence_index,
   );
@@ -2015,7 +2636,7 @@ function routeChainMatchesEvidence(value, routeValidation) {
         || typeof properties.evidence_scope !== "string" || !properties.evidence_scope
         || properties.validation_status !== "road_validated"
         || properties.road_validated !== true || properties.fallback_used !== false
-        || properties.geometry_source !== "cached_osrm_route_geometry"
+        || !["cached_osrm_route_geometry", ...(planning ? ["runtime_osrm_geojson"] : [])].includes(properties.geometry_source)
         || typeof properties.cross_day !== "boolean"
         || !Number.isInteger(properties.day) || !Number.isInteger(properties.from_day)
         || !Number.isInteger(properties.to_day)
@@ -2077,10 +2698,27 @@ function durationRouteEvidenceUnchanged(childPlan) {
     && parentPlan.gaps.features.length === 0;
 }
 
+function acceptedStopOrderByDay() {
+  const plan = state.workspace?.geography?.plans?.find(row => row.plan_id === state.session?.accepted_plan_id);
+  if (!plan?.stops?.features) return null;
+  const days = new Map();
+  for (const feature of [...plan.stops.features].sort((a, b) => a.properties.sequence_index - b.properties.sequence_index)) {
+    const {day, stop_id: id} = feature.properties;
+    if (!Number.isInteger(day) || day <= 0 || day > 21 || typeof id !== "string"
+        || [...days.values()].some(ids => ids.includes(id))) return null;
+    if (!days.has(day)) days.set(day, []);
+    days.get(day).push(id);
+  }
+  return days;
+}
+
 function normalizePreviewGeography(value, proposal, routeValidation, draft) {
+  const marineKeys = proposal.execution_mode === "trip_replan_independent_evaluation"
+    && proposal.runtime_execution?.planning_bundle?.plan?.sequence?.includes("channel_islands")
+    ? ["marine_routes", "offshore_stops"] : [];
   if (!exactKeys(value, [
     "plan_id", "content_hash", "role", "label", "status", "coverage",
-    "route_path", "stops", "validated_legs", "gaps",
+    "route_path", "stops", "validated_legs", "gaps", ...marineKeys,
   ])
       || value.plan_id !== proposal.child_plan_id
       || value.content_hash !== proposal.child_plan_content_hash
@@ -2097,7 +2735,7 @@ function normalizePreviewGeography(value, proposal, routeValidation, draft) {
       || value.coverage.required_leg_count !== routeValidation.required_leg_count
       || value.coverage.road_validated_leg_count !== routeValidation.road_validated_leg_count
       || value.coverage.gap_count !== 0
-      || !routeChainMatchesEvidence(value, routeValidation)) return null;
+      || !routeChainMatchesEvidence(value, routeValidation, proposal.execution_mode === "trip_replan_independent_evaluation")) return null;
   for (const name of ["route_path", "stops", "validated_legs", "gaps"]) {
     const collection = value[name];
     if (!exactKeys(collection, ["type", "features"])
@@ -2109,10 +2747,20 @@ function normalizePreviewGeography(value, proposal, routeValidation, draft) {
           || feature.properties.role !== "draft_preview") return null;
     }
   }
-  const acceptedByDay = new Map((state.workspace?.timeline || []).map(
-    (day) => [day.day, day.stops.map((stop) => stop.id)],
-  ));
+  const acceptedByDay = acceptedStopOrderByDay();
+  if (!acceptedByDay) return null;
   const reorderedDays = new Set();
+  for (const operation of draft) {
+    if (operation.type === "replace_nearby") {
+      const order = [...acceptedByDay.values()].find((ids) => ids.includes(operation.target));
+      if (!order) return null;
+      order.splice(order.indexOf(operation.target), 1, operation.parameters.candidate_id);
+    } else if (operation.type === "add_candidate") {
+      const order = acceptedByDay.get(operation.parameters.day);
+      if (!order) return null;
+      order.push(operation.target);
+    }
+  }
   for (const operation of draft) {
     if (operation.type !== "set_stop_order") continue;
     const order = acceptedByDay.get(operation.parameters.day);
@@ -2141,6 +2789,7 @@ function previewProposalBinding(value) {
     eligibility: value?.eligibility,
     provenance: value?.provenance,
     execution_mode: value?.execution_mode,
+    runtime_execution: value?.runtime_execution ?? null,
     message: value?.message,
     expected_revision: value?.expected_revision,
     session_revision: value?.session_revision,
@@ -2190,17 +2839,393 @@ function previewProposalBinding(value) {
   };
 }
 
+function normalizeRuntimeExecution(value, proposal) {
+  if (!exactKeys(value, [
+    "schema_version", "execution_id", "started_at", "completed_at", "request_id",
+    "request_content_hash", "parent_plan_id", "parent_plan_content_hash", "planner_run",
+    "repair_request", "planner_trace", "child_plan_id", "child_plan_content_hash",
+    "evaluation_id", "evaluation_content_hash", "child_plan", "plan_diff",
+    "evaluation_certificate", "evaluation_executed", "evaluator",
+  ]) || value.schema_version !== "runtime-repair-execution-v1"
+      || !/^execution_[0-9a-f]{32}$/.test(value.execution_id)
+      || !/^[0-9a-f]{16}$/.test(value.request_content_hash)
+      || value.request_id !== proposal.compiled_request.source_request_id
+      || value.parent_plan_id !== proposal.parent_plan_id
+      || value.parent_plan_content_hash !== proposal.parent_plan_content_hash
+      || value.child_plan_id !== proposal.child_plan_id
+      || value.child_plan_content_hash !== proposal.child_plan_content_hash
+      || value.evaluation_id !== proposal.certificate_id
+      || value.evaluation_content_hash !== proposal.certificate_content_hash
+      || value.repair_request?.request_id !== value.request_id
+      || value.repair_request?.parent_plan_id !== value.parent_plan_id
+      || value.planner_run?.planning_request_id !== value.request_id
+      || value.planner_trace?.request_id !== value.request_id
+      || value.planner_trace?.parent_plan_id !== value.parent_plan_id
+      || !sameJson(value.planner_trace?.planner_run, value.planner_run)) return null;
+  const started = Date.parse(value.started_at);
+  const completed = Date.parse(value.completed_at);
+  if (!Number.isFinite(started) || !Number.isFinite(completed) || completed < started) return null;
+  const constraints = value.repair_request.confirmed_constraints;
+  if (!constraints || !Array.isArray(constraints.must_include)
+      || !Array.isArray(constraints.must_delete)) return null;
+  for (const operation of proposal.compiled_request.operations) {
+    if (operation.type === "replace_nearby"
+        && (!constraints.must_delete.includes(operation.target)
+          || !constraints.must_include.includes(operation.parameters.candidate_id))) return null;
+    if (operation.type === "add_candidate"
+        && !constraints.must_include.includes(operation.target)) return null;
+    if (operation.type === "keep_stop" && !constraints.must_include.includes(operation.target)
+        && !constraints.preserved_stop_ids?.includes(operation.target)) return null;
+  }
+  if (proposal.child_plan_id === null) {
+    return value.child_plan === null && value.plan_diff === null
+      && value.evaluation_certificate === null && value.evaluation_executed === false ? value : null;
+  }
+  const certificate = value.evaluation_certificate;
+  const evaluated = Date.parse(certificate?.evaluated_at);
+  if (value.evaluation_executed !== true || value.evaluator !== "PlanEvaluator.evaluate_final_plan"
+      || value.planner_run.result_plan_id !== proposal.child_plan_id
+      || value.planner_run.execution_status !== "COMPLETED"
+      || value.planner_run.method_executed !== proposal.evidence.executed_method
+      || value.planner_run.method_requested !== proposal.evidence.requested_method
+      || value.child_plan?.plan_id !== proposal.child_plan_id
+      || value.child_plan?.content_hash !== proposal.child_plan_content_hash
+      || value.child_plan?.parent_plan_id !== proposal.parent_plan_id
+      || value.child_plan?.planning_request_id !== value.request_id
+      || value.child_plan?.source_run_id !== value.planner_run.run_id
+      || value.child_plan?.context_snapshot_id !== value.planner_run.context_snapshot_id
+      || value.child_plan?.catalog_snapshot_id !== value.planner_run.catalog_snapshot_id
+      || value.plan_diff?.diff_id !== proposal.diff_id
+      || value.plan_diff?.parent_plan_id !== proposal.parent_plan_id
+      || value.plan_diff?.child_plan_id !== proposal.child_plan_id
+      || certificate?.certificate_id !== proposal.certificate_id
+      || certificate?.plan_id !== proposal.child_plan_id
+      || certificate?.plan_content_hash !== proposal.child_plan_content_hash
+      || certificate?.content_hash !== proposal.certificate_content_hash
+      || certificate?.source_run_id !== value.planner_run.run_id
+      || !sameJson(certificate?.route_validation, proposal.route_validation)
+      || proposal.route_validation?.context_snapshot_id !== value.child_plan.context_snapshot_id
+      || certificate?.evaluation_status !== proposal.evaluation_status
+      || !Number.isFinite(evaluated) || evaluated < started || evaluated > completed) return null;
+  return value;
+}
+
+async function normalizeCombinedAttributeOwnership(diff, proposal, child) {
+  const context = state.workspace?.attribute_diff_context;
+  const evidence = diff.attribute_ownership_evidence;
+  const mixed = diff.schema_version === "plan-diff-v7";
+  if (!exactKeys(context, ["schema_version", "parent_plan_id", "parent_plan_content_hash",
+    "owned_constraints", "attribute_constraints", "stops", "route_ids_by_day",
+    "default_visit_minutes", "ownership_policy", "content_hash"])
+      || context.schema_version !== "accepted-attribute-diff-context-v1"
+      || context.parent_plan_id !== proposal.parent_plan_id
+      || context.parent_plan_content_hash !== proposal.parent_plan_content_hash
+      || !Array.isArray(context.stops) || !Array.isArray(context.attribute_constraints)
+      || !Array.isArray(context.owned_constraints) || !Array.isArray(child.owned_constraints)
+      || !sameJson([...child.owned_constraints].sort((a, b) => a.constraint_id.localeCompare(b.constraint_id)),
+        [...context.owned_constraints].sort((a, b) => a.constraint_id.localeCompare(b.constraint_id)))
+      || !exactKeys(evidence, ["schema_version", "parent_plan_id", "parent_plan_content_hash",
+        "semantic_scope", "ownership_policy", "constraints", "changes", "content_hash"])
+      || evidence.schema_version !== `plan-diff-attribute-ownership-evidence-v${mixed ? 2 : 1}`
+      || evidence.parent_plan_id !== context.parent_plan_id
+      || evidence.parent_plan_content_hash !== context.parent_plan_content_hash
+      || !sameJson(evidence.ownership_policy, context.ownership_policy)
+      || !sameJson(evidence.semantic_scope, {
+        cost_semantics: "attribute_sensitivity", permission_claim: "not_evaluated",
+        feasibility_claim: "not_evaluated", cost_coverage: "all_listed_diff_changes",
+        relation_specific_attributes: ["day", "duration", "end_time", "existence", "order", ...(mixed ? ["role"] : []), "start_time", "time_window"],
+        lodging_and_road_relations: "not_migrated",
+      }) || !Array.isArray(evidence.constraints) || !evidence.constraints.length
+      || !Array.isArray(evidence.changes) || !Array.isArray(child.selected_stops)) return null;
+  for (const record of [context, evidence]) {
+    const payload = {...record};
+    delete payload.content_hash;
+    if (await computedStableContentHash(payload) !== record.content_hash) return null;
+  }
+  const policy = context.ownership_policy;
+  if (!exactKeys(policy, ["change_type_weights", "constraint_strength_weights"])
+      || [policy.change_type_weights, policy.constraint_strength_weights].some(weights => !weights
+        || typeof weights !== "object" || Array.isArray(weights)
+        || Object.values(weights).some(weight => !Number.isFinite(weight) || weight < 0))) return null;
+  const parents = new Map(context.stops.map(stop => [stop.stop_id, stop]));
+  const children = new Map(child.selected_stops.map(stop => [stop.stop_id || stop.poi_id, stop]));
+  if (parents.size !== context.stops.length || children.size !== child.selected_stops.length) return null;
+  const expected = [];
+  const consumed = new Set();
+  const families = {added_stops: ["added_stop", "existence"], deleted_stops: ["deleted_stop", "existence"],
+    duration_changes: ["duration_change", "duration"], time_window_changes: ["time_window_change", "time_window"],
+    role_changes: ["role_change", "role"], reorder_changes: ["order_change", "order"], road_changes: ["road_change", "road"]};
+  for (const [group, [kind, attribute]] of Object.entries(families)) {
+    for (const row of diff[group] || []) {
+      const id = attribute === "road" ? `route:${row.day}` : row.stop_id;
+      const parent = parents.get(id), stop = children.get(id);
+      let before, after, scale = 1;
+      if (attribute === "existence") {
+        before = parents.has(id); after = children.has(id);
+        if (before === after || (kind === "added_stop") !== after) return null;
+      } else if (attribute === "road") {
+        before = context.route_ids_by_day[row.day] ?? null;
+        after = child.route_ids_by_day?.[row.day] ?? null;
+        if (row.from_route_id !== before || row.to_route_id !== after) return null;
+      } else {
+        if (!parent || !stop) return null;
+        if (attribute === "duration") {
+          const durationValue = (constraint, minutes) => constraint ?? (Number.isInteger(minutes) ? {
+            mode: "exact", preferred_minutes: minutes, minimum_minutes: minutes, maximum_minutes: minutes,
+          } : null);
+          before = durationValue(parent.duration_constraint, parent.duration_minutes);
+          after = durationValue(stop.duration_constraint, stop.visit_duration_minutes);
+          const accountingFrom = parent.duration_minutes ?? context.default_visit_minutes;
+          const accountingTo = stop.visit_duration_minutes ?? context.default_visit_minutes;
+          if (!sameJson(row.from_constraint, parent.duration_constraint)
+              || row.from_minutes !== parent.duration_minutes || row.from_source !== parent.duration_source
+              || row.accounting_from_minutes !== accountingFrom || row.accounting_to_minutes !== accountingTo
+              || row.delta_minutes !== accountingTo - accountingFrom) return null;
+          scale = Math.max(1, Math.abs(row.delta_minutes) / 60);
+        } else if (attribute === "time_window") {
+          before = parent.time_window_constraint; after = stop.time_window_constraint ?? null;
+          if (!sameJson(row.from_constraint, before)
+              || row.from_earliest_arrival !== (before?.earliest_arrival ?? null)
+              || row.from_latest_departure !== (before?.latest_departure ?? null)) return null;
+        } else if (attribute === "role") {
+          before = parent.itinerary_role; after = stop.itinerary_role ?? null;
+          if (row.from_role !== before || row.from_source !== parent.itinerary_role_source) return null;
+        } else {
+          before = parent.order; after = stop.stop_order;
+          if (row.from_order !== before || row.to_order !== after) return null;
+        }
+      }
+      const rules = context.attribute_constraints.filter(rule => rule.target_stop_id === id && rule.attribute === attribute);
+      if (proposal.eligibility === "eligible" && rules.some(rule => !sameJson(after, rule.canonical_value)
+          && (["locked", "booked", "hard"].includes(rule.strength)
+            || !["auto_with_penalty", "always"].includes(rule.relaxation_policy)))) return null;
+      for (const rule of rules) consumed.add(rule.constraint_id);
+      const weight = strength => strength ? (policy.constraint_strength_weights[strength] ?? 1) : 1;
+      const ranked = [...rules].sort((a, b) => weight(b.strength) - weight(a.strength)
+        || (a.strength < b.strength ? 1 : a.strength > b.strength ? -1 : 0));
+      const owner = ranked[0]?.strength ?? "";
+      const multiplier = weight(owner), base = policy.change_type_weights[kind] ?? 1;
+      const cost = base * multiplier * scale;
+      if (row.owner_strength !== owner || row.cost !== cost || before === undefined || after === undefined) return null;
+      const satisfaction = actual => actual === null ? "unavailable" : null;
+      expected.push({change_kind: kind, target_stop_id: id, attributes: [attribute],
+        applicable_constraint_ids: rules.map(rule => rule.constraint_id).sort(),
+        selected_constraint_ids: rules.filter(rule => weight(rule.strength) === multiplier).map(rule => rule.constraint_id).sort(),
+        before_value: {[attribute]: before}, after_value: {[attribute]: after},
+        constraint_satisfaction: rules.map(rule => ({constraint_id: rule.constraint_id, attribute,
+          canonical_value: rule.canonical_value,
+          satisfaction_before: satisfaction(before) || (sameJson(before, rule.canonical_value) ? "satisfied" : "unsatisfied"),
+          satisfaction_after: satisfaction(after) || (sameJson(after, rule.canonical_value) ? "satisfied" : "unsatisfied"),
+        })), owner_strength: owner, base_change_weight: base, strength_multiplier: multiplier,
+        delta_scale: scale, cost});
+    }
+  }
+  expected.sort((a, b) => a.change_kind.localeCompare(b.change_kind) || a.target_stop_id.localeCompare(b.target_stop_id));
+  const constraints = context.attribute_constraints.filter(rule => consumed.has(rule.constraint_id));
+  return sameJson(evidence.changes, expected) && sameJson(evidence.constraints, constraints) ? evidence : null;
+}
+
+async function normalizeCombinedRuntimeExecution(value, proposal, draft) {
+  if (!exactKeys(value, [
+    "schema_version", "execution_id", "started_at", "completed_at", "request_id",
+    "parent_plan_id", "parent_plan_content_hash", "operations", "repair_request",
+    "request_content_hash", "optimizer_execution", "planner_run", "child_plan", "plan_diff",
+    "evaluation_certificate", "child_plan_id", "child_plan_content_hash", "evaluation_id",
+    "evaluation_content_hash", "evaluation_executed", "evaluator",
+  ]) || value.schema_version !== "atomic-combined-repair-execution-v1"
+      || !/^execution_[0-9a-f]{32}$/.test(value.execution_id)
+      || value.request_id !== proposal.compiled_request.source_request_id
+      || value.parent_plan_id !== proposal.parent_plan_id
+      || value.parent_plan_content_hash !== proposal.parent_plan_content_hash
+      || value.child_plan_id !== proposal.child_plan_id
+      || value.child_plan_content_hash !== proposal.child_plan_content_hash
+      || value.evaluation_id !== proposal.certificate_id
+      || value.evaluation_content_hash !== proposal.certificate_content_hash
+      || value.evaluator !== "PlanEvaluator.evaluate_final_plan"
+      || !sameJson(value.operations, draftHashRecords(draft))) return null;
+  const started = Date.parse(value.started_at);
+  const completed = Date.parse(value.completed_at);
+  const request = value.repair_request;
+  if (!Number.isFinite(started) || !Number.isFinite(completed) || completed < started
+      || !exactKeys(request, ["schema_version", "request_id", "parent_plan_id", "request_family",
+        "user_intent", "operations", "confirmed_constraints"])
+      || request.schema_version !== "atomic-combined-repair-request-v1"
+      || request.request_id !== value.request_id || request.parent_plan_id !== value.parent_plan_id
+      || request.request_family !== "combined_typed_edit"
+      || request.user_intent !== "Review the complete staged draft as one independently evaluated child."
+      || !sameJson(request.operations, value.operations) || !exactKeys(request.confirmed_constraints, [])
+      || await computedStableContentHash(request) !== value.request_content_hash) return null;
+  const selection = draft.filter(operation => ["keep_stop", "replace_nearby", "add_candidate"].includes(operation.type));
+  const optimizer = value.optimizer_execution;
+  if (selection.length) {
+    const certificate = optimizer?.evaluation_certificate;
+    if (!optimizer || !normalizeRuntimeExecution(optimizer, {
+      compiled_request: {source_request_id: optimizer.request_id, operations: selection},
+      parent_plan_id: optimizer.parent_plan_id, parent_plan_content_hash: optimizer.parent_plan_content_hash,
+      child_plan_id: optimizer.child_plan_id, child_plan_content_hash: optimizer.child_plan_content_hash,
+      certificate_id: optimizer.evaluation_id, certificate_content_hash: optimizer.evaluation_content_hash,
+      diff_id: optimizer.plan_diff?.diff_id,
+      route_validation: certificate?.route_validation,
+      evaluation_status: certificate?.evaluation_status,
+      evidence: {requested_method: optimizer.planner_run?.method_requested,
+        executed_method: optimizer.planner_run?.method_executed},
+    }) || Date.parse(optimizer.started_at) < started || Date.parse(optimizer.completed_at) > completed) return null;
+  } else if (optimizer !== null) return null;
+  if (proposal.child_plan_id === null) {
+    return value.evaluation_executed === false && value.child_plan === null
+      && value.plan_diff === null && value.evaluation_certificate === null && value.planner_run === null ? value : null;
+  }
+  const child = value.child_plan;
+  const run = value.planner_run;
+  const certificate = value.evaluation_certificate;
+  if (value.evaluation_executed !== true
+      || child?.plan_id !== proposal.child_plan_id || child.content_hash !== proposal.child_plan_content_hash
+      || child.parent_plan_id !== proposal.parent_plan_id || child.planning_request_id !== value.request_id
+      || child.source_run_id !== run?.run_id || child.context_snapshot_id !== run?.context_snapshot_id
+      || child.catalog_snapshot_id !== run?.catalog_snapshot_id
+      || run?.planning_request_id !== value.request_id || run.result_plan_id !== child.plan_id
+      || run.execution_status !== "COMPLETED"
+      || run.method_requested !== "atomic_combined_repair_v1" || run.method_executed !== run.method_requested
+      || run.method_requested !== proposal.evidence.requested_method || run.method_executed !== proposal.evidence.executed_method
+      || run.solver_backend !== (selection.length ? "deterministic_context_aware_heuristic" : "typed_direct_edits")
+      || !await normalizeDirectCertificateRecord(certificate, proposal)
+      || certificate.source_run_id !== run.run_id
+      || certificate.route_validation.context_snapshot_id !== child.context_snapshot_id
+      || Date.parse(certificate.evaluated_at) < started || Date.parse(certificate.evaluated_at) > completed) return null;
+  const diff = value.plan_diff;
+  const groups = ["added_stops", "deleted_stops", "day_moves", "time_shifts", "reorder_changes", "lodging_changes", "road_changes"];
+  const typedGroups = ["duration_changes", "time_window_changes", "role_changes"];
+  const typed = typedGroups.filter(key => diff?.[key]?.length);
+  const owned = ["plan-diff-v5", "plan-diff-v7"].includes(diff?.schema_version);
+  const ownershipGroups = {added_stops: "existence", deleted_stops: "existence",
+    reorder_changes: "order", duration_changes: "duration", time_window_changes: "time_window"};
+  const requiresOwnedEvidence = (state.workspace?.attribute_diff_context?.attribute_constraints || []).some(rule =>
+    Object.entries(ownershipGroups).some(([key, attribute]) => rule.attribute === attribute
+      && (diff?.[key] || []).some(row => row.stop_id === rule.target_stop_id)));
+  if (requiresOwnedEvidence && !owned) return null;
+  const schema = owned ? diff.schema_version : typed.length > 1 ? "plan-diff-v6" : typed.includes("role_changes") ? "plan-diff-v4"
+    : typed.includes("time_window_changes") ? "plan-diff-v3" : typed.includes("duration_changes") ? "plan-diff-v2" : "plan-diff-v1";
+  // v6 serializes only the non-empty attribute families, not all three.
+  const typedKeys = typed;
+  if (!exactKeys(diff, ["diff_id", "parent_plan_id", "child_plan_id", ...groups,
+    "unchanged_days", "weighted_edit_cost", "schema_version", ...typedKeys,
+    ...(owned ? ["attribute_ownership_evidence"] : [])])
+      || diff.schema_version !== schema || diff.diff_id !== proposal.diff_id
+      || diff.parent_plan_id !== proposal.parent_plan_id || diff.child_plan_id !== child.plan_id
+      || ![...groups, ...typedKeys].every(key => Array.isArray(diff[key]))
+      || diff.day_moves.length || diff.time_shifts.length || diff.lodging_changes.length
+      || !Number.isFinite(diff.weighted_edit_cost)
+      || await computedStableContentHash(diff) !== proposal.diff_content_hash) return null;
+  if (owned && (certificate.evaluator_version !== "verify-001-plan-evaluator-v2"
+      || (diff.schema_version === "plan-diff-v7" && typed.length < 2 && !typed.includes("role_changes"))
+      || (diff.schema_version === "plan-diff-v5" && (typed.length > 1 || typed.includes("role_changes")))
+      || !await normalizeCombinedAttributeOwnership(diff, proposal, child))) return null;
+  const costRows = [...groups, ...typedKeys].flatMap(key => diff[key]);
+  if (costRows.some(row => !Number.isFinite(row.cost) || row.cost < 0)
+      || Math.abs(costRows.reduce((sum, row) => sum + row.cost, 0) - diff.weighted_edit_cost) > 1e-8) return null;
+  const diffSeed = {parent_plan_id: diff.parent_plan_id, child_plan_id: diff.child_plan_id,
+    added: diff.added_stops, deleted: diff.deleted_stops, day_moves: diff.day_moves, time_shifts: diff.time_shifts,
+    reorder: diff.reorder_changes, lodging: diff.lodging_changes, road: diff.road_changes,
+    unchanged_days: diff.unchanged_days, weighted_edit_cost: diff.weighted_edit_cost};
+  for (const key of typed) diffSeed[key] = diff[key];
+  if (owned) diffSeed.attribute_ownership_evidence = diff.attribute_ownership_evidence;
+  if (`diff_${await computedStableContentHash(diffSeed)}` !== diff.diff_id) return null;
+  const expectedDays = acceptedStopOrderByDay();
+  if (!expectedDays) return null;
+  for (const operation of selection) {
+    if (operation.type === "replace_nearby") {
+      const order = [...expectedDays.values()].find(ids => ids.includes(operation.target));
+      if (!order) return null;
+      order.splice(order.indexOf(operation.target), 1, operation.parameters.candidate_id);
+    } else if (operation.type === "add_candidate") {
+      const order = expectedDays.get(operation.parameters.day);
+      if (!order || order.includes(operation.target)) return null;
+      order.push(operation.target);
+    }
+  }
+  for (const operation of draft.filter(row => row.type === "set_stop_order")) {
+    const order = expectedDays.get(operation.parameters.day);
+    const index = order?.indexOf(operation.target) ?? -1;
+    if (index < 0 || operation.parameters.sequence_index >= order.length) return null;
+    order.splice(index, 1);
+    order.splice(operation.parameters.sequence_index, 0, operation.target);
+  }
+  const orderedDays = [...expectedDays].map(([day, stop_ids]) => ({day, stop_ids}));
+  const sequence = orderedDays.flatMap(day => day.stop_ids);
+  const assignments = Object.fromEntries(orderedDays.flatMap(day => day.stop_ids.map(id => [id, day.day])));
+  if (!sameJson(child.ordered_days, orderedDays) || !sameJson(child.sequence, sequence)
+      || !sameJson(child.day_assignments, assignments) || !Array.isArray(child.selected_stops)
+      || child.selected_stops.length !== sequence.length) return null;
+  const stops = new Map(child.selected_stops.map(stop => [stop.stop_id || stop.poi_id, stop]));
+  const geography = proposal.geography_plan?.stops?.features;
+  if (stops.size !== sequence.length || !Array.isArray(geography) || geography.length !== sequence.length) return null;
+  for (const [index, id] of sequence.entries()) {
+    const stop = stops.get(id);
+    const feature = geography.find(row => row.properties.stop_id === id);
+    if (!stop || !feature || stop.day !== assignments[id] || feature.properties.day !== stop.day
+        || feature.properties.sequence_index !== index + 1 || feature.properties.stop_order !== (stop.stop_order ?? index + 1)
+        || !sameCoordinate(feature.geometry?.coordinates, [stop.longitude, stop.latitude])
+        || feature.properties.itinerary_role !== (stop.itinerary_role ?? null)
+        || feature.properties.itinerary_role_source !== (stop.itinerary_role_source || "unavailable")
+        || feature.properties.visit_duration_minutes !== (stop.visit_duration_minutes ?? null)
+        || !sameJson(feature.properties.inspector_metadata?.duration_constraint, stop.duration_constraint ?? null)) return null;
+  }
+  const operationGroups = {set_stop_duration: "duration_changes", set_stop_time_window: "time_window_changes", set_stop_role: "role_changes"};
+  for (const [type, key] of Object.entries(operationGroups)) {
+    const operations = draft.filter(row => row.type === type);
+    const changes = diff[key] || [];
+    if (changes.length !== operations.length || new Set(changes.map(row => row.stop_id)).size !== changes.length) return null;
+    for (const operation of operations) {
+      const stop = stops.get(operation.target);
+      const change = changes.find(row => row.stop_id === operation.target);
+      if (!stop || !change || change.day !== stop.day) return null;
+      if (type === "set_stop_duration") {
+        const requested = canonicalExactDuration(operation.parameters.duration);
+        if (!requested || !sameJson(stop.duration_constraint, requested)
+            || stop.visit_duration_minutes !== requested.preferred_minutes
+            || !sameJson(change.to_constraint, requested) || change.to_minutes !== stop.visit_duration_minutes) return null;
+      } else if (type === "set_stop_time_window") {
+        const requested = timeWindowConstraintFromParameters(operation.parameters);
+        if (!requested || !sameJson(stop.time_window_constraint, requested)
+            || !sameJson(change.to_constraint, requested)
+            || change.to_earliest_arrival !== requested.earliest_arrival
+            || change.to_latest_departure !== requested.latest_departure) return null;
+      } else if (stop.itinerary_role !== operation.parameters.role
+          || stop.itinerary_role_source !== "user_declared_itinerary_role"
+          || change.to_role !== stop.itinerary_role || change.to_source !== stop.itinerary_role_source) return null;
+    }
+  }
+  const added = selection.filter(row => row.type !== "keep_stop").map(row => row.type === "replace_nearby" ? row.parameters.candidate_id : row.target).sort();
+  const deleted = selection.filter(row => row.type === "replace_nearby").map(row => row.target).sort();
+  const changedDays = diffChangedDays(diff);
+  if (!sameJson(diff.added_stops.map(row => row.stop_id).sort(), added)
+      || !sameJson(diff.deleted_stops.map(row => row.stop_id).sort(), deleted)
+      || selection.some(row => row.type === "keep_stop" && !stops.has(row.target))
+      || !changedDays || !sameJson(diff.unchanged_days, [...expectedDays.keys()].filter(day => !changedDays.includes(day)))) return null;
+  return value;
+}
+
 async function normalizeEvaluatedPreviewResponse(value, expected) {
   if (!exactKeys(value, ["proposal", "session"])) return null;
   const { proposal, session } = value;
   const orderOnly = expected.draft.length > 0
     && expected.draft.every((operation) => operation.type === "set_stop_order");
-  const durationOnly = expected.draft.length > 0
+  const durationDraftOnly = expected.draft.length > 0
     && expected.draft.every((operation) => operation.type === "set_stop_duration");
-  const timeWindowOnly = expected.draft.length > 0
+  const timeWindowDraftOnly = expected.draft.length > 0
     && expected.draft.every((operation) => operation.type === "set_stop_time_window");
+  const ownedScheduleEdit = (durationDraftOnly || timeWindowDraftOnly)
+    && (state.workspace?.attribute_diff_context?.attribute_constraints || []).some(rule =>
+      rule.attribute === (durationDraftOnly ? "duration" : "time_window")
+        && expected.draft.some(operation => operation.target === rule.target_stop_id));
+  const durationOnly = durationDraftOnly && !ownedScheduleEdit;
+  const timeWindowOnly = timeWindowDraftOnly && !ownedScheduleEdit;
   const roleOnly = expected.draft.length > 0
     && expected.draft.every((operation) => operation.type === "set_stop_role");
+  const directEditOnly = orderOnly || durationOnly || timeWindowOnly || roleOnly;
+  const combined = ownedScheduleEdit || (!directEditOnly && expected.draft.some(operation => [
+    "set_stop_order", "set_stop_duration", "set_stop_time_window", "set_stop_role",
+  ].includes(operation.type)));
   if (!exactKeys(session, [
     "schema_version", "session_id", "trip_id", "run_id", "revision", "accepted_plan_id",
     "selected_day", "selected_stop_id", "selected_segment_id", "selected_candidate_id",
@@ -2222,25 +3247,28 @@ async function normalizeEvaluatedPreviewResponse(value, expected) {
     "diff_content_hash", "diff_identity", "evaluation_status", "certificate_identity",
     "route_validation", "route_validation_identity", "evidence", "geography_plan",
     "compiled_request", "repair",
+    ...(proposal?.child_plan_id === null ? ["blocking_findings"] : []),
+    ...(["deterministic_repair_pipeline", "atomic_combined_independent_evaluation", "trip_replan_independent_evaluation"].includes(proposal?.execution_mode) ? ["runtime_execution"] : []),
+    "decision_eligible", "ranking_eligible", "acceptance_eligible", "acceptance_blocking_code",
+    ...(orderOnly ? ["evaluation_certificate", "plan_diff"] : []),
     ...((durationOnly || timeWindowOnly) ? [
       "plan_diff", "schedule_impact", "schedule_impact_identity", "certificate_schedule_evidence",
-      "decision_eligible", "ranking_eligible", "acceptance_eligible", "acceptance_blocking_code",
     ] : []),
     ...(roleOnly ? [
       "plan_diff", "role_impact", "role_impact_identity", "certificate_role_evidence",
       "role_proposal_integrity",
-      "decision_eligible", "ranking_eligible", "acceptance_eligible", "acceptance_blocking_code",
     ] : []),
   ];
   const draftHash = await computedDraftContentHash(expected.draft);
   const operationIds = expected.draft.map((operation) => operation.operation_id);
   if (!exactKeys(proposal, proposalKeys)
       || proposal.schema_version !== "draft-preview-v1"
-      || !["eligible", "ineligible"].includes(proposal.state)
-      || proposal.eligibility !== proposal.state
+      || !["eligible", "ineligible", "blocked", "failed", "not_evaluated"].includes(proposal.state)
+      || proposal.eligibility !== (["eligible", "ineligible"].includes(proposal.state)
+        ? proposal.state : "not_evaluated")
       || !(proposal.reason === null || typeof proposal.reason === "string")
-      || !["deterministic_repair_pipeline", "independent_evaluated_direct_edit"].includes(proposal.provenance)
-      || !["deterministic_repair_pipeline", "typed_direct_edit_independent_evaluation"].includes(proposal.execution_mode)
+      || !["deterministic_repair_pipeline", "independent_evaluated_direct_edit", "independent_evaluated_combined_edit"].includes(proposal.provenance)
+      || !["deterministic_repair_pipeline", "typed_direct_edit_independent_evaluation", "atomic_combined_independent_evaluation", "trip_replan_independent_evaluation"].includes(proposal.execution_mode)
       || proposal.expected_revision !== expected.revision
       || proposal.session_revision !== session.revision
       || draftHash === null || proposal.draft_content_hash !== draftHash
@@ -2255,21 +3283,33 @@ async function normalizeEvaluatedPreviewResponse(value, expected) {
       || !proposal.compiled_request.source_request_id
       || proposal.compiled_request.source_request_id.length > 128
       || canonicalJson(proposal.compiled_request.operations)
-        !== canonicalJson(draftHashRecords(expected.draft))) return null;
+        !== canonicalJson(draftHashRecords(expected.draft))
+      || proposal.decision_eligible !== (proposal.state === "eligible")
+      || proposal.ranking_eligible !== false
+      || proposal.acceptance_eligible !== (proposal.state === "eligible")
+      || proposal.acceptance_blocking_code !== (proposal.state === "eligible" ? null : "proposal_not_eligible")) return null;
   if (!exactKeys(session.proposal, proposalKeys)
       || !sameJson(previewProposalBinding(session.proposal), previewProposalBinding(proposal))) return null;
+  if (proposal.execution_mode === "deterministic_repair_pipeline"
+      && !normalizeRuntimeExecution(proposal.runtime_execution, proposal)) return null;
+  if (proposal.execution_mode === "atomic_combined_independent_evaluation"
+      && !await normalizeCombinedRuntimeExecution(proposal.runtime_execution, proposal, expected.draft)) return null;
+  if (proposal.execution_mode === "trip_replan_independent_evaluation"
+      && !await normalizeTripPlanningExecution(proposal.runtime_execution, proposal, expected.draft)) return null;
   const roleProposalIntegrity = roleOnly
     ? await normalizeRoleProposalIntegrity(proposal.role_proposal_integrity, proposal)
     : null;
   if (roleOnly && !roleProposalIntegrity) return null;
-  const directEditOnly = orderOnly || durationOnly || timeWindowOnly || roleOnly;
+  const deterministicPipeline = proposal.provenance === "deterministic_repair_pipeline"
+    && proposal.execution_mode === "deterministic_repair_pipeline";
   if ((directEditOnly && (
     proposal.provenance !== "independent_evaluated_direct_edit"
       || proposal.execution_mode !== "typed_direct_edit_independent_evaluation"
-  )) || (!directEditOnly && (
-    proposal.provenance !== "deterministic_repair_pipeline"
-      || proposal.execution_mode !== "deterministic_repair_pipeline"
-  ))) return null;
+  )) || (combined && (proposal.provenance !== "independent_evaluated_combined_edit"
+    || proposal.execution_mode !== "atomic_combined_independent_evaluation"))
+    || (!directEditOnly && !combined && !deterministicPipeline
+      && !(proposal.execution_mode === "trip_replan_independent_evaluation"
+        && expected.draft.length === 1 && expected.draft[0].type === "replan_trip"))) return null;
   const identityKeys = ["matrix_id", "context_snapshot_id", "source_bundle_id", "source_content_sha256"];
   if (!exactKeys(proposal.route_validation_identity, identityKeys)
       || !exactKeys(proposal.diff_identity, ["diff_id", "parent_plan_id", "child_plan_id", "content_hash"])
@@ -2282,7 +3322,10 @@ async function normalizeEvaluatedPreviewResponse(value, expected) {
       ])) return null;
   const hasChild = proposal.child_plan_id !== null;
   if (!hasChild) {
-    if (proposal.state !== "ineligible" || proposal.reason === null
+    if (!["blocked", "failed", "not_evaluated"].includes(proposal.state) || proposal.reason === null
+        || !Array.isArray(proposal.blocking_findings)
+        || proposal.blocking_findings.some((finding) => !finding || typeof finding.code !== "string"
+          || typeof finding.corrective_action !== "string")
         || proposal.child_plan_content_hash !== null || proposal.certificate_id !== null
         || proposal.certificate_content_hash !== null || proposal.diff_id !== null
         || proposal.diff_content_hash !== null || proposal.evaluation_status !== null
@@ -2293,7 +3336,8 @@ async function normalizeEvaluatedPreviewResponse(value, expected) {
         || Object.values(proposal.route_validation_identity).some((item) => item !== null)) return null;
     return { proposal, session: { ...session, proposal } };
   }
-  if (!/^plan_[0-9a-f]{16}$/.test(proposal.child_plan_id)
+  if (!["eligible", "ineligible"].includes(proposal.state)
+      || !/^plan_[0-9a-f]{16}$/.test(proposal.child_plan_id)
       || !/^[0-9a-f]{16}$/.test(proposal.child_plan_content_hash)
       || !/^diff_[0-9a-f]{16}$/.test(proposal.diff_id)
       || !/^[0-9a-f]{16}$/.test(proposal.diff_content_hash)
@@ -2307,7 +3351,15 @@ async function normalizeEvaluatedPreviewResponse(value, expected) {
       || proposal.certificate_identity.plan_id !== proposal.child_plan_id
       || proposal.certificate_identity.plan_content_hash !== proposal.child_plan_content_hash
       || proposal.certificate_identity.content_hash !== proposal.certificate_content_hash) return null;
+  if (orderOnly && (
+    !await normalizeDirectCertificateRecord(proposal.evaluation_certificate, proposal)
+    || proposal.plan_diff?.diff_id !== proposal.diff_id
+    || proposal.plan_diff?.parent_plan_id !== proposal.parent_plan_id
+    || proposal.plan_diff?.child_plan_id !== proposal.child_plan_id
+    || await computedStableContentHash(proposal.plan_diff) !== proposal.diff_content_hash
+  )) return null;
   const routeValidation = normalizeRouteValidation(proposal.route_validation);
+  if (!routeValidation) return null;
   const planDiff = durationOnly
     ? await normalizeDurationPlanDiff(proposal.plan_diff, proposal, expected.draft)
     : timeWindowOnly
@@ -2355,26 +3407,24 @@ async function normalizeEvaluatedPreviewResponse(value, expected) {
           || !durationRouteEvidenceUnchanged(proposal.geography_plan)
           || proposal.repair.changed.added.length !== 0
           || proposal.repair.changed.removed.length !== 0
-          || proposal.repair.changed.affected_day_count !== scheduleImpact.affected_days.length
           || proposal.repair.changed.road_change_count !== 0
           || proposal.repair.changed.lodging_change_count !== 0
           || proposal.repair.tradeoffs.weighted_edit_cost !== planDiff.weighted_edit_cost
           || proposal.repair.tradeoffs.preservation_rate !== 1
           || proposal.repair.tradeoffs.utility_retained !== null
-          || proposal.repair.tradeoffs.weather_risk_delta !== null
-          || proposal.evaluation_status !== (
-            scheduleImpact.child.status === "failed"
-              ? "FAILED"
-              : scheduleImpact.child.status === "incomplete_evidence"
-                ? "PASSED_WITH_WARNINGS"
-                : "PASSED"
-          )
+          || (certificateScheduleEvidence.certificate_record.metrics.weather_risk_delta !== undefined
+            && certificateScheduleEvidence.certificate_record.metrics.weather_risk_delta !== 0)
+          || proposal.repair.tradeoffs.weather_risk_delta
+            !== (certificateScheduleEvidence.certificate_record.metrics.weather_risk_delta ?? null)
+          || proposal.evaluation_status !== certificateScheduleEvidence.evaluation_status
           || proposal.evidence.hard_feasibility_status !== (
-            scheduleImpact.child.status === "failed" ? "FAILED" : "PASSED"
+            certificateScheduleEvidence.failure_codes.length ? "FAILED" : "PASSED"
           )
-          || proposal.state !== (scheduleImpact.child.status === "failed" ? "ineligible" : "eligible")
+          || proposal.state !== (
+            certificateScheduleEvidence.failure_codes.length ? "ineligible" : "eligible"
+          )
           || proposal.reason !== (
-            scheduleImpact.child.status === "failed" ? "independent_evaluation_failed" : null
+            certificateScheduleEvidence.failure_codes.length ? "independent_evaluation_failed" : null
           )
       ))) return null;
   if (timeWindowOnly && (
@@ -2384,26 +3434,24 @@ async function normalizeEvaluatedPreviewResponse(value, expected) {
       || !durationRouteEvidenceUnchanged(proposal.geography_plan)
       || proposal.repair.changed.added.length !== 0
       || proposal.repair.changed.removed.length !== 0
-      || proposal.repair.changed.affected_day_count !== scheduleImpact.affected_days.length
       || proposal.repair.changed.road_change_count !== 0
       || proposal.repair.changed.lodging_change_count !== 0
       || proposal.repair.tradeoffs.weighted_edit_cost !== planDiff.weighted_edit_cost
       || proposal.repair.tradeoffs.preservation_rate !== 1
       || proposal.repair.tradeoffs.utility_retained !== null
-      || proposal.repair.tradeoffs.weather_risk_delta !== null
-      || proposal.evaluation_status !== (
-        scheduleImpact.child.status === "failed"
-          ? "FAILED"
-          : scheduleImpact.child.status === "incomplete_evidence"
-            ? "PASSED_WITH_WARNINGS"
-            : "PASSED"
-      )
+      || (certificateScheduleEvidence.certificate_record.metrics.weather_risk_delta !== undefined
+        && certificateScheduleEvidence.certificate_record.metrics.weather_risk_delta !== 0)
+      || proposal.repair.tradeoffs.weather_risk_delta
+        !== (certificateScheduleEvidence.certificate_record.metrics.weather_risk_delta ?? null)
+      || proposal.evaluation_status !== certificateScheduleEvidence.evaluation_status
       || proposal.evidence.hard_feasibility_status !== (
-        scheduleImpact.child.status === "failed" ? "FAILED" : "PASSED"
+        certificateScheduleEvidence.failure_codes.length ? "FAILED" : "PASSED"
       )
-      || proposal.state !== (scheduleImpact.child.status === "failed" ? "ineligible" : "eligible")
+      || proposal.state !== (
+        certificateScheduleEvidence.failure_codes.length ? "ineligible" : "eligible"
+      )
       || proposal.reason !== (
-        scheduleImpact.child.status === "failed" ? "independent_evaluation_failed" : null
+        certificateScheduleEvidence.failure_codes.length ? "independent_evaluation_failed" : null
       )
   )) return null;
   if (roleOnly && (
@@ -2413,26 +3461,22 @@ async function normalizeEvaluatedPreviewResponse(value, expected) {
       || !normalizeRoleGeography(proposal.geography_plan, planDiff, roleImpact)
       || proposal.repair.changed.added.length !== 0
       || proposal.repair.changed.removed.length !== 0
-      || proposal.repair.changed.affected_day_count !== roleImpact.affected_days.length
       || proposal.repair.changed.road_change_count !== 0
       || proposal.repair.changed.lodging_change_count !== 0
       || proposal.repair.tradeoffs.weighted_edit_cost !== planDiff.weighted_edit_cost
       || proposal.repair.tradeoffs.preservation_rate !== 1
       || proposal.repair.tradeoffs.utility_retained !== null
-      || proposal.repair.tradeoffs.weather_risk_delta !== null
-      || proposal.evaluation_status !== (
-        roleImpact.child_schedule.status === "failed"
-          ? "FAILED"
-          : certificateRoleEvidence.warning_codes.length
-            ? "PASSED_WITH_WARNINGS"
-            : "PASSED"
-      )
+      || proposal.repair.tradeoffs.weather_risk_delta
+        !== (certificateRoleEvidence.certificate_record.metrics.weather_risk_delta ?? null)
+      || proposal.evaluation_status !== certificateRoleEvidence.evaluation_status
       || proposal.evidence.hard_feasibility_status !== (
-        roleImpact.child_schedule.status === "failed" ? "FAILED" : "PASSED"
+        certificateRoleEvidence.failure_codes.length ? "FAILED" : "PASSED"
       )
-      || proposal.state !== (roleImpact.child_schedule.status === "failed" ? "ineligible" : "eligible")
+      || proposal.state !== (
+        certificateRoleEvidence.failure_codes.length ? "ineligible" : "eligible"
+      )
       || proposal.reason !== (
-        roleImpact.child_schedule.status === "failed" ? "independent_evaluation_failed" : null
+        certificateRoleEvidence.failure_codes.length ? "independent_evaluation_failed" : null
       )
   )) return null;
   return { proposal, session: { ...session, proposal } };
@@ -2481,6 +3525,14 @@ function normalizeRoute(path) {
 }
 
 const API_ERROR_COPY = {
+  copilot_outcome_unknown: "The provider outcome is unknown. This message will not be sent again automatically; checking it only reconciles saved status.",
+  copilot_result_context_stale: "The itinerary changed while the reply was running. The reply is retained in history but cannot stage changes for this newer itinerary.",
+  conversation_turn_limit_reached: "This conversation is full. Start a new conversation before sending another message. No provider call was made.",
+  conversation_size_limit_reached: "This conversation has reached its storage limit. Start a new conversation. No provider call was made.",
+  draft_pipeline_execution_timed_out: "The repair timed out before evaluation. Your accepted itinerary and staged draft are unchanged.",
+  preview_capacity_reached: "The local repair engine is busy. Your draft is unchanged. Wait for a running preview to finish, then try again.",
+  preview_execution_timeout: "The repair did not finish in time. No result was applied; your accepted itinerary and staged draft are unchanged.",
+  preview_client_disconnected: "The preview connection closed before its result could be applied. Your accepted itinerary is unchanged.",
   request_validation_failed: "The browser and local service use different API versions. Stop the service, restart it, then refresh this page.",
   draft_candidate_target_mismatch: "That candidate cannot replace the selected stop. Choose a compatible candidate.",
   draft_duplicate_operation: "That change is already in the draft.",
@@ -2505,6 +3557,8 @@ const API_ERROR_COPY = {
   invalid_route_issue: "Choose a supported route issue and keep the note within 500 characters.",
   invalid_draft_impact_preview: "The local service returned an invalid draft-impact contract. Restart the product before editing.",
   invalid_evaluated_preview: "The evaluated repair response did not match this exact draft, parent, route evidence, or certificate. Nothing was shown as evaluated.",
+  unsupported_optimizer_mapping: "This action does not yet have an implemented optimizer mapping. No evaluated repair was run.",
+  draft_optimizer_mapping_unsupported: "This draft contains an action without an implemented optimizer mapping. Remove or revise that action before previewing.",
   draft_evaluated_operation_combination_unsupported: "An evaluated direct edit must run alone. Keep only same-day reorder, exact-duration, time-window, or itinerary-role operations before previewing.",
   draft_order_index_invalid: "Choose a valid position within the stop's accepted day.",
   duration_mode_evaluation_not_supported: "Preferred, minimum, maximum, and range duration rules remain draft only. Choose Exact to run an evaluated preview.",
@@ -2512,21 +3566,166 @@ const API_ERROR_COPY = {
   invalid_stop_time_window: "Provide at least one zero-padded local-time bound, with earliest service admission no later than latest departure. Cross-midnight windows are not supported.",
   stop_role_evaluation_not_supported: "Structural itinerary roles remain draft only and cannot run an evaluated preview in this slice.",
   invalid_stop_role: "Choose a supported trip-specific itinerary role. No draft was added.",
+  acceptance_confirmation_required: "Confirm the durable decision before continuing.",
+  acceptance_proposal_required: "Run and review an eligible evaluated preview before accepting.",
+  acceptance_proposal_invalid: "The evaluated proposal no longer matches the immutable artifacts. Run Preview again.",
+  acceptance_pointer_conflict: "Another decision changed the accepted plan. Reload before deciding again.",
+  acceptance_idempotency_conflict: "This decision key was already used for a different request.",
+  accepted_plan_requires_new_repair_baseline: "This accepted plan is durable. Start a new repair baseline before adding more edits.",
 };
 
 function apiErrorMessage(detail, status) {
   return API_ERROR_COPY[detail] || detail || `Request failed (${status})`;
 }
 
-async function api(path, { method = "GET", body, headers: extraHeaders = {} } = {}) {
-  const headers = { Accept: "application/json", ...extraHeaders };
+function isBuildMismatch(code) {
+  return ["product_client_build_mismatch", "product_server_build_changed"].includes(code);
+}
+
+function renderBuildRecovery(code) {
+  state.buildRecovery = code;
+  state.previewRuntime.epoch += 1;
+  $$("dialog[open]").forEach((dialog) => dialog.close());
+  $("#app-shell").hidden = true;
+  const screen = $("#loading-screen");
+  screen.hidden = false;
+  screen.classList.add("recovery-screen");
+  const restart = code === "product_server_build_changed";
+  screen.innerHTML = `<section class="recovery-card" data-build-recovery="${code}">
+    <p class="eyebrow">Workspace update</p><h1>${restart ? "Restart the local app, then reload" : "Reload to use the updated app"}</h1>
+    <p>${restart ? "The source files changed after this server started. It cannot safely combine the old backend with new website files. Restart the launcher before continuing." : "This page belongs to a different app build. No new edit or chat request will be sent from this page."}</p>
+    <p>Your stored session, drafts, accepted itinerary and conversation have not been cleared.</p>
+    <button class="primary" id="reload-current-build" type="button">${restart ? "Reload after restarting" : "Reload updated app"}</button>
+  </section>`;
+  $("#reload-current-build").addEventListener("click", () => location.reload());
+  $("#reload-current-build").focus();
+}
+
+async function api(path, { method = "GET", body, headers: extraHeaders = {}, signal, pendingMutation = false } = {}) {
+  if (state.mutationRecovery?.blocked && method !== "GET" && !path.endsWith("/draft/impact-preview") && !pendingMutation) {
+    throw Object.assign(new Error("Resolve the saved action before continuing. Your message has not been sent."), {code:"mutation_outcome_uncertain"});
+  }
+  if ((state.workspaceConflict || state.workspaceSyncPending) && method !== "GET" && !path.endsWith("/draft/impact-preview")
+      && !(pendingMutation && state.mutationRecovery?.blocked)) {
+    throw Object.assign(new Error("Refresh the current workspace before making another change."), {code:"workspace_refresh_required"});
+  }
+  if (state.buildRecovery) throw Object.assign(new Error(state.buildRecovery), {code:state.buildRecovery, status:409});
+  const headers = { Accept: "application/json", ...extraHeaders, "X-Product-Build-Id":state.clientBuildId || "" };
   if (body !== undefined) headers["Content-Type"] = "application/json";
   if (state.token) headers["X-Session-Token"] = state.token;
-  const response = await fetch(path, { method, headers, body: body === undefined ? undefined : JSON.stringify(body) });
+  const response = await fetch(path, { method, headers, body: body === undefined ? undefined : JSON.stringify(body), signal });
   const contentType = response.headers.get("content-type") || "";
   const payload = contentType.includes("application/json") ? await response.json() : null;
-  if (!response.ok) throw new Error(apiErrorMessage(payload?.detail, response.status));
+  if (!response.ok) {
+    if (isBuildMismatch(payload?.detail)) renderBuildRecovery(payload.detail);
+    const error = new Error(apiErrorMessage(payload?.detail, response.status));
+    error.code = payload?.detail;
+    error.status = response.status;
+    throw error;
+  }
+  if (method !== "GET" && !path.endsWith("/draft/impact-preview")) announceWorkspaceChange(payload);
   return payload;
+}
+
+function copilotStreamError(code, status = 500, retryable = false) {
+  const error = new Error(apiErrorMessage(code, status));
+  error.code = code;
+  error.status = status;
+  error.retryable = retryable;
+  return error;
+}
+
+function copilotStreamFrame(block) {
+  const data = block.split(/\r?\n/)
+    .filter((line) => line.startsWith("data:"))
+    .map((line) => line.slice(5).trimStart())
+    .join("\n");
+  if (!data) return null;
+  try {
+    return JSON.parse(data);
+  } catch {
+    throw copilotStreamError("invalid_copilot_stream", 502, true);
+  }
+}
+
+async function streamCopilotMessage(
+  path,
+  { body, signal, onEvent = () => {} },
+) {
+  if (state.workspaceConflict || state.workspaceSyncPending) throw copilotStreamError("workspace_refresh_required", 409, false);
+  if (state.mutationRecovery?.blocked) throw copilotStreamError("mutation_outcome_uncertain", 409, false);
+  if (state.buildRecovery) throw copilotStreamError(state.buildRecovery, 409, false);
+  const headers = {
+    Accept: "text/event-stream",
+    "Content-Type": "application/json",
+    "X-Product-Build-Id": state.clientBuildId || "",
+  };
+  if (state.token) headers["X-Session-Token"] = state.token;
+  const response = await fetch(path, {
+    method: "POST",
+    headers,
+    body: JSON.stringify(body),
+    signal,
+  });
+  const contentType = response.headers.get("content-type") || "";
+  if (!response.ok) {
+    const payload = contentType.includes("application/json") ? await response.json() : null;
+    if (isBuildMismatch(payload?.detail)) renderBuildRecovery(payload.detail);
+    throw copilotStreamError(payload?.detail, response.status, response.status >= 500 && !isBuildMismatch(payload?.detail));
+  }
+  if (contentType.includes("application/json")) return response.json();
+  if (!contentType.includes("text/event-stream")) {
+    throw copilotStreamError("invalid_copilot_stream", 502, true);
+  }
+
+  let buffer = "";
+  let completed = null;
+  let terminal = false;
+  let lastSequence = 0;
+  const consume = (block) => {
+    const event = copilotStreamFrame(block);
+    if (!event) return;
+    if (
+      event.schema_version !== "copilot-stream-v1"
+      || event.client_message_id !== body.client_message_id
+      || !Number.isInteger(event.sequence)
+      || event.sequence <= lastSequence
+      || typeof event.request_id !== "string"
+    ) {
+      throw copilotStreamError("invalid_copilot_stream", 502, true);
+    }
+    lastSequence = event.sequence;
+    onEvent(event);
+    if (event.type === "turn.completed") {
+      if (terminal || !event.payload) throw copilotStreamError("invalid_copilot_stream", 502, true);
+      terminal = true;
+      completed = event.payload;
+    } else if (event.type === "turn.failed") {
+      if (terminal) throw copilotStreamError("invalid_copilot_stream", 502, true);
+      terminal = true;
+      throw copilotStreamError(event.code, event.status, event.retryable === true);
+    } else if (!["message.accepted", "assistant.status"].includes(event.type)) {
+      throw copilotStreamError("invalid_copilot_stream", 502, true);
+    }
+  };
+
+  if (response.body?.getReader) {
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    while (true) {
+      const { done, value } = await reader.read();
+      buffer += decoder.decode(value || new Uint8Array(), { stream: !done });
+      const frames = buffer.split(/\r?\n\r?\n/);
+      buffer = frames.pop() || "";
+      frames.forEach(consume);
+      if (done) break;
+    }
+  } else {
+    buffer = await response.text();
+  }
+  if (buffer.trim()) consume(buffer);
+  if (!terminal || !completed) throw copilotStreamError("copilot_stream_incomplete", 502, true);
+  return completed;
 }
 
 async function boot() {
@@ -2541,33 +3740,62 @@ async function boot() {
       return;
     }
 
-    try {
-      state.mapConfig = await api("/api/map/config");
-      if (state.mapConfig?.schema_version !== "product-map-configuration-v2") {
-        state.mapConfig = null;
-      }
-    } catch {
-      state.mapConfig = null;
-    }
+    await refreshMapRuntime();
 
     const payload = await restoreOrCreateSession();
     state.workspace = payload.workspace;
     state.session = payload.session;
+    syncPreviewRuntimeFromSession({ invalidate: false });
     if (payload.mutation_token) state.token = payload.mutation_token;
     state.registry = payload.registry;
+    restorePendingMutationInput();
+    try { await mutationRecovery.restore(); } catch { /* The recovery panel retains an unreadable record. */ }
     await loadDraftImpactPreview({ render: false });
     bindEvents();
     applyRuntimeAvailability();
     $("#loading-screen").hidden = true;
     $("#app-shell").hidden = false;
+    if (findSelectedStop()) {
+      state.mapInteraction.selectionKind = "stop";
+      state.mapInteraction.selectedStopPlanId = findSelectedStop().plan_id;
+    }
     await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
     const defaultCompareId = state.route === "/app/compare"
-      && !state.session.selected_alternative_id ? recommendedAlternativeId() : null;
+      && !state.session.selected_alternative_id
+      && !activeProposalPlan() ? recommendedAlternativeId() : null;
     if (defaultCompareId) await selectContext({ selected_alternative_id: defaultCompareId });
     else renderAll();
-    await copilot.restore();
+    if (mutationRecovery.pending) await recoverPendingMutation(false);
+    else await copilot.restore();
+    if (state.sessionRecoveryNotice) toast(state.sessionRecoveryNotice, true);
   } catch (error) {
     renderStartupFailure(error);
+  }
+}
+
+async function refreshMapRuntime() {
+  if (state.mapRecoveryPending) return false;
+  state.mapRecoveryPending = true;
+  state.mapConfig = null;
+  try {
+    for (const delay of [0, 1000, 2000]) {
+      if (delay) await new Promise((resolve) => setTimeout(resolve, delay));
+      try {
+        const health = await api("/api/health");
+        if (health?.schema_version !== "product-health-v2"
+            || health.product_id !== "itinerary-repair-copilot" || !health.core_ready) continue;
+        state.health = health;
+        const config = await api("/api/map/config");
+        state.mapConfig = config?.schema_version === "product-map-configuration-v2" ? config : null;
+        if (state.mapConfig?.status === "ready" && component("map")?.status === "ready") return true;
+      } catch {
+        state.mapConfig = null;
+      }
+    }
+    state.mapConfig = null;
+    return false;
+  } finally {
+    state.mapRecoveryPending = false;
   }
 }
 
@@ -2582,10 +3810,18 @@ async function restoreOrCreateSession() {
     state.token = saved.mutation_token;
     try {
       return await api(`/api/sessions/${encodeURIComponent(saved.session_id)}`);
-    } catch {
+    } catch (error) {
+      if (isBuildMismatch(error?.code) || sessionStorage.getItem(PENDING_MUTATION_KEY)
+          || error.status !== 404 || !["unknown_session", "session_not_found", "session_expired"].includes(error.code)) throw error;
+      if (error.code === "session_expired") {
+        state.sessionRecoveryNotice = "Your editing session expired. Your accepted itinerary is current. Earlier drafts are retained for recovery and have not been reapplied.";
+      }
       state.token = null;
       sessionStorage.removeItem(SESSION_STORAGE_KEY);
     }
+  }
+  if (sessionStorage.getItem(PENDING_MUTATION_KEY)) {
+    throw new Error("The pending action's workspace credentials could not be restored. Its saved record has been preserved.");
   }
   const payload = await api("/api/sessions", { method: "POST", body: {} });
   state.token = payload.mutation_token;
@@ -2634,6 +3870,7 @@ function renderCoreRecovery(health) {
 }
 
 function renderStartupFailure(error) {
+  if (isBuildMismatch(error?.code)) return renderBuildRecovery(error.code);
   const code = error?.message === "invalid_product_health" ? "invalid_product_health" : "health_unavailable";
   $("#loading-screen").classList.add("recovery-screen");
   $("#loading-screen").innerHTML = `<section class="recovery-card" aria-labelledby="recovery-title">
@@ -2657,13 +3894,23 @@ function applyRuntimeAvailability() {
     unavailable.push({ name: "map", code: "map_configuration_unavailable" });
   }
   const banner = $("#runtime-banner");
+  const mapReady = component("map")?.status === "ready" && state.mapConfig?.status === "ready";
+  banner.hidden = unavailable.length === 0;
+  $("#app-shell").classList.toggle("has-runtime-banner", unavailable.length > 0);
   if (unavailable.length) {
-    banner.hidden = false;
-    $("#app-shell").classList.add("has-runtime-banner");
-    banner.innerHTML = `<strong>Limited local runtime</strong><span>${unavailable.map((item) => escapeHtml(componentMessage(item))).join(" ")}</span>`;
+    banner.innerHTML = `<strong>Limited local runtime</strong><span>${unavailable.map((item) => escapeHtml(componentMessage(item))).join(" ")}</span>${mapReady ? "" : '<button type="button" id="retry-map-runtime">Retry map</button>'}`;
+    $("#retry-map-runtime")?.addEventListener("click", async () => {
+      if (state.mapRecoveryPending) return;
+      $("#retry-map-runtime").disabled = true;
+      $("#retry-map-runtime").textContent = "Checking map…";
+      await refreshMapRuntime();
+      applyRuntimeAvailability();
+      renderAll();
+    });
+  } else {
+    banner.innerHTML = "";
   }
 
-  const mapReady = component("map")?.status === "ready" && state.mapConfig?.status === "ready";
   $("#layers-button").disabled = !mapReady;
   $("#layers-button").title = mapReady ? "Show route layers" : "Local map layers are unavailable";
 
@@ -2673,8 +3920,19 @@ function applyRuntimeAvailability() {
 function bindEvents() {
   $$("[data-route]").forEach((button) => button.addEventListener("click", () => navigate(button.dataset.route)));
   copilot.bind();
+  bindWorkspaceSynchronization();
+  $("#copilot-input").addEventListener("input", savePendingMutationInput);
+  window.addEventListener("pagehide", savePendingMutationInput);
   $("#map-select-button").addEventListener("click", () => setMapInteractionMode("select"));
   $("#map-edit-button").addEventListener("click", () => setMapInteractionMode("edit"));
+  $("#map-interest-button").addEventListener("click", () => {
+    if (state.interestRegions.enabled) {
+      resetInterestRegions();
+      renderMap();
+    } else {
+      void fetchInterestRegions();
+    }
+  });
   $("#close-map-edit").addEventListener("click", () => $("#map-edit-dialog").close());
   $("#layers-button").addEventListener("click", () => {
     if (state.poiDiscovery.response?.candidates?.length) {
@@ -2686,7 +3944,7 @@ function bindEvents() {
     toast("This pane shows the original route and the active option only. Find route-aware candidates from a selected route leg to add a candidate layer.");
   });
   $("#help-button").addEventListener("click", () => $("#info-dialog").showModal());
-  $("#settings-button").addEventListener("click", () => $("#info-dialog").showModal());
+
   $("#draft-move").addEventListener("click", () => addDraft("move_day", { day: Number($("#destination-day").value) }));
   $("#draft-keep").addEventListener("click", () => addDraft("keep_stop", {}));
   $("#draft-lock").addEventListener("click", () => addDraft("lock_stop", {}));
@@ -2699,6 +3957,7 @@ function bindEvents() {
   $("#registered-candidate").addEventListener("change", (event) => {
     void selectContext({ selected_candidate_id: event.currentTarget.value || null });
   });
+  $("#destination-day").addEventListener("change", refreshCandidateAdditionAvailability);
   $("#draft-replace").addEventListener("click", () => addDraft("replace_nearby", { candidate_id: $("#registered-candidate").value }));
   $("#draft-add").addEventListener("click", () => addDraft("add_candidate", { day: Number($("#destination-day").value) }, $("#registered-candidate").value));
   $("#draft-undo").addEventListener("click", undoDraft);
@@ -2722,7 +3981,7 @@ function navigate(route) {
   const normalized = normalizeRoute(route);
   if (location.pathname !== normalized) history.pushState({}, "", normalized);
   state.route = normalized;
-  if (normalized === "/app/compare" && !state.session.selected_alternative_id) {
+  if (normalized === "/app/compare" && !state.session.selected_alternative_id && !activeProposalPlan()) {
     const recommendedId = recommendedAlternativeId();
     if (recommendedId) {
       void selectContext({ selected_alternative_id: recommendedId });
@@ -2742,12 +4001,14 @@ function recommendedAlternativeId() {
 }
 
 function renderAll() {
+  restoreMutationControls();
   renderTrip();
   renderWorkspace();
   renderContextPanel();
   renderMetrics();
   copilot.update();
   updateActiveNav();
+  $("#map-interest-button").hidden = state.route !== "/app/map";
   const editButton = $("#map-edit-button");
   const selectButton = $("#map-select-button");
   editButton.classList.toggle("is-active", state.mapInteraction.mode === "edit");
@@ -2759,21 +4020,66 @@ function renderAll() {
   flow.hidden = state.route !== "/app/repairs"
     && state.session.draft.length === 0
     && !state.session.proposal;
+  renderMutationRecovery();
 }
 
 function activeAlternativeId() {
-  return state.session.proposal?.state === "eligible" && state.session.proposal?.child_plan_id
-    ? state.session.proposal.child_plan_id
-    : state.session.selected_alternative_id;
+  return activeRenderPlan()?.plan_id || null;
 }
 
 function activeProposalPlan() {
+  if (state.workspaceSyncPending) return null;
   const proposal = state.session.proposal;
-  return proposal?.schema_version === "draft-preview-v1"
-    && proposal?.state === "eligible"
-    && proposal.geography_plan?.plan_id === proposal.child_plan_id
-    ? proposal.geography_plan
-    : null;
+  const plan = proposal?.geography_plan;
+  const routeValidation = normalizeRouteValidation(proposal?.route_validation);
+  if (proposal?.schema_version !== "draft-preview-v1"
+      || proposal.execution_mode === "registered_independent_evaluation"
+      || proposal.state !== "eligible"
+      || plan?.plan_id !== proposal.child_plan_id
+      || plan?.content_hash !== proposal.child_plan_content_hash
+      || plan?.role !== "draft_preview"
+      || plan?.status !== "ready"
+      || plan?.coverage?.status !== "complete"
+      || plan.coverage.complete !== true
+      || plan.coverage.itinerary_sequence_accounted !== true
+      || !Number.isInteger(plan.coverage.route_path_node_count)
+      || !Number.isInteger(plan.coverage.required_leg_count)
+      || !Number.isInteger(plan.coverage.road_validated_leg_count)
+      || !routeValidation
+      || routeValidation?.required_leg_count !== plan.coverage.required_leg_count
+      || routeValidation?.road_validated_leg_count !== plan.coverage.road_validated_leg_count
+      || plan.coverage.required_leg_count !== plan.coverage.road_validated_leg_count
+      || plan.coverage.gap_count !== 0) return null;
+  for (const name of ["route_path", "stops", "validated_legs", "gaps"]) {
+    if (plan[name]?.type !== "FeatureCollection"
+        || !Array.isArray(plan[name].features)
+        || (["route_path", "stops"].includes(name) && plan[name].features.length === 0)
+        || plan[name].features.some((feature) => (
+          feature?.properties?.plan_id !== proposal.child_plan_id
+          || feature?.properties?.content_hash !== proposal.child_plan_content_hash
+          || feature?.properties?.role !== "draft_preview"
+        ))) return null;
+  }
+  if (plan.coverage.route_path_node_count !== plan.route_path.features.length
+      || plan.coverage.required_leg_count !== plan.validated_legs.features.length
+      || plan.route_path.features.length !== plan.coverage.required_leg_count + 1
+      || plan.gaps.features.length !== 0) return null;
+  return plan;
+}
+
+function copilotPreviewState() {
+  const plan = activeProposalPlan();
+  const mapFailureMessage = {
+    MAP_RENDER_FAILED: "The map could not be rendered or verified. Acceptance remains disabled. Retry the map before accepting this preview.",
+    MAP_IDENTITY_FAILED: "The map does not match the expected itinerary identity. Acceptance remains disabled. Retry the map before accepting this preview.",
+  }[state.previewRuntime.status];
+  return {
+    status: state.previewRuntime.status,
+    planId: plan?.plan_id || state.session?.proposal?.child_plan_id || null,
+    contentHash: plan?.content_hash || state.session?.proposal?.child_plan_content_hash || null,
+    mapPlanId: state.acknowledgedPreviewPlanId,
+    message: mapFailureMessage || state.previewRuntime.message || state.session?.proposal?.message || null,
+  };
 }
 
 function activeGeography() {
@@ -2786,10 +4092,73 @@ function activeGeography() {
   };
 }
 
+function activeRenderPlan(geography = activeGeography()) {
+  const proposalPlan = activeProposalPlan();
+  if (proposalPlan) return proposalPlan;
+  const explicitTripPreview = geography?.plans?.find(
+    (plan) => plan.plan_id === state.tripPreviewPlanId,
+  );
+  return explicitTripPreview
+    || acceptedPlan(geography)
+    || geography?.plans?.find((plan) => plan.role === "original")
+    || null;
+}
+
+function timelineForPlan(plan) {
+  const accepted = acceptedPlan(state.workspace.geography)
+    || state.workspace.geography?.plans?.find((candidate) => candidate.role === "original");
+  const proposal = state.session.proposal;
+  const previewDays = proposal?.state === "eligible" && proposal.child_plan_id === plan?.plan_id
+    && proposal.child_plan_content_hash === plan?.content_hash
+    ? diffChangedDays(proposal.plan_diff || proposal.runtime_execution?.plan_diff) || [] : [];
+  const templateByDay = new Map(
+    (state.workspace.timeline || []).map((day) => [Number(day.day), day]),
+  );
+  const stopsByDay = new Map();
+  (plan?.stops?.features || []).forEach((feature) => {
+    const stop = feature.properties || {};
+    const day = Number(stop.day);
+    if (!Number.isInteger(day)) return;
+    if (!stopsByDay.has(day)) stopsByDay.set(day, []);
+    stopsByDay.get(day).push({
+      id: stop.stop_id,
+      name: stop.name || stop.stop_id,
+      city: stop.city || null,
+      order: Number(stop.stop_order),
+    });
+  });
+  const acceptedByDay = new Map();
+  (accepted?.stops?.features || []).forEach((feature) => {
+    const stop = feature.properties || {};
+    const day = Number(stop.day);
+    if (!acceptedByDay.has(day)) acceptedByDay.set(day, []);
+    acceptedByDay.get(day).push(`${stop.stop_id}:${Number(stop.stop_order)}`);
+  });
+  const dayCount = Math.max(Number(state.workspace.trip?.day_count) || templateByDay.size, ...stopsByDay.keys());
+  return Array.from({ length: dayCount }, (_, index) => {
+    const day = index + 1;
+    const template = templateByDay.get(day) || {};
+    const stops = (stopsByDay.get(day) || []).sort((left, right) => left.order - right.order);
+    const activeIdentity = stops.map((stop) => `${stop.id}:${stop.order}`);
+    const acceptedIdentity = (acceptedByDay.get(day) || []).sort();
+    const changed = previewDays.includes(day)
+      || [...activeIdentity].sort().join("|") !== acceptedIdentity.join("|");
+    return {
+      ...template,
+      day,
+      stops: stops.map((stop) => ({ ...stop, changed })),
+      states: [
+        ...(plan?.role === "original" && state.workspace.trip?.affected_days?.includes(day) ? ["affected"] : []),
+        ...(changed ? ["changed"] : []),
+      ],
+    };
+  });
+}
 function renderTrip() {
-  const { trip, timeline } = state.workspace;
-  const originalPlan = state.workspace.geography?.plans?.find((plan) => plan.role === "original");
-  const routeNodes = [...(originalPlan?.route_path?.features || [])]
+  const { trip } = state.workspace;
+  const renderedPlan = activeRenderPlan();
+  const timeline = timelineForPlan(renderedPlan);
+  const routeNodes = [...(renderedPlan?.route_path?.features || [])]
     .sort((left, right) => Number(left.properties?.occurrence_index) - Number(right.properties?.occurrence_index));
   const routeStart = readableRouteAnchor(routeNodes[0]?.properties?.node_id);
   const routeEnd = readableRouteAnchor(routeNodes.at(-1)?.properties?.node_id);
@@ -2797,17 +4166,18 @@ function renderTrip() {
     ? `California Coast · ${routeStart} to ${routeEnd}` : trip.title;
   $("#run-label").textContent = state.registry.label;
   $("#trip-metrics").innerHTML = `
-    <div><b>${trip.day_count}</b><span>Days</span></div>
-    <div><b>${trip.stop_count}</b><span>Stops</span></div>
-    <div><b>${trip.affected_days.length}</b><span>Affected</span></div>`;
+    <div><b>${timeline.length}</b><span>Days</span></div>
+    <div><b>${renderedPlan?.stops?.features?.length ?? trip.stop_count}</b><span>Stops</span></div>
+    <div><b>${trip.affected_days.length}</b><span>Original issue days</span></div>`;
   $("#day-list").innerHTML = timeline.map((day) => {
     const selected = day.day === state.session.selected_day;
     const affected = day.states.includes("affected");
+    const changed = day.states.includes("changed");
     const names = day.stops.map((stop) => stop.name).join(" · ") || "No recorded stop";
     return `<button type="button" class="day-card ${selected ? "is-selected" : ""} ${affected ? "is-affected" : ""}" data-day="${day.day}" data-stop="${escapeHtml(day.stops[0]?.id || "")}" aria-pressed="${selected}">
       <span class="day-number">Day ${day.day}</span>
       <span class="day-copy"><strong>${escapeHtml(names)}</strong><span>${day.stops.length} recorded stop${day.stops.length === 1 ? "" : "s"}</span></span>
-      <span class="day-state" aria-label="${affected ? "Affected day" : "Unchanged day"}">${affected ? "⚠" : "✓"}</span>
+      <span class="day-state" aria-label="${changed ? "Changed from accepted itinerary" : affected ? "Original disruption day" : "Recorded day"}">${changed ? "Δ" : affected ? "⚠" : "·"}</span>
     </button>`;
   }).join("");
   $$(".day-card").forEach((button) => button.addEventListener("click", () => selectMapStop({
@@ -2858,6 +4228,63 @@ function readableRouteAnchor(value) {
   )).join(" ");
 }
 
+function proposalCertificate(proposal) {
+  const record = proposal?.runtime_execution?.evaluation_certificate
+    || proposal?.evaluation_certificate
+    || proposal?.certificate_schedule_evidence?.certificate_record
+    || proposal?.certificate_role_evidence?.certificate_record;
+  return record?.plan_id === proposal?.child_plan_id
+    && record?.plan_content_hash === proposal?.child_plan_content_hash
+    && record?.certificate_id === proposal?.certificate_id
+    && record?.content_hash === proposal?.certificate_content_hash ? record : null;
+}
+
+function planPresentationEvidence(plan) {
+  const proposal = state.session.proposal;
+  const proposalExact = Boolean(plan?.plan_id && plan?.content_hash)
+    && proposal?.child_plan_id === plan?.plan_id
+    && proposal?.child_plan_content_hash === plan?.content_hash
+    && proposal?.certificate_identity?.plan_id === plan?.plan_id
+    && proposal?.certificate_identity?.plan_content_hash === plan?.content_hash;
+  if (proposalExact) return {
+    eligibility: proposal.eligibility || "Not evaluated",
+    certificateId: proposal.certificate_id,
+    permissions: proposal.repair?.permissions || null,
+    repair: proposal.repair || null,
+    metrics: proposalCertificate(proposal)?.metrics || {},
+    weightedEditCost: proposal.repair?.tradeoffs?.weighted_edit_cost ?? null,
+  };
+  const record = state.workspace.alternative_evidence?.[plan?.plan_id];
+  const certificate = record?.certificate;
+  const exact = Boolean(plan?.plan_id && plan?.content_hash)
+    && record?.plan_id === plan?.plan_id && record?.plan_content_hash === plan?.content_hash
+    && certificate?.plan_id === plan?.plan_id && certificate?.plan_content_hash === plan?.content_hash;
+  return {
+    eligibility: exact ? certificate.comparison_eligibility || "Not evaluated" : "Not evaluated",
+    certificateId: exact ? certificate.certificate_id : null,
+    permissions: exact && plan?.role === "registered_repair" ? state.workspace.repair?.permissions : null,
+    repair: exact && plan?.role === "registered_repair" ? state.workspace.repair : null,
+    metrics: exact ? certificate.metrics || {} : {},
+    weightedEditCost: exact ? record.diff?.weighted_edit_cost ?? null : null,
+  };
+}
+
+function routeLegMinutes(feature) {
+  const seconds = feature?.properties?.duration_s;
+  return typeof seconds === "number" && Number.isFinite(seconds) && seconds >= 0 ? seconds / 60 : null;
+}
+
+function planRouteMinutes(plan) {
+  const legs = validatedRouteFeatures(plan);
+  if (!legs.length || plan?.coverage?.complete !== true || routeGapFeatures(plan).length
+      || plan.coverage.gap_count !== 0 || legs.length !== plan.coverage.required_leg_count
+      || legs.length !== plan.coverage.road_validated_leg_count
+      || legs.some((leg) => leg.properties?.plan_id !== plan.plan_id
+        || leg.properties?.road_validated !== true || leg.properties?.fallback_used !== false)) return null;
+  const minutes = legs.map(routeLegMinutes);
+  return minutes.every((value) => value !== null) ? minutes.reduce((total, value) => total + value, 0) : null;
+}
+
 function textualRouteEvidence(plan, daySummary) {
   const routes = [...validatedRouteFeatures(plan)]
     .sort((left, right) => Number(left.properties?.leg_index) - Number(right.properties?.leg_index));
@@ -2873,17 +4300,7 @@ function textualRouteEvidence(plan, daySummary) {
   const validatedCount = routes.filter((feature) => (
     feature.properties?.road_validated === true && feature.properties?.fallback_used === false
   )).length;
-  const alternative = (state.workspace.alternatives || []).find((row) => row.plan_id === plan?.plan_id);
-  const proposalMatches = state.session.proposal?.child_plan_id === plan?.plan_id;
-  const evidence = proposalMatches
-    ? state.session.proposal?.evidence
-    : state.workspace.alternative_evidence?.[plan?.plan_id]?.certificate;
-  const eligibility = proposalMatches
-    ? state.session.proposal?.eligibility
-    : alternative?.display_status || evidence?.comparison_eligibility || state.workspace.repair?.status || "Unavailable";
-  const permissions = proposalMatches
-    ? state.session.proposal?.repair?.permissions
-    : plan?.role === "registered_repair" ? state.workspace.repair?.permissions : null;
+  const { eligibility, permissions } = planPresentationEvidence(plan);
   const bookingImpact = permissions
     ? `${permissions.booked_change_count ?? "Unavailable"} booked changes and ${permissions.locked_change_count ?? "Unavailable"} locked changes recorded.`
     : "No plan-specific booking-change metric is available.";
@@ -2902,18 +4319,11 @@ function textRoutePanelHtml(plan, originalPlan) {
   const legs = validatedRouteFeatures(plan)
     .filter((feature) => Number(feature.properties?.day) === selectedDay)
     .sort((left, right) => Number(left.properties?.leg_index) - Number(right.properties?.leg_index));
-  const durations = legs.map((feature) => feature.properties?.duration_minutes);
-  const duration = durations.length && durations.every(
-    (value) => typeof value === "number" && Number.isFinite(value) && value > 0,
+  const durations = legs.map(routeLegMinutes);
+  const duration = planRouteMinutes(plan) !== null && durations.length && durations.every(
+    (value) => typeof value === "number" && Number.isFinite(value) && value >= 0,
   ) ? `${formatMetric(durations.reduce((total, value) => total + value, 0))} minutes` : "Unavailable";
-  const alternative = (state.workspace.alternatives || []).find((row) => row.plan_id === plan?.plan_id);
-  const proposalMatches = state.session.proposal?.child_plan_id === plan?.plan_id;
-  const eligibility = proposalMatches
-    ? state.session.proposal?.eligibility
-    : alternative?.display_status || state.workspace.repair?.status || "Unavailable";
-  const permissions = proposalMatches
-    ? state.session.proposal?.repair?.permissions
-    : plan?.role === "registered_repair" ? state.workspace.repair?.permissions : null;
+  const { eligibility, permissions } = planPresentationEvidence(plan);
   const bookingImpact = permissions
     ? `${permissions.booked_change_count ?? "Unavailable"} booked; ${permissions.locked_change_count ?? "Unavailable"} locked changes`
     : "Unavailable";
@@ -2923,15 +4333,16 @@ function textRoutePanelHtml(plan, originalPlan) {
   const travelLegs = legs.length ? `<ol>${legs.map((feature) => {
     const properties = feature.properties || {};
     const names = routeNamePair(properties, plan);
-    const minutes = typeof properties.duration_minutes === "number" && properties.duration_minutes > 0
-      ? `${formatMetric(properties.duration_minutes)} minutes` : "duration Unavailable";
+    const durationMinutes = routeLegMinutes(feature);
+    const minutes = durationMinutes !== null
+      ? `${formatMetric(durationMinutes)} minutes` : "duration Unavailable";
     return `<li>${escapeHtml(names.origin)} → ${escapeHtml(names.destination)} · ${escapeHtml(minutes)} · road validated</li>`;
   }).join("")}</ol>` : "<p>Travel legs are Unavailable for this day.</p>";
   const originalDay = routeSummaryForPlan(originalPlan).split(/(?=Day \d+:)/)
     .find((row) => row.startsWith(`Day ${selectedDay}:`)) || "Unavailable";
   const proposedDay = routeSummaryForPlan(plan).split(/(?=Day \d+:)/)
     .find((row) => row.startsWith(`Day ${selectedDay}:`)) || "Unavailable";
-  return `<section class="text-route-summary" aria-label="Selected day route summary">
+  return `<section class="text-route-summary" data-plan-id="${escapeHtml(plan?.plan_id || "")}" data-plan-content-hash="${escapeHtml(plan?.content_hash || "")}" aria-label="Selected day route summary">
     <h3>Day ${escapeHtml(selectedDay)} route</h3>
     <dl><dt>Stop order</dt><dd>${escapeHtml(stopOrder)}</dd><dt>Travel duration</dt><dd>${escapeHtml(duration)}</dd><dt>Disruption</dt><dd>${escapeHtml(state.workspace.issue.summary)}</dd><dt>Original route</dt><dd>${escapeHtml(originalDay)}</dd><dt>Proposed route</dt><dd>${escapeHtml(proposedDay)}</dd><dt>Booking impact</dt><dd>${escapeHtml(bookingImpact)}</dd><dt>Eligibility</dt><dd>${escapeHtml(eligibility)}</dd></dl>
     <h3>Travel legs</h3>${travelLegs}
@@ -3122,6 +4533,83 @@ function candidateExplorerHtml() {
   </aside>`;
 }
 
+function currentInterestResponse() {
+  const value = state.interestRegions.response;
+  const parent = acceptedPlan(activeGeography());
+  const displayed = activeRenderPlan();
+  return state.interestRegions.enabled && value?.session_id === state.session?.session_id
+    && value.session_revision === state.session.revision
+    && value.accepted_plan_id === state.session.accepted_plan_id
+    && value.accepted_plan_content_hash === parent?.content_hash
+    && value.exploration_plan_id === displayed?.plan_id
+    && value.exploration_plan_content_hash === displayed?.content_hash
+    && value.context.day === state.session.selected_day
+    && value.context.route_leg_id === state.session.selected_segment_id ? value : null;
+}
+
+function selectInterestPlace(placeId) {
+  state.interestRegions.selectedId = placeId;
+  renderMap();
+  $("#geographic-map")?.scrollIntoView({block: "center"});
+}
+
+function interestPlaceListHtml(response) {
+  if (!response) return "";
+  const view = state.interestRegions;
+  const query = view.placeSearch.trim().toLocaleLowerCase();
+  const regionPoints = interestPlacesInRegion(response, view.massLevel);
+  const inside = new Set(regionPoints.map(point => point.place_id));
+  const points = (view.placeScope === "region" ? regionPoints : response.poi_predictions)
+    .filter(point => `${point.name} ${(point.place_categories || []).join(" ")}`.toLocaleLowerCase().includes(query))
+    .slice().sort((a, b) => b.interest_probability_mean - a.interest_probability_mean || a.name.localeCompare(b.name));
+  const hasRegion = response.surface.status === "ready";
+  return `<p role="status">${points.length} matching places · ${response.poi_predictions.length} nearby in this catalog.</p>
+    ${points.length ? `<ol class="interest-place-list">${points.map(point => `<li><button type="button" data-interest-place="${escapeHtml(point.place_id)}" aria-pressed="${point.place_id === view.selectedId}">
+      <strong>${escapeHtml(point.name)}</strong><span>${Math.round(point.interest_probability_mean * 100)}% estimated interest</span>
+      <small>${escapeHtml((point.place_categories || []).map(humanLabel).join(", ") || "Category unavailable")} · ${hasRegion ? inside.has(point.place_id) ? "Inside selected boundary" : "Outside selected boundary" : "Boundary unavailable"}</small>
+      <small>90% model interval: ${point.interest_probability_interval.map(value => `${Math.round(value * 100)}%`).join("–")} · ${escapeHtml(humanLabel(point.feasibility_status))} · Locate on map</small>
+    </button></li>`).join("")}</ol>` : response.poi_predictions.length ? "<p>No catalog places match this filter. Try All nearby places or another search.</p>" : "<p>No nearby places are recorded for this route yet. Choose another day or route to explore.</p>"}`;
+}
+
+function interestExplorerHtml() {
+  const view = state.interestRegions;
+  if (!view.enabled) return "";
+  const response = currentInterestResponse();
+  const points = response?.poi_predictions || [];
+  const selected = points.find(point => point.place_id === view.selectedId);
+  const required = response?.required_points || [];
+  const selectedRequired = required.find(point => point.place_id === view.selectedId);
+  const region = response?.surface?.regions_geojson?.features.find(feature => feature.properties.mass_level === view.massLevel);
+  const previewExploration = response?.plan_scope === "evaluated_preview";
+  const percent = value => `${Math.round(value * 100)}%`;
+  return `<section class="interest-region-panel" aria-labelledby="interest-region-heading">
+    <header><div><span class="eyebrow">Explore places</span><h2 id="interest-region-heading">Your interest region</h2></div><button type="button" id="close-interest-regions">Hide interest layer</button></header>
+    <p>Same-hue shading shows model interest density. The darkest markers are confirmed must-go constraints. Interest does not establish itinerary feasibility.</p>
+    ${previewExploration ? '<p class="interest-region-caveat">Exploring the evaluated preview. This itinerary has not been accepted. Place browsing is read only. Road and official-source evidence may have aged; accepting the trip still requires current evidence.</p>' : ""}
+    <div class="interest-region-legend" aria-label="Interest layer legend"><span><i class="interest-density-swatch" aria-hidden="true"></i>Lower → higher model density</span><span><i class="interest-required-swatch" aria-hidden="true"></i>Confirmed must-go</span></div>
+    <div class="interest-region-controls">
+      <label>Stated preference<select id="interest-preference"><option value="1" ${view.naturePreference === 1 ? "selected" : ""}>More nature</option><option value="0" ${view.naturePreference === 0 ? "selected" : ""}>Balanced</option><option value="-1" ${view.naturePreference === -1 ? "selected" : ""}>More culture</option></select></label>
+      <label>Model interest mass<select id="interest-mass-level">${[0.5, 0.8, 0.95].map(level => `<option value="${level}" ${view.massLevel === level ? "selected" : ""}>${percent(level)} region</option>`).join("")}</select></label>
+      <button type="button" id="refresh-interest-regions" ${view.status === "loading" ? "disabled" : ""}>Refresh estimates</button>
+    </div>
+    <div class="interest-region-status" role="status">${view.status === "loading" ? "Estimating interest for this route context…" : view.error ? escapeHtml(view.error) : response ? `${response.model.evidence_mode === "prior_only" ? "Prior estimate" : "Feedback-based estimate"} · not calibrated · ${points.length} places · ${response.candidate_universe.route_checked_candidate_count} route-checked candidates. ${region ? `Boundary contains ${percent(region.properties.achieved_mass)} of the model distribution.` : points.length ? `Continuous region unavailable: ${humanLabel(response.surface.unavailable_reason)}. Places remain inspectable.` : "No nearby places are recorded for this route yet. Choose another day or route to explore."}` : "Route context changed. Select a validated route leg and refresh."}</div>
+    ${response ? `<p class="interest-region-caveat">${escapeHtml(response.surface.support_note || "Geographic support is unavailable.")} ${response.surface.excluded_candidate_count || 0} places excluded from the land-supported density. The boundary percentage describes model mass, not the chance that every place is suitable.</p>` : ""}
+    ${points.length ? `<label>Inspect a place<select id="interest-place-selector"><option value="">Choose a place (${points.length})</option>${points.map(point => `<option value="${escapeHtml(point.place_id)}" ${point.place_id === view.selectedId ? "selected" : ""}>${escapeHtml(point.name)}</option>`).join("")}</select></label>` : ""}
+    ${selected ? `<article class="interest-place-detail"><h3>${escapeHtml(selected.name)}</h3><p>Estimated interest: <strong>${percent(selected.interest_probability_mean)}</strong> · 90% model uncertainty interval: ${selected.interest_probability_interval.map(percent).join("–")}.</p>
+      ${selected.description ? `<p>${escapeHtml(selected.description)}</p>` : ""}
+      <p>${escapeHtml((selected.place_categories || []).map(humanLabel).join(", "))} · ${selected.display_coordinate.latitude.toFixed(5)}, ${selected.display_coordinate.longitude.toFixed(5)}</p>
+      <p>Sources: ${(selected.source_refs || []).map(source => safeExternalLink(source, source)).join(" · ") || "Unavailable"}</p>
+      <p>Route status: ${escapeHtml(humanLabel(selected.feasibility_status))}. ${selected.candidate?.burden?.recommended === true ? "Existing evaluator recommendation is available." : "No automatic recommendation."}</p><button type="button" id="explore-interest-place" ${state.mapInteraction.mode === "edit" && !previewExploration ? "" : 'disabled aria-describedby="interest-edit-hint"'}>Check this place on the map</button>${previewExploration ? '<p id="interest-edit-hint">Accept this evaluated itinerary before creating a stop draft on its routes.</p>' : state.mapInteraction.mode === "edit" ? "" : '<p id="interest-edit-hint">Choose Edit in the map toolbar to check road access for this place.</p>'}<p>Road checking does not establish itinerary feasibility. Custom stops are draft only; evaluated preview and acceptance require a supported itinerary operation.</p></article>` : ""}
+    ${selectedRequired ? `<article class="interest-place-detail"><h3>Must-go: ${escapeHtml(selectedRequired.name)}</h3><p>${selectedRequired.conflict_status === "satisfied" ? "Confirmed constraint is satisfied by the accepted itinerary." : `Conflict: ${escapeHtml(humanLabel(selectedRequired.conflict_status))}`}</p><p>Estimated interest: ${selectedRequired.interest_probability_mean == null ? "insufficient model features" : percent(selectedRequired.interest_probability_mean)}. Its darkest color represents the confirmed constraint, not a probability of 100%.</p></article>` : ""}
+    <details ${required.length ? "open" : ""}><summary>Confirmed must-go points (${required.length})</summary>${required.length ? `<ul>${required.map(point => `<li><button type="button" data-interest-place="${escapeHtml(point.place_id)}" aria-pressed="${point.place_id === view.selectedId}">Must-go: ${escapeHtml(point.name)}</button> · ${point.conflict_status === "satisfied" ? "present in accepted itinerary" : `Conflict: ${escapeHtml(humanLabel(point.conflict_status))}`}${point.coordinate ? "" : " · coordinate unavailable"}</li>`).join("")}</ul>` : "<p>No confirmed hard existence constraints for this day. Map selection alone does not create one.</p>"}</details>
+    ${response ? `<h3>Browse specific places</h3><div class="interest-region-controls">
+      <label>Show places<select id="interest-place-scope"><option value="region" ${view.placeScope === "region" ? "selected" : ""}>Inside selected region</option><option value="all" ${view.placeScope === "all" ? "selected" : ""}>All nearby places</option></select></label>
+      <label>Search name or category<input id="interest-place-search" type="search" value="${escapeHtml(view.placeSearch)}" placeholder="e.g. beach, museum, Point Lobos"></label></div>
+      <p>These are catalog locations. Shading between them does not imply additional known places or confirmed road access.</p>
+      <div id="interest-place-results">${interestPlaceListHtml(response)}</div>` : ""}
+  </section>`;
+}
+
 function humanLabel(value) {
   return String(value || "Unavailable").replaceAll("_", " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
 }
@@ -3139,7 +4627,7 @@ function stopNameForId(stopId, plan = null) {
   const geographyFeature = state.workspace?.geography?.plans
     ?.flatMap((row) => row.stops?.features || [])
     .find((feature) => feature.properties?.stop_id === stopId);
-  return geographyFeature?.properties?.name || "Stop unavailable";
+  return geographyFeature?.properties?.name || humanLabel(stopId);
 }
 
 function acceptedPlan(geography) {
@@ -3204,6 +4692,7 @@ function operationDisplayName(type) {
     keep_stop: "Keep stop",
     lock_stop: "Lock stop",
     mark_flexible: "Flexible stop",
+    replan_trip: "Trip replan",
     route_feedback: "Route feedback",
     replace_nearby: "Replacement",
     add_candidate: "Added candidate",
@@ -3215,6 +4704,10 @@ function operationDisplayName(type) {
 }
 
 function draftStateHtml(operations) {
+  if (!operations.length && state.session.proposal?.execution_mode === "trip_replan_independent_evaluation"
+      && state.session.proposal?.state === "eligible") {
+    return '<span class="status-pill warning">Trip replan preview</span><p>This selection belongs to the evaluated trip preview. Accepting the new itinerary remains separate.</p>';
+  }
   if (!operations.length) return '<span class="status-pill">Matches accepted parent</span><p>No active draft changes target this selection.</p>';
   const rows = operations.map((operation) => {
     const impact = impactRow(operation.operation_id);
@@ -3278,6 +4771,9 @@ function mapInspectorHtml(geography, displayedPlan) {
     if (!waypoint) return "";
     const relocateEnabled = interaction.mode === "edit"
       && Boolean(mapEditCapability("relocate_custom_waypoint"));
+    const latestDraft = state.session.draft.at(-1);
+    const removeEnabled = MAP_DRAFT_OPERATION_TYPES.has(latestDraft?.type)
+      && latestDraft?.target === waypoint.waypoint_id;
     return `<section class="map-context-card draft-waypoint" aria-labelledby="map-context-title">
       <span class="status-pill route-checked">Route-checked draft</span>
       <h3 id="map-context-title">${escapeHtml(waypoint.name)}</h3>
@@ -3287,23 +4783,50 @@ function mapInspectorHtml(geography, displayedPlan) {
         <dt>State</dt><dd>Confirmed session draft; not evaluated</dd></dl>
       <p>This waypoint and its affected road legs are server-owned draft evidence. The accepted parent is unchanged.</p>
       <button type="button" id="relocate-custom-waypoint" ${relocateEnabled ? "" : "disabled title=\"Switch to Edit mode to relocate this custom waypoint\""}>Relocate this waypoint</button>
+      <button type="button" id="remove-custom-waypoint" ${removeEnabled ? "" : "disabled title=\"Undo newer draft changes before removing this waypoint\""}>Remove this draft waypoint</button>
+      ${removeEnabled ? "" : "<p>Only the latest draft operation can be undone. Undo newer changes first.</p>"}
     </section>`;
   }
   if (interaction.selectionKind === "stop") {
     const stop = findSelectedStop();
     if (!stop) return "";
     const acceptedPlanId = state.session.accepted_plan_id;
-    const selectedPlanId = interaction.selectedStopPlanId || acceptedPlanId;
+    const selectedPlanId = stop.plan_id;
     const stopPlan = geography?.plans?.find(
       (plan) => plan.plan_id === selectedPlanId,
     );
     const feature = stopPlan?.stops?.features?.find(
       (candidate) => candidate.properties?.stop_id === stop.id,
     );
-    const properties = feature?.properties || {};
+    const canonicalPlan = state.session.proposal?.runtime_execution?.planning_bundle?.plan;
+    const canonicalStop = canonicalPlan?.plan_id === selectedPlanId && canonicalPlan?.content_hash === stopPlan?.content_hash
+      ? canonicalPlan.selected_stops?.find(row => (row.stop_id || row.poi_id) === stop.id) : null;
+    const properties = {...canonicalStop, ...feature?.properties};
+    const reference = geography?.plans?.flatMap(plan => plan.stops?.features || []).find(row =>
+      row.properties?.stop_id === stop.id && Array.isArray(row.properties.destination_places));
+    if (!properties.destination_places && reference) properties.destination_places = reference.properties.destination_places;
     const acceptedTarget = selectedPlanId === acceptedPlanId
       && (state.workspace.draft_capabilities?.parent_targets || []).includes(stop.id);
-    const duration = properties.duration || properties.duration_constraint || null;
+    const metadata = properties.inspector_metadata?.schema_version === "plan-stop-inspector-v1"
+      ? properties.inspector_metadata : {};
+    const duration = metadata.duration_constraint || properties.duration_constraint || null;
+    const dayStops = (stopPlan?.stops?.features || [])
+      .filter(item => item.properties?.day === properties.day)
+      .sort((left, right) => left.properties.sequence_index - right.properties.sequence_index);
+    const dayPosition = dayStops.findIndex(item => item.properties?.stop_id === stop.id) + 1;
+    const visitDuration = Number.isFinite(properties.visit_duration_minutes)
+      ? `${formatMetric(properties.visit_duration_minutes)} min · plan value` : "Unavailable";
+    const recordedContext = [
+      typeof metadata.weather_feasible === "boolean"
+        ? `Recorded weather feasibility: ${metadata.weather_feasible ? "feasible" : "not feasible"}` : null,
+      Number.isFinite(metadata.weather_risk) ? `Recorded contextual risk: ${formatMetric(metadata.weather_risk)}` : null,
+    ].filter(Boolean).join(" · ");
+    const recordedSource = typeof metadata.source_list === "string" ? metadata.source_list
+      : Array.isArray(metadata.source_list) && metadata.source_list.every(item => typeof item === "string")
+        ? metadata.source_list.join(", ") : null;
+    const sourceText = recordedSource
+      ? `${humanLabel(recordedSource)}${Number.isFinite(metadata.source_confidence) ? ` · confidence ${formatMetric(metadata.source_confidence)}` : ""} · freshness unavailable`
+      : null;
     const access = properties.selected_access_point || properties.route_access_point || null;
     const attributeConstraints = Array.isArray(properties.attribute_constraints)
       ? properties.attribute_constraints.map((row) => humanLabel(row.attribute || row)).join(", ")
@@ -3312,35 +4835,51 @@ function mapInspectorHtml(geography, displayedPlan) {
       ? safeExternalLink(properties.official_url, "Official source")
       : safeExternalLink(properties.informational_url, "Informational source");
     const activeDraft = stopDraftOperations(stop.id);
-    return `<section class="map-context-card" aria-labelledby="map-context-title">
-      <span class="status-pill">Selected stop</span>
-      <h3 id="map-context-title">${escapeHtml(stop.name)}</h3>
-      <p>${escapeHtml(unavailable(properties.description, (value) => value))}</p>
-      <dl><dt>Itinerary role</dt><dd>${escapeHtml(unavailable(properties.itinerary_role, humanLabel))}</dd>
+    const selectionKey = `${selectedPlanId}:${stopPlan?.content_hash}:${stop.id}`;
+    if (state.destinationDetails?.selectionKey !== selectionKey) {
+      state.destinationDetails = {selectionKey, tab: "overview", expanded: false};
+    }
+    const information = destinationInformationHtml(properties, stop.name);
+    const panels = {
+      overview: `<p>${escapeHtml(properties.description || properties.guide?.intro || "A description has not been recorded for this destination.")}</p>${information.overview}`,
+      visit: `<dl><dt>Itinerary role</dt><dd>${escapeHtml(unavailable(properties.itinerary_role, humanLabel))}</dd>
         <dt>Role source</dt><dd>${escapeHtml(unavailable(properties.itinerary_role_source, humanLabel))}</dd>
         <dt>Place categories</dt><dd>${escapeHtml(unavailable(
     Array.isArray(properties.place_categories) && properties.place_categories.length
       ? properties.place_categories.map(humanLabel).join(", ")
       : null,
   ))}</dd>
-        <dt>Day and order</dt><dd>Day ${escapeHtml(properties.day ?? stop.day ?? "Unavailable")} · ${escapeHtml(unavailable(properties.sequence_index, (value) => `position ${Number(value) + 1}`))}</dd>
+        <dt>Day and order</dt><dd>Day ${escapeHtml(properties.day ?? stop.day ?? "Unavailable")} · ${dayPosition > 0 ? `position ${dayPosition} in day` : "Unavailable"}</dd>
         <dt>Arrival</dt><dd>${escapeHtml(unavailable(properties.arrival_time || properties.expected_arrival))}</dd>
         <dt>Departure</dt><dd>${escapeHtml(unavailable(properties.departure_time || properties.expected_departure))}</dd>
-        <dt>Duration rule</dt><dd>${escapeHtml(formatDurationConstraint(duration))}</dd>
+        <dt>Visit duration</dt><dd>${escapeHtml(visitDuration)}</dd>
+        <dt>Duration rule</dt><dd>${duration ? escapeHtml(formatDurationConstraint(duration)) : "Not specified"}</dd>
         <dt>Commitment</dt><dd>${escapeHtml(unavailable(properties.commitment_strength || properties.ownership_strength, humanLabel))}</dd>
         <dt>Attribute constraints</dt><dd>${escapeHtml(attributeConstraints)}</dd>
-        <dt>Weather / context</dt><dd>${escapeHtml(unavailable(properties.context_summary || properties.weather_context))}</dd>
-        <dt>Visit guidance</dt><dd>${escapeHtml(unavailable(properties.visit_guidance))}</dd>
-        <dt>Route access</dt><dd>${access?.road_validated === true ? `${escapeHtml(humanLabel(access.access_type))} · road validated` : "Unavailable"}</dd>
-        <dt>Source / freshness</dt><dd>${sourceFreshnessHtml(properties)}</dd>
-        <dt>Place link</dt><dd>${placeLink}</dd></dl>
+        <dt>Weather / context</dt><dd>${recordedContext ? `${escapeHtml(recordedContext)} · recorded plan context, not a live forecast` : "Unavailable"}</dd>
+        <dt>Visit guidance</dt><dd>${escapeHtml(unavailable(properties.visit_guidance || properties.access_note || properties.guide?.access_name))}</dd>
+        <dt>Route access</dt><dd>${access?.road_validated === true ? `${escapeHtml(humanLabel(access.access_type))} · road validated` : "Unavailable"}</dd></dl>
       <div class="selection-draft-state">${draftStateHtml(activeDraft)}</div>
-      <p>This is a trip stop, not a movable catalog place. Editing it creates a typed draft and never moves or rewrites the catalog place.</p>
+      <p>Editing this stop creates a draft for review.</p>
       <div class="map-context-actions"><button type="button" id="inspect-edit-stop" ${acceptedTarget ? "" : "disabled title=\"Only an accepted-parent stop can be edited\""}>Open typed stop edits</button>
-        <button type="button" id="prepare-replacement-candidates" ${acceptedTarget ? "" : "disabled title=\"Replacement discovery requires an accepted-parent stop\""}>Find a replacement</button></div>
+        <button type="button" id="prepare-replacement-candidates" ${acceptedTarget ? "" : "disabled title=\"Replacement discovery requires an accepted-parent stop\""}>Find a replacement</button></div>`,
+      photos: information.photos,
+      reviews: information.reviews,
+      sources: `<dl><dt>Source / freshness</dt><dd>${sourceText ? escapeHtml(sourceText) : sourceFreshnessHtml(properties)}</dd>
+        <dt>Place link</dt><dd>${placeLink}</dd></dl>${information.sources}`,
+    };
+    const labels = {overview: "Overview", visit: "Visit details", photos: "Photos", reviews: "Reviews", sources: "Sources"};
+    return `<section class="map-context-card destination-details ${state.destinationDetails.expanded ? "is-expanded" : ""}" aria-labelledby="map-context-title">
+      <header class="destination-heading"><div>
+      <span class="status-pill">${selectedPlanId === displayedPlan?.plan_id ? "Selected stop" : "Original plan stop"}</span>
+      <h3 id="map-context-title">${escapeHtml(stop.name)}</h3></div>
+      <button type="button" id="expand-destination-details" aria-expanded="${state.destinationDetails.expanded}" aria-controls="destination-content">${state.destinationDetails.expanded ? "Compact view" : "Expand details"}</button></header>
+      <div class="destination-tabs" role="tablist" aria-label="Destination details">${Object.keys(panels).map(key => `<button type="button" role="tab" id="destination-tab-${key}" data-destination-tab="${key}" aria-controls="destination-panel-${key}" aria-selected="${state.destinationDetails.tab === key}" tabindex="${state.destinationDetails.tab === key ? "0" : "-1"}">${labels[key]}</button>`).join("")}</div>
+      <div class="destination-content" id="destination-content">${Object.entries(panels).map(([key, html]) => `<section role="tabpanel" id="destination-panel-${key}" aria-labelledby="destination-tab-${key}" tabindex="0" ${state.destinationDetails.tab === key ? "" : "hidden"}>${html}</section>`).join("")}</div>
     </section>`;
   }
   if (interaction.selectionKind === "route_leg") {
+    if (state.interestRegions.enabled) return "";
     const selected = interaction.selectedRouteLeg;
     const routePlan = geography?.plans?.find((plan) => plan.plan_id === selected?.plan_id)
       || displayedPlan;
@@ -3366,6 +4905,7 @@ function mapInspectorHtml(geography, displayedPlan) {
       <p>Clicking a road line selects router evidence; it does not make the polyline freely draggable.</p>
       ${state.poiDiscovery.replacementTargetId ? `<p><strong>Replacement target:</strong> ${escapeHtml(stopNameForId(state.poiDiscovery.replacementTargetId, routePlan))}. The server will require this leg to touch that exact stop.</p>` : ""}
       <div class="map-context-actions"><button type="button" id="find-route-candidates" ${interaction.mode === "edit" && acceptedRouteTarget ? "" : "disabled title=\"Select an accepted-plan route leg in Edit mode\""}>Find route-aware candidates</button>
+        <button type="button" id="explore-interest-regions" ${selected?.plan_id === displayedPlan?.plan_id ? "" : "disabled"}>Explore interest region</button>
         <button type="button" id="inspect-route-edit" ${issueCapability?.enabled === true && acceptedRouteTarget ? "" : `disabled title=\"${escapeHtml(acceptedRouteTarget ? issueCapability?.blocking_code || "Route issue reporting is unavailable" : "Only an accepted-plan route leg can be edited")}\"`}>Add supported route feedback</button>
         <button type="button" disabled title="${escapeHtml(preferenceCapability?.blocking_code || "Route preference editing is unavailable")}">Change route preference</button></div>
     </section>`;
@@ -3437,21 +4977,59 @@ function mapInspectorHtml(geography, displayedPlan) {
   </section>`;
 }
 
+const YOSEMITE_SOURCE_URLS = {"yosemite_lower_fall": "https://www.nps.gov/yose/planyourvisit/lowerfalltrail.htm", "yosemite_cooks_meadow": "https://www.nps.gov/yose/planyourvisit/cooksmeadowtrail.htm", "yosemite_glacier_point": "https://www.nps.gov/yose/planyourvisit/glacierpoint.htm", "yosemite_sentinel_dome": "https://www.nps.gov/places/000/sentinel-dome-and-taft-point-trailhead.htm", "yosemite_mariposa_grove": "https://www.nps.gov/yose/planyourvisit/mg.htm", "yosemite_wawona_history": "https://www.nps.gov/yose/learn/historyculture/historycenter.htm", "yosemite_conditions": "https://www.nps.gov/yose/planyourvisit/conditions.htm"};
+function validYosemiteGuide(guide) {
+  if (guide?.schema_version!=="yosemite-stop-guide-v1" || typeof guide.intro!=="string" || !guide.intro
+      || !Array.isArray(guide.visitor_reviews) || !guide.photo?.alt || !guide.photo?.credit) return false;
+  try {
+    const image=new URL(guide.photo.url);
+    if (image.origin!=="https://www.nps.gov" || !["/yose/","/common/uploads/"].some(p=>image.pathname.startsWith(p))) return false;
+    return guide.visitor_reviews.every(r=>typeof r.summary==="string" && r.author && new URL(r.source_url).origin==="https://www.reddit.com");
+  } catch {return false;}
+}
+function destinationInformationHtml(properties, name) {
+  const regional = Array.isArray(properties.destination_places) ? properties.destination_places : [];
+  const places = (regional.length ? regional : [{attraction_name: name, guide: properties.guide, official_url: properties.official_url}])
+    .filter(place => validYosemiteGuide(place.guide));
+  const overview = regional.length && places.length ? `<h4>Places within this destination</h4><p class="truth-note">Reference guide only. These places have not been added to your itinerary. Opening hours and seasonal access need confirmation.</p>${places.map(place => `<details><summary>${escapeHtml(place.attraction_name)}</summary><p>${escapeHtml(place.guide.intro)}</p><p>Access: ${escapeHtml(place.guide.access_name)}</p>${safeExternalLink(place.official_url, "Official place information")}</details>`).join("")}` : "";
+  const photos = places.map(place => {
+    const photo = place.guide.photo;
+    return `<figure><h4>${escapeHtml(place.attraction_name)}</h4><img loading="lazy" src="${escapeHtml(photo.url)}" alt="${escapeHtml(photo.alt)}" referrerpolicy="no-referrer"><figcaption>${escapeHtml(photo.caption_and_credit || photo.alt)}<br>${escapeHtml(photo.credit)} · ${safeExternalLink(photo.source_url, "Photo source")}</figcaption></figure>`;
+  }).join("") || "<p>No sourced photos are available for this destination.</p>";
+  const reviews = places.map(place => `<article><h4>${escapeHtml(place.attraction_name)}</h4>${place.guide.visitor_reviews.length ? place.guide.visitor_reviews.map(review => `<blockquote><p>${escapeHtml(review.summary)}</p><footer>${escapeHtml(review.author)} · ${escapeHtml(review.date_label)} · ${safeExternalLink(review.source_url, "Read visitor report")}</footer></blockquote>`).join("") : "<p>No verified visitor reports are available for this place.</p>"}<p class="truth-note">${escapeHtml(place.guide.review_disclosure)}</p></article>`).join("") || "<p>No verified visitor reports are available for this destination.</p>";
+  const sources = places.map(place => `<p><strong>${escapeHtml(place.attraction_name)}</strong> · ${safeExternalLink(place.official_url, "Official place information")}</p>`).join("");
+  return {overview, photos, reviews, sources};
+}
+
+function yosemiteGuideHtml(planId) {
+  const bundle=state.session.proposal?.runtime_execution?.planning_bundle;
+  if (bundle?.parameters?.additional_yosemite_days!==3 || bundle.plan.plan_id!==planId) return "";
+  const guides=bundle.plan.selected_stops.filter(s=>s.guide);
+  if (!guides.every(s=>validYosemiteGuide(s.guide))) return "";
+  return `<section class="yosemite-guide" id="yosemite-guide" aria-label="新增三天優勝美地圖文"><h2>新增三天 · 優勝美地圖文導覽</h2><p>三天使用不同景點與主題；共同進出道路可能重疊。照片與個人遊記均附來源，飯店、季節道路和接駁須按實際日期再確認。</p><div class="yosemite-guide-grid">${guides.map(stop=>{const g=stop.guide;return `<article class="yosemite-guide-card" data-yosemite-stop="${escapeHtml(stop.poi_id)}"><p class="eyebrow">Day ${stop.day} · ${escapeHtml(g.theme)}</p><h3>${escapeHtml(stop.attraction_name)}</h3><figure><img src="${escapeHtml(g.photo.url)}" alt="${escapeHtml(g.photo.alt)}" referrerpolicy="no-referrer"><figcaption>${escapeHtml(g.photo.caption_and_credit || g.photo.alt)}<br>${escapeHtml(g.photo.credit)} · ${safeExternalLink(g.photo.source_url,"照片原頁")}</figcaption></figure><p>${escapeHtml(g.intro)}</p><p><strong>預留 ${stop.visit_duration_minutes} 分鐘</strong> · 車程終點：${escapeHtml(g.access_name)}</p><h4>遊客分享</h4>${g.visitor_reviews.length?g.visitor_reviews.map(r=>`<blockquote><p>${escapeHtml(r.summary)}</p><footer>${escapeHtml(r.author)} · ${escapeHtml(r.date_label)} · ${safeExternalLink(r.source_url,"閱讀原始遊記")}</footer></blockquote>`).join(""):"<p>目前未取得可核實的遊客評論。</p>"}<p class="truth-note">${escapeHtml(g.review_disclosure)}</p><p>${safeExternalLink(stop.official_url,"NPS 官方簡介")}</p><button type="button" data-yosemite-day="${stop.day}" data-yosemite-stop-id="${escapeHtml(stop.poi_id)}">在地圖查看 ${escapeHtml(stop.attraction_name)}</button></article>`}).join("")}</div></section>`;
+}
+
 function renderMap() {
+  const interestButton = $("#map-interest-button");
+  if (interestButton) {
+    interestButton.classList.toggle("is-active", state.interestRegions.enabled);
+    interestButton.setAttribute("aria-pressed", String(state.interestRegions.enabled));
+    interestButton.title = "Explore nearby places for the displayed itinerary and day. Viewing does not create a draft.";
+  }
+  const textRouteOpen = $(".textual-map-alternative")?.open === true;
   const geography = activeGeography();
   const mapDraft = confirmedMapDraftState();
   const geographyReady = geography?.schema_version === "product-geography-v2"
     && ["ready", "ready_with_gaps"].includes(geography.status);
   const original = geographyReady ? geography.plans?.find((plan) => plan.role === "original") : null;
-  const repaired = geographyReady ? geography.plans?.find((plan) => plan.role === "registered_repair") : null;
+  const accepted = geographyReady ? acceptedPlan(geography) : null;
   const proposalEligible = state.session.proposal?.schema_version === "draft-preview-v1"
     && state.session.proposal?.state === "eligible"
     && Boolean(state.session.proposal?.child_plan_id);
   const selectedAlternative = geographyReady ? geography.plans?.find(
-    (plan) => ["alternative", "draft_preview"].includes(plan.role)
-      && plan.plan_id === activeAlternativeId(),
+    (plan) => plan.plan_id === activeAlternativeId() && plan.plan_id !== accepted?.plan_id,
   ) : null;
-  const displayed = proposalEligible ? selectedAlternative : selectedAlternative || repaired || original;
+  const displayed = selectedAlternative || accepted || original;
   const displayedStopIds = new Set(displayed?.stops?.features?.map((feature) => feature.properties?.stop_id) || []);
   const accessibleStops = [
     ...(displayed?.stops?.features || []).map((feature) => ({ feature, removed: false })),
@@ -3459,13 +5037,14 @@ function renderMap() {
       .filter((feature) => !displayedStopIds.has(feature.properties?.stop_id))
       .map((feature) => ({ feature, removed: true })),
   ];
-  const dayRouteDescription = selectedAlternative
-    ? routeSummaryForPlan(selectedAlternative)
-    : state.workspace.map_alternative;
+  const dayRouteDescription = routeSummaryForPlan(displayed);
   const routeDescription = textualRouteEvidence(displayed, dayRouteDescription);
   const routeLegs = validatedRouteFeatures(displayed);
   const routeGaps = routeGapFeatures(displayed);
-  const removedByLabel = selectedAlternative ? "selected alternative" : "registered repair";
+  const islandTrips = displayed?.marine_routes?.features || [];
+  const islandNote = islandTrips.length ? `<p class="truth-note"><strong>Channel Islands · Day ${escapeHtml(islandTrips[0].properties.day)}</strong>: Drive to Ventura Harbor · Island Packers (1691 Spinnaker Dr), then passenger ferry to Santa Cruz Island / Scorpion Anchorage and back. Purple dashed line = schematic sea route. 480-minute allowance; sailing schedule, tickets and landing conditions remain unverified.</p>` : "";
+  const yosemiteGuide = yosemiteGuideHtml(displayed?.plan_id);
+  const removedByLabel = selectedAlternative ? "selected preview" : "active itinerary";
   const stopButtons = accessibleStops.map(({ feature, removed }) => {
     const stop = feature.properties || {};
     const selected = stop.stop_id === state.session.selected_stop_id;
@@ -3499,6 +5078,9 @@ function renderMap() {
     </li>`;
   }).join("");
   const draftCount = state.session.draft.length;
+  const interest = currentInterestResponse();
+  const selectedInterest = interest?.poi_predictions.find(point => point.place_id === state.interestRegions.selectedId);
+  const selectedRequiredInterest = interest?.required_points.find(point => point.place_id === state.interestRegions.selectedId);
   const routeCheckedOnly = hasRouteCheckedOnlyDraft();
   const impactSummary = state.typedImpact.response?.summary;
   const impactCurrent = state.typedImpact.response?.session_revision === state.session.revision;
@@ -3506,45 +5088,50 @@ function renderMap() {
   const impactBlockerLabel = impactSummary?.blocking_codes?.length
     ? `Preview blocked: ${impactSummary.blocking_codes.map(humanLabel).join(", ")}.`
     : null;
-  $("#workspace-content").innerHTML = `<div class="map-stage">
+  $("#workspace-content").innerHTML = `${yosemiteGuide ? '<button type="button" id="open-yosemite-guide">查看新增三天圖文</button>' : ""}<div class="map-stage" data-preview-state="${escapeHtml(state.previewRuntime.status)}" data-preview-request-epoch="${escapeHtml(state.previewRuntime.epoch)}" data-preview-request-id="${escapeHtml(state.previewRuntime.requestId || "")}">
     <div id="geographic-map" class="geographic-map" aria-hidden="true"></div>
+    <div class="map-note">${islandTrips.length ? `<strong>Ventura ↔ Channel Islands · Day ${escapeHtml(islandTrips[0].properties.day)}</strong><br>Purple dashed sea route · schematic; sailing unverified.<br>` : ""}<strong>Day ${escapeHtml(state.session.selected_day)} highlighted</strong><br>${displayed?.plan_id === original?.plan_id ? `${escapeHtml(state.workspace.issue.label)} · ${escapeHtml(state.workspace.issue.summary)}` : "Current evaluated route shown with the original route for reference."}</div>
+    ${mapInspectorHtml(geography, displayed)}
+    ${candidateExplorerHtml()}
+    ${interest ? `<aside class="interest-map-summary" aria-label="Interest places"><strong>${interest.poi_predictions.length} nearby places</strong>
+      ${selectedInterest ? `<span>${escapeHtml(selectedInterest.name)}</span><small>${Math.round(selectedInterest.interest_probability_mean * 100)}% estimated interest · 90% interval ${selectedInterest.interest_probability_interval.map(value => `${Math.round(value * 100)}%`).join("–")}</small>` : selectedRequiredInterest ? `<span>Must-go: ${escapeHtml(selectedRequiredInterest.name)}</span><small>Confirmed itinerary constraint</small>` : "<span>Click a blue point or browse the place list.</span>"}
+      <button type="button" id="browse-interest-places">Browse places ↓</button>
+      ${state.interestRegions.selectedId ? '<button type="button" id="show-whole-interest-region">Show whole region</button>' : ""}</aside>` : ""}
+    <div class="map-accessibility-panel">
     <div id="map-render-status" class="map-render-status" role="status">
       ${geographyReady ? "Loading verified local geography…" : "Geographic evidence is unavailable. Use the text route description."}
     </div>
-    <div class="map-mode-switch" role="group" aria-label="Map interaction mode">
-      <button type="button" data-map-mode="select" aria-pressed="${state.mapInteraction.mode === "select"}">Select</button>
-      <button type="button" data-map-mode="edit" aria-pressed="${state.mapInteraction.mode === "edit"}">Edit</button>
-    </div>
-    <div class="map-note"><strong>Day ${escapeHtml(state.session.selected_day)} highlighted</strong><br>${escapeHtml(state.workspace.issue.label)} · ${escapeHtml(state.workspace.issue.summary)}</div>
-    ${mapInspectorHtml(geography, displayed)}
-    ${candidateExplorerHtml()}
-    <details class="textual-map-alternative">
+    <details class="textual-map-alternative" ${textRouteOpen ? "open" : ""}>
       <summary>Text route description</summary>
-      <p>${escapeHtml(routeDescription)}</p>
       ${textRoutePanelHtml(displayed, original)}
+      <p>${escapeHtml(routeDescription)}</p>
+      ${islandNote}
       ${stopButtons ? `<ol class="accessible-stop-list">${stopButtons}</ol>` : ""}
       ${routeButtons ? `<h3>Validated route legs</h3><ol class="accessible-route-list">${routeButtons}</ol>` : ""}
       ${customWaypointItems ? `<h3>Confirmed custom draft waypoints</h3><ol class="accessible-draft-waypoint-list">${customWaypointItems}</ol>` : ""}
       ${gapItems ? `<div class="route-gap-summary" role="alert"><h3>Required route gaps</h3><ul>${gapItems}</ul></div>` : ""}
     </details>
+    </div>
     <div class="map-legend" aria-label="Map legend">
       <span><i class="line-swatch original"></i>Original</span>
-      <span><i class="line-swatch repair"></i>Registered repair</span>
+      ${islandTrips.length ? `<span style="color:#7445b0;border-top:3px dashed #7445b0">Ferry round trip · schematic</span>` : ""}
+      ${displayed?.plan_id && displayed.plan_id !== original?.plan_id ? `<span><i class="line-swatch repair"></i>${displayed.plan_id === accepted?.plan_id ? "Accepted route" : displayed.role === "draft_preview" ? "Evaluated preview" : "Selected alternative"}</span>` : ""}
       <span><i class="line-swatch selected-day"></i>Selected Day ${escapeHtml(state.session.selected_day)}</span>
-      ${selectedAlternative ? `<span><i class="line-swatch alternative"></i>Selected alternative</span>` : ""}
       ${routeGaps.length ? `<span><i class="marker-swatch gap"></i>Unvalidated gap</span>` : ""}
       ${mapDraft.waypoints.length ? `<span><i class="marker-swatch draft-waypoint"></i>Route-checked draft waypoint</span><span><i class="line-swatch draft-route"></i>Affected draft route</span>` : ""}
       ${state.poiDiscovery.response?.candidates?.length ? `<span><i class="marker-swatch poi-candidate"></i>POI candidate · discovery only</span>` : ""}
-      <span><i class="marker-swatch changed"></i>Changed</span>
+      <span><i class="marker-swatch changed"></i>Selected-day stop</span>
     </div>
     ${mapAttribution(geography)}
     <div class="draft-bar">
       <strong>${draftCount} draft ${draftCount === 1 ? "change" : "changes"}</strong>
-      <span>${routeCheckedOnly ? "Route-checked draft; evaluated repair is not enabled for arbitrary waypoints yet." : proposalEligible ? `Evaluated ${escapeHtml(state.session.proposal.evaluation_status || state.session.proposal.eligibility || "proposal")} certificate is current for this draft.` : draftCount && impactCurrent ? impactBlockerLabel ? escapeHtml(impactBlockerLabel) : `${impactSummary.evaluated_executable_count} evaluated-preview capable · ${impactSummary.draft_only_count} draft only · not certified.` : draftCount ? "Checking server-owned draft impact; evaluation is disabled until it resolves." : state.mapInteraction.mode === "edit" ? "Map clicks remain exploratory until road checking and explicit confirmation." : "Select a stop or road-validated route leg."}</span>
-      <button type="button" id="inline-undo" ${draftCount ? "" : "disabled"}>Undo</button>
-      <button type="button" id="inline-preview" class="primary" ${draftCount && evaluatedPreviewReady ? "" : `disabled title="${draftCount ? escapeHtml(impactBlockerLabel || "This draft includes non-executable or not-yet-classified operations") : "Add a draft before preview"}"`}>Preview repair</button>
+      <span>${state.previewRuntime.status === "PREVIEW_RUNNING" ? "Preview running. The accepted parent remains rendered until an eligible child and matching map acknowledgement are ready." : routeCheckedOnly ? "Route-checked draft; evaluated repair is not enabled for arbitrary waypoints yet." : proposalEligible ? `Evaluated ${escapeHtml(state.session.proposal.evaluation_status || state.session.proposal.eligibility || "proposal")} certificate is current for this draft.` : draftCount && impactCurrent ? impactBlockerLabel ? escapeHtml(impactBlockerLabel) : `${impactSummary.evaluated_executable_count} evaluated-preview capable · ${impactSummary.draft_only_count} draft only · not certified.` : draftCount ? "Checking server-owned draft impact; evaluation is disabled until it resolves." : state.mapInteraction.mode === "edit" ? "Map clicks remain exploratory until road checking and explicit confirmation." : "Select a stop or road-validated route leg."}</span>
+      <button type="button" id="inline-undo" ${draftCount ? "" : "disabled"}>Undo latest draft</button>
+      <button type="button" id="inline-preview" class="primary" ${draftCount && evaluatedPreviewReady && state.previewRuntime.status !== "PREVIEW_RUNNING" ? "" : `disabled title="${state.previewRuntime.status === "PREVIEW_RUNNING" ? "Preview request in progress" : draftCount ? escapeHtml(impactBlockerLabel || "This draft includes non-executable or not-yet-classified operations") : "Add a draft before preview"}"`}>${state.previewRuntime.status === "PREVIEW_RUNNING" ? "Preview running…" : "Preview repair"}</button>
     </div>
-  </div>`;
+  </div>${yosemiteGuide}${interestExplorerHtml()}`;
+  $("#open-yosemite-guide")?.addEventListener("click",()=>$("#yosemite-guide")?.scrollIntoView({block:"start"}));
+  $$('[data-yosemite-day]').forEach(button=>button.addEventListener("click",async()=>{await selectMapStop({plan_id:displayed.plan_id,selected_day:Number(button.dataset.yosemiteDay),selected_stop_id:button.dataset.yosemiteStopId}); $("#workspace-content").scrollTop=0;}));
   $$('[data-geo-stop]').forEach((button) => button.addEventListener("click", () => selectMapStop({
     plan_id: button.dataset.geoPlan || null,
     selected_day: Number(button.dataset.geoDay),
@@ -3562,14 +5149,80 @@ function renderMap() {
   $$('[data-relocate-waypoint]').forEach((button) => button.addEventListener("click", () => {
     beginCustomWaypointRelocation(button.dataset.relocateWaypoint);
   }));
-  $$('[data-map-mode]').forEach((button) => button.addEventListener("click", () => {
-    setMapInteractionMode(button.dataset.mapMode);
-  }));
   $("#inspect-edit-stop")?.addEventListener("click", openMapEdit);
+  const destinationTabs = $$("[data-destination-tab]");
+  const selectDestinationTab = key => {
+    state.destinationDetails.tab = key;
+    destinationTabs.forEach(tab => {
+      const selected = tab.dataset.destinationTab === key;
+      tab.setAttribute("aria-selected", String(selected));
+      tab.tabIndex = selected ? 0 : -1;
+      $(`#destination-panel-${tab.dataset.destinationTab}`).hidden = !selected;
+    });
+    $("#destination-content").scrollTop = 0;
+  };
+  destinationTabs.forEach((tab, index) => {
+    tab.addEventListener("click", () => selectDestinationTab(tab.dataset.destinationTab));
+    tab.addEventListener("keydown", event => {
+      const next = event.key === "Home" ? 0 : event.key === "End" ? destinationTabs.length - 1
+        : event.key === "ArrowRight" ? (index + 1) % destinationTabs.length
+        : event.key === "ArrowLeft" ? (index + destinationTabs.length - 1) % destinationTabs.length : null;
+      if (next === null) return;
+      event.preventDefault();
+      selectDestinationTab(destinationTabs[next].dataset.destinationTab);
+      destinationTabs[next].focus();
+    });
+  });
+  $("#expand-destination-details")?.addEventListener("click", event => {
+    state.destinationDetails.expanded = !state.destinationDetails.expanded;
+    $(".destination-details").classList.toggle("is-expanded", state.destinationDetails.expanded);
+    event.currentTarget.setAttribute("aria-expanded", String(state.destinationDetails.expanded));
+    event.currentTarget.textContent = state.destinationDetails.expanded ? "Compact view" : "Expand details";
+  });
   $("#prepare-replacement-candidates")?.addEventListener("click", prepareReplacementDiscovery);
   $("#find-route-candidates")?.addEventListener("click", fetchPoiCandidates);
+  $("#explore-interest-regions")?.addEventListener("click", fetchInterestRegions);
+  $("#refresh-interest-regions")?.addEventListener("click", fetchInterestRegions);
+  $("#browse-interest-places")?.addEventListener("click", () => {
+    $(".interest-region-panel")?.scrollIntoView({block: "start"});
+    $("#interest-place-search")?.focus({preventScroll: true});
+  });
+  $("#show-whole-interest-region")?.addEventListener("click", () => selectInterestPlace(null));
+  $("#interest-place-search")?.addEventListener("input", event => {
+    state.interestRegions.placeSearch = event.currentTarget.value;
+    $("#interest-place-results").innerHTML = interestPlaceListHtml(currentInterestResponse());
+  });
+  $("#interest-place-scope")?.addEventListener("change", event => {
+    state.interestRegions.placeScope = event.currentTarget.value;
+    $("#interest-place-results").innerHTML = interestPlaceListHtml(currentInterestResponse());
+  });
+  $(".interest-region-panel")?.addEventListener("click", event => {
+    const button = event.target.closest("[data-interest-place]");
+    if (!button) return;
+    selectInterestPlace(button.dataset.interestPlace);
+  });
+  $("#close-interest-regions")?.addEventListener("click", () => { resetInterestRegions(); renderMap(); });
+  $("#interest-preference")?.addEventListener("change", event => {
+    state.interestRegions.naturePreference = Number(event.currentTarget.value);
+    void fetchInterestRegions();
+  });
+  $("#interest-mass-level")?.addEventListener("change", event => {
+    state.interestRegions.massLevel = Number(event.currentTarget.value);
+    renderMap();
+  });
+  $("#interest-place-selector")?.addEventListener("change", event => {
+    selectInterestPlace(event.currentTarget.value || null);
+  });
+  $("#explore-interest-place")?.addEventListener("click", () => {
+    const point = currentInterestResponse()?.poi_predictions.find(row => row.place_id === state.interestRegions.selectedId);
+    if (point) createExploratoryPin(point.display_coordinate);
+  });
   $("#relocate-custom-waypoint")?.addEventListener("click", () => {
     beginCustomWaypointRelocation(state.mapInteraction.selectedWaypointId);
+  });
+  $("#remove-custom-waypoint")?.addEventListener("click", () => {
+    if (!window.confirm("Remove this latest staged waypoint? The accepted itinerary will remain unchanged.")) return;
+    void undoDraft();
   });
   $("#inspect-route-edit")?.addEventListener("click", openMapEdit);
   $("#exploratory-meaning")?.addEventListener("change", (event) => {
@@ -3617,6 +5270,10 @@ function renderMap() {
     poiCandidates: state.poiDiscovery.response?.candidates || [],
     selectedCandidateId: state.poiDiscovery.selectedCandidateId,
     showPoiCandidates: state.poiDiscovery.showLayer,
+    interestRegions: currentInterestResponse(),
+    interestMassLevel: state.interestRegions.massLevel,
+    selectedInterestId: state.interestRegions.selectedId,
+    onSelectInterest: selectInterestPlace,
     onSelectStop: selectMapStop,
     onSelectRouteLeg: selectRouteLeg,
     onSelectCandidate: (candidate) => selectPoiCandidate(candidate.candidate_id),
@@ -3644,10 +5301,70 @@ function mapAttribution(geography) {
 function updateGeographicMapStatus(status) {
   const element = $("#map-render-status");
   if (!element) return;
+  element.dataset.mapStatusCode = status.code || "unknown";
   element.classList.remove("is-warning", "is-error");
+  const renderedPlan = activeRenderPlan();
+  const stage = element.closest(".map-stage");
+  if (stage) {
+    if (renderedPlan) {
+      stage.dataset.activePlanId = renderedPlan.plan_id;
+      stage.dataset.activePlanContentHash = renderedPlan.content_hash;
+    } else {
+      delete stage.dataset.activePlanId;
+      delete stage.dataset.activePlanContentHash;
+    }
+  }
   if (["ready", "ready_with_gaps"].includes(status.state)) {
+    const expectedMarkerIds = (renderedPlan?.stops?.features || [])
+      .map((feature) => feature.properties?.stop_id)
+      .filter(Boolean)
+      .sort();
+    const acknowledgedMarkerIds = Array.isArray(status.activeMarkerIds)
+      ? [...status.activeMarkerIds].sort() : [];
+    const identityExact = Boolean(
+      renderedPlan
+      && status.activePlanId === renderedPlan.plan_id
+      && status.activePlanContentHash === renderedPlan.content_hash
+      && typeof status.activeGeometryHash === "string"
+      && /^[0-9a-f]{64}$/.test(status.activeGeometryHash)
+      && JSON.stringify(acknowledgedMarkerIds) === JSON.stringify(expectedMarkerIds),
+    );
+    if (!identityExact) {
+      state.acknowledgedPreviewPlanId = null;
+      state.previewRuntime.status = "MAP_IDENTITY_FAILED";
+      if (stage) {
+        stage.dataset.previewState = state.previewRuntime.status;
+        delete stage.dataset.renderedMapPlanId;
+        delete stage.dataset.renderedGeometryHash;
+        delete stage.dataset.renderedMarkerIds;
+      }
+      element.hidden = false;
+      element.classList.add("is-error");
+      element.textContent = "The map rendered, but its plan identity could not be verified. The accepted itinerary remains authoritative.";
+      copilot.previewStateChanged();
+      renderContextPanel();
+      return;
+    }
+    if (stage) {
+      stage.dataset.renderedMapPlanId = status.activePlanId;
+      stage.dataset.renderedGeometryHash = status.activeGeometryHash;
+      stage.dataset.renderedMarkerIds = JSON.stringify(acknowledgedMarkerIds);
+      if (activeProposalPlan()) state.previewRuntime.status = "PREVIEW_RENDERED";
+      else if (!["PREVIEW_RUNNING", "PREVIEW_FAILED", "PREVIEW_INELIGIBLE", "PREVIEW_BLOCKED", "PREVIEW_NOT_EVALUATED"].includes(
+        state.previewRuntime.status,
+      )) state.previewRuntime.status = "PARENT_RENDERED";
+      stage.dataset.previewState = state.previewRuntime.status;
+      stage.dataset.previewRequestEpoch = String(state.previewRuntime.epoch);
+      stage.dataset.previewRequestId = state.previewRuntime.requestId || "";
+    }
+    if (activeProposalPlan() && state.acknowledgedPreviewPlanId !== renderedPlan.plan_id) {
+      state.acknowledgedPreviewPlanId = renderedPlan.plan_id;
+      toast("Preview ready. The itinerary and map now show the same evaluated child plan.");
+      copilot.previewStateChanged();
+    }
+    renderContextPanel();
     const notices = [];
-    if (Number(status.visiblePlanCount) < 2) notices.push("Only the accepted-plan route is available in this pane.");
+    if (status.basemapOverviewOnly) notices.push("Overview basemap: this route extends beyond local detailed map coverage. Roads and stop positions are verified; local street detail is limited.");
     if (status.gapCount) notices.push(`${status.gapCount} required route connection${status.gapCount === 1 ? " is" : "s are"} shown as an explicit unvalidated gap.`);
     if (!notices.length) {
       element.textContent = "Map ready with loaded local tiles and road-validated route layers.";
@@ -3659,9 +5376,23 @@ function updateGeographicMapStatus(status) {
     }
     return;
   }
+  state.acknowledgedPreviewPlanId = null;
+  if (activeProposalPlan() && state.previewRuntime.status !== "PREVIEW_RUNNING") {
+    state.previewRuntime.status = status.state === "loading" ? "PREVIEW_DATA_READY" : "MAP_RENDER_FAILED";
+  }
+  if (stage) {
+    stage.dataset.previewState = state.previewRuntime.status;
+    delete stage.dataset.renderedMapPlanId;
+    delete stage.dataset.renderedGeometryHash;
+    delete stage.dataset.renderedMarkerIds;
+  }
   element.hidden = false;
-  element.classList.add("is-error");
-  element.textContent = "The geographic map could not be verified. The text route description remains available.";
+  element.classList.add(status.state === "loading" ? "is-warning" : "is-error");
+  element.textContent = status.state === "loading"
+    ? "Loading the current itinerary map…"
+    : "The geographic map could not be verified. The text route description remains available.";
+  copilot.previewStateChanged();
+  renderContextPanel();
 }
 
 function timeWindowLabel(value) {
@@ -3700,16 +5431,17 @@ function evaluatedEditEvidenceHtml(proposal) {
   }).join("");
   const route = proposal.route_validation || {};
   const repair = proposal.repair;
-  const roleEvidence = proposal.plan_diff?.schema_version === "plan-diff-v4";
+  const diff = proposal.plan_diff || proposal.runtime_execution?.plan_diff;
+  const roleEvidence = diff?.schema_version === "plan-diff-v4";
   const schedule = proposal.schedule_impact || proposal.role_impact;
   const scheduleAccounting = roleEvidence ? schedule?.child_schedule : schedule?.child;
-  const timeWindowEvidence = proposal.plan_diff?.schema_version === "plan-diff-v3";
+  const timeWindowEvidence = diff?.schema_version === "plan-diff-v3";
   const scheduleStatus = schedule
     ? `${humanLabel(scheduleAccounting.status)} · evaluator-owned modeled accounting`
     : proposal.evidence?.hard_feasibility_status === "PASSED"
       ? "Hard feasibility passed; stop-by-stop schedule accounting is Unavailable in this response."
       : "Unavailable";
-  const durationChanges = proposal.plan_diff?.duration_changes || [];
+  const durationChanges = diff?.duration_changes || [];
   const durationRows = durationChanges.map((change) => {
     const explicitFrom = change.from_minutes == null
       ? "Explicit parent duration Unavailable"
@@ -3719,11 +5451,11 @@ function evaluatedEditEvidenceHtml(proposal) {
       : `${formatMetric(change.accounting_from_minutes)} min accounting baseline (${humanLabel(change.accounting_from_source)})`;
     return `<li><strong>${escapeHtml(stopNameForId(change.stop_id, acceptedPlan(activeGeography())))}</strong><span>${escapeHtml(explicitFrom)} · ${escapeHtml(accountingFrom)} → ${escapeHtml(formatMetric(change.to_minutes))} min exact · ${escapeHtml(formatMetric(change.delta_minutes))} min modeled change</span></li>`;
   }).join("");
-  const timeWindowChanges = proposal.plan_diff?.time_window_changes || [];
+  const timeWindowChanges = diff?.time_window_changes || [];
   const timeWindowRows = timeWindowChanges.map((change) => `
     <li><strong>${escapeHtml(stopNameForId(change.stop_id, acceptedPlan(activeGeography())))}</strong>
       <span>${escapeHtml(timeWindowLabel(change.from_constraint))} → ${escapeHtml(timeWindowLabel(change.to_constraint))} · trip-specific user constraint</span></li>`).join("");
-  const roleChanges = proposal.plan_diff?.role_changes || [];
+  const roleChanges = diff?.role_changes || [];
   const roleRows = roleChanges.map((change) => `
     <li><strong>${escapeHtml(stopNameForId(change.stop_id, acceptedPlan(activeGeography())))}</strong>
       <span>${escapeHtml(unavailable(change.from_role, humanLabel))} → ${escapeHtml(humanLabel(change.to_role))} · ${escapeHtml(humanLabel(change.to_source))}</span></li>`).join("");
@@ -3749,8 +5481,8 @@ function evaluatedEditEvidenceHtml(proposal) {
   const outcome = proposal.state === "eligible"
     ? '<span class="status-pill success">Evaluated eligible</span>'
     : `<span class="status-pill warning">Evaluated ineligible</span><p>Blocking reason: ${escapeHtml(humanLabel(proposal.reason || "Unavailable"))}</p>`;
-  return `<details class="evaluated-edit-evidence" open>
-    <summary>Evaluated edit evidence</summary>
+  return `<details class="evaluated-edit-evidence">
+    <summary>Evaluated edit evidence (advanced)</summary>
     <div class="evaluated-edit-evidence-grid">
       <section><h4>Requested draft</h4><ol>${operationRows || "<li>Unavailable</li>"}</ol><p>Draft hash <code>${escapeHtml(proposal.draft_content_hash)}</code></p></section>
       <section><h4>Child and diff</h4><dl>
@@ -3767,30 +5499,181 @@ function evaluatedEditEvidenceHtml(proposal) {
         <dt>Fallback legs</dt><dd>${escapeHtml(unavailable(route.fallback_leg_count))}</dd>
         <dt>Route matrix</dt><dd>${escapeHtml(unavailable(proposal.route_validation_identity?.matrix_id))}</dd>
       </dl>${scheduleDisclosure}${modeledSchedule ? `<ol>${modeledSchedule}</ol>` : ""}</section>
-      ${durationRows ? `<section><h4>Typed duration diff</h4><ol>${durationRows}</ol><p>Duration changes are PlanDiff v2 evidence; they are not time shifts or road changes.</p></section>` : ""}
-      ${timeWindowRows ? `<section><h4>Typed time-window diff</h4><ol>${timeWindowRows}</ol><p>Time-window changes are PlanDiff v3 trip constraints. They are not place opening hours, latest-start bounds, or time shifts.</p></section>` : ""}
-      ${roleRows ? `<section><h4>Typed itinerary-role diff</h4><ol>${roleRows}</ol><p>Role changes are PlanDiff v4 trip-use evidence. They do not change PlaceEntity identity, place categories, road geometry, or modeled schedule.</p></section>` : ""}
+      ${durationRows ? `<section><h4>Typed duration diff</h4><ol>${durationRows}</ol><p>Duration changes are ${escapeHtml(diff.schema_version)} evidence; they are not time shifts or road changes.</p></section>` : ""}
+      ${timeWindowRows ? `<section><h4>Typed time-window diff</h4><ol>${timeWindowRows}</ol><p>Time-window changes are ${escapeHtml(diff.schema_version)} trip constraints. They are not place opening hours, latest-start bounds, or time shifts.</p></section>` : ""}
+      ${roleRows ? `<section><h4>Typed itinerary-role diff</h4><ol>${roleRows}</ol><p>Role changes are ${escapeHtml(diff.schema_version)} trip-use evidence. They do not change PlaceEntity identity or place categories; other edits in the draft may change road geometry or schedule.</p></section>` : ""}
       ${traceRows ? `<section><h4>Required-window schedule trace</h4><ol>${traceRows}</ol></section>` : ""}
+      ${proposal.execution_mode === "trip_replan_independent_evaluation" ? tripPlanningEvidenceHtml(proposal) : ""}
       <section><h4>Independent certificate</h4>${outcome}<dl>
         <dt>Certificate</dt><dd>${escapeHtml(unavailable(proposal.certificate_id))}</dd>
         <dt>Evaluation</dt><dd>${escapeHtml(unavailable(proposal.evaluation_status))}</dd>
         <dt>Artifact grounding</dt><dd>${escapeHtml(unavailable(proposal.evidence?.artifact_grounding_status))}</dd>
       </dl></section>
     </div>
-    <p class="truth-note">This is a route-validated, independently evaluated session preview. The accepted parent is unchanged; acceptance remains disabled until W5.</p>
+    <p class="truth-note">This is a route-validated, independently evaluated session preview. Accepting it requires explicit confirmation and a fresh server-side revalidation against the immutable parent, diff, route evidence, and certificate.</p>
   </details>`;
 }
 
+function tripPlanningEvidenceHtml(proposal) {
+  const value = proposal.runtime_execution;
+  const solver = value?.solver || {};
+  const sources = (value?.official_sources || []).map(row => `<li><a href="${escapeHtml(row.url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(row.source_id)}</a><p>Retrieved ${escapeHtml(row.retrieved_at)} · ${escapeHtml(row.park_access || row.status)}</p><p>${escapeHtml(row.excerpt)}</p></li>`).join("");
+  const notices = (value?.notices || []).map(text => `<li>${escapeHtml(text)}</li>`).join("");
+  return `<section><h4>Trip planning result</h4><p>${solver.status === "OPTIMAL" ? "Optimal within this finite candidate model" : "Feasible plan; optimality not proven"} · ${escapeHtml(solver.objective)}.</p><p>${escapeHtml(solver.scope)}. Gap: ${escapeHtml(solver.optimality_gap == null ? "Unavailable" : solver.optimality_gap)}.</p><h4>Official travel sources</h4><ul>${sources}</ul><ul>${notices}</ul></section>`;
+}
+
+function normalizeAcceptanceAction(value, expectedDecisionType) {
+  const pointerKeys = [
+    "schema_version", "trip_id", "run_id", "original_plan_id", "original_plan_content_hash",
+    "accepted_plan_id", "accepted_plan_content_hash", "decision_id", "revision", "updated_at", "content_hash",
+  ];
+  const decisionKeys = [
+    "schema_version", "decision_id", "idempotency_key", "decision_type", "trip_id", "run_id",
+    "session_id", "session_revision_before", "session_revision_after", "pointer_revision_before",
+    "pointer_revision_after", "previous_plan_id", "previous_plan_content_hash", "selected_plan_id",
+    "selected_plan_content_hash", "proposal_id", "draft_content_hash", "diff_id", "diff_content_hash",
+    "certificate_id", "certificate_content_hash", "snapshot_content_hash", "created_at",
+    "request_fingerprint", "content_hash",
+  ];
+  const sessionKeys = [
+    "schema_version", "session_id", "trip_id", "run_id", "revision", "accepted_plan_id",
+    "selected_day", "selected_stop_id", "selected_segment_id", "selected_candidate_id",
+    "selected_alternative_id", "draft", "proposal", "permission_decisions", "conversation_id",
+  ];
+  if (!exactKeys(value, ["schema_version", "result", "session", "workspace"])
+      || value.schema_version !== "acceptance-action-v1"
+      || !value.workspace || typeof value.workspace !== "object"
+      || value.workspace.accepted_plan_pointer?.accepted_plan_id !== value.session?.accepted_plan_id
+      || !exactKeys(value.result, ["schema_version", "decision", "pointer", "recovery_performed"])
+      || value.result.schema_version !== "acceptance-result-v1"
+      || typeof value.result.recovery_performed !== "boolean"
+      || !exactKeys(value.result.pointer, pointerKeys)
+      || !exactKeys(value.result.decision, decisionKeys)
+      || !exactKeys(value.session, sessionKeys)) return null;
+  const { decision, pointer } = value.result;
+  if (pointer.schema_version !== "workspace-pointer-v1"
+      || decision.schema_version !== "acceptance-decision-v1"
+      || decision.decision_type !== expectedDecisionType
+      || !/^decision_[0-9a-f]{32}$/.test(decision.decision_id)
+      || pointer.decision_id !== decision.decision_id
+      || decision.session_id !== value.session.session_id
+      || decision.trip_id !== value.session.trip_id
+      || decision.run_id !== value.session.run_id
+      || decision.session_revision_after !== decision.session_revision_before + 1
+      || decision.pointer_revision_after !== decision.pointer_revision_before + 1
+      || pointer.revision !== decision.pointer_revision_after
+      || pointer.accepted_plan_id !== decision.selected_plan_id
+      || pointer.accepted_plan_content_hash !== decision.selected_plan_content_hash
+      || value.session.revision !== decision.session_revision_after
+      || value.session.accepted_plan_id !== pointer.accepted_plan_id
+      || !Array.isArray(value.session.draft) || value.session.draft.length !== 0
+      || value.session.proposal !== null
+      || !Array.isArray(value.session.permission_decisions)
+      || value.session.permission_decisions.length !== 0
+      || !/^[0-9a-f]{64}$/.test(pointer.content_hash)
+      || !/^[0-9a-f]{64}$/.test(decision.content_hash)
+      || !/^[0-9a-f]{64}$/.test(decision.request_fingerprint)) return null;
+  return value;
+}
+
+function previewCanBeAccepted() {
+  const proposal = state.session?.proposal;
+  return !state.workspaceSyncPending && !state.workspaceConflict && proposal?.state === "eligible" && proposal.acceptance_eligible === true
+    && state.previewRuntime.status === "PREVIEW_RENDERED"
+    && state.acknowledgedPreviewPlanId === proposal.child_plan_id;
+}
+
+async function submitAcceptance(decisionType) {
+  if (pendingSelection && !(await pendingSelection)) return toast("Selection could not be updated. No acceptance was sent.", true);
+  const acceptRepair = decisionType === "accept_repair";
+  if (acceptRepair && !previewCanBeAccepted()) {
+    toast("Wait for the eligible preview to finish rendering before accepting it.", true);
+    return;
+  }
+  const dialog = $("#acceptance-dialog");
+  if (dialog.open || dialog.dataset.submitting) return;
+  const sessionId = state.session.session_id;
+  const revision = state.session.revision;
+  const parentPlanId = state.session.accepted_plan_id;
+  const conversationId = state.session.conversation_id;
+  const childPlanId = state.session.proposal?.child_plan_id;
+  const childContentHash = state.session.proposal?.child_plan_content_hash;
+  $("#acceptance-message").textContent = acceptRepair
+    ? "Accept this independently evaluated repair as the durable trip plan?"
+    : "Keep the immutable original plan as the durable trip plan?";
+  $("#acceptance-confirm").textContent = acceptRepair ? "Accept repair" : "Keep original";
+  dialog.returnValue = "cancel";
+  dialog.dataset.submitting = "true";
+  try {
+    const confirmed = await new Promise((resolve) => {
+      dialog.addEventListener("close", () => resolve(dialog.returnValue === "confirm"), { once: true });
+      dialog.showModal();
+    });
+    if (!confirmed) return;
+    if (state.session.session_id !== sessionId || state.session.revision !== revision
+        || state.session.accepted_plan_id !== parentPlanId
+        || (acceptRepair && (!previewCanBeAccepted()
+          || state.session.proposal.child_plan_id !== childPlanId
+          || state.session.proposal.child_plan_content_hash !== childContentHash))) {
+      toast("The trip or preview changed while confirmation was open. Review it and confirm again.", true);
+      return;
+    }
+    const confirmation = acceptRepair ? "accept_evaluated_repair" : "keep_original_plan";
+    const endpoint = acceptRepair ? "accept" : "keep-original";
+    const payload = await api(`/api/sessions/${encodeURIComponent(sessionId)}/${endpoint}`, {
+      method: "POST",
+      body: {
+        expected_revision: revision,
+        confirmation,
+        idempotency_key: `${endpoint}:${crypto.randomUUID()}`,
+      },
+    });
+    const normalized = normalizeAcceptanceAction(payload, decisionType);
+    if (!normalized) throw new Error("invalid_acceptance_response");
+    if (state.session?.session_id !== sessionId || state.session.revision !== revision
+        || state.session.accepted_plan_id !== parentPlanId || state.session.conversation_id !== conversationId) {
+      toast("The trip changed while the decision was saving. Reload that trip to review its saved decision.", true);
+      return;
+    }
+    state.session = normalized.session;
+    state.workspace = normalized.workspace;
+    syncPreviewRuntimeFromSession();
+    state.typedImpact = { status: "idle", response: null, error: null };
+    renderAll();
+    toast(acceptRepair
+      ? "Evaluated repair accepted. The immutable plan pointer and decision ledger were updated."
+      : "Original plan kept. The durable decision was recorded.");
+  } catch (error) {
+    if (!(error.status === 409 && error.code === "stale_session_revision" && await refreshStaleWorkspace(error))) toast(error.message, true);
+  } finally {
+    delete dialog.dataset.submitting;
+  }
+}
 function renderRepair() {
   const issue = state.workspace.issue;
-  const proposal = state.session.proposal;
+  const proposal = state.workspaceSyncPending ? null : state.session.proposal;
   const evaluated = proposal?.schema_version === "draft-preview-v1" && ["eligible", "ineligible"].includes(proposal.state);
   const eligible = evaluated && proposal.state === "eligible";
   const registered = proposal?.state === "eligible" && proposal?.provenance === "registered_fixture_artifacts";
+  const unevaluated = proposal?.schema_version === "draft-preview-v1" && !evaluated && !registered;
+  const acceptedBaseline = acceptedPlan(state.workspace.geography);
+  const hasAcceptedRepair = state.workspace.accepted_plan_pointer?.decision_id
+    && acceptedBaseline?.content_hash === state.workspace.accepted_plan_pointer.accepted_plan_content_hash
+    && planPresentationEvidence(acceptedBaseline).certificateId;
+  const acceptedChild = !proposal && hasAcceptedRepair && activeRenderPlan()?.plan_id === acceptedBaseline.plan_id;
+  const displayed = activeRenderPlan();
+  const hasRenderedRepair = hasAcceptedRepair || (eligible && displayed?.plan_id === proposal.child_plan_id
+    && displayed?.content_hash === proposal.child_plan_content_hash);
+  const canAccept = eligible && previewCanBeAccepted();
   const repair = evaluated || registered ? proposal.repair : state.workspace.repair;
-  const statusLabel = eligible ? "Evaluated eligible proposal" : evaluated ? "Evaluated ineligible proposal" : registered ? "Registered fixture proposal" : "Preview required";
-  const repairTitle = eligible ? "Evaluated draft repair" : evaluated ? "No eligible draft repair" : registered ? "Registered repair fixture" : "Registered repair";
-  const repairBody = repair ? `
+  const statusLabel = eligible ? "Evaluated eligible proposal" : evaluated ? "Evaluated ineligible proposal" : unevaluated ? "No independent evaluation" : acceptedChild ? "Accepted evaluated itinerary" : registered ? "Registered fixture proposal" : "Preview required";
+  const repairTitle = eligible ? "Evaluated draft repair" : evaluated ? "No eligible draft repair" : unevaluated ? "Preview did not produce an evaluated child" : acceptedChild ? "Accepted repair is displayed" : registered ? "Registered repair fixture" : "Recommendation — not applied";
+  const repairBody = unevaluated
+    ? `<ul>${(proposal.blocking_findings || []).map((finding) => `<li>${escapeHtml(humanLabel(finding.code))}: ${escapeHtml(finding.origin_id || "")} ${finding.destination_id ? `→ ${escapeHtml(finding.destination_id)}` : ""}. ${escapeHtml(finding.corrective_action)}</li>`).join("")}</ul><p>The staged draft is retained. The accepted itinerary and map have not been replaced.</p>`
+    : acceptedChild ? `<p>The saved accepted child is the displayed itinerary. Its metrics and certificate come from the immutable acceptance snapshot.</p>`
+    : !evaluated && !registered
+    ? `<p>This registered recommendation is not the displayed itinerary. Run Preview repair to generate and evaluate your draft before accepting any changes.</p>`
+    : repair ? `
       <p>${escapeHtml(repair.result)}</p>
       <ul class="change-list">
         <li>${repair.changed.affected_day_count} affected day</li>
@@ -3803,7 +5686,7 @@ function renderRepair() {
     <h2 id="repair-heading">Decision workspace</h2>
     <span class="status-pill ${eligible || registered ? "success" : "warning"}">${escapeHtml(statusLabel)}</span>
     <article class="issue-card">
-      <h3>Issue detected · Registered weather disruption</h3>
+      <h3>${hasRenderedRepair ? "Original repair context" : "Issue detected · Registered weather disruption"}</h3>
       <p>${escapeHtml(issue.summary)}</p>
     </article>
     <article class="repair-card">
@@ -3813,14 +5696,16 @@ function renderRepair() {
       ${evaluatedEditEvidenceHtml(proposal)}
     </article>
     <div class="action-stack">
-      <button class="primary" id="accept-repair" disabled>Accept evaluated repair</button>
+      <button class="primary" id="accept-repair" ${canAccept ? "" : "disabled"}>Accept evaluated repair</button>
       <button id="compare-repair">Compare alternatives</button>
       <button id="review-evidence">Review evidence</button>
-      <button id="keep-original" disabled>Keep original</button>
+      <button id="keep-original">Keep original</button>
     </div>
-    <p class="truth-note">The parent and child artifacts are immutable. Acceptance and Keep original remain disabled until the W5 repository transaction is implemented. This prototype does not verify E5.</p>`;
+    <p class="truth-note">Accept and Keep original require explicit confirmation. Decisions append to the durable ledger and atomically update the accepted-plan pointer; immutable plan artifacts are never overwritten. Rollback remains a separate audited action.</p>`;
   $("#compare-repair").addEventListener("click", () => navigate("/app/compare"));
   $("#review-evidence").addEventListener("click", () => navigate("/app/evidence"));
+  $("#accept-repair").addEventListener("click", () => submitAcceptance("accept_repair"));
+  $("#keep-original").addEventListener("click", () => submitAcceptance("keep_original"));
 }
 
 function renderContextPanel() {
@@ -3858,87 +5743,161 @@ function renderDraftContextPanel() {
 }
 
 function renderCompareContextPanel() {
-  const resolution = resolveCompareSelection(state.workspace, state.session);
+  const context = evaluatedProposalCompareContext();
+  const resolution = resolveCompareSelection(
+    context?.workspace || state.workspace,
+    context?.session || state.session,
+  );
   const option = resolution.state === "selected" ? resolution.option : null;
   $("#repair-panel").innerHTML = `<span class="eyebrow">Selected alternative</span><h2 id="repair-heading">Tradeoff</h2>
     ${option ? `<span class="status-pill success">${escapeHtml(option.display_status || option.status || "Selected")}</span><article class="repair-card"><h3>${escapeHtml(option.method_label || "Selected repair")}</h3><dl><dt>Route time</dt><dd>${escapeHtml(option.route_total_minutes == null ? "Unavailable" : `${formatMetric(option.route_total_minutes)} minutes`)}</dd><dt>Edit cost</dt><dd>${escapeHtml(formatMetric(option.weighted_edit_cost))}</dd><dt>Road route</dt><dd>${option.route_validated ? "Validated" : "Unavailable"}</dd></dl><p>The maps, metrics, changes, and Evidence button refer to this same selected repair.</p></article>` : '<article class="repair-card"><h3>Choose a repair</h3><p>Select one available option in Compare.</p></article>'}
-    <div class="action-stack"><button id="context-choose" class="primary" type="button" disabled title="Acceptance remains disabled until W5">Choose option (not enabled)</button><button id="context-evidence" type="button" ${resolution.evidenceExact ? "" : "disabled"}>View advanced Evidence</button></div>`;
+    <div class="action-stack"><button id="context-choose" class="primary" type="button" ${option ? "" : "disabled"} title="Selects this option for Trip preview; acceptance requires an eligible evaluated preview and confirmation">Choose option for Trip preview</button><button id="context-evidence" type="button" ${resolution.evidenceExact ? "" : "disabled"}>View advanced Evidence</button></div>`;
+  $("#context-choose").addEventListener("click", () => {
+    if (!option) return;
+    state.tripPreviewPlanId = option.plan_id;
+    navigate("/app/itinerary");
+  });
   $("#context-evidence").addEventListener("click", () => navigate("/app/evidence"));
 }
 
 function renderEvidenceContextPanel() {
-  const resolution = resolveCompareSelection(state.workspace, state.session);
+  const context = evidencePresentationContext();
+  const resolution = resolveCompareSelection(
+    context?.workspace || state.workspace, context?.session || state.session,
+  );
   const proposal = state.session.proposal;
   const evaluated = proposal?.schema_version === "draft-preview-v1"
     && ["eligible", "ineligible"].includes(proposal.state);
   const exact = resolution.state === "selected" && resolution.evidenceExact;
   $("#repair-panel").innerHTML = `<span class="eyebrow">Evidence summary</span><h2 id="repair-heading">Eligibility checks</h2>
-    <span class="status-pill ${evaluated || exact ? "success" : "warning"}">${evaluated ? escapeHtml(humanLabel(proposal.state)) : exact ? "Exact registered evidence" : "Selection required"}</span>
-    <article class="repair-card"><h3>Current scope</h3><ul class="change-list"><li>Exact selected option: ${exact ? "verified" : "Unavailable"}</li><li>Road validation: ${exact || evaluated ? "checked" : "Unavailable"}</li><li>Acceptance: disabled until W5</li></ul><p>Technical plan, hash, diff, method, and certificate details are shown in the main Evidence view.</p></article>
+    <span class="status-pill ${evaluated || exact ? "success" : "warning"}">${evaluated ? escapeHtml(humanLabel(proposal.state)) : exact ? context?.scope === "accepted" ? "Exact accepted-plan evidence" : "Exact selected evidence" : "Selection required"}</span>
+    <article class="repair-card"><h3>Current scope</h3><ul class="change-list"><li>Exact selected option: ${exact ? "verified" : "Unavailable"}</li><li>Road validation: ${(evaluated ? proposal.route_validation?.publication_ready : exact) ? "checked" : "Unavailable"}</li><li>Acceptance requires an eligible rendered preview and explicit confirmation in Trip.</li></ul><p>Technical plan, hash, diff, method, and certificate details are shown in the main Evidence view.</p></article>
     <div class="action-stack"><button id="context-back-compare" type="button">Back to Compare</button></div>`;
   $("#context-back-compare").addEventListener("click", () => navigate("/app/compare"));
 }
 
 function renderMetrics() {
-  const proposal = state.session.proposal;
-  const evaluated = proposal?.schema_version === "draft-preview-v1" && ["eligible", "ineligible"].includes(proposal.state);
-  const registered = proposal?.state === "eligible" && proposal?.provenance === "registered_fixture_artifacts";
-  const r = evaluated ? proposal.repair : state.workspace.repair;
-  const preservation = r?.tradeoffs?.preservation_rate;
+  const plan = activeRenderPlan();
+  const facts = planPresentationEvidence(plan);
+  const preservation = facts.repair?.tradeoffs?.preservation_rate ?? facts.metrics.preservation_rate;
+  const risk = facts.repair?.tradeoffs?.weather_risk_delta ?? facts.metrics.weather_risk_delta;
+  const routeMinutes = planRouteMinutes(plan);
+  const scope = facts.certificateId ? "Exact displayed-plan evidence" : "Not evaluated for this plan";
   const metrics = [
-    ["Contextual risk", r ? formatMetric(r.tradeoffs.weather_risk_delta) : "Unavailable", "Evaluator-owned delta"],
-    ["Preservation", preservation == null ? "Unavailable" : `${Math.round(preservation * 100)}%`, "Artifact-backed"],
-    ["Edit cost", r ? formatMetric(r.tradeoffs.weighted_edit_cost) : "Unavailable", "Lower is better"],
-    ["Certificate", evaluated ? proposal.evaluation_status || proposal.eligibility || "Unavailable" : registered ? proposal.certificate_id || "Registered fixture" : "Preview required", evaluated ? "Current evaluated draft certificate" : "Draft changes invalidate evaluated state"],
+    ["Route time", routeMinutes === null ? "Unavailable" : `${formatMetric(routeMinutes)} min`, "Exact road-evidence duration"],
+    ["Contextual risk", risk == null ? "Unavailable" : formatMetric(risk), scope],
+    ["Preservation", preservation == null ? "Unavailable" : `${Math.round(preservation * 100)}%`, scope],
+    ["Edit cost", facts.weightedEditCost == null ? "Unavailable" : formatMetric(facts.weightedEditCost), scope],
+    ["Certificate", facts.eligibility, scope],
   ];
-  $("#metric-strip").innerHTML = metrics.map(([label, value, note]) => `<div class="metric"><span>${label}</span><strong>${escapeHtml(value)}</strong><small>${escapeHtml(note)}</small></div>`).join("");
+  const strip = $("#metric-strip");
+  // Compare and Evidence render their own selected-artifact summaries. Keep
+  // the Trip summary from appearing as an unlabeled competing plan there.
+  strip.hidden = state.route === "/app/compare" || state.route === "/app/evidence";
+  strip.dataset.planId = plan?.plan_id || "";
+  strip.dataset.planContentHash = plan?.content_hash || "";
+  strip.dataset.evaluationId = facts.certificateId || "";
+  strip.innerHTML = metrics.map(([label, value, note]) => `<div class="metric" data-plan-id="${escapeHtml(plan?.plan_id || "")}" data-plan-content-hash="${escapeHtml(plan?.content_hash || "")}"><span>${label}</span><strong>${escapeHtml(value)}</strong><small>${escapeHtml(note)}</small></div>`).join("");
+}
+
+function evaluatedProposalCompareContext() {
+  const proposal = state.session.proposal;
+  const plan = activeProposalPlan();
+  if (!plan || proposal?.child_plan_id !== plan.plan_id) return null;
+  const option = {
+    plan_id: proposal.child_plan_id,
+    plan_content_hash: proposal.child_plan_content_hash,
+    role: "evaluated_preview",
+    status: proposal.state,
+    display_status: proposal.state === "eligible" ? "Eligible" : "Ineligible",
+    ranking_eligible: proposal.ranking_eligible === true,
+    method_label: "Evaluated draft repair",
+    route_total_minutes: planRouteMinutes(plan),
+    weighted_edit_cost: proposal.repair?.tradeoffs?.weighted_edit_cost ?? null,
+    route_validated: proposal.route_validation?.publication_ready === true,
+  };
+  const evidence = {
+    parent_plan_id: proposal.parent_plan_id,
+    plan_id: proposal.child_plan_id,
+    plan_content_hash: proposal.child_plan_content_hash,
+    diff_id: proposal.diff_id,
+    certificate_id: proposal.certificate_id,
+    certificate: proposalCertificate(proposal),
+    diff: proposal.runtime_execution?.plan_diff || proposal.plan_diff || null,
+    source_hashes: {child: proposal.child_plan_content_hash, diff: proposal.diff_content_hash,
+      certificate: proposal.certificate_content_hash},
+    methods: {requested: [proposal.evidence?.requested_method || "Unavailable"],
+      executed: [proposal.evidence?.executed_method || proposal.execution_mode]},
+  };
+  return {
+    scope: "preview",
+    workspace: {
+      ...state.workspace,
+      alternatives: [option],
+      alternative_evidence: { [proposal.child_plan_id]: evidence },
+      geography: activeGeography(),
+    },
+    session: { ...state.session, selected_alternative_id: proposal.child_plan_id },
+  };
+}
+
+function evidencePresentationContext() {
+  const preview = evaluatedProposalCompareContext();
+  if (preview) return preview;
+  // Explicit Compare selection wins; otherwise inspect the exact accepted snapshot.
+  if (state.session.selected_alternative_id) return null;
+  const pointer = state.workspace.accepted_plan_pointer;
+  const id = state.session.accepted_plan_id;
+  const plans = activeGeography()?.plans?.filter(plan => plan.plan_id === id) || [];
+  const evidence = state.workspace.alternative_evidence?.[id];
+  const certificate = evidence?.certificate;
+  if (!pointer?.decision_id || pointer.accepted_plan_id !== id || plans.length !== 1
+      || plans[0].content_hash !== pointer.accepted_plan_content_hash
+      || evidence?.plan_id !== id || evidence.plan_content_hash !== plans[0].content_hash
+      || certificate?.plan_id !== id || certificate.plan_content_hash !== plans[0].content_hash
+      || certificate.certificate_id !== evidence.certificate_id
+      || evidence.diff?.child_plan_id !== id || evidence.diff.diff_id !== evidence.diff_id
+      || evidence.diff.parent_plan_id !== evidence.parent_plan_id) return null;
+  return {
+    scope: "accepted",
+    workspace: { ...state.workspace, geography: activeGeography(), alternatives: [{
+      plan_id: id, plan_content_hash: plans[0].content_hash, role: "accepted",
+      method_label: "Accepted evaluated itinerary", status: certificate.comparison_eligibility,
+      display_status: "Accepted", ranking_eligible: false,
+    }] },
+    session: { ...state.session, selected_alternative_id: id },
+  };
 }
 
 function renderCompare() {
+  const context = evaluatedProposalCompareContext();
   renderCompareWorkspace({
     container: $("#workspace-content"),
-    workspace: state.workspace,
-    session: state.session,
+    workspace: context?.workspace || state.workspace,
+    session: context?.session || state.session,
     mapConfig: state.mapConfig,
     onBack: () => navigate("/app/itinerary"),
-    onSelectAlternative: (planId) => selectContext({ selected_alternative_id: planId }),
+    onSelectAlternative: context
+      ? () => {}
+      : (planId) => selectContext({ selected_alternative_id: planId }),
+    onChooseAlternative: (planId) => { state.tripPreviewPlanId = planId; },
     onOpenEvidence: (planId) => {
-      if (state.session.selected_alternative_id === planId) navigate("/app/evidence");
+      if (context?.session.selected_alternative_id === planId
+          || state.session.selected_alternative_id === planId) navigate("/app/evidence");
     },
   });
 }
 
-function comparisonTable() {
-  const alternatives = state.workspace.alternatives;
-  const rows = [
-    ["Independent eligibility", "required", "Unevaluated reference", ...alternatives.map((row) => row.display_status)],
-    ["Strict route time", "lower", "Unavailable", ...alternatives.map((row) => row.route_total_minutes == null ? "Unavailable" : `${formatMetric(row.route_total_minutes)} minutes`)],
-    ["Ownership-weighted edit cost", "lower", "0 (reference)", ...alternatives.map((row) => formatMetric(row.weighted_edit_cost))],
-    ["Road-validated route", "required", "Unavailable", ...alternatives.map((row) => row.route_validated ? "Validated" : "Unavailable")],
-    ["Certificate", "required", "Unavailable", ...alternatives.map((row) => row.certificate_id || "Unavailable")],
-  ];
-  const headings = ["Keep original", ...alternatives.map((row) => row.method_label)];
-  return `<table class="comparison-table"><thead><tr><th>Metric</th><th>Direction</th>${headings.map((label) => `<th>${escapeHtml(label)}</th>`).join("")}</tr></thead><tbody>${rows.map((row) => `<tr>
-    <th scope="row">${escapeHtml(row[0])}</th><td>${escapeHtml(row[1])}</td>${row.slice(2).map((value) => `<td class="${value === "Unavailable" ? "unavailable" : ""}">${escapeHtml(value)}</td>`).join("")}
-  </tr>`).join("")}</tbody></table>`;
-}
-
 function renderEvidence() {
-  const proposal = state.session.proposal;
-  const registeredSelection = resolveCompareSelection(state.workspace, state.session);
-  const proposalMatches = !state.session.selected_alternative_id
-    && proposal?.schema_version === "draft-preview-v1"
-    && proposal?.state === "eligible"
-    && proposal?.child_plan_id;
-  const selectedAlternative = proposalMatches ? {
-    plan_id: proposal.child_plan_id,
-    method_label: "Evaluated draft repair",
-  } : registeredSelection.state === "selected" && registeredSelection.evidenceExact
-    ? registeredSelection.option
+  const context = evidencePresentationContext();
+  const resolution = resolveCompareSelection(context?.workspace || state.workspace, context?.session || state.session);
+  const proposalMatches = context?.scope === "preview";
+  const selectedAlternative = resolution.state === "selected" && resolution.evidenceExact
+    ? resolution.option
     : null;
   if (!selectedAlternative) {
     const code = state.session.selected_alternative_id
-      ? registeredSelection.code
+      ? resolution.code
       : "evidence_option_not_selected";
     $("#workspace-content").innerHTML = `<div class="route-view">
       <header class="route-heading"><div><span class="eyebrow">Structured evidence</span><h2>Evidence unavailable</h2><p>Evidence is shown only for the exact option selected in Compare. No first-option fallback was used.</p></div><button class="secondary" id="evidence-back">Back to Compare</button></header>
@@ -3947,24 +5906,8 @@ function renderEvidence() {
     $("#evidence-back").addEventListener("click", () => navigate("/app/compare"));
     return;
   }
-  const selectedEvidence = proposalMatches ? {
-    parent_plan_id: proposal.parent_plan_id,
-    plan_id: proposal.child_plan_id,
-    plan_content_hash: proposal.child_plan_content_hash,
-    diff_id: proposal.diff_id,
-    certificate_id: proposal.certificate_id,
-    source_hashes: {
-      child: proposal.child_plan_content_hash,
-      diff: proposal.diff_content_hash,
-      certificate: proposal.certificate_content_hash,
-    },
-    methods: {
-      requested: [proposal.evidence?.requested_method || "typed_draft_compiler_v1"],
-      executed: [proposal.evidence?.executed_method || proposal.execution_mode],
-    },
-    certificate: proposal.evidence,
-  } : registeredSelection.evidence;
-  const selectedPlan = proposalMatches ? activeProposalPlan() : state.workspace.geography?.plans?.find((plan) => plan.plan_id === selectedAlternative?.plan_id);
+  const selectedEvidence = resolution.evidence;
+  const selectedPlan = resolution.plan;
   const lineage = selectedEvidence ? {
     parent_plan_id: selectedEvidence.parent_plan_id,
     child_plan_id: selectedEvidence.plan_id,
@@ -3983,7 +5926,7 @@ function renderEvidence() {
   } : {};
   const routeDescription = selectedPlan ? routeSummaryForPlan(selectedPlan) : "Unavailable";
   const sourceHashCount = Object.keys(selectedEvidence?.source_hashes || {}).length;
-  $("#workspace-content").innerHTML = `<div class="route-view">
+  $("#workspace-content").innerHTML = `<div class="route-view" data-evidence-scope="${context?.scope || "selected_option"}" data-evidence-plan-id="${escapeHtml(selectedPlan.plan_id)}" data-plan-content-hash="${escapeHtml(selectedPlan.content_hash)}" data-evaluation-id="${escapeHtml(certificate?.certificate_id || "")}">
     <header class="route-heading"><div><span class="eyebrow">Structured evidence</span><h2>Evidence and lineage</h2><p>Missing and stale states are displayed, never coerced to success.</p></div><button class="secondary" id="evidence-back">Back to trip</button></header>
     <div class="evidence-grid">
       <article class="evidence-card"><h3>1 · Eligibility and certificate</h3>
@@ -3995,15 +5938,15 @@ function renderEvidence() {
       <article class="evidence-card"><h3>3 · Route and source evidence</h3>
         <p>${escapeHtml(routeDescription)}</p>
         <p>${sourceHashCount || "No"} selected-plan source hashes are available.</p>
-        ${proposalMatches ? '<p class="truth-note">Preview evidence is session-local and cannot be downloaded until W5 acceptance persists the child.</p>' : `<a class="download-link" href="/api/runs/${encodeURIComponent(state.session.run_id)}/evidence-bundle?plan_id=${encodeURIComponent(selectedAlternative.plan_id)}">Download selected-plan evidence</a>`}
+        ${proposalMatches ? '<p class="truth-note">This is evaluated preview evidence, not an accepted change. Explicit acceptance persists the child and its lineage.</p>' : context?.scope === "accepted" ? '<p class="truth-note">This is the persisted accepted itinerary, with its exact inspected certificate and parent-child diff. It is not a new preview.</p>' : `<a class="download-link" href="/api/runs/${encodeURIComponent(state.session.run_id)}/evidence-bundle?plan_id=${encodeURIComponent(selectedAlternative.plan_id)}">Download selected-plan evidence</a>`}
       </article>
       <article class="evidence-card"><h3>4 · Requested and executed methods</h3>
         <details open><summary>Requested methods</summary><p>${escapeHtml((methods.requested || []).join(", ") || "Unavailable")}</p></details>
         <details><summary>Executed methods</summary><p>${escapeHtml((methods.executed || []).join(", ") || "Unavailable")}</p></details>
       </article>
       <article class="evidence-card"><h3>5 · Technical lineage</h3><dl>${objectDl(lineage)}</dl></article>
+      <article class="evidence-card"><h3>6 · Exact selected-plan metrics</h3><dl>${objectDl(certificate?.metrics || {})}</dl><p>Values come from the selected plan's evaluator certificate; compare against the accepted baseline in Compare.</p></article>
     </div>
-    ${comparisonTable()}
   </div>`;
   $("#evidence-back").addEventListener("click", () => navigate("/app/itinerary"));
 }
@@ -4016,7 +5959,7 @@ function renderRepairHistory() {
       <article class="evidence-card"><h3>Validated session baseline</h3><p><code>${escapeHtml(state.session.accepted_plan_id)}</code></p></article>
       <article class="evidence-card"><h3>Current proposal</h3><p>${escapeHtml(proposal?.message || "No evaluated proposal in this session.")}</p></article>
       <article class="evidence-card"><h3>Typed draft operations</h3>${state.session.draft.length ? `<ol>${state.session.draft.map((op) => `<li><strong>${escapeHtml(operationDisplayName(op.type))}</strong><span>${escapeHtml(draftTargetLabel(op))}</span></li>`).join("")}</ol>` : "<p>No active draft operations.</p>"}</article>
-      <article class="evidence-card"><h3>Decision boundary</h3><p>Legacy decision files are preserved but not trusted or extended. Acceptance activates in W5. Copilot transcripts are stored only in local product state and expire after 30 days.</p></article>
+      <article class="evidence-card"><h3>Decision boundary</h3><p>Legacy decision files are preserved but not trusted or extended. Eligible evaluated repairs require explicit confirmation and are recorded in the durable W5 ledger. Copilot transcripts expire after 30 days without a new turn; separately saved test evidence is retained independently.</p></article>
     </div>
   </div>`;
   $("#repairs-back").addEventListener("click", () => navigate("/app/itinerary"));
@@ -4136,7 +6079,7 @@ function typedImpactSummaryHtml() {
   if (state.typedImpact.status === "loading") return '<section class="typed-impact" role="status"><strong>Checking draft impact…</strong></section>';
   const response = state.typedImpact.response;
   if (!response) {
-    return `<section class="typed-impact is-blocked" role="status"><strong>Draft impact unavailable</strong><p>${escapeHtml(state.typedImpact.error || "The server-owned impact preview has not loaded.")}</p></section>`;
+    return `<section class="typed-impact is-blocked" role="status"><strong>Draft impact unavailable</strong><p>${escapeHtml(state.typedImpact.error || "The server-owned impact preview has not loaded.")}</p><button type="button" class="secondary" data-retry-draft-impact>Retry draft impact check</button></section>`;
   }
   const summary = response.summary;
   const rows = response.operations.map((row) => `<li><strong>${escapeHtml(operationDisplayName(row.type))}</strong>
@@ -4169,6 +6112,7 @@ function stopTypedEditorHtml(stop, properties) {
   return `<div class="typed-editor" data-editor-kind="stop">
     <header class="typed-editor-heading"><div><span class="eyebrow">Accepted-plan stop</span><h3>${escapeHtml(stop.name)}</h3></div><span class="status-pill warning">Draft, not accepted</span></header>
     <p>Each save appends exactly one server-validated operation. Draft-only edits cannot be sent to evaluated repair.</p>
+    <p class="truth-note" data-combination-policy>Preview repair evaluates the complete supported draft as one proposed itinerary. Conflicting or draft-only changes block preview; protected rules still apply.</p>
     <details open><summary>Role, day, and order</summary>
       <form class="typed-operation-form" data-typed-operation="set_stop_role">
         <label>Itinerary role<select name="role" data-role-select required>${roleOptionsHtml(properties?.itinerary_role ?? null)}</select></label>
@@ -4434,9 +6378,36 @@ async function submitTypedOperation(event) {
 function bindTypedEditSurface() {
   const surface = $("#typed-edit-surface");
   if (!surface) return;
-  surface.querySelectorAll(".typed-operation-form").forEach(
-    (form) => form.addEventListener("submit", submitTypedOperation),
-  );
+  surface.querySelector("[data-retry-draft-impact]")?.addEventListener("click", async () => {
+    if (state.typedImpact.status === "loading") return;
+    const pending = loadDraftImpactPreview({ render: false });
+    const request = state.typedImpact.request;
+    renderAll();
+    refreshMapEditDialog();
+    await pending;
+    if (!draftImpactRequestIsCurrent(request)) return;
+    renderAll();
+    if ($("#map-edit-dialog").open) refreshMapEditDialog();
+  });
+  surface.querySelectorAll(".typed-operation-form").forEach((form) => {
+    form.addEventListener("submit", submitTypedOperation);
+    const type = form.dataset.typedOperation;
+    const submit = form.querySelector('button[type="submit"]');
+    if (!submit) return;
+    const intrinsicDisabled = submit.disabled || !typedEditCapability(type)?.enabled;
+    const originalTitle = submit.title;
+    const updateCombination = () => {
+      const parameters = type === "set_stop_duration" ? { duration: { mode: form.elements.duration_mode?.value } } : {};
+      const blocker = draftCombinationBlocker([...state.session.draft, { type, parameters }]);
+      submit.disabled = intrinsicDisabled || Boolean(blocker);
+      submit.title = blocker ? "This edit cannot be combined with the staged draft. Preview and accept, or undo, the current edit first."
+        : originalTitle;
+      if (blocker) form.dataset.combinationBlockingCode = blocker;
+      else delete form.dataset.combinationBlockingCode;
+    };
+    form.addEventListener("change", updateCombination);
+    updateCombination();
+  });
   const attributeForm = surface.querySelector('[data-typed-operation="set_attribute_constraint"]');
   if (attributeForm) {
     renderAttributeValueEditor(attributeForm);
@@ -4447,6 +6418,12 @@ function bindTypedEditSurface() {
 }
 
 async function updateSelection(patch) {
+  if (state.workspaceConflict || state.workspaceSyncPending) return false;
+  const origin = { ...state.session };
+  const ownsSession = (session) => session
+    && ["session_id", "trip_id", "run_id"].every((field) => session[field] === origin[field])
+    && Number.isSafeInteger(session.revision) && session.revision >= 0;
+  let saved = false;
   try {
     const stopExplicit = Object.hasOwn(patch, "selected_stop_id");
     const candidateExplicit = Object.hasOwn(patch, "selected_candidate_id");
@@ -4463,37 +6440,85 @@ async function updateSelection(patch) {
       ) selectedCandidateId = null;
     }
 
-    const payload = await api(`/api/sessions/${state.session.session_id}/selection`, {
-      method: "POST",
-      body: {
+    let payload = await mutationRecovery.submit("selection", {
         expected_revision: state.session.revision,
         selected_day: Object.hasOwn(patch, "selected_day") ? patch.selected_day : state.session.selected_day,
         selected_stop_id: selectedStopId,
         selected_segment_id: Object.hasOwn(patch, "selected_segment_id") ? patch.selected_segment_id : state.session.selected_segment_id,
         selected_candidate_id: selectedCandidateId,
         selected_alternative_id: Object.hasOwn(patch, "selected_alternative_id") ? patch.selected_alternative_id : state.session.selected_alternative_id,
-      },
     });
+    if (!ownsSession(payload?.session)) throw new Error("The selection response did not match its workspace.");
+    saved = true;
+    if (!ownsSession(state.session)) throw new Error("The visible workspace changed while saving selection.");
+    if (state.session.conversation_id !== origin.conversation_id
+        || payload.session.revision < state.session.revision) {
+      // Conversation deletion/rebinding does not advance itinerary revision.
+      // Read the committed selection and current conversation together; never
+      // merge a stale response's trip fields with guessed conversation metadata.
+      let reconciled = false;
+      for (let attempt = 0; attempt < 3; attempt += 1) {
+        const beforeRead = { ...state.session };
+        payload = await api(`/api/sessions/${encodeURIComponent(origin.session_id)}`);
+        if (!ownsSession(state.session) || !ownsSession(payload?.session)) {
+          throw new Error("The selection refresh did not match its workspace.");
+        }
+        if (state.session.revision !== beforeRead.revision
+            || state.session.conversation_id !== beforeRead.conversation_id
+            || payload.session.revision < state.session.revision) continue;
+        reconciled = true;
+        break;
+      }
+      if (!reconciled) throw new Error("The workspace kept changing. Refresh to read the saved selection.");
+      if (payload.workspace) state.workspace = payload.workspace;
+      if (payload.registry) state.registry = payload.registry;
+    }
+    if (payload.workspace) state.workspace = payload.workspace;
+    if (payload.registry) state.registry = payload.registry;
     state.session = payload.session;
+    syncPreviewRuntimeFromSession();
     await loadDraftImpactPreview({ render: false });
     renderAll();
     return true;
-  } catch (error) { toast(error.message, true); return false; }
+  } catch (error) {
+    if (!saved && error.status === 409 && error.code === "stale_session_revision" && await refreshStaleWorkspace(error)) return false;
+    toast(saved ? `Selection was saved, but its current workspace could not be refreshed. ${error.message}` : error.message, true);
+    return false;
+  }
 }
 
 function operationEnabled(type) {
   return state.workspace.draft_capabilities?.operations?.[type]?.enabled === true;
 }
 
+function draftImpactRequestIsCurrent(request) {
+  return Boolean(request && state.typedImpact.request === request
+    && Object.entries(request).every(([key, value]) => state.session?.[key] === value));
+}
+
 async function loadDraftImpactPreview({ render = true } = {}) {
   if (!state.session?.session_id) return null;
+  const request = Object.fromEntries(
+    ["session_id", "trip_id", "run_id", "revision", "accepted_plan_id"].map(key => [key, state.session[key]]),
+  );
+  state.typedImpact.request = request;
   state.typedImpact.status = "loading";
+  state.typedImpact.response = null;
   state.typedImpact.error = null;
+  const controller = new AbortController();
+  let deadline;
   try {
-    const payload = await api(`/api/sessions/${state.session.session_id}/draft/impact-preview`, {
-      method: "POST",
-      body: { expected_revision: state.session.revision },
+    const expired = new Promise((_resolve, reject) => {
+      deadline = setTimeout(() => {
+        reject(new Error("Draft impact check timed out. Your saved draft is unchanged. Retry the check when the server responds."));
+        controller.abort();
+      }, 20000);
     });
+    const payload = await Promise.race([api(`/api/sessions/${state.session.session_id}/draft/impact-preview`, {
+      method: "POST", signal: controller.signal,
+      body: { expected_revision: state.session.revision },
+    }), expired]);
+    if (!draftImpactRequestIsCurrent(request)) return null;
     const normalized = normalizeDraftImpactPreview(payload);
     if (!normalized) throw new Error("invalid_draft_impact_preview");
     state.typedImpact.status = "ready";
@@ -4501,11 +6526,14 @@ async function loadDraftImpactPreview({ render = true } = {}) {
     if (render) renderAll();
     return normalized;
   } catch (error) {
+    if (!draftImpactRequestIsCurrent(request)) return null;
     state.typedImpact.status = "failed";
     state.typedImpact.response = null;
     state.typedImpact.error = error.message;
     if (render) renderAll();
     return null;
+  } finally {
+    clearTimeout(deadline);
   }
 }
 
@@ -4516,7 +6544,11 @@ function canRunEvaluatedPreview() {
 }
 
 function selectContext(patch) {
-  const request = updateSelection(patch);
+  const sessionId = state.session?.session_id;
+  const previous = pendingSelection || Promise.resolve();
+  // Resolve defaults and the revision only after earlier selection writes finish.
+  const request = previous.catch(() => false).then(() => state.session?.session_id === sessionId
+    ? updateSelection({ ...patch }) : false);
   pendingSelection = request;
   return request.finally(() => {
     if (pendingSelection === request) pendingSelection = null;
@@ -4524,12 +6556,90 @@ function selectContext(patch) {
 }
 
 function resetPoiDiscovery({ keepReplacementTarget = true } = {}) {
+  resetInterestRegions();
   state.poiDiscovery.status = "idle";
   state.poiDiscovery.response = null;
   state.poiDiscovery.selectedCandidateId = null;
   state.poiDiscovery.showLayer = true;
   state.poiDiscovery.error = null;
   if (!keepReplacementTarget) state.poiDiscovery.replacementTargetId = null;
+}
+
+function resetInterestRegions() {
+  state.interestRegions.controller?.abort();
+  state.interestRegions.controller = null;
+  state.interestRegions.generation += 1;
+  state.interestRegions.enabled = false;
+  state.interestRegions.status = "idle";
+  state.interestRegions.response = null;
+  state.interestRegions.selectedId = null;
+  state.interestRegions.error = null;
+}
+
+async function fetchInterestRegions() {
+  if (pendingSelection && !(await pendingSelection)) {
+    toast("Selection could not be updated. Interest estimates were not requested.", true);
+    return false;
+  }
+  const displayed = activeRenderPlan();
+  const parent = acceptedPlan(activeGeography());
+  if (!displayed || !parent) return false;
+  let route = state.mapInteraction.selectedRouteLeg;
+  const legs = displayed.validated_legs?.features || [];
+  if (route?.plan_id !== displayed.plan_id || route.day !== state.session.selected_day
+      || !legs.some(feature => feature.properties?.route_leg_id === route.route_leg_id)) {
+    const leg = legs.find(feature => feature.properties?.day === state.session.selected_day);
+    if (!leg) {
+      toast("No road-validated route is available for this day. Choose another day to explore interest.", true);
+      return false;
+    }
+    const selected = await selectRouteLeg({...leg.properties, plan_id: displayed.plan_id});
+    if (!selected || activeRenderPlan()?.content_hash !== displayed.content_hash) return false;
+    route = state.mapInteraction.selectedRouteLeg;
+  }
+  if (!route?.route_leg_id) {
+    return false;
+  }
+  const view = state.interestRegions;
+  view.controller?.abort();
+  const controller = new AbortController();
+  const generation = ++view.generation;
+  const expected = {sessionId: state.session.session_id, revision: state.session.revision,
+    planId: parent.plan_id, planHash: parent.content_hash, day: route.day,
+    explorationPlanId: displayed.plan_id, explorationPlanHash: displayed.content_hash,
+    routeLegId: route.route_leg_id, naturePreference: view.naturePreference,
+    replacementTargetId: displayed.plan_id === state.session.accepted_plan_id ? state.poiDiscovery.replacementTargetId : null};
+  view.controller = controller; view.enabled = true; view.status = "loading"; view.response = null; view.error = null;
+  const query = new URLSearchParams({expected_revision: String(expected.revision), day: String(expected.day),
+    route_leg_id: expected.routeLegId, nature_preference: String(expected.naturePreference),
+    plan_id: expected.explorationPlanId,
+    max_detour_minutes: String(state.poiDiscovery.maxDetourMinutes)});
+  if (expected.replacementTargetId) query.set("replacement_target_id", expected.replacementTargetId);
+  renderMap();
+  const timeout = setTimeout(() => controller.abort(), 20000);
+  try {
+    const raw = await api(`/api/sessions/${expected.sessionId}/map/interest-regions?${query}`, {signal: controller.signal});
+    if (generation !== view.generation || !view.enabled || state.session.revision !== expected.revision
+        || state.session.session_id !== expected.sessionId || state.session.selected_day !== expected.day
+        || activeRenderPlan()?.plan_id !== expected.explorationPlanId
+        || activeRenderPlan()?.content_hash !== expected.explorationPlanHash
+        || state.session.selected_segment_id !== expected.routeLegId) return false;
+    view.response = normalizeInterestResponse(raw, expected);
+    view.status = "ready";
+    view.selectedId = null;
+    renderMap();
+    return true;
+  } catch (error) {
+    if (generation !== view.generation || !view.enabled) return false;
+    view.status = "failed";
+    view.error = controller.signal.aborted ? "Interest request cancelled or timed out. The accepted itinerary is unchanged." : error.message;
+    view.response = null;
+    renderMap();
+    return false;
+  } finally {
+    clearTimeout(timeout);
+    if (view.controller === controller) view.controller = null;
+  }
 }
 
 function prepareReplacementDiscovery() {
@@ -4671,6 +6781,10 @@ async function closePoiDiscovery() {
 function setMapInteractionMode(mode) {
   if (!["select", "edit"].includes(mode)) return;
   state.mapInteraction.mode = mode;
+  if (mode === "edit") {
+    const textRoute = $(".textual-map-alternative");
+    if (textRoute) textRoute.open = false;
+  }
   if (mode === "select" && state.mapInteraction.selectionKind === "exploratory") {
     cancelExploratoryPin(false);
   }
@@ -4679,7 +6793,7 @@ function setMapInteractionMode(mode) {
     return;
   }
   renderAll();
-  requestAnimationFrame(() => $("[data-map-mode][aria-pressed='true']")?.focus());
+  requestAnimationFrame(() => $(state.mapInteraction.mode === "edit" ? "#map-edit-button" : "#map-select-button")?.focus());
 }
 
 function selectMapStop(selection) {
@@ -4702,6 +6816,8 @@ function selectMapStop(selection) {
 
 function selectRouteLeg(selection) {
   if (!selection?.route_leg_id) return Promise.resolve(false);
+  const textRoute = $(".textual-map-alternative");
+  if (textRoute) textRoute.open = false;
   resetPoiDiscovery({ keepReplacementTarget: true });
   state.mapInteraction.selectionKind = "route_leg";
   state.mapInteraction.selectedStopPlanId = null;
@@ -4722,6 +6838,8 @@ function selectCustomWaypoint(waypointId) {
     (candidate) => candidate.waypoint_id === waypointId,
   );
   if (!waypoint) return false;
+  const textRoute = $(".textual-map-alternative");
+  if (textRoute) textRoute.open = false;
   state.mapInteraction.selectionKind = "custom_waypoint";
   state.mapInteraction.selectedStopPlanId = null;
   state.mapInteraction.selectedRouteLeg = null;
@@ -4815,7 +6933,7 @@ function cancelExploratoryPin(render = true) {
     requestAnimationFrame(() => {
       const target = targetWaypointId
         ? $("#relocate-custom-waypoint")
-        : $("[data-map-mode='edit']");
+        : $("#map-edit-button");
       target?.focus();
     });
   }
@@ -4937,7 +7055,8 @@ async function confirmMapWaypoint(event) {
       method: "POST",
       body,
     });
-    state.session = payload.session;
+    installDraftMutationSession(payload.session);
+    syncPreviewRuntimeFromSession();
     state.mapInteraction.selectionKind = "custom_waypoint";
     state.mapInteraction.selectedWaypointId = payload.operation?.target || pin.targetWaypointId || null;
     state.mapInteraction.exploratoryPin = null;
@@ -4973,12 +7092,20 @@ function refreshMapEditDialog() {
     : [];
   const candidates = compatibleCandidates.length ? compatibleCandidates : allCandidates;
   const candidateSelect = $("#registered-candidate");
-  candidateSelect.innerHTML = candidates.map((candidate) => {
+  const selectedCandidateAvailable = candidates.some(
+    (candidate) => (candidate.candidate_id || candidate.stop_id || candidate.id) === state.session.selected_candidate_id,
+  );
+  const requireAcceptedChildChoice = Boolean(state.workspace.accepted_plan_pointer?.decision_id)
+    && !selectedCandidateAvailable;
+  candidateSelect.innerHTML = (requireAcceptedChildChoice
+    ? `<option value="">Choose a registered candidate</option>` : "") + candidates.map((candidate) => {
     const id = candidate.candidate_id || candidate.stop_id || candidate.id;
     return `<option value="${escapeHtml(id)}">${escapeHtml(candidate.label || candidate.name || id)}</option>`;
   }).join("");
-  if (candidates.some((candidate) => (candidate.candidate_id || candidate.stop_id || candidate.id) === state.session.selected_candidate_id)) {
+  if (selectedCandidateAvailable) {
     candidateSelect.value = state.session.selected_candidate_id;
+  } else if (requireAcceptedChildChoice) {
+    candidateSelect.value = "";
   }
   candidateSelect.disabled = candidates.length === 0;
   $("#draft-keep").disabled = !selectedParent || !operationEnabled("keep_stop");
@@ -4986,8 +7113,17 @@ function refreshMapEditDialog() {
   $("#draft-lock").disabled = !selectedParent || !operationEnabled("lock_stop");
   $("#draft-flexible").disabled = !selectedParent || !operationEnabled("mark_flexible");
   $("#draft-feedback").disabled = !operationEnabled("route_feedback");
-  $("#draft-replace").disabled = !selectedParent || compatibleCandidates.length === 0 || !operationEnabled("replace_nearby");
-  $("#draft-add").disabled = candidates.length === 0 || !operationEnabled("add_candidate");
+  $("#draft-replace").disabled = !selectedParent || !candidateSelect.value
+    || compatibleCandidates.length === 0 || !operationEnabled("replace_nearby");
+  refreshCandidateAdditionAvailability();
+  for (const [id, type] of Object.entries({ "draft-keep":"keep_stop", "draft-move":"move_day",
+    "draft-lock":"lock_stop", "draft-flexible":"mark_flexible", "draft-feedback":"route_feedback",
+    "draft-replace":"replace_nearby", "draft-add":"add_candidate" })) {
+    if (draftCombinationBlocker([...state.session.draft, { type }])) {
+      $(`#${id}`).disabled = true;
+      $(`#${id}`).title = "This action cannot be combined with the staged direct edit. Preview and accept, or undo, that edit first.";
+    }
+  }
   $("#draft-undo").disabled = state.session.draft.length === 0;
   $("#draft-preview").disabled = state.session.draft.length === 0 || hasRouteCheckedOnlyDraft() || !canRunEvaluatedPreview();
   $("#draft-preview").title = state.session.draft.length && !canRunEvaluatedPreview()
@@ -4997,114 +7133,301 @@ function refreshMapEditDialog() {
   } else if (state.session.selected_stop_id) {
     $("#edit-target").textContent = "The selected marker belongs to a repair preview and cannot be edited in place. Select an original accepted-plan stop, or add a registered candidate.";
   } else {
-    $("#edit-target").textContent = "Select an original accepted-plan stop. Route feedback and Add candidate remain available.";
+    $("#edit-target").textContent = "Select an accepted-plan stop. Only actions with an implemented optimizer mapping and the required route evidence are enabled.";
   }
 }
 
+function refreshCandidateAdditionAvailability() {
+  const candidate = $("#registered-candidate")?.value;
+  const day = Number($("#destination-day")?.value);
+  const additionCapability = state.workspace.draft_capabilities?.operations?.add_candidate;
+  const selectedAddition = additionCapability?.candidate_day_readiness?.find((row) => (
+    row.candidate_id === candidate
+      && row.day === day
+      && row.parent_plan_id === state.session.accepted_plan_id
+      && row.parent_plan_content_hash === state.workspace.accepted_plan_pointer?.accepted_plan_content_hash
+  ));
+  const control = $("#draft-add");
+  const combinationBlocked = Boolean(draftCombinationBlocker([
+    ...state.session.draft, { type: "add_candidate", target: candidate, parameters: { day } },
+  ]));
+  control.disabled = selectedAddition?.preview_executable !== true || combinationBlocked;
+  control.title = combinationBlocked
+    ? "This action cannot be combined with the staged direct edit. Preview and accept, or undo, that edit first."
+    : selectedAddition?.preview_executable === true
+      ? ""
+      : "This candidate/day pair does not have complete route evidence for an evaluated preview.";
+}
+
 async function openMapEdit() {
-  if (pendingSelection) await pendingSelection;
+  if (pendingSelection && !(await pendingSelection)) return toast("Selection could not be updated. The editor was not opened.", true);
   refreshMapEditDialog();
   $("#map-edit-dialog").showModal();
 }
 
-async function addDraft(type, parameters, explicitTarget, source = "map") {
-  if (pendingSelection) await pendingSelection;
-  const target = explicitTarget || state.session.selected_stop_id;
-  if (!target && type !== "route_feedback") return toast("Select a stop before adding this draft.", true);
+function previewExpectedContext() {
+  return {
+    session_id: state.session.session_id,
+    trip_id: state.session.trip_id,
+    run_id: state.session.run_id,
+    revision: state.session.revision,
+    accepted_plan_id: state.session.accepted_plan_id,
+    parent_plan_content_hash: state.typedImpact.response?.parent_plan_content_hash,
+    draft: structuredClone(state.session.draft),
+    permission_decisions: structuredClone(state.session.permission_decisions),
+    conversation_id: state.session.conversation_id,
+  };
+}
+
+async function submitDraftMutation(action, body = {}) {
+  if (state.workspaceConflict || state.workspaceSyncPending) throw new Error("Refresh the current workspace before making another change.");
+  if (!["operations", "undo"].includes(action)) throw new Error("unsupported_draft_mutation");
+  const expected = previewExpectedContext();
+  const supersedesPreview = state.previewRuntime.status === "PREVIEW_RUNNING";
+  if (supersedesPreview) state.previewRuntime.epoch += 1;
+  const epoch = state.previewRuntime.epoch;
+  let completed = false;
   try {
-    const payload = await api(`/api/sessions/${state.session.session_id}/draft/operations`, {
-      method: "POST",
-      body: { expected_revision: state.session.revision, type, target: target || "selected_route", parameters, source },
+    let payload;
+    try {
+      payload = await mutationRecovery.submit(action, { ...body, expected_revision: expected.revision });
+    } catch (error) {
+      if (!supersedesPreview || error.status !== 409 || error.code !== "stale_session_revision"
+          || !previewRequestIsCurrent(epoch, expected)) throw error;
+      const current = await api(`/api/sessions/${expected.session_id}`);
+      const normalized = await normalizeEvaluatedPreviewResponse({
+        proposal: current?.session?.proposal, session: current?.session,
+      }, expected);
+      // Only an independently checked preview of this exact draft may advance
+      // our revision. Never install that older proposal or retry another action.
+      if (!normalized || !previewRequestIsCurrent(epoch, expected)) throw error;
+      payload = await mutationRecovery.submit(action, { ...body, expected_revision: normalized.session.revision });
+    }
+    if (!previewRequestIsCurrent(epoch, expected)) throw new Error(apiErrorMessage("stale_session_revision"));
+    completed = true;
+    return payload;
+  } finally {
+    if (!completed && supersedesPreview && epoch === state.previewRuntime.epoch) {
+      syncPreviewRuntimeFromSession();
+      renderAll();
+      copilot.previewStateChanged();
+    }
+  }
+}
+
+function installDraftMutationSession(nextSession, payload = null) {
+  const previous = state.session;
+  const proposal = previous?.proposal;
+  const withdrewPreview = proposal?.state === "eligible"
+    && typeof proposal.child_plan_id === "string" && proposal.child_plan_id.trim()
+    && proposal.geography_plan?.plan_id === proposal.child_plan_id
+    && proposal.geography_plan?.content_hash === proposal.child_plan_content_hash
+    && nextSession.proposal === null
+    && nextSession.session_id === previous.session_id
+    && nextSession.accepted_plan_id === previous.accepted_plan_id;
+  if (payload?.workspace) state.workspace = payload.workspace;
+  if (payload?.registry) state.registry = payload.registry;
+  state.session = nextSession;
+  if (!withdrewPreview) return;
+  // Server selection is authoritative; local inspector hints must follow the
+  // same preview-to-accepted transition without overriding ordinary inspection.
+  const interaction = state.mapInteraction;
+  if (interaction.selectionKind === "custom_waypoint" && selectedDraftWaypoint()) return;
+  const accepted = acceptedPlan(state.workspace.geography);
+  const stop = accepted?.stops?.features?.find(
+    feature => feature.properties?.stop_id === nextSession.selected_stop_id,
+  );
+  const leg = findRouteLeg(accepted, nextSession.selected_segment_id);
+  interaction.selectedStopPlanId = stop ? accepted.plan_id : null;
+  interaction.selectedRouteLeg = leg ? { ...leg.properties } : null;
+  interaction.selectionKind = stop ? "stop" : leg ? "route_leg" : null;
+}
+
+async function addDraft(type, parameters, explicitTarget, source = "map") {
+  if (pendingSelection && !(await pendingSelection)) {
+    toast("Selection could not be updated. No draft was added.", true);
+    return false;
+  }
+  const target = explicitTarget || state.session.selected_stop_id;
+  const operations = Array.isArray(type) ? type : [{ type, target: target || "selected_route", parameters }];
+  if (Array.isArray(type) ? operations.some(operation => !operation?.target) : !target && type !== "route_feedback") return toast("Select a stop before adding this draft.", true);
+  if (draftCombinationBlocker([...state.session.draft, ...operations])) {
+    toast("This combination cannot be evaluated. Nothing was added. Preview and accept, or undo, the current draft before adding a different edit family.", true);
+    return false;
+  }
+  try {
+    const payload = await submitDraftMutation("operations", Array.isArray(type) ? {
+      operations: operations.map(operation => ({ ...operation, source })),
+    } : {
+      type, target: target || "selected_route", parameters, source,
     });
-    state.session = payload.session;
+    installDraftMutationSession(payload.session, payload);
+    syncPreviewRuntimeFromSession();
+    state.tripPreviewPlanId = null;
+    state.acknowledgedPreviewPlanId = null;
     resetPoiDiscovery({ keepReplacementTarget: false });
-    await loadDraftImpactPreview({ render: false });
-    toast("Draft operation added. The parent plan is unchanged.");
+    const impactPending = loadDraftImpactPreview({ render: false });
+    const impactRequest = state.typedImpact.request;
+    toast(source === "copilot"
+      ? "Copilot suggestion staged. Run Preview repair to compute and display any map change."
+      : "Draft operation added. The parent plan is unchanged.");
+    renderAll();
+    if ($("#map-edit-dialog").open) refreshMapEditDialog();
+    await impactPending;
+    if (!draftImpactRequestIsCurrent(impactRequest)) return true;
     renderAll();
     if ($("#map-edit-dialog").open) refreshMapEditDialog();
     return true;
-  } catch (error) { toast(error.message, true); return false; }
+  } catch (error) { if (!(error.status === 409 && error.code === "stale_session_revision" && await refreshStaleWorkspace(error))) toast(error.message, true); return false; }
 }
 
 async function addCopilotDraft(intent) {
-  const target = intent.target_stop_id || state.session.selected_stop_id;
-  if (intent.type === "route_feedback") {
-    return addDraft(intent.type, { preference: intent.preference || "reduce_contextual_risk" }, "selected_route", "copilot");
+  if (Array.isArray(intent)) {
+    const operations = intent.map(item => copilotOperationForIntent(item));
+    if (operations.some(operation => !operation?.target)) return false;
+    return addDraft(operations, null, null, "copilot");
   }
-  if (intent.type === "move_day") {
-    return addDraft(intent.type, { day: intent.destination_day }, target, "copilot");
-  }
-  if (intent.type === "replace_nearby") {
-    return addDraft(intent.type, { candidate_id: intent.candidate_id }, target, "copilot");
-  }
-  if (intent.type === "add_candidate") {
-    return addDraft(intent.type, { day: intent.destination_day || state.session.selected_day }, intent.candidate_id, "copilot");
-  }
-  if (["keep_stop", "lock_stop", "mark_flexible"].includes(intent.type)) {
-    return addDraft(intent.type, {}, target, "copilot");
+  const operation = copilotOperationForIntent(
+    intent,
+    state.session.selected_stop_id,
+    state.session.selected_day,
+  );
+  if (operation?.target) {
+    return addDraft(
+      operation.type,
+      operation.parameters,
+      operation.target,
+      "copilot",
+    );
   }
   toast("This Copilot suggestion is advisory and cannot be added as a typed draft.", true);
+  return false;
 }
 
 async function undoDraft() {
+  if (state.undoPending) return;
+  state.undoPending = true;
+  copilot.update();
   try {
-    const payload = await api(`/api/sessions/${state.session.session_id}/draft/undo`, {
-      method: "POST", body: { expected_revision: state.session.revision },
-    });
-    state.session = payload.session;
+    if (pendingSelection && !(await pendingSelection)) return toast("Selection could not be updated. No undo was sent.", true);
+    const payload = await submitDraftMutation("undo");
+    installDraftMutationSession(payload.session, payload);
+    syncPreviewRuntimeFromSession();
+    state.tripPreviewPlanId = null;
+    state.acknowledgedPreviewPlanId = null;
     resetPoiDiscovery({ keepReplacementTarget: false });
     if (state.mapInteraction.selectedWaypointId && !selectedDraftWaypoint()) {
       state.mapInteraction.selectionKind = null;
       state.mapInteraction.selectedWaypointId = null;
     }
-    await loadDraftImpactPreview({ render: false });
+    const impactPending = loadDraftImpactPreview({ render: false });
+    const impactRequest = state.typedImpact.request;
     toast("Latest draft operation removed.");
     renderAll();
     if ($("#map-edit-dialog").open) refreshMapEditDialog();
-  } catch (error) { toast(error.message, true); }
+    await impactPending;
+    if (!draftImpactRequestIsCurrent(impactRequest)) return;
+    renderAll();
+    if ($("#map-edit-dialog").open) refreshMapEditDialog();
+  } catch (error) { if (!(error.status === 409 && error.code === "stale_session_revision" && await refreshStaleWorkspace(error))) toast(error.message, true); } finally {
+    state.undoPending = false;
+    copilot.update();
+  }
 }
 
-async function previewDraft() {
+async function previewDraft(options = null) {
+  // DOM click handlers pass an Event; only an explicit Copilot option narrows scope.
+  const scopedToCopilot = options && (Object.hasOwn(options, "expectedCopilotOperation") || Object.hasOwn(options, "expectedCopilotOperations"));
+  const expectedCopilotOperations = scopedToCopilot
+    ? structuredClone(options.expectedCopilotOperations || [options.expectedCopilotOperation]) : null;
+  const copilotOrigin = scopedToCopilot ? Object.fromEntries(
+    ["session_id", "trip_id", "run_id", "accepted_plan_id", "conversation_id"].map(key => [key, state.session[key]]),
+  ) : null;
+  if (pendingSelection && !(await pendingSelection)) {
+    toast("Selection could not be updated. No preview was sent.", true);
+    return false;
+  }
+  if (scopedToCopilot && !Object.entries(copilotOrigin).every(([key, value]) => state.session[key] === value)) {
+    toast("This queued Copilot preview belongs to an older workspace or conversation. No preview was sent; review the preserved draft in Repairs.", true);
+    return false;
+  }
   if (hasRouteCheckedOnlyDraft()) {
     toast("This arbitrary waypoint draft is route-checked, but evaluated repair is not enabled yet.", true);
-    return;
+    return false;
   }
   if (!canRunEvaluatedPreview()) {
     toast("This draft contains changes that are not enabled for evaluated repair. Inspect the server-owned draft impact, then undo or revise those changes.", true);
-    return;
+    return false;
   }
+  const previewEpoch = state.previewRuntime.epoch + 1;
+  state.previewRuntime = {
+    epoch: previewEpoch,
+    status: "PREVIEW_RUNNING",
+    requestId: null,
+  };
+  renderAll();
+  copilot.previewStateChanged();
+  let expected = null;
   try {
-    const impact = state.typedImpact.response;
-    const expected = {
-      session_id: state.session.session_id,
-      trip_id: state.session.trip_id,
-      run_id: state.session.run_id,
-      revision: state.session.revision,
-      accepted_plan_id: state.session.accepted_plan_id,
-      parent_plan_content_hash: impact?.parent_plan_content_hash,
-      draft: structuredClone(state.session.draft),
-      permission_decisions: structuredClone(state.session.permission_decisions),
-      conversation_id: state.session.conversation_id,
-    };
+    if (scopedToCopilot && (state.session.draft.length !== expectedCopilotOperations.length
+        || !state.session.draft.every((operation, index) => sameCopilotDraftOperation(operation, expectedCopilotOperations[index])))) {
+      throw new Error("The draft no longer contains only these exact staged suggestions. No preview was sent; review the current draft in Repairs.");
+    }
+    expected = previewExpectedContext();
     const payload = await api(`/api/sessions/${state.session.session_id}/preview`, {
       method: "POST", body: { expected_revision: state.session.revision },
     });
+    if (!previewRequestIsCurrent(previewEpoch, expected)) {
+      toast("An older preview response was ignored because the workspace changed.");
+      return false;
+    }
     const normalized = await normalizeEvaluatedPreviewResponse(payload, expected);
     if (!normalized) throw new Error(apiErrorMessage("invalid_evaluated_preview"));
+    if (!previewRequestIsCurrent(previewEpoch, expected)) {
+      toast("An older preview response was ignored because the workspace changed.");
+      return false;
+    }
     state.session = normalized.session;
-    await loadDraftImpactPreview({ render: false });
+    if (normalized.proposal.state === "eligible") {
+      state.mapInteraction.selectedStopPlanId = normalized.proposal.child_plan_id;
+      state.mapInteraction.selectedRouteLeg = null;
+      state.mapInteraction.selectionKind = state.session.selected_stop_id ? "stop" : null;
+    }
+    state.previewRuntime.status = previewStateForSession(normalized.session);
+    state.previewRuntime.requestId = normalized.proposal.compiled_request?.source_request_id || null;
+    state.tripPreviewPlanId = null;
+    state.acknowledgedPreviewPlanId = null;
+    const installedContext = previewExpectedContext();
+    const impactPending = loadDraftImpactPreview({ render: false });
+    const impactRequest = state.typedImpact.request;
+    await impactPending;
+    if (!previewRequestIsCurrent(previewEpoch, installedContext)
+        || !draftImpactRequestIsCurrent(impactRequest)) return false;
     $("#map-edit-dialog").close();
-    toast(normalized.proposal.message, normalized.proposal.state !== "eligible");
+    toast(normalized.proposal.state === "eligible"
+      ? "Preview evaluated. Rendering the exact child itinerary and map…"
+      : normalized.proposal.message, normalized.proposal.state !== "eligible");
     renderAll();
-  } catch (error) { toast(error.message, true); }
+    copilot.previewStateChanged();
+    return true;
+  } catch (error) {
+    if (previewEpoch !== state.previewRuntime.epoch) return false;
+    if (error.status === 409 && error.code === "stale_session_revision" && await refreshStaleWorkspace(error)) return false;
+    state.previewRuntime.status = "PREVIEW_FAILED";
+    state.previewRuntime.requestId = null;
+    state.previewRuntime.message = error.message;
+    renderAll();
+    copilot.previewStateChanged();
+    toast(error.message, true);
+    return false;
+  }
 }
-
 function setupDockResize() {
   const dock = $("#copilot-dock");
   const handle = $("#dock-resizer");
   const setWidth = (width) => {
     const bounded = Math.max(320, Math.min(560, width));
-    dock.style.width = `${bounded}px`;
+    $("#app-shell").style.setProperty("--copilot-width", `${bounded}px`);
     handle.setAttribute("aria-valuenow", String(Math.round(bounded)));
   };
   const resize = (clientX) => setWidth(innerWidth - clientX);
@@ -5116,6 +7439,7 @@ function setupDockResize() {
   });
   handle.addEventListener("keydown", (event) => {
     if (event.key === "ArrowLeft" || event.key === "ArrowRight") {
+      event.preventDefault();
       const current = dock.getBoundingClientRect().width;
       setWidth(current + (event.key === "ArrowLeft" ? 20 : -20));
     }
@@ -5131,25 +7455,23 @@ function updateActiveNav() {
 }
 
 function findSelectedStop() {
-  for (const day of state.workspace.timeline) {
-    const found = day.stops.find((stop) => stop.id === state.session.selected_stop_id);
-    if (found) return found;
-  }
   const geography = activeGeography();
-  const selectedPlan = geography?.plans?.find(
+  const explicitPlan = geography?.plans?.find(
     (plan) => plan.plan_id === state.mapInteraction.selectedStopPlanId,
   );
-  const searchPlans = selectedPlan
-    ? [selectedPlan, ...(geography?.plans || []).filter((plan) => plan !== selectedPlan)]
-    : geography?.plans || [];
-  const feature = searchPlans
-    .flatMap((plan) => plan?.stops?.features || [])
-    .find((candidate) => candidate.properties?.stop_id === state.session.selected_stop_id);
+  const hasSelectedStop = (plan) => plan?.stops?.features?.some(
+    (feature) => feature.properties?.stop_id === state.session.selected_stop_id,
+  );
+  const selectedPlan = hasSelectedStop(explicitPlan) ? explicitPlan : activeRenderPlan(geography);
+  const feature = selectedPlan?.stops?.features?.find(
+    (candidate) => candidate.properties?.stop_id === state.session.selected_stop_id,
+  );
   if (feature) {
     return {
       id: feature.properties.stop_id,
       name: feature.properties.name || feature.properties.stop_id,
       day: feature.properties.day,
+      plan_id: selectedPlan.plan_id,
     };
   }
   return null;
@@ -5173,7 +7495,10 @@ function toast(message, error = false) {
   const item = document.createElement("div");
   item.className = `toast${error ? " error" : ""}`;
   item.textContent = message;
-  $("#toast-region").append(item);
+  const region = $("#toast-region");
+  // A newer status supersedes old progress, while errors retain their own lifetime.
+  region.querySelectorAll(".toast:not(.error)").forEach((previous) => previous.remove());
+  region.append(item);
   setTimeout(() => item.remove(), 5000);
 }
 

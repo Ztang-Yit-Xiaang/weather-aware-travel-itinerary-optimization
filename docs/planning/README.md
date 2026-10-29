@@ -14,6 +14,7 @@ silently override current evidence.
 | [e3_exact_baseline_scalability_phase_plan.md](e3_exact_baseline_scalability_phase_plan.md) | Implementation-ready E3.1 exact-baseline work |
 | [itinerary_repair_copilot_implementation_plan.md](itinerary_repair_copilot_implementation_plan.md) | Corrective multi-agent local-product contract, AUD-0/W0-W8 phases, G0-G8 gates, ownership, and verification |
 | [w4_copilot_provider_transcript_phase_plan.md](w4_copilot_provider_transcript_phase_plan.md) | Implementation-ready W4 provider, versioned prompt engineering/evaluation, typed interpretation, local transcript, synchronization, and G4 audit contract |
+| [e2e_1_vertical_slice_integration_runtime_truth_phase_plan.md](e2e_1_vertical_slice_integration_runtime_truth_phase_plan.md) | Mandatory production-path integration gate binding staged drafts, child plan, independent evaluation, geography, every visible surface, map acknowledgement, acceptance, and exact I/O evidence |
 | [../current/map_runtime_substitution_decision.md](../current/map_runtime_substitution_decision.md) | MAP-DEC-002 active MapLibre-primary/Atlas-backup runtime decision and W1M/G1 transition rules |
 
 `docs/current/current_problem_manifest.md` remains the implementation-status
@@ -34,8 +35,23 @@ The verified live G1 closeout is recorded in
 [`w1m_live_g1_verification_report.md`](../audits/w1m_live_g1_verification_report.md)
 and
 [`w1m_live_g1_evidence_manifest.json`](../audits/w1m_live_g1_evidence_manifest.json).
-W1M/G1 and corrected-v2 W2/G2 and W3/G3 are verified. W4 is implemented; G4 is
-blocked on authorized live provider evidence, and W5-W8 remain planned. Historical v1 draft, preview, browser, regression, and
+W1M/G1 and corrected-v2 W2/G2 and W3/G3 are verified. W4 is implemented; G4R and
+August G4 v6 are verified for their recorded source. W5 is implemented.
+E2E-1 is `in-progress`. September's 50-test deterministic aggregate and October
+7's real website-provider journey plus exact-output replay pass for their
+recorded snapshots. Full regression, a fresh aggregate after the shared-test
+repair, remaining composition/mobile-keyboard boundaries and phase audit still
+block G5. See the [current concise status and complete concern register](../reports/runtime_coherence_status_20261007.md);
+The latest continuation checkpoint independently verifies 14 zero-provider browser
+journeys: all four original/accepted-parent × staged/one-click combined paths,
+real evaluated child/map, A → B → C acceptance and reload. A separate fresh paid
+website journey also verifies twice: one GPT-5.4-mini request, both edits, real
+repair/final evaluation, consistent child/map, reload and four viewports; no
+acceptance. Scoped regressions pass 130 and 283. Rejected and earlier source-bound
+runs remain preserved. The original non-frozen regression's failures still require
+a complete frozen project regression and aggregate. Mixed ownership/conflicting
+grouped variants, native mobile keyboard and phase audit remain open.
+W6-W8 remain planned. Historical v1 draft, preview, browser, regression, and
 independent-audit evidence is recorded in
 [`w3_g3_verification_report.md`](../audits/w3_g3_verification_report.md) and its
 [`w3_g3_evidence_manifest.json`](../audits/w3_g3_evidence_manifest.json). It does

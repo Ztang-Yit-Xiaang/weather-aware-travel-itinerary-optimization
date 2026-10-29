@@ -1,0 +1,191 @@
+[
+  {
+    "id": "C01",
+    "title": "Paraphrased replacement",
+    "prompt": "The coast looks stormy. Please swap the Bixby stop for Pfeiffer Big Sur State Park and leave the other days alone.",
+    "expected_intents": [
+      {
+        "type": "replace_nearby",
+        "target_stop_id": "bixby_creek_bridge_viewpoint",
+        "candidate_id": "pfeiffer_big_sur_state_park"
+      }
+    ],
+    "expected_state": "proposal_ready",
+    "requires_provider_interpretation": false
+  },
+  {
+    "id": "C02",
+    "title": "Two edits, reversed order",
+    "prompt": "Give Griffith Observatory 60 minutes, and replace Bixby Creek Bridge with Pfeiffer Big Sur State Park.",
+    "expected_intents": [
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 60,
+            "minimum_minutes": 60,
+            "maximum_minutes": 60
+          }
+        }
+      },
+      {
+        "type": "replace_nearby",
+        "target_stop_id": "bixby_creek_bridge_viewpoint",
+        "candidate_id": "pfeiffer_big_sur_state_park"
+      }
+    ],
+    "expected_state": "proposal_ready",
+    "requires_provider_interpretation": false
+  },
+  {
+    "id": "C03",
+    "title": "Chinese combined request",
+    "prompt": "請把 Bixby Creek Bridge 換成 Pfeiffer Big Sur State Park，並把 Griffith Observatory 的停留時間設為 90 分鐘。",
+    "expected_intents": [
+      {
+        "type": "replace_nearby",
+        "target_stop_id": "bixby_creek_bridge_viewpoint",
+        "candidate_id": "pfeiffer_big_sur_state_park"
+      },
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 90,
+            "minimum_minutes": 90,
+            "maximum_minutes": 90
+          }
+        }
+      }
+    ],
+    "expected_state": "proposal_ready",
+    "requires_provider_interpretation": true
+  },
+  {
+    "id": "C04",
+    "title": "Standalone duration",
+    "prompt": "I'd like 75 minutes at Griffith Observatory instead of 45.",
+    "expected_intents": [
+      {
+        "type": "set_stop_duration",
+        "target_stop_id": "griffith_observatory",
+        "parameters": {
+          "duration": {
+            "mode": "exact",
+            "preferred_minutes": 75,
+            "minimum_minutes": 75,
+            "maximum_minutes": 75
+          }
+        }
+      }
+    ],
+    "expected_state": "proposal_ready",
+    "requires_provider_interpretation": false
+  },
+  {
+    "id": "C05",
+    "title": "Arrival time window",
+    "prompt": "Set the arrival window for Griffith Observatory to 09:00–18:00.",
+    "expected_intents": null,
+    "expected_state": "clarification_required",
+    "requires_provider_interpretation": false
+  },
+  {
+    "id": "C06",
+    "title": "Day-four stop order",
+    "prompt": "On Day 4, visit Kings Canyon National Park before Sequoia National Park.",
+    "expected_intents": [
+      {
+        "type": "set_stop_order",
+        "target_stop_id": "kings_canyon_national_park",
+        "parameters": {
+          "day": 4,
+          "sequence_index": 0
+        }
+      },
+      {
+        "type": "set_stop_order",
+        "target_stop_id": "sequoia_national_park",
+        "parameters": {
+          "day": 4,
+          "sequence_index": 1
+        }
+      }
+    ],
+    "expected_state": "proposal_ready",
+    "requires_provider_interpretation": true
+  },
+  {
+    "id": "C07",
+    "title": "Stop role",
+    "prompt": "Treat Stearns Wharf as a scenic stop instead of an activity.",
+    "expected_intents": [
+      {
+        "type": "set_stop_role",
+        "target_stop_id": "stearns_wharf",
+        "parameters": {
+          "role": "scenic_stop"
+        }
+      }
+    ],
+    "expected_state": "proposal_ready",
+    "requires_provider_interpretation": false
+  },
+  {
+    "id": "C08",
+    "title": "Ambiguous target and candidate",
+    "prompt": "Replace that place with somewhere better.",
+    "expected_intents": null,
+    "expected_state": "clarification_required",
+    "requires_provider_interpretation": false
+  },
+  {
+    "id": "C09",
+    "title": "Conflicting duration values",
+    "prompt": "Set Griffith Observatory duration to 60 minutes and also to exactly 90 minutes.",
+    "expected_intents": null,
+    "expected_state": "clarification_required",
+    "requires_provider_interpretation": false
+  },
+  {
+    "id": "C10",
+    "title": "Unsupported booking",
+    "prompt": "Book me a hotel in Los Angeles for tonight.",
+    "expected_intents": null,
+    "expected_state": "permission_required",
+    "requires_provider_interpretation": true
+  },
+  {
+    "id": "C11",
+    "title": "Supported edit mixed with booking",
+    "prompt": "Replace Bixby Creek Bridge with Pfeiffer Big Sur State Park and book me a hotel in Los Angeles.",
+    "expected_intents": null,
+    "expected_state": "clarification_required",
+    "requires_provider_interpretation": false
+  },
+  {
+    "id": "C12",
+    "title": "Keep the whole original trip",
+    "prompt": "Keep the original plan.",
+    "expected_intents": [
+      {
+        "type": "keep_original"
+      }
+    ],
+    "expected_state": "proposal_ready",
+    "requires_provider_interpretation": false
+  },
+  {
+    "id": "C13",
+    "title": "Preference memory",
+    "prompt": "I prefer nature and less driving.",
+    "followup": "What preferences did I ask you to remember?",
+    "expected_intents": null,
+    "expected_state": "clarification_required",
+    "requires_provider_interpretation": false
+  }
+]

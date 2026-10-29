@@ -114,10 +114,14 @@ def test_actual_time_window_api_payloads_pass_js_and_forgeries_fail(tmp_path: Pa
         acceptance = client.post(
             f"/api/sessions/{eligible_before['session_id']}/accept",
             headers=eligible_headers,
-            json={"expected_revision": eligible_before["revision"] + 1},
+            json={
+                "expected_revision": eligible_before["revision"] + 1,
+                "confirmation": "accept_evaluated_repair",
+                "idempotency_key": "time-window-frontend-0001",
+            },
         )
         assert acceptance.status_code == 409
-        assert acceptance.json() == {"detail": "acceptance_not_enabled_until_w5"}
+        assert acceptance.json() == {"detail": "acceptance_proposal_invalid"}
 
         latest_created = client.post("/api/sessions", json={}).json()
         latest_headers = {"X-Session-Token": latest_created["mutation_token"]}
@@ -178,7 +182,7 @@ def test_actual_time_window_api_payloads_pass_js_and_forgeries_fail(tmp_path: Pa
             json={
                 "expected_revision": mixed_session["revision"],
                 "type": "set_stop_duration",
-                "target": "surf_n_wear_s_beach_house",
+                "target": "griffith_observatory",
                 "parameters": {
                     "duration": {
                         "mode": "exact",
@@ -215,7 +219,7 @@ def test_actual_time_window_api_payloads_pass_js_and_forgeries_fail(tmp_path: Pa
             json={
                 "expected_revision": 0,
                 "type": "set_stop_time_window",
-                "target": "surf_n_wear_s_beach_house",
+                "target": "griffith_observatory",
                 "parameters": {"earliest_arrival": "11:00", "latest_departure": None},
                 "source": "typed_stop_editor",
                 "evidence_refs": [],
@@ -284,8 +288,9 @@ def test_actual_time_window_api_payloads_pass_js_and_forgeries_fail(tmp_path: Pa
     assert "evaluated time-window frontend contract and forgeries passed" in completed.stdout
 
 
-def test_asset_token_is_bumped_for_evaluated_time_window_contract() -> None:
+def test_assets_are_build_bound_for_evaluated_time_window_contract() -> None:
     markup = INDEX.read_text(encoding="utf-8")
 
-    assert "/static/css/app.css?v=20260810-stability5" in markup
-    assert "/static/js/app.js?v=20260810-stability5" in markup
+    assert '/static/css/app.css?v=__PRODUCT_BUILD_ID__' in markup
+    assert '/static/js/app.js?v=__PRODUCT_BUILD_ID__' in markup
+    assert '<meta name="product-build-id" content="__PRODUCT_BUILD_ID__">' in markup

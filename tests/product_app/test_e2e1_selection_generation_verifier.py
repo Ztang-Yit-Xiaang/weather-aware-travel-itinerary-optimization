@@ -219,6 +219,7 @@ def _fixture(tmp_path, monkeypatch):
         "wrong_turn_owner",
         "wrong_map",
         "changed_source",
+        "missing_source",
         "unexpected_accept",
         "missing_impact",
         "impact_wrong_revision",
@@ -266,6 +267,8 @@ def test_independent_generation_gate_rejects_false_green(tmp_path, monkeypatch, 
         trace["final"] = {**trace["final"], "active_plan_id": "wrong_plan"}
     elif fault == "changed_source":
         files["source_identity_after.json"] = {"fixture.js": "0" * 64}
+    elif fault == "missing_source":
+        (tmp_path / "fixture.js").unlink()
     elif fault == "unexpected_accept":
         records.append({"method": "POST", "url": "http://127.0.0.1:8127/api/sessions/session_unit/accept"})
     elif fault == "missing_impact":

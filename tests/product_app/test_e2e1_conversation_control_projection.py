@@ -318,7 +318,11 @@ def test_recorded_selection_generation_rejects_changed_sources(recorded_runtime_
     trace = json.loads((case / "trace.json").read_text())
     turns = json.loads((case / "exact_chat_io.json").read_text())
     records = verifier._http(case, "http://127.0.0.1:8127")
-    current = all(verifier.core._sha256(verifier.core.ROOT / path) == digest for path, digest in identities.items())
+    current = all(
+        (source := verifier.core._safe_path(verifier.core.ROOT, path)).is_file()
+        and verifier.core._sha256(source) == digest
+        for path, digest in identities.items()
+    )
     if current:
         assert verify_selection_generation(case, trace, records, turns) == (
             "before",

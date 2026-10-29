@@ -246,7 +246,10 @@ def verify_selection_generation(case, trace, records, turns):
     require(
         sources == core._load(case / "source_identity_after.json")
         and sources
-        and all(core._sha256(core._safe_path(core.ROOT, path)) == value for path, value in sources.items()),
+        and all(
+            (source := core._safe_path(core.ROOT, path)).is_file() and core._sha256(source) == value
+            for path, value in sources.items()
+        ),
         "selection_generation_source_changed",
     )
     return ("before", "before_late_selection", "after_late_selection")

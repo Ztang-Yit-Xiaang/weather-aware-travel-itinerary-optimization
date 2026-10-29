@@ -19,15 +19,17 @@ An inspectable research prototype that detects weather disruptions, repairs mult
 ![Itinerary Repair Copilot workspace](docs/assets/readme/itinerary-workspace.png)
 
 <!-- BEGIN portfolio-project-animations -->
-## Animated project guide
+## Recorded project interactions
 
-These self-contained SVG animations explain the project workflow. They are illustrative guides, not recorded experiments or new performance results. Static content remains available when reduced motion is requested.
+These previews record interaction with original project figures, saved notebook outputs, source tests, or the actual project interface. They do not represent new experiments, model inference, or benchmark runs. Pointer-driven inspection, saved-result selection, and browser controls are captured below.
 
-### Itinerary repair
+### Explore the actual trip dashboard
 
-![Itinerary repair — illustrative animation](docs/portfolio-animations/context-aware-travel-itinerary-optimization.svg)
+![Explore the actual trip dashboard - recorded project interaction](docs/portfolio-previews/context-aware-travel-itinerary-optimization.gif)
 
-Illustrative disruption and route repair. Stops, routes and movement are schematic, not live travel data.
+The original saved-route dashboard: select routes, click stops, change layers, and use route playback. Archived data, not a live trip or a new optimizer run.
+
+[Original project material](https://github.com/Ztang-Yit-Xiaang/weather-aware-travel-itinerary-optimization)
 
 <!-- END portfolio-project-animations -->
 

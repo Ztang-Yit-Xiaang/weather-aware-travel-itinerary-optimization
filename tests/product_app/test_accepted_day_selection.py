@@ -61,7 +61,7 @@ def test_selection_uses_current_accepted_days_without_preview(tmp_path: Path, mo
                     "response": output,
                 }
             )
-            (tmp_path / "selection_io.json").write_text(json.dumps(exchanges, indent=2), encoding="utf-8")
+            (tmp_path / "selection_io.json").write_text(json.dumps(exchanges), encoding="utf-8")
             if response.status_code != expected_status:
                 failures.append(f"day={day!r}: expected {expected_status}, got {response.status_code} {output}")
             elif expected_status == 200:

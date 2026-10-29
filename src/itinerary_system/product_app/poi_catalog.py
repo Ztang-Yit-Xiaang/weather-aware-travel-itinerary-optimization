@@ -16,7 +16,7 @@ import re
 from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
 from datetime import datetime
-from pathlib import Path
+from pathlib import Path, PureWindowsPath
 from typing import Any
 from urllib.parse import urlsplit
 
@@ -243,7 +243,11 @@ def _parse_manifest(data: Mapping[str, Any]) -> ProductPOICatalogManifestV1:
 
 def _resolve_contained_file(root: Path, relative_name: str) -> Path:
     candidate_name = Path(relative_name)
-    if candidate_name.is_absolute() or any(part == ".." for part in candidate_name.parts):
+    if (
+        candidate_name.is_absolute()
+        or PureWindowsPath(relative_name).drive
+        or any(part == ".." for part in candidate_name.parts)
+    ):
         raise POICatalogError("catalog_path_not_relative")
     if candidate_name.name != relative_name and len(candidate_name.parts) == 1:
         raise POICatalogError("catalog_path_invalid")

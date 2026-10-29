@@ -230,7 +230,7 @@ def test_real_api_accept_pfeiffer_add_point_lobos_accept_restart(tmp_path):
                 "output": {key: item for key, item in value.items() if key != "mutation_token"},
             }
         )
-        (tmp_path / "exact_addition_api_io.json").write_text(json.dumps(exchanges, indent=2), encoding="utf-8")
+        (tmp_path / "exact_addition_api_io.json").write_text(json.dumps(exchanges), encoding="utf-8")
         assert response.status_code == 200, response.text
         return value
 

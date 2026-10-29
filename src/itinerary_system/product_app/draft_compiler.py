@@ -297,7 +297,7 @@ class FrozenDraftCompiler:
             raise WorkspaceError("draft_candidate_not_registered", 409)
         if candidate_id in self.parent_stop_ids:
             raise WorkspaceError("draft_candidate_already_in_plan", 409)
-        if not _valid_day(day):
+        if not _valid_day(day) or not any(row["day"] == day for row in self.parent_plan["ordered_days"]):
             raise WorkspaceError("draft_destination_day_invalid", 409)
         matrix, config, _ = self._runtime_inputs()
         stops = next(row["stop_ids"] for row in self.parent_plan["ordered_days"] if row["day"] == day)

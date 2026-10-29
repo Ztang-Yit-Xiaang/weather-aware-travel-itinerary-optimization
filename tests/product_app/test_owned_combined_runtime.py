@@ -69,7 +69,7 @@ def test_owned_combined_api_keeps_complete_child_or_blocks_acceptance(
                 "output": {key: value for key, value in result.items() if key != "mutation_token"},
             }
         )
-        (tmp_path / "exact_owned_api_io.json").write_text(json.dumps(exchanges, indent=2), encoding="utf-8")
+        (tmp_path / "exact_owned_api_io.json").write_text(json.dumps(exchanges), encoding="utf-8")
         assert response.status_code == status, response.text
         return result
 
@@ -223,7 +223,7 @@ def test_owned_combined_api_keeps_complete_child_or_blocks_acceptance(
                     "output": {"code": error.value.code, "status_code": error.value.status_code},
                 }
             )
-        (tmp_path / "exact_owned_boundary_io.json").write_text(json.dumps(rejected, indent=2), encoding="utf-8")
+        (tmp_path / "exact_owned_boundary_io.json").write_text(json.dumps(rejected), encoding="utf-8")
         contract_path = tmp_path / "exact_owned_frontend_contract.json"
         contract_path.write_text(
             json.dumps(

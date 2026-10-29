@@ -153,7 +153,7 @@ def test_same_day_reorder_preserves_complete_untouched_stop_records_and_constrai
     stops = deepcopy(compiler._parent_artifact.selected_stops)
     for stop in stops:
         if stop["day"] == 5:
-            stop["stop_order"] = 6  # Real accepted-replacement artifact shape.
+            stop["visit_note"] = "Preserve this untouched stop metadata."
         if stop["day"] == 6:
             stop["time_window_constraint"] = {
                 "schema_version": "stop-time-window-constraint-v1",

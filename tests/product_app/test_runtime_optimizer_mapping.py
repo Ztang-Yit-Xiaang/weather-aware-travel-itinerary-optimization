@@ -73,7 +73,7 @@ def test_atomic_combined_api_preview_acceptance_and_restart_preserve_complete_ch
             }
         )
         (tmp_path / "exact_atomic_combined_api_io.json").write_text(
-            json.dumps(exchanges, indent=2, sort_keys=True), encoding="utf-8"
+            json.dumps(exchanges, sort_keys=True), encoding="utf-8"
         )
         assert response.status_code == 200, response.text
         return output

@@ -760,10 +760,10 @@ function pythonStableJson(value, parentKey = null) {
   if (!value || typeof value !== "object") return null;
   const fields = [];
   for (const key of Object.keys(value).sort()) {
-    const serialized = pythonStableJson(
-      value[key],
-      STABLE_FLOAT_OBJECTS.has(parentKey) ? parentKey : key,
-    );
+    // Guide-reference durations are integer metadata, unlike itinerary-stop durations.
+    const scopeKey = parentKey === "destination_places" && key === "visit_duration_minutes"
+      ? null : STABLE_FLOAT_OBJECTS.has(parentKey) ? parentKey : key;
+    const serialized = pythonStableJson(value[key], scopeKey);
     if (serialized === null) return null;
     fields.push(`${JSON.stringify(key)}:${serialized}`);
   }
@@ -1811,7 +1811,7 @@ async function normalizeTimeWindowScheduleImpact(value, identity, proposal, plan
       || typeof value.evaluator_version !== "string" || !value.evaluator_version
       || value.route_matrix_id !== routeValidation.matrix_id
       || value.configured_default_visit_minutes !== 45
-      || value.configured_day_start_minute !== 480
+      || value.configured_day_start_minute !== 540
       || !normalizeTimeWindowCostPolicy(value.time_window_cost_policy)
       || !exactKeys(identity, [
         "content_hash", "evaluator_version", "route_matrix_id", "parent_plan_id",
@@ -2077,7 +2077,7 @@ async function normalizeRoleImpact(value, identity, proposal, planDiff, routeVal
       || typeof value.evaluator_version !== "string" || !value.evaluator_version
       || value.route_matrix_id !== routeValidation.matrix_id
       || value.configured_default_visit_minutes !== 45
-      || value.configured_day_start_minute !== 480
+      || value.configured_day_start_minute !== 540
       || !exactStringArray(value.supported_evaluated_roles, EVALUATED_STOP_ROLES)
       || !sameJson(value.semantic_scope, ROLE_SEMANTIC_SCOPE)
       || !exactKeys(identity, [
@@ -3116,7 +3116,7 @@ async function normalizeCombinedRuntimeExecution(value, proposal, draft) {
       || diff.day_moves.length || diff.time_shifts.length || diff.lodging_changes.length
       || !Number.isFinite(diff.weighted_edit_cost)
       || await computedStableContentHash(diff) !== proposal.diff_content_hash) return null;
-  if (owned && (certificate.evaluator_version !== "verify-001-plan-evaluator-v2"
+  if (owned && (certificate.evaluator_version !== "verify-001-plan-evaluator-v3"
       || (diff.schema_version === "plan-diff-v7" && typed.length < 2 && !typed.includes("role_changes"))
       || (diff.schema_version === "plan-diff-v5" && (typed.length > 1 || typed.includes("role_changes")))
       || !await normalizeCombinedAttributeOwnership(diff, proposal, child))) return null;

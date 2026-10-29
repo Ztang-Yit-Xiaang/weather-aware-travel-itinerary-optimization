@@ -273,9 +273,7 @@ def test_real_replacement_duration_time_window_role_acceptance_survives_restart(
                 "output": {key: value for key, value in output.items() if key != "mutation_token"},
             }
         )
-        (tmp_path / "exact_role_chain_io.json").write_text(
-            json.dumps(exchanges, indent=2, sort_keys=True), encoding="utf-8"
-        )
+        (tmp_path / "exact_role_chain_io.json").write_text(json.dumps(exchanges, sort_keys=True), encoding="utf-8")
         assert response.status_code == 200, response.text
         return output
 

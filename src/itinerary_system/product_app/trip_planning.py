@@ -357,7 +357,7 @@ def trip_request_interpretation(context: Any, message: str) -> CopilotInterpreta
             if chinese
             else ("I understood the interests: " + ", ".join(interests) + ". " if interests else "")
             + "You asked for less driving. Please restate the complete request with a maximum daily driving time in hours or minutes. "
-            "I can check that daily cap, but cannot guarantee less total driving than the original trip. No partial draft was created."
+            "Guaranteed reductions in total driving are not supported; I can check that daily cap. No partial draft was created."
         )
     if re.search(r"\b(?:replace|swap|substitute)\b|換成|换成|替換|替换", message, re.I):
         return clarify()
@@ -461,6 +461,14 @@ def trip_request_interpretation(context: Any, message: str) -> CopilotInterpreta
         re.I,
     ):
         return clarify()
+    if (
+        not (coastal or start or individualized or extension or official)
+        and required_mentions
+        and required_mentions <= set(context.allowed_stop_ids)
+        and re.search(r"\b(?:before|after)\b", message, re.I)
+    ):
+        # Existing accepted-stop ordering has its own complete-request validator.
+        return None
     time_text = message[: drive_match.start()] + message[drive_match.end() :] if drive_match else message
     if re.search(r"\b(?:minutes?|hours?|duration|time window|reorder)\b|分鐘|分钟|小時|小时|排序", time_text, re.I):
         return clarify()

@@ -600,7 +600,7 @@ def test_mixed_duration_and_order_impact_matches_evaluated_preview(tmp_path: Pat
             )
         path = Path(destination)
         path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(json.dumps(exchanges, indent=2), encoding="utf-8")
+        path.write_text(json.dumps(exchanges), encoding="utf-8")
     assert impact.json()["summary"]["can_run_evaluated_preview"] is True
     assert impact.json()["summary"]["blocking_codes"] == []
     assert preview.status_code == 200

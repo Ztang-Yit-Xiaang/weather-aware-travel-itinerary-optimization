@@ -44,9 +44,7 @@ def test_real_accepted_stop_retains_canonical_inspector_data_after_restart(tmp_p
                 "output": {key: value for key, value in payload.items() if key != "mutation_token"},
             }
         )
-        (tmp_path / "exact_inspector_api_io.json").write_text(
-            json.dumps(exchanges, indent=2, sort_keys=True), encoding="utf-8"
-        )
+        (tmp_path / "exact_inspector_api_io.json").write_text(json.dumps(exchanges, sort_keys=True), encoding="utf-8")
         assert response.status_code == 200, payload
         return payload
 
@@ -92,9 +90,7 @@ def test_real_accepted_stop_retains_canonical_inspector_data_after_restart(tmp_p
         exchanges.append(
             {"path": path, "method": "GET", "input": None, "status": response.status_code, "output": restored}
         )
-        (tmp_path / "exact_inspector_api_io.json").write_text(
-            json.dumps(exchanges, indent=2, sort_keys=True), encoding="utf-8"
-        )
+        (tmp_path / "exact_inspector_api_io.json").write_text(json.dumps(exchanges, sort_keys=True), encoding="utf-8")
         geography = restored["workspace"]["geography"]
         plan = next(row for row in geography["plans"] if row["plan_id"] == proposal["child_plan_id"])
         properties = next(
@@ -123,9 +119,7 @@ def test_real_accepted_stop_retains_canonical_inspector_data_after_restart(tmp_p
         )
         (tmp_path / "node_output.txt").write_text(completed.stdout + completed.stderr, encoding="utf-8")
         assert completed.returncode == 0, completed.stdout + completed.stderr
-    (tmp_path / "exact_inspector_api_io.json").write_text(
-        json.dumps(exchanges, indent=2, sort_keys=True), encoding="utf-8"
-    )
+    (tmp_path / "exact_inspector_api_io.json").write_text(json.dumps(exchanges, sort_keys=True), encoding="utf-8")
 
 
 def test_inspector_projection_preserves_unknowns_and_does_not_invent_exact_constraint():

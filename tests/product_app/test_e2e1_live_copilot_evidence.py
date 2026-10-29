@@ -343,6 +343,19 @@ def test_combined_paid_bundle_has_no_leftover_single_operation_assumption(record
     original = provider_path.read_bytes()
     recorded = json.loads(json.loads(original)["records"][0]["request_body_utf8"])
     assert _sha256_text(recorded["instructions"]) == "2b0d9433261534d0a21225f53110e77b1fac66f3af277cebaa2a20fcc1ba8041"
+    assert (
+        verifier._canonical_sha256(recorded["text"]["format"]["schema"])
+        == "ce00cc9926a9a8e6ff26d81de2bc35dd1617e6ef691f642855d8533440446365"
+    )
+    monkeypatch.setattr(verifier, "to_strict_json_schema", lambda model: recorded["text"]["format"]["schema"])
+
+    def pinned_historical_context(value):
+        normalized = {**value, "session_id": "<SESSION_ID>"}
+        assert _sha256_text(verifier._canonical_prompt_json(normalized)) == (
+            "f350c66602a66de56de9539191602d506433dea56ae6e43496323a7bdd300e2a"
+        )
+
+    monkeypatch.setattr(verifier, "_verify_current_context_extensions", pinned_historical_context)
     monkeypatch.setattr(verifier, "DEVELOPER_INSTRUCTIONS", recorded["instructions"])
     monkeypatch.setattr(
         verifier,

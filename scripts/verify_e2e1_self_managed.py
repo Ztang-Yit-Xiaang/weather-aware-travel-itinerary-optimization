@@ -1380,6 +1380,12 @@ def _private_build_id(repository, rows, registry_body):
         for row in rows
         if row["path"].startswith("src/itinerary_system/product_app/") and Path(row["path"]).suffix.lower() in suffixes
     )
+    paths.update({"src/itinerary_system/interest_model.py", "src/itinerary_system/interest_surface.py"})
+    paths.update(
+        path.relative_to(repository).as_posix()
+        for path in (repository / "src/itinerary_system").rglob("*.py")
+        if path.is_file() and "__pycache__" not in path.parts
+    )
     require(paths <= {row["path"] for row in rows}, "private_build_input_missing")
     digest = hashlib.sha256()
     for relative in sorted(paths, key=lambda value: repository / value):

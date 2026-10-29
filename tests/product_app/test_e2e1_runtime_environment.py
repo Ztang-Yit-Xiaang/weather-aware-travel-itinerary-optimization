@@ -9,6 +9,7 @@ from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
+from test_map_asset_preflight import build_package
 
 ROOT = Path(__file__).resolve().parents[2]
 SPEC = importlib.util.spec_from_file_location("runtime_environment", ROOT / "scripts/e2e1_runtime_environment.py")
@@ -50,7 +51,8 @@ def captured(tmp_path, monkeypatch):
     monkeypatch.setattr(environment.subprocess, "run", run)
     monkeypatch.setattr(environment.importlib.metadata, "version", lambda name: "1.2.3")
     monkeypatch.setattr(delta, "sha256", lambda path: "b" * 64)
-    assets = ROOT / "docker/maplibre/assets"
+    assets = tmp_path / "map-assets"
+    build_package(assets)
     map_provenance = json.loads((assets / "provenance.json").read_text(encoding="utf-8"))
     requests = []
 

@@ -74,7 +74,10 @@ displayed = acceptedPlan;
 render();
 assert.ok(panel.innerHTML.includes("Issue detected"),"A child response not actually rendered must not relabel the parent view");
 
-const toastCode = source.slice(source.indexOf("function toast("), source.indexOf("\nboot();"));
+const toastStart = source.indexOf("function toast(");
+const startup = source.indexOf("\nensureHostedLogin()", toastStart);
+assert.ok(toastStart >= 0 && startup > toastStart);
+const toastCode = source.slice(toastStart, startup);
 const items = [];
 const region = {querySelectorAll:() => items.filter(item => !item.className.includes("error")),append:item => items.push(item)};
 const notify = new Function("document","$","setTimeout",`${toastCode};return toast;`)(

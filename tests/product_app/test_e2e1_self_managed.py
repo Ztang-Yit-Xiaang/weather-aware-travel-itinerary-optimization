@@ -379,7 +379,15 @@ def test_private_copy_inventory_and_fingerprints_bind_exact_production_inputs():
         "scripts/run_product_app.py",
         "configs/product_app_registry.json",
         "configs/product_route_delta.json",
+        "configs/interest_regions/exploration_manifest.json",
+        "src/itinerary_system/product_app/static/vendor/manifest.json",
+        "src/itinerary_system/product_app/static/vendor/fonts/Noto Sans Regular/0-255.pbf",
     } <= paths
+    required_sources = deterministic_source_inputs("tests/product_app/browser/test_build_coherence_live.py")
+    assert {path for path in paths if path.startswith("configs/interest_regions/")} <= set(required_sources)
+    assert {path for path in paths if path.startswith("src/itinerary_system/product_app/static/")} <= set(
+        required_sources
+    )
     rows = [{"path": path} for path in paths]
     registry = (core.ROOT / "configs/product_app_registry.json").read_bytes()
     assert verifier._private_build_id(core.ROOT, rows, registry) == product_build_id(core.ROOT)
@@ -390,6 +398,35 @@ def test_private_copy_inventory_and_fingerprints_bind_exact_production_inputs():
     incomplete = [row for row in rows if row["path"] != "scripts/run_product_app.py"]
     with pytest.raises(core.E2E1VerificationError, match="private_build_input_missing"):
         verifier._private_build_id(core.ROOT, incomplete, registry)
+
+
+def test_private_build_fingerprint_binds_interest_changes_and_rejects_omitted_input(tmp_path):
+    from itinerary_system.product_app.runtime import product_build_id
+
+    files = {
+        "scripts/run_product_app.py": "version = 1\n",
+        "configs/product_app_registry.json": "{}",
+        "configs/product_route_delta.json": '{"descriptor_path":"results/route_deltas/unit/descriptor.json"}',
+        "results/route_deltas/unit/descriptor.json": "{}",
+        "src/itinerary_system/interest_model.py": "",
+        "src/itinerary_system/interest_surface.py": "",
+        "src/itinerary_system/product_app/api.py": "version = 1\n",
+        "configs/interest_regions/catalog.json": '{"version":1}',
+    }
+    for relative, body in files.items():
+        path = tmp_path / relative
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(body, encoding="utf-8")
+    rows = [{"path": path} for path in files]
+    registry = files["configs/product_app_registry.json"].encode()
+    before = verifier._private_build_id(tmp_path, rows, registry)
+    assert before == product_build_id(tmp_path)
+    (tmp_path / "configs/interest_regions/catalog.json").write_text('{"version":2}', encoding="utf-8")
+    after = verifier._private_build_id(tmp_path, rows, registry)
+    assert after == product_build_id(tmp_path) and after != before
+    omitted = [row for row in rows if row["path"] != "configs/interest_regions/catalog.json"]
+    with pytest.raises(core.E2E1VerificationError, match="private_build_input_missing"):
+        verifier._private_build_id(tmp_path, omitted, registry)
 
 
 @pytest.mark.parametrize(

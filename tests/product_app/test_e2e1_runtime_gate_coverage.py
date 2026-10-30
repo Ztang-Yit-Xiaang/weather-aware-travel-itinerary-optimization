@@ -310,7 +310,30 @@ def test_all_current_literal_dynamic_and_responsive_bindings_have_exact_explicit
     registry = json.loads((gates.ROOT / "configs/e2e1_interaction_coverage.json").read_text())
     rows = gates.source_controls()
     mapped, unmatched, stale = gates.binding_inventory(registry, rows)
-    assert len(rows) == len(mapped) == 101 and unmatched == stale == []
+    assert len(rows) == len(mapped) == 108 and unmatched == stale == []
+    added = {
+        row["binding_id"]: row["required_execution_selectors"]
+        for row in mapped
+        if row["binding_id"]
+        in {
+            "hosted_sign_out",
+            "hosted_sign_in",
+            "interest_places_refresh",
+            "interest_regions_retry",
+            "interest_search_area",
+            "interest_search_radius",
+            "evidence_download",
+        }
+    }
+    assert added == {
+        "hosted_sign_out": ["#hosted-sign-out"],
+        "hosted_sign_in": ["form.hosted-login"],
+        "interest_places_refresh": ["#refresh-interest-place-data"],
+        "interest_regions_retry": ["#retry-interest-regions"],
+        "interest_search_area": ["#interest-search-area"],
+        "interest_search_radius": ["#interest-radius"],
+        "evidence_download": ["#evidence-download"],
+    }
     recovery = {
         row["binding_id"]: row
         for row in mapped
@@ -334,7 +357,7 @@ def test_all_current_literal_dynamic_and_responsive_bindings_have_exact_explicit
     }
     assert all(row["required_execution_selectors"] == [row["source_selector"]] for row in recovery.values())
     dynamic = [row for row in mapped if row["source_selector"] is None]
-    assert len(dynamic) == 13
+    assert len(dynamic) == 15
     assert next(row for row in dynamic if row["binding_id"] == "compare_responsive")["kind"] == "responsive_lifecycle"
     assert next(row for row in mapped if row["binding_id"] == "navigate_global")["required_execution_selectors"] == [
         prefix + '[data-route="/app/' + route + '"]'

@@ -1,0 +1,4632 @@
+{
+  "schema_version": "interest-local-places-v1",
+  "retrieved_at": "2026-10-29T17:53:14.912916+00:00",
+  "attribution": "OpenStreetMap contributors",
+  "license_url": "https://www.openstreetmap.org/copyright",
+  "data_role": "community_mapped_place_metadata_not_user_feedback",
+  "source_sha256": "81fdaedfa41c8a45fc6083a131e46e1ad17e040705faa8898fefd66c3949cbe7",
+  "query_scope": "Named tourism attractions, museums, viewpoints, galleries and artworks within 3 km of the eight recorded itinerary visit areas. Not a completeness or availability guarantee.",
+  "visitor_areas": [
+    {
+      "stop_id": "yosemite_national_park",
+      "name": "Yosemite Valley visitor area",
+      "coordinate": {
+        "latitude": 37.746508,
+        "longitude": -119.58445
+      },
+      "source_refs": [
+        "https://www.nps.gov/yose/planyourvisit/basicinfo.htm",
+        "https://www.nps.gov/planyourvisit/event-details.htm?id=EEE5D35C-CB34-4B78-28B492A82DAAC59A"
+      ]
+    },
+    {
+      "stop_id": "sequoia_national_park",
+      "name": "Giant Forest visitor area",
+      "coordinate": {
+        "latitude": 36.564688,
+        "longitude": -118.772683
+      },
+      "source_refs": [
+        "https://www.nps.gov/seki/planyourvisit/visitorcenters.htm",
+        "https://www.nps.gov/planyourvisit/event-details.htm?id=3BAB5234-B6BF-AC68-75B4DFA5C72CF6D0"
+      ]
+    },
+    {
+      "stop_id": "kings_canyon_national_park",
+      "name": "Grant Grove visitor area",
+      "coordinate": {
+        "latitude": 36.747062,
+        "longitude": -118.973092
+      },
+      "source_refs": [
+        "https://www.nps.gov/seki/grant-grove.htm",
+        "https://www.nps.gov/planyourvisit/event-details.htm?id=8E00E6B6-0BDA-676D-81AD59ED8E0B06EC"
+      ]
+    }
+  ],
+  "places": [
+    {
+      "place_id": "osm_node_313753662",
+      "name": "General Sherman Tree",
+      "display_coordinate": {
+        "latitude": 36.5816453,
+        "longitude": -118.751443
+      },
+      "place_categories": [
+        "nature",
+        "outdoor"
+      ],
+      "source_refs": [
+        "https://www.openstreetmap.org/node/313753662"
+      ],
+      "source_attribution": "OpenStreetMap contributors",
+      "coordinate_role": "community_mapped_display_location_not_route_access",
+      "description": "Community-mapped place. Current opening conditions, public access and itinerary feasibility have not been verified."
+    },
+    {
+      "place_id": "osm_node_317081601",
+      "name": "California Society of Pioneers Museum and Library",
+      "display_coordinate": {
+        "latitude": 37.7999996,
+        "longitude": -122.4596162
+      },
+      "place_categories": [
+        "culture"
+      ],
+      "source_refs": [
+        "https://www.openstreetmap.org/node/317081601",
+        "https://www.californiapioneers.org/"
+      ],
+      "source_attribution": "OpenStreetMap contributors",
+      "coordinate_role": "community_mapped_display_location_not_route_access",
+      "description": "Community-mapped place. Current opening conditions, public access and itinerary feasibility have not been verified."
+    },
+    {
+      "place_id": "osm_node_331507160",
+      "name": "Glacier Point",
+      "display_coordinate": {
+        "latitude": 37.7306704,
+        "longitude": -119.5736664
+      },
+      "place_categories": [
+        "nature",
+        "outdoor"
+      ],
+      "source_refs": [
+        "https://www.openstreetmap.org/node/331507160"
+      ],
+      "source_attribution": "OpenStreetMap contributors",
+      "coordinate_role": "community_mapped_display_location_not_route_access",
+      "description": "Community-mapped place. Current opening conditions, public access and itinerary feasibility have not been verified."
+    },
+    {
+      "place_id": "osm_node_358795662",
+      "name": "Sentinel Dome",
+      "display_coordinate": {
+        "latitude": 37.7229821,
+        "longitude": -119.58433
+      },
+      "place_categories": [
+        "nature",
+        "outdoor"
+      ],
+      "source_refs": [
+        "https://www.openstreetmap.org/node/358795662"
+      ],
+      "source_attribution": "OpenStreetMap contributors",
+      "coordinate_role": "community_mapped_display_location_not_route_access",
+      "description": "Community-mapped place. Current opening conditions, public access and itinerary feasibility have not been verified."
+    },
+    {
+      "place_id": "osm_node_358806261",
+      "name": "Congress Group",
+      "display_coordinate": {
+        "latitude": 36.5727279,
+        "longitude": -118.7510478
+      },
+      "place_categories": [
+        "nature",
+        "outdoor"
+      ],
+      "source_refs": [
+        "https://www.openstreetmap.org/node/358806261"
+      ],
+      "source_attribution": "OpenStreetMap contributors",
+      "coordinate_role": "community_mapped_display_location_not_route_access",
+      "description": "Community-mapped place. Current opening conditions, public access and itinerary feasibility have not been verified."
+    },
+    {
+      "place_id": "osm_node_358807658",
+      "name": "Union Point",
+      "display_coordinate": {
+        "latitude": 37.734847,
+        "longitude": -119.5877031
+      },
+      "place_categories": [
+        "nature",
+        "outdoor"
+      ],
+      "source_refs": [
+        "https://www.openstreetmap.org/node/358807658"
+      ],
+      "source_attribution": "OpenStreetMap contributors",
+      "coordinate_role": "community_mapped_display_location_not_route_access",
+      "description": "Community-mapped place. Current opening conditions, public access and itinerary feasibility have not been verified."
+    },
+    {
+      "place_id": "osm_node_358833288",
+      "name": "Hawk Hill",
+      "display_coordinate": {
+        "latitude": 37.8285523,
+        "longitude": -122.498775
+      },
+      "place_categories": [
+        "nature",
+        "outdoor"
+      ],
+      "source_refs": [
+        "https://www.openstreetmap.org/node/358833288"
+      ],
+      "source_attribution": "OpenStreetMap contributors",
+      "coordinate_role": "community_mapped_display_location_not_route_access",
+      "description": "Community-mapped place. Current opening conditions, public access and itinerary feasibility have not been verified."
+    },
+    {
+      "place_id": "osm_node_368174120",
+      "name": "Bay Area Discovery Museum",
+      "display_coordinate": {
+        "latitude": 37.8356835,
+        "longitude": -122.4766919
+      },
+      "place_categories": [
+        "culture"
+      ],
+      "source_refs": [
+        "https://www.openstreetmap.org/node/368174120",
+        "https://bayareadiscoverymuseum.org/"
+      ],
+      "source_attribution": "OpenStreetMap contributors",
+      "coordinate_role": "community_mapped_display_location_not_route_access",
+      "description": "Community-mapped place. Current opening conditions, public access and itinerary feasibility have not been verified."
+    },
+    {
+      "place_id": "osm_node_368174524",
+      "name": "Santa Barbara Museum of Art",
+      "display_coordinate": {
+        "latitude": 34.4233305,
+        "longitude": -119.704024
+      },
+      "place_categories": [
+        "culture"
+      ],
+      "source_refs": [
+        "https://www.openstreetmap.org/node/368174524",
+        "https://www.sbma.net/"
+      ],
+      "source_attribution": "OpenStreetMap contributors",
+      "coordinate_role": "community_mapped_display_location_not_route_access",
+      "description": "Community-mapped place. Current opening conditions, public access and itinerary feasibility have not been verified."
+    },
+    {
+      "place_id": "osm_node_368174531",
+      "name": "Santa Barbara Historical Museum",
+      "display_coordinate": {
+        "latitude": 34.4215341,
+        "longitude": -119.6972909
+      },
+      "place_categories": [
+        "culture"
+      ],
+      "source_refs": [
+        "https://www.openstreetmap.org/node/368174531",
+        "https://www.sbhistorical.org/"
+      ],
+      "source_attribution": "OpenStreetMap contributors",
+      "coordinate_role": "community_mapped_display_location_not_route_access",
+      "description": "Community-mapped place. Current opening conditions, public access and itinerary feasibility have not been verified."
+    },
+    {
+      "place_id": "osm_node_423734952",
+      "name": "5 Points",
+      "display_coordinate": {
+        "latitude": 34.126901,
+        "longitude": -118.280258
+      },
+      "place_categories": [
+        "nature",
+        "outdoor"
+      ],
+      "source_refs": [
+        "https://www.openstreetmap.org/node/423734952"
+      ],
+      "source_attribution": "OpenStreetMap contributors",
+      "coordinate_role": "community_mapped_display_location_not_route_access",
+      "description": "Community-mapped place. Current opening conditions, public access and itinerary feasibility have not been verified."
+    },
+    {
+      "place_id": "osm_node_469707993",
+      "name": "Golden Gate Bridge Vista Point",
+      "display_coordinate": {
+        "latitude": 37.8322873,
+        "longitude": -122.479636
+      },
+      "place_categories": [
+        "nature",
+        "outdoor"
+      ],
+      "source_refs": [
+        "https://www.openstreetmap.org/node/469707993"
+      ],
+      "source_attribution": "OpenStreetMap contributors",
+      "coordinate_role": "community_mapped_display_location_not_route_access",
+      "description": "Community-mapped place. Current opening conditions, public access and itinerary feasibility have not been verified."
+    },
+    {
+      "place_id": "osm_node_559832679",
+      "name": "Simon Breitbard",
+      "display_coordinate": {
+        "latitude": 37.4509419,
+        "longitude": -122.184917
+      },
+      "place_categories": [
+        "culture"
+      ],
+      "source_refs": [
+        "https://www.openstreetmap.org/node/559832679"
+      ],
+      "source_attribution": "OpenStreetMap contributors",
+      "coordinate_role": "community_mapped_display_location_not_route_access",
+      "description": "Community-mapped place. Current opening conditions, public access and itinerary feasibility have not been verified."
+    },
+    {
+      "place_id": "osm_node_665689214",
+      "name": "Immigrant Point Overlook",
+      "display_coordinate": {
+        "latitude": 37.7961682,
+        "longitude": -122.477875
+      },
+      "place_categories": [
+        "nature",
+        "outdoor"
+      ],
+      "source_refs": [
+        "https://www.openstreetmap.org/node/665689214",
+        "https://presidio.gov/explore/attractions/immigrant-point-overlook"
+      ],
+      "source_attribution": "OpenStreetMap contributors",
+      "coordinate_role": "community_mapped_display_location_not_route_access",
+      "description": "Community-mapped place. Current opening conditions, public access and itinerary feasibility have not been verified."
+    },
+    {
+      "place_id": "osm_node_1041656790",
+      "name": "Beacon Hill",
+      "display_coordinate": {
+        "latitude": 34.1284912,
+        "longitude": -118.2773421
+      },
+      "place_categories": [
+        "nature",
+        "outdoor"
+      ],
+      "source_refs": [
+        "https://www.openstreetmap.org/node/1041656790"
+      ],
+      "source_attribution": "OpenStreetMap contributors",
+      "coordinate_role": "community_mapped_display_location_not_route_access",
+      "description": "Community-mapped place. Current opening conditions, public access and itinerary feasibility have not been verified."
+    },
+    {
+      "place_id": "osm_node_1183476394",
+      "name": "Golden Gate Bridge Lookout",
+      "display_coordinate": {
+        "latitude": 37.82872,
+        "longitude": -122.4860027
+      },
+      "place_categories": [
+        "nature",
+        "outdoor"
+      ],
+      "source_refs": [
+        "https://www.openstreetmap.org/node/1183476394"
+      ],
+      "source_attribution": "OpenStreetMap contributors",
+      "coordinate_role": "community_mapped_display_location_not_route_access",
+      "description": "Community-mapped place. Current opening conditions, public access and itinerary feasibility have not been verified."
+    },
+    {
+      "place_id": "osm_node_1667739187",
+      "name": "Nature Center at Happy Isles",
+      "display_coordinate": {
+        "latitude": 37.7304692,
+        "longitude": -119.559572
+      },
+      "place_categories": [
+        "culture"
+      ],
+      "source_refs": [
+        "https://www.openstreetmap.org/node/1667739187",
+        "https://www.nps.gov/places/000/happy-isles-art-and-nature-center.htm"
+      ],
+      "source_attribution": "OpenStreetMap contributors",
+      "coordinate_role": "community_mapped_display_location_not_route_access",
+      "description": "Community-mapped place. Current opening conditions, public access and itinerary feasibility have not been verified."
+    },
+    {
+      "place_id": "osm_node_1710414037",
+      "name": "Hewlett Packard's Garage",
+      "display_coordinate": {
+        "latitude": 37.4429402,
+        "longitude": -122.1545898
+      },
+      "place_categories": [
+        "nature",
+        "outdoor"
+      ],
+      "source_refs": [
+        "https://www.openstreetmap.org/node/1710414037",
+        "https://www.hpmuseum.org/garage/garage.htm"
+      ],
+      "source_attribution": "OpenStreetMap contributors",
+      "coordinate_role": "community_mapped_display_location_not_route_access",
+      "description": "Community-mapped place. Current opening conditions, public access and itinerary feasibility have not been verified."
+    },
+    {
+      "place_id": "osm_node_1751223608",
+      "name": "Moro Rock",
+      "display_coordinate": {
+        "latitude": 36.5440904,
+        "longitude": -118.7651094
+      },
+      "place_categories": [
+        "nature",
+        "outdoor"
+      ],
+      "source_refs": [
+        "https://www.openstreetmap.org/node/1751223608"
+      ],
+      "source_attribution": "OpenStreetMap contributors",
+      "coordinate_role": "community_mapped_display_location_not_route_access",
+      "description": "Community-mapped place. Current opening conditions, public access and itinerary feasibility have not been verified."
+    },
+    {
+      "place_id": "osm_node_1751223614",
+      "name": "Crescent Meadow",
+      "display_coordinate": {
+        "latitude": 36.5533286,
+        "longitude": -118.7477742
+      },
+      "place_categories": [
+        "nature",
+        "outdoor"
+      ],
+      "source_refs": [
+        "https://www.openstreetmap.org/node/1751223614"
+      ],
+      "source_attribution": "OpenStreetMap contributors",
+      "coordinate_role": "community_mapped_display_location_not_route_access",
+      "description": "Community-mapped place. Current opening conditions, public access and itinerary feasibility have not been verified."
+    },
+    {
+      "place_id": "osm_node_1751781798",
+      "name": "Sentinel Tree",
+      "display_coordinate": {
+        "latitude": 36.5648692,
+        "longitude": -118.7730503
+      },
+      "place_categories": [
+        "nature",
+        "outdoor"
+      ],
+      "source_refs": [
+        "https://www.openstreetmap.org/node/1751781798"
+      ],
+      "source_attribution": "OpenStreetMap contributors",
+      "coordinate_role": "community_mapped_display_location_not_route_access",
+      "description": "Community-mapped place. Current opening conditions, public access and itinerary feasibility have not been verified."
+    },
+    {
+      "place_id": "osm_node_1834856622",
+      "name": "Vista Viewpoint",
+      "display_coordinate": {
+        "latitude": 34.1235668,
+        "longitude": -118.2852932
+      },
+      "place_categories": [
+        "nature",
+        "outdoor"
+      ],
+      "source_refs": [
+        "https://www.openstreetmap.org/node/1834856622"
+      ],
+      "source_attribution": "OpenStreetMap contributors",
+      "coordinate_role": "community_mapped_display_location_not_route_access",
+      "description": "Community-mapped place. Current opening conditions, public access and itinerary feasibility have not been verified."
+    },
+    {
+      "place_id": "osm_node_1856427893",
+      "name": "General Grant Tree",
+      "display_coordinate": {
+        "latitude": 36.7480556,
+        "longitude": -118.9711111
+      },
+      "place_categories": [
+        "nature",
+        "outdoor"
+      ],
+      "source_refs": [
+        "https://www.openstreetmap.org/node/1856427893"
+      ],
+      "source_attribution": "OpenStreetMap contributors",
+      "coordinate_role": "community_mapped_display_location_not_route_access",
+      "description": "Community-mapped place. Current opening conditions, public access and itinerary feasibility have not been verified."
+    },
+    {
+      "place_id": "osm_node_1902039556",
+      "name": "Hanging Rock",
+      "display_coordinate": {
+        "latitude": 36.5490191,
+        "longitude": -118.7707979
+      },
+      "place_categories": [
+        "nature",
+        "outdoor"
+      ],
+      "source_refs": [
+        "https://www.openstreetmap.org/node/1902039556"
+      ],
+      "source_attribution": "OpenStreetMap contributors",
+      "coordinate_role": "community_mapped_display_location_not_route_access",
+      "description": "Community-mapped place. Current opening conditions, public access and itinerary feasibility have not been verified."
+    },
+    {
+      "place_id": "osm_node_1902039562",
+      "name": "Tunnel Log",
+      "display_coordinate": {
+        "latitude": 36.5525387,
+        "longitude": -118.7613829
+      },
+      "place_categories": [
+        "nature",
+        "outdoor"
+      ],
+      "source_refs": [
+        "https://www.openstreetmap.org/node/1902039562",
+        "https://www.nps.gov/thingstodo/drive-through-tunnel-log.htm"
+      ],
+      "source_attribution": "OpenStreetMap contributors",
+      "coordinate_role": "community_mapped_display_location_not_route_access",
+      "description": "Community-mapped place. Current opening conditions, public access and itinerary feasibility have not been verified."
+    },
+    {
+      "place_id": "osm_node_1902039587",
+      "name": "Hanging Rock",
+      "display_coordinate": {
+        "latitude": 36.5490564,
+        "longitude": -118.7705409
+      },
+      "place_categories": [
+        "nature",
+        "outdoor"
+      ],
+      "source_refs": [
+        "https://www.openstreetmap.org/node/1902039587"
+      ],
+      "source_attribution": "OpenStreetMap contributors",
+      "coordinate_role": "community_mapped_display_location_not_route_access",
+      "description": "Community-mapped place. Current opening conditions, public access and itinerary feasibility have not been verified."
+    },
+    {
+      "place_id": "osm_node_2176846893",
+      "name": "Hurricane View Point",
+      "display_coordinate": {
+        "latitude": 36.3574944,
+        "longitude": -121.9027845
+      },
+      "place_categories": [
+        "nature",
+        "outdoor"
+      ],
+      "source_refs": [
+        "https://www.openstreetmap.org/node/2176846893"
+      ],
+      "source_attribution": "OpenStreetMap contributors",
+      "coordinate_role": "community_mapped_display_location_not_route_access",
+      "description": "Community-mapped place. Current opening conditions, public access and itinerary feasibility have not been verified."
+    },
+    {
+      "place_id": "osm_node_2377697296",
+      "name": "Eleven Range Overlook",
+      "display_coordinate": {
+        "latitude": 36.5514714,
+        "longitude": -118.7877186
+      },
+      "place_categories": [
+        "nature",
+        "outdoor"
+      ],
+      "source_refs": [
+        "https://www.openstreetmap.org/node/2377697296"
+      ],
+      "source_attribution": "OpenStreetMap contributors",
+      "coordinate_role": "community_mapped_display_location_not_route_access",
+      "description": "Community-mapped place. Current opening conditions, public access and itinerary feasibility have not been verified."
+    },
+    {
+      "place_id": "osm_node_2389657981",
+      "name": "Lower Yosemite Fall",
+      "display_coordinate": {
+        "latitude": 37.7514442,
+        "longitude": -119.5971408
+      },
+      "place_categories": [
+        "nature",
+        "outdoor"
+      ],
+      "source_refs": [
+        "https://www.openstreetmap.org/node/2389657981"
+      ],
+      "source_attribution": "OpenStreetMap contributors",
+      "coordinate_role": "community_mapped_display_location_not_route_access",
+      "description": "Community-mapped place. Current opening conditions, public access and itinerary feasibility have not been verified."
+    },
+    {
+      "place_id": "osm_node_2389658224",
+      "name": "Upper Yosemite Fall",
+      "display_coordinate": {
+        "latitude": 37.7569712,
+        "longitude": -119.5967689
+      },
+      "place_categories": [
+        "nature",
+        "outdoor"
+      ],
+      "source_refs": [
+        "https://www.openstreetmap.org/node/2389658224"
+      ],
+      "source_attribution": "OpenStreetMap contributors",
+      "coordinate_role": "community_mapped_display_location_not_route_access",
+      "description": "Community-mapped place. Current opening conditions, public access and itinerary feasibility have not been verified."
+    },
+    {
+      "place_id": "osm_node_2469991556",
+      "name": "Sequoia Lake Overlook",
+      "display_coordinate": {
+        "latitude": 36.7441846,
+        "longitude": -118.9840444
+      },
+      "place_categories": [
+        "nature",
+        "outdoor"
+      ],
+      "source_refs": [
+        "https://www.openstreetmap.org/node/2469991556"
+      ],
+      "source_attribution": "OpenStreetMap contributors",
+      "coordinate_role": "community_mapped_display_location_not_route_access",
+      "description": "Community-mapped place. Current opening conditions, public access and itinerary feasibility have not been verified."
+    },
+    {
+      "place_id": "osm_node_2509930247",
+      "name": "Bossé Toy Train Museum",
+      "display_coordinate": {
+        "latitude": 34.4243418,
+        "longitude": -119.7060357
+      },
+      "place_categories": [
+        "culture"
+      ],
+      "source_refs": [
+        "https://www.openstreetmap.org/node/2509930247",
+        "https://www.bossetoytrainmuseum.org/"
+      ],
+      "source_attribution": "OpenStreetMap contributors",
+      "coordinate_role": "community_mapped_display_location_not_route_access",
+      "description": "Community-mapped place. Current opening conditions, public access and itinerary feasibility have not been verified."
+    },
+    {
+      "place_id": "osm_node_2509930252",
+      "name": "The Painted Cabernet",
+      "display_coordinate": {
+        "latitude": 34.4239766,
+        "longitude": -119.7055546
+      },
+      "place_categories": [
+        "culture"
+      ],
+      "source_refs": [
+        "https://www.openstreetmap.org/node/2509930252",
+        "https://www.paintedcabernet.com/"
+      ],
+      "source_attribution": "OpenStreetMap contributors",
+      "coordinate_role": "community_mapped_display_location_not_route_access",
+      "description": "Community-mapped place. Current opening conditions, public access and itinerary feasibility have not been verified."
+    },
+    {
+      "place_id": "osm_node_2546311479",
+      "name": "Chromatic Gate, 1991",
+      "display_coordinate": {
+        "latitude": 34.416412,
+        "longitude": -119.675073
+      },
+      "place_categories": [
+        "culture"
+      ],
+      "source_refs": [
+        "https://www.openstreetmap.org/node/2546311479"
+      ],
+      "source_attribution": "OpenStreetMap contributors",
+      "coordinate_role": "community_mapped_display_location_not_route_access",
+      "description": "Community-mapped place. Current opening conditions, public access and itinerary feasibility have not been verified."
+    },
+    {
+      "place_id": "osm_node_2628201933",
+      "name": "Sense Fine Art",
+      "display_coordinate": {
+        "latitude": 37.4504351,
+        "longitude": -122.185358
+      },
+      "place_categories": [
+        "culture"
+      ],
+      "source_refs": [
+        "https://www.openstreetmap.org/node/2628201933",
+        "https://www.sensefineart.com/"
+      ],
+      "source_attribution": "OpenStreetMap contributors",
+      "coordinate_role": "community_mapped_display_location_not_route_access",
+      "description": "Community-mapped place. Current opening conditions, public access and itinerary feasibility have not been verified."
+    },
+    {
+      "place_id": "osm_node_2628201948",
+      "name": "The Main Gallery",
+      "display_coordinate": {
+        "latitude": 37.4496695,
+        "longitude": -122.185994
+      },
+      "place_categories": [
+        "culture"
+      ],
+      "source_refs": [
+        "https://www.openstreetmap.org/node/2628201948"
+      ],
+      "source_attribution": "OpenStreetMap contributors",
+      "coordinate_role": "community_mapped_display_location_not_route_access",
+      "description": "Community-mapped place. Current opening conditions, public access and itinerary feasibility have not been verified."
+    },
+    {
+      "place_id": "osm_node_2799309123",
+      "name": "Casa Dolores",
+      "display_coordinate": {
+        "latitude": 34.4186966,
+        "longitude": -119.7062439
+      },
+      "place_categories": [
+        "culture"
+      ],
+      "source_refs": [
+        "https://www.openstreetmap.org/node/2799309123"
+      ],
+      "source_attribution": "OpenStreetMap contributors",
+      "coordinate_role": "community_mapped_display_location_not_route_access",
+      "description": "Community-mapped place. Current opening conditions, public access and itinerary feasibility have not been verified."
+    },
+    {
+      "place_id": "osm_node_2951461661",
+      "name": "Lower Yosemite Falls Vista Point",
+      "display_coordinate": {
+        "latitude": 37.7499261,
+        "longitude": -119.5959714
+      },
+      "place_categories": [
+        "nature",
+        "outdoor"
+      ],
+      "source_refs": [
+        "https://www.openstreetmap.org/node/2951461661"
+      ],
+      "source_attribution": "OpenStreetMap contributors",
+      "coordinate_role": "community_mapped_display_location_not_route_access",
+      "description": "Community-mapped place. Current opening conditions, public access and itinerary feasibility have not been verified."
+    },
+    {
+      "place_id": "osm_node_3064121661",
+      "name": "Nikola Tesla",
+      "display_coordinate": {
+        "latitude": 37.4261611,
+        "longitude": -122.1411693
+      },
+      "place_categories": [
+        "culture"
+      ],
+      "source_refs": [
+        "https://www.openstreetmap.org/node/3064121661"
+      ],
+      "source_attribution": "OpenStreetMap contributors",
+      "coordinate_role": "community_mapped_display_location_not_route_access",
+      "description": "Community-mapped place. Current opening conditions, public access and itinerary feasibility have not been verified."
+    },
+    {
+      "place_id": "osm_node_3123176385",
+      "name": "Rocky Creek Bridge",
+      "display_coordinate": {
+        "latitude": 36.3799108,
+        "longitude": -121.9020871
+      },
+      "place_categories": [
+        "nature",
+        "outdoor"
+      ],
+      "source_refs": [
+        "https://www.openstreetmap.org/node/3123176385"
+      ],
+      "source_attribution": "OpenStreetMap contributors",
+      "coordinate_role": "community_mapped_display_location_not_route_access",
+      "description": "Community-mapped place. Current opening conditions, public access and itinerary feasibility have not been verified."
+    },
+    {
+      "place_id": "osm_node_3123177166",
+      "name": "Sea Otter Refuge View Point",
+      "display_coordinate": {
+        "latitude": 36.3562398,
+        "longitude": -121.9024714
+      },
+      "place_categories": [
+        "nature",
+        "outdoor"
+      ],
+      "source_refs": [
+        "https://www.openstreetmap.org/node/3123177166"
+      ],
+      "source_attribution": "OpenStreetMap contributors",
+      "coordinate_role": "community_mapped_display_location_not_route_access",
+      "description": "Community-mapped place. Current opening conditions, public access and itinerary feasibility have not been verified."
+    },
+    {
+      "place_id": "osm_node_3204926589",
+      "name": "Hollywood Sign",
+      "display_coordinate": {
+        "latitude": 34.1340991,
+        "longitude": -118.321652
+      },
+      "place_categories": [
+        "nature",
+        "outdoor"
+      ],
+      "source_refs": [
+        "https://www.openstreetmap.org/node/3204926589"
+      ],
+      "source_attribution": "OpenStreetMap contributors",
+      "coordinate_role": "community_mapped_display_location_not_route_access",
+      "description": "Community-mapped place. Current opening conditions, public access and itinerary feasibility have not been verified."
+    },
+    {
+      "place_id": "osm_node_3591517482",
+      "name": "Chimney Tree",
+      "display_coordinate": {
+        "latitude": 36.5598785,
+        "longitude": -118.7474272
+      },
+      "place_categories": [
+        "nature",
+        "outdoor"
+      ],
+      "source_refs": [
+        "https://www.openstreetmap.org/node/3591517482"
+      ],
+      "source_attribution": "OpenStreetMap contributors",
+      "coordinate_role": "community_mapped_display_location_not_route_access",
+      "description": "Community-mapped place. Current opening conditions, public access and itinerary feasibility have not been verified."
+    },
+    {
+      "place_id": "osm_node_3591533237",
+      "name": "Tharp's Log",
+      "display_coordinate": {
+        "latitude": 36.5604676,
+        "longitude": -118.742737
+      },
+      "place_categories": [
+        "nature",
+        "outdoor"
+      ],
+      "source_refs": [
+        "https://www.openstreetmap.org/node/3591533237"
+      ],
+      "source_attribution": "OpenStreetMap contributors",
+      "coordinate_role": "community_mapped_display_location_not_route_access",
+      "description": "Community-mapped place. Current opening conditions, public access and itinerary feasibility have not been verified."
+    },
+    {
+      "place_id": "osm_node_3700495190",
+      "name": "Gamlin Cabin",
+      "display_coordinate": {
+        "latitude": 36.7487679,
+        "longitude": -118.9717445
+      },
+      "place_categories": [
+        "nature",
+        "outdoor"
+      ],
+      "source_refs": [
+        "https://www.openstreetmap.org/node/3700495190"
+      ],
+      "source_attribution": "OpenStreetMap contributors",
+      "coordinate_role": "community_mapped_display_location_not_route_access",
+      "description": "Community-mapped place. Current opening conditions, public access and itinerary feasibility have not been verified."
+    },
+    {
+      "place_id": "osm_node_3700503863",
+      "name": "Auto Log",
+      "display_coordinate": {
+        "latitude": 36.5543676,
+        "longitude": -118.7691946
+      },
+      "place_categories": [
+        "nature",
+        "outdoor"
+      ],
+      "source_refs": [
+        "https://www.openstreetmap.org/node/3700503863"
+      ],
+      "source_attribution": "OpenStreetMap contributors",
+      "coordinate_role": "community_mapped_display_location_not_route_access",
+      "description": "Community-mapped place. Current opening conditions, public access and itinerary feasibility have not been verified."
+    },
+    {
+      "place_id": "osm_node_3781763842",
+      "name": "Sherman Tree View",
+      "display_coordinate": {
+        "latitude": 36.5820741,
+        "longitude": -118.7509109
+      },
+      "place_categories": [
+        "nature",
+        "outdoor"
+      ],
+      "source_refs": [
+        "https://www.openstreetmap.org/node/3781763842"
+      ],
+      "source_attribution": "OpenStreetMap contributors",
+      "coordinate_role": "community_mapped_display_location_not_route_access",
+      "description": "Community-mapped place. Current opening conditions, public access and itinerary feasibility have not been verified."
+    },
+    {
+      "place_id": "osm_node_3809512586",
+      "name": "The Tiffany & Co. Foundation Overlook",
+      "display_coordinate": {
+        "latitude": 34.1262598,
+        "longitude": -118.3055928
+      },
+      "place_categories": [
+        "nature",
+        "outdoor"
+      ],
+      "source_refs": [
+        "https://www.openstreetmap.org/node/3809512586"
+      ],
+      "source_attribution": "OpenStreetMap contributors",
+      "coordinate_role": "community_mapped_display_location_not_route_access",
+      "description": "Community-mapped place. Current opening conditions, public access and itinerary feasibility have not been verified."
+    },
+    {
+      "place_id": "osm_node_3937076067",
+      "name": "Colonel Young Tree",
+      "display_coordinate": {
+        "latitude": 36.5559369,
+        "longitude": -118.7688412
+      },
+      "place_categories": [
+        "nature",
+        "outdoor"
+      ],
+      "source_refs": [
+        "https://www.openstreetmap.org/node/3937076067"
+      ],
+      "source_attribution": "OpenStreetMap contributors",
+      "coordinate_role": "community_mapped_display_location_not_route_access",
+      "description": "Community-mapped place. Current opening conditions, public access and itinerary feasibility have not been verified."
+    },
+    {
+      "place_id": "osm_node_4137281190",
+      "name": "Yosemite Falls View",
+      "display_coordinate": {
+        "latitude": 37.7472014,
+        "longitude": -119.5939143
+      },
+      "place_categories": [
+        "nature",
+        "outdoor"
+      ],
+      "source_refs": [
+        "https://www.openstreetmap.org/node/4137281190"
+      ],
+      "source_attribution": "OpenStreetMap contributors",
+      "coordinate_role": "community_mapped_display_location_not_route_access",
+      "description": "Community-mapped place. Current opening conditions, public access and itinerary feasibility have not been verified."
+    },
+    {
+      "place_id": "osm_node_4202269447",
+      "name": "Golden Gate Overlook",
+      "display_coordinate": {
+        "latitude": 37.8040128,
+        "longitude": -122.4766999
+      },
+      "place_categories": [
+        "nature",
+        "outdoor"
+      ],
+      "source_refs": [
+        "https://www.openstreetmap.org/node/4202269447"
+      ],
+      "source_attribution": "OpenStreetMap contributors",
+      "coordinate_role": "community_mapped_display_location_not_route_access",
+      "description": "Community-mapped place. Current opening conditions, public access and itinerary feasibility have not been verified."
+    },
+    {
+      "place_id": "osm_node_4207307534",
+      "name": "Pacific Overlook",
+      "display_coordinate": {
+        "latitude": 37.8008203,
+        "longitude": -122.4779624
+      },
+      "place_categories": [
+        "nature",
+        "outdoor"
+      ],
+      "source_refs": [
+        "https://www.openstreetmap.org/node/4207307534"
+      ],
+      "source_attribution": "OpenStreetMap contributors",
+      "coordinate_role": "community_mapped_display_location_not_route_access",
+      "description": "Community-mapped place. Current opening conditions, public access and itinerary feasibility have not been verified."
+    },
+    {
+      "place_id": "osm_node_4216592671",
+      "name": "Admiration Point",
+      "display_coordinate": {
+        "latitude": 36.5511416,
+        "longitude": -118.7984478
+      },
+      "place_categories": [
+        "nature",
+        "outdoor"
+      ],
+      "source_refs": [
+        "https://www.openstreetmap.org/node/4216592671"
+      ],
+      "source_attribution": "OpenStreetMap contributors",
+      "coordinate_role": "community_mapped_display_location_not_route_access",
+      "description": "Community-mapped place. Current opening conditions, public access and itinerary feasibility have not been verified."
+    },
+    {
+      "place_id": "osm_node_4220113808",
+      "name": "Spread the Word",
+      "display_coordinate": {
+        "latitude": 37.8083726,
+        "longitude": -122.4707692
+      },
+      "place_categories": [
+        "culture"
+      ],
+      "source_refs": [
+        "https://www.openstreetmap.org/node/4220113808"
+      ],
+      "source_attribution": "OpenStreetMap contributors",
+      "coordinate_role": "community_mapped_display_location_not_route_access",
+      "description": "Community-mapped place. Current opening conditions, public access and itinerary feasibility have not been verified."
+    },
+    {
+      "place_id": "osm_node_4242428789",
+      "name": "Golden Gate Bridge Vista Point",
+      "display_coordinate": {
+        "latitude": 37.8296726,
+        "longitude": -122.4832466
+      },
+      "place_categories": [
+        "nature",
+        "outdoor"
+      ],
+      "source_refs": [
+        "https://www.openstreetmap.org/node/4242428789"
+      ],
+      "source_attribution": "OpenStreetMap contributors",
+      "coordinate_role": "community_mapped_display_location_not_route_access",
+      "description": "Community-mapped place. Current opening conditions, public access and itinerary feasibility have not been verified."
+    },
+    {
+      "place_id": "osm_node_4302164505",
+      "name": "Moreton Bay Fig Tree",
+      "display_coordinate": {
+        "latitude": 34.4136443,
+        "longitude": -119.6940334
+      },
+      "place_categories": [
+        "nature",
+        "outdoor"
+      ],
+      "source_refs": [
+        "https://www.openstreetmap.org/node/4302164505",
+        "https://sbparksandrec.santabarbaraca.gov/parks/moreton-bay-fig-tree-park"
+      ],
+      "source_attribution": "OpenStreetMap contributors",
+      "coordinate_role": "community_mapped_display_location_not_route_access",
+      "description": "Community-mapped place. Current opening conditions, public access and itinerary feasibility have not been verified."
+    },
+    {
+      "place_id": "osm_node_4362555639",
+      "name": "Condor Express Whale Watching",
+      "display_coordinate": {
+        "latitude": 34.4082985,
+        "longitude": -119.6915176
+      },
+      "place_categories": [
+        "nature",
+        "outdoor"
+      ],
+      "source_refs": [
+        "https://www.openstreetmap.org/node/4362555639"
+      ],
+      "source_attribution": "OpenStreetMap contributors",
+      "coordinate_role": "community_mapped_display_location_not_route_access",
+      "description": "Community-mapped place. Current opening conditions, public access and itinerary feasibility have not been verified."
+    },
+    {
+      "place_id": "osm_node_4723311770",
+      "name": "Greenberg Memorial Bench",
+      "display_coordinate": {
+        "latitude": 34.1194797,
+        "longitude": -118.2825119
+      },
+      "place_categories": [
+        "nature",
+        "outdoor"
+      ],
+      "source_refs": [
+        "https://www.openstreetmap.org/node/4723311770"
+      ],
+      "source_attribution": "OpenStreetMap contributors",
+      "coordinate_role": "community_mapped_display_location_not_route_access",
+      "description": "Community-mapped place. Current opening conditions, public access and itinerary feasibility have not been verified."
+    },
+    {
+      "place_id": "osm_node_4726985989",
+      "name": "Oh My Gosh Point",
+      "display_coordinate": {
+        "latitude": 37.7505776,
+        "longitude": -119.5982874
+      },
+      "place_categories": [
+        "nature",
+        "outdoor"
+      ],
+      "source_refs": [
+        "https://www.openstreetmap.org/node/4726985989"
+      ],
+      "source_attribution": "OpenStreetMap contributors",
+      "coordinate_role": "community_mapped_display_location_not_route_access",
+      "description": "Community-mapped place. Current opening conditions, public access and itinerary feasibility have not been verified."
+    },
+    {
+      "place_id": "osm_node_4776041623",
+      "name": "Yosemite Falls Overlook",
+      "display_coordinate": {
+        "latitude": 37.7570175,
+        "longitude": -119.5968901
+      },
+      "place_categories": [
+        "nature",
+        "outdoor"
+      ],
+      "source_refs": [
+        "https://www.openstreetmap.org/node/4776041623"
+      ],
+      "source_attribution": "OpenStreetMap contributors",
+      "coordinate_role": "community_mapped_display_location_not_route_access",
+      "description": "Community-mapped place. Current opening conditions, public access and itinerary feasibility have not been verified."
+    },
+    {
+      "place_id": "osm_node_4781618342",
+      "name": "Centennial Stump",
+      "display_coordinate": {
+        "latitude": 36.7482028,
+        "longitude": -118.9719401
+      },
+      "place_categories": [
+        "nature",
+        "outdoor"
+      ],
+      "source_refs": [
+        "https://www.openstreetmap.org/node/4781618342"
+      ],
+      "source_attribution": "OpenStreetMap contributors",
+      "coordinate_role": "community_mapped_display_location_not_route_access",
+      "description": "Community-mapped place. Current opening conditions, public access and itinerary feasibility have not been verified."
+    },
+    {
+      "place_id": "osm_node_4782027623",
+      "name": "Booker T. Washington Tree",
+      "display_coordinate": {
+        "latitude": 36.5557571,
+        "longitude": -118.7704657
+      },
+      "place_categories": [
+        "nature",
+        "outdoor"
+      ],
+      "source_refs": [
+        "https://www.openstreetmap.org/node/4782027623"
+      ],
+      "source_attribution": "OpenStreetMap contributors",
+      "coordinate_role": "community_mapped_display_location_not_route_access",
+      "description": "Community-mapped place. Current opening conditions, public access and itinerary feasibility have not been verified."
+    },
+    {
+      "place_id": "osm_node_4783165729",
+      "name": "Buttress Tree",
+      "display_coordinate": {
+        "latitude": 36.5506214,
+        "longitude": -118.7647405
+      },
+      "place_categories": [
+        "nature",
+        "outdoor"
+      ],
+      "source_refs": [
+        "https://www.openstreetmap.org/node/4783165729"
+      ],
+      "source_attribution": "OpenStreetMap contributors",
+      "coordinate_role": "community_mapped_display_location_not_route_access",
+      "description": "Community-mapped place. Current opening conditions, public access and itinerary feasibility have not been verified."
+    },
+    {
+      "place_id": "osm_node_4783165730",
+      "name": "Parker Group",
+      "display_coordinate": {
+        "latitude": 36.5507489,
+        "longitude": -118.7638814
+      },
+      "place_categories": [
+        "nature",
+        "outdoor"
+      ],
+      "source_refs": [
+        "https://www.openstreetmap.org/node/4783165730"
+      ],
+      "source_attribution": "OpenStreetMap contributors",
+      "coordinate_role": "community_mapped_display_location_not_route_access",
+      "description": "Community-mapped place. Current opening conditions, public access and itinerary feasibility have not been verified."
+    },
+    {
+      "place_id": "osm_node_4791664323",
+      "name": "Columbia Rock",
+      "display_coordinate": {
+        "latitude": 37.7465545,
+        "longitude": -119.6027829
+      },
+      "place_categories": [
+        "nature",
+        "outdoor"
+      ],
+      "source_refs": [
+        "https://www.openstreetmap.org/node/4791664323",
+        "https://www.nps.gov/yose/planyourvisit/yosemitefallstrail.htm"
+      ],
+      "source_attribution": "OpenStreetMap contributors",
+      "coordinate_role": "community_mapped_display_location_not_route_access",
+      "description": "Community-mapped place. Current opening conditions, public access and itinerary feasibility have not been verified."
+    },
+    {
+      "place_id": "osm_node_4799508654",
+      "name": "Calden Overlook",
+      "display_coordinate": {
+        "latitude": 34.4041315,
+        "longitude": -119.6990129
+      },
+      "place_categories": [
+        "nature",
+        "outdoor"
+      ],
+      "source_refs": [
+        "https://www.openstreetmap.org/node/4799508654"
+      ],
+      "source_attribution": "OpenStreetMap contributors",
+      "coordinate_role": "community_mapped_display_location_not_route_access",
+      "description": "Community-mapped place. Current opening conditions, public access and itinerary feasibility have not been verified."
+    },
+    {
+      "place_id": "osm_node_4799644952",
+      "name": "Winslow Maxwell Overlook",
+      "display_coordinate": {
+        "latitude": 34.4070289,
+        "longitude": -119.6948647
+      },
+      "place_categories": [
+        "nature",
+        "outdoor"
+      ],
+      "source_refs": [
+        "https://www.openstreetmap.org/node/4799644952"
+      ],
+      "source_attribution": "OpenStreetMap contributors",
+      "coordinate_role": "community_mapped_display_location_not_route_access",
+      "description": "Community-mapped place. Current opening conditions, public access and itinerary feasibility have not been verified."
+    },
+    {
+      "place_id": "osm_node_4947736882",
+      "name": "Flamingos",
+      "display_coordinate": {
+        "latitude": 34.420218,
+        "longitude": -119.665383
+      },
+      "place_categories": [
+        "nature",
+        "outdoor"
+      ],
+      "source_refs": [
+        "https://www.openstreetmap.org/node/4947736882"
+      ],
+      "source_attribution": "OpenStreetMap contributors",
+      "coordinate_role": "community_mapped_display_location_not_route_access",
+      "description": "Community-mapped place. Current opening conditions, public access and itinerary feasibility have not been verified."
+    },
+    {
+      "place_id": "osm_node_4980785872",
+      "name": "Garth Brooks",
+      "display_coordinate": {
+        "latitude": 34.103257,
+        "longitude": -118.3265655
+      },
+      "place_categories": [
+        "culture"
+      ],
+      "source_refs": [
+        "https://www.openstreetmap.org/node/4980785872"
+      ],
+      "source_attribution": "OpenStreetMap contributors",
+      "coordinate_role": "community_mapped_display_location_not_route_access",
+      "description": "Community-mapped place. Current opening conditions, public access and itinerary feasibility have not been verified."
+    },
+    {
+      "place_id": "osm_node_5023202922",
+      "name": "The Three Amigos",
+      "display_coordinate": {
+        "latitude": 36.5634034,
+        "longitude": -118.752554
+      },
+      "place_categories": [
+        "nature",
+        "outdoor"
+      ],
+      "source_refs": [
+        "https://www.openstreetmap.org/node/5023202922"
+      ],
+      "source_attribution": "OpenStreetMap contributors",
+      "coordinate_role": "community_mapped_display_location_not_route_access",
+      "description": "Community-mapped place. Current opening conditions, public access and itinerary feasibility have not been verified."
+    },
+    {
+      "place_id": "osm_node_5023203022",
+      "name": "Cleveland Tree",
+      "display_coordinate": {
+        "latitude": 36.5578669,
+        "longitude": -118.746988
+      },
+      "place_categories": [
+        "nature",
+        "outdoor"
+      ],
+      "source_refs": [
+        "https://www.openstreetmap.org/node/5023203022"
+      ],
+      "source_attribution": "OpenStreetMap contributors",
+      "coordinate_role": "community_mapped_display_location_not_route_access",
+      "description": "Community-mapped place. Current opening conditions, public access and itinerary feasibility have not been verified."
+    },
+    {
+      "place_id": "osm_node_5040160408",
+      "name": "Fort Statue",
+      "display_coordinate": {
+        "latitude": 37.8036087,
+        "longitude": -122.475161
+      },
+      "place_categories": [
+        "culture"
+      ],
+      "source_refs": [
+        "https://www.openstreetmap.org/node/5040160408"
+      ],
+      "source_attribution": "OpenStreetMap contributors",
+      "coordinate_role": "community_mapped_display_location_not_route_access",
+      "description": "Community-mapped place. Current opening conditions, public access and itinerary feasibility have not been verified."
+    },
+    {
+      "place_id": "osm_node_5212949785",
+      "name": "Panoramic Point",
+      "display_coordinate": {
+        "latitude": 36.753692,
+        "longitude": -118.9443512
+      },
+      "place_categories": [
+        "nature",
+        "outdoor"
+      ],
+      "source_refs": [
+        "https://www.openstreetmap.org/node/5212949785"
+      ],
+      "source_attribution": "OpenStreetMap contributors",
+      "coordinate_role": "community_mapped_display_location_not_route_access",
+      "description": "Community-mapped place. Current opening conditions, public access and itinerary feasibility have not been verified."
+    },
+    {
+      "place_id": "osm_node_5241902003",
+      "name": "The Ordonez Gun",
+      "display_coordinate": {
+        "latitude": 37.7997633,
+        "longitude": -122.45784
+      },
+      "place_categories": [
+        "culture"
+      ],
+      "source_refs": [
+        "https://www.openstreetmap.org/node/5241902003"
+      ],
+      "source_attribution": "OpenStreetMap contributors",
+      "coordinate_role": "community_mapped_display_location_not_route_access",
+      "description": "Community-mapped place. Current opening conditions, public access and itinerary feasibility have not been verified."
+    },
+    {
+      "place_id": "osm_node_5444091618",
+      "name": "The Sieve of Eratosthenes",
+      "display_coordinate": {
+        "latitude": 37.425345,
+        "longitude": -122.1656846
+      },
+      "place_categories": [
+        "culture"
+      ],
+      "source_refs": [
+        "https://www.openstreetmap.org/node/5444091618"
+      ],
+      "source_attribution": "OpenStreetMap contributors",
+      "coordinate_role": "community_mapped_display_location_not_route_access",
+      "description": "Community-mapped place. Current opening conditions, public access and itinerary feasibility have not been verified."
+    },
+    {
+      "place_id": "osm_node_5648594194",
+      "name": "Gay Liberation",
+      "display_coordinate": {
+        "latitude": 37.4283311,
+        "longitude": -122.171666
+      },
+      "place_categories": [
+        "culture"
+      ],
+      "source_refs": [
+        "https://www.openstreetmap.org/node/5648594194"
+      ],
+      "source_attribution": "OpenStreetMap contributors",
+      "coordinate_role": "community_mapped_display_location_not_route_access",
+      "description": "Community-mapped place. Current opening conditions, public access and itinerary feasibility have not been verified."
+    },
+    {
+      "place_id": "osm_node_5648594207",
+      "name": "The Burghers of Calais",
+      "display_coordinate": {
+        "latitude": 37.4280031,
+        "longitude": -122.1699656
+      },
+      "place_categories": [
+        "culture"
+      ],
+      "source_refs": [
+        "https://www.openstreetmap.org/node/5648594207"
+      ],
+      "source_attribution": "OpenStreetMap contributors",
+      "coordinate_role": "community_mapped_display_location_not_route_access",
+      "description": "Community-mapped place. Current opening conditions, public access and itinerary feasibility have not been verified."
+    },
+    {
+      "place_id": "osm_node_5758204515",
+      "name": "The Gates of Hell",
+      "display_coordinate": {
+        "latitude": 37.432494,
+        "longitude": -122.1707984
+      },
+      "place_categories": [
+        "culture"
+      ],
+      "source_refs": [
+        "https://www.openstreetmap.org/node/5758204515"
+      ],
+      "source_attribution": "OpenStreetMap contributors",
+      "coordinate_role": "community_mapped_display_location_not_route_access",
+      "description": "Community-mapped place. Current opening conditions, public access and itinerary feasibility have not been verified."
+    },
+    {
+      "place_id": "osm_node_5827168285",
+      "name": "Beachwood Dr. - Mid-block",
+      "display_coordinate": {
+        "latitude": 34.1074501,
+        "longitude": -118.3223268
+      },
+      "place_categories": [
+        "nature",
+        "outdoor"
+      ],
+      "source_refs": [
+        "https://www.openstreetmap.org/node/5827168285"
+      ],
+      "source_attribution": "OpenStreetMap contributors",
+      "coordinate_role": "community_mapped_display_location_not_route_access",
+      "description": "Community-mapped place. Current opening conditions, public access and itinerary feasibility have not been verified."
+    },
+    {
+      "place_id": "osm_node_6064744363",
+      "name": "National Cemetery Overlook",
+      "display_coordinate": {
+        "latitude": 37.7974636,
+        "longitude": -122.465119
+      },
+      "place_categories": [
+        "nature",
+        "outdoor"
+      ],
+      "source_refs": [
+        "https://www.openstreetmap.org/node/6064744363"
+      ],
+      "source_attribution": "OpenStreetMap contributors",
+      "coordinate_role": "community_mapped_display_location_not_route_access",
+      "description": "Community-mapped place. Current opening conditions, public access and itinerary feasibility have not been verified."
+    },
+    {
+      "place_id": "osm_node_6070261691",
+      "name": "New Dimension Art Gallery",
+      "display_coordinate": {
+        "latitude": 34.421559,
+        "longitude": -119.702504
+      },
+      "place_categories": [
+        "culture"
+      ],
+      "source_refs": [
+        "https://www.openstreetmap.org/node/6070261691",
+        "https://newdimensionartgallery.com/"
+      ],
+      "source_attribution": "OpenStreetMap contributors",
+      "coordinate_role": "community_mapped_display_location_not_route_access",
+      "description": "Community-mapped place. Current opening conditions, public access and itinerary feasibility have not been verified."
+    },
+    {
+      "place_id": "osm_node_6298580485",
+      "name": "Lower Yosemite Fall View",
+      "display_coordinate": {
+        "latitude": 37.7457978,
+        "longitude": -119.5962506
+      },
+      "place_categories": [
+        "nature",
+        "outdoor"
+      ],
+      "source_refs": [
+        "https://www.openstreetmap.org/node/6298580485"
+      ],
+      "source_attribution": "OpenStreetMap contributors",
+      "coordinate_role": "community_mapped_display_location_not_route_access",
+      "description": "Community-mapped place. Current opening conditions, public access and itinerary feasibility have not been verified."
+    },
+    {
+      "place_id": "osm_node_6467168692",
+      "name": "Joseph Strauss Legacy Circle",
+      "display_coordinate": {
+        "latitude": 37.8079723,
+        "longitude": -122.475405
+      },
+      "place_categories": [
+        "culture"
+      ],
+      "source_refs": [
+        "https://www.openstreetmap.org/node/6467168692"
+      ],
+      "source_attribution": "OpenStreetMap contributors",
+      "coordinate_role": "community_mapped_display_location_not_route_access",
+      "description": "Community-mapped place. Current opening conditions, public access and itinerary feasibility have not been verified."
+    },
+    {
+      "place_id": "osm_node_6467594665",
+      "name": "Luna Moth Walk I",
+      "display_coordinate": {
+        "latitude": 37.4251689,
+        "longitude": -122.167901
+      },
+      "place_categories": [
+        "culture"
+      ],
+      "source_refs": [
+        "https://www.openstreetmap.org/node/6467594665"
+      ],
+      "source_attribution": "OpenStreetMap contributors",
+      "coordinate_role": "community_mapped_display_location_not_route_access",
+      "description": "Community-mapped place. Current opening conditions, public access and itinerary feasibility have not been verified."
+    },
+    {
+      "place_id": "osm_node_6476775189",
+      "name": "Head of Pierre de Wissant, Burgher of Calais",
+      "display_coordinate": {
+        "latitude": 37.4322456,
+        "longitude": -122.1711286
+      },
+      "place_categories": [
+        "culture"
+      ],
+      "source_refs": [
+        "https://www.openstreetmap.org/node/6476775189"
+      ],
+      "source_attribution": "OpenStreetMap contributors",
+      "coordinate_role": "community_mapped_display_location_not_route_access",
+      "description": "Community-mapped place. Current opening conditions, public access and itinerary feasibility have not been verified."
+    },
+    {
+      "place_id": "osm_node_6476775190",
+      "name": "Head of Jean d'Aire, Burgher of Calais",
+      "display_coordinate": {
+        "latitude": 37.4322365,
+        "longitude": -122.1710769
+      },
+      "place_categories": [
+        "culture"
+      ],
+      "source_refs": [
+        "https://www.openstreetmap.org/node/6476775190"
+      ],
+      "source_attribution": "OpenStreetMap contributors",
+      "coordinate_role": "community_mapped_display_location_not_route_access",
+      "description": "Community-mapped place. Current opening conditions, public access and itinerary feasibility have not been verified."
+    },
+    {
+      "place_id": "osm_node_6476775191",
+      "name": "Torso of the Falling Man",
+      "display_coordinate": {
+        "latitude": 37.43235,
+        "longitude": -122.1711095
+      },
+      "place_categories": [
+        "culture"
+      ],
+      "source_refs": [
+        "https://www.openstreetmap.org/node/6476775191"
+      ],
+      "source_attribution": "OpenStreetMap contributors",
+      "coordinate_role": "community_mapped_display_location_not_route_access",
+      "description": "Community-mapped place. Current opening conditions, public access and itinerary feasibility have not been verified."
+    },
+    {
+      "place_id": "osm_node_6476775192",
+      "name": "Jean d'Aire, Burgher of Calais",
+      "display_coordinate": {
+        "latitude": 37.4323225,
+        "longitude": -122.1710244
+      },
+      "place_categories": [
+        "culture"
+      ],
+      "source_refs": [
+        "https://www.openstreetmap.org/node/6476775192"
+      ],
+      "source_attribution": "OpenStreetMap contributors",
+      "coordinate_role": "community_mapped_display_location_not_route_access",
+      "description": "Community-mapped place. Current opening conditions, public access and itinerary feasibility have not been verified."
+    },
+    {
+      "place_id": "osm_node_6476775193",
+      "name": "The Walking Man",
+      "display_coordinate": {
+        "latitude": 37.4324065,
+        "longitude": -122.1710472
+      },
+      "place_categories": [
+        "culture"
+      ],
+      "source_refs": [
+        "https://www.openstreetmap.org/node/6476775193"
+      ],
+      "source_attribution": "OpenStreetMap contributors",
+      "coordinate_role": "community_mapped_display_location_not_route_access",
+      "description": "Community-mapped place. Current opening conditions, public access and itinerary feasibility have not been verified."
+    },
+    {
+      "place_id": "osm_node_6476775194",
+      "name": "Seated Woman (Cybele)",
+      "display_coordinate": {
+        "latitude": 37.4324721,
+        "longitude": -122.1710618
+      },
+      "place_categories": [
+        "culture"
+      ],
+      "source_refs": [
+        "https://www.openstreetmap.org/node/6476775194"
+      ],
+      "source_attribution": "OpenStreetMap contributors",
+      "coordinate_role": "community_mapped_display_location_not_route_access",
+      "description": "Community-mapped place. Current opening conditions, public access and itinerary feasibility have not been verified."
+    },
+    {
+      "place_id": "osm_node_6476775195",
+      "name": "Prayer",
+      "display_coordinate": {
+        "latitude": 37.4325009,
+        "longitude": -122.1709662
+      },
+      "place_categories": [
+        "culture"
+      ],
+      "source_refs": [
+        "https://www.openstreetmap.org/node/6476775195"
+      ],
+      "source_attribution": "OpenStreetMap contributors",
+      "coordinate_role": "community_mapped_display_location_not_route_access",
+      "description": "Community-mapped place. Current opening conditions, public access and itinerary feasibility have not been verified."
+    },
+    {
+      "place_id": "osm_node_6476775196",
+      "name": "Adam",
+      "display_coordinate": {
+        "latitude": 37.4324918,
+        "longitude": -122.1708302
+      },
+      "place_categories": [
+        "culture"
+      ],
+      "source_refs": [
+        "https://www.openstreetmap.org/node/6476775196"
+      ],
+      "source_attribution": "OpenStreetMap contributors",
+      "coordinate_role": "community_mapped_display_location_not_route_access",
+      "description": "Community-mapped place. Current opening conditions, public access and itinerary feasibility have not been verified."
+    },
+    {
+      "place_id": "osm_node_6476775197",
+      "name": "Eve",
+      "display_coordinate": {
+        "latitude": 37.4324792,
+        "longitude": -122.1707692
+      },
+      "place_categories": [
+        "culture"
+      ],
+      "source_refs": [
+        "https://www.openstreetmap.org/node/6476775197"
+      ],
+      "source_attribution": "OpenStreetMap contributors",
+      "coordinate_role": "community_mapped_display_location_not_route_access",
+      "description": "Community-mapped place. Current opening conditions, public access and itinerary feasibility have not been verified."
+    },
+    {
+      "place_id": "osm_node_6476775199",
+      "name": "Meditation",
+      "display_coordinate": {
+        "latitude": 37.4323868,
+        "longitude": -122.1706874
+      },
+      "place_categories": [
+        "culture"
+      ],
+      "source_refs": [
+        "https://www.openstreetmap.org/node/6476775199"
+      ],
+      "source_attribution": "OpenStreetMap contributors",
+      "coordinate_role": "community_mapped_display_location_not_route_access",
+      "description": "Community-mapped place. Current opening conditions, public access and itinerary feasibility have not been verified."
+    },
+    {
+      "place_id": "osm_node_6476775200",
+      "name": "Martyr",
+      "display_coordinate": {
+        "latitude": 37.4323403,
+        "longitude": -122.1707399
+      },
+      "place_categories": [
+        "culture"
+      ],
+      "source_refs": [
+        "https://www.openstreetmap.org/node/6476775200"
+      ],
+      "source_attribution": "OpenStreetMap contributors",
+      "coordinate_role": "community_mapped_display_location_not_route_access",
+      "description": "Community-mapped place. Current opening conditions, public access and itinerary feasibility have not been verified."
+    },
+    {
+      "place_id": "osm_node_6476775201",
+      "name": "The Three Shades",
+      "display_coordinate": {
+        "latitude": 37.4323205,
+        "longitude": -122.1706255
+      },
+      "place_categories": [
+        "culture"
+      ],
+      "source_refs": [
+        "https://www.openstreetmap.org/node/6476775201"
+      ],
+      "source_attribution": "OpenStreetMap contributors",
+      "coordinate_role": "community_mapped_display_location_not_route_access",
+      "description": "Community-mapped place. Current opening conditions, public access and itinerary feasibility have not been verified."
+    },
+    {
+      "place_id": "osm_node_6476775202",
+      "name": "The Spirit of Eternal Repose",
+      "display_coordinate": {
+        "latitude": 37.4322853,
+        "longitude": -122.1709458
+      },
+      "place_categories": [
+        "culture"
+      ],
+      "source_refs": [
+        "https://www.openstreetmap.org/node/6476775202"
+      ],
+      "source_attribution": "OpenStreetMap contributors",
+      "coordinate_role": "community_mapped_display_location_not_route_access",
+      "description": "Community-mapped place. Current opening conditions, public access and itinerary feasibility have not been verified."
+    },
+    {
+      "place_id": "osm_node_6476775203",
+      "name": "Fallen Caryatid with Urn",
+      "display_coordinate": {
+        "latitude": 37.4322702,
+        "longitude": -122.1707188
+      },
+      "place_categories": [
+        "culture"
+      ],
+      "source_refs": [
+        "https://www.openstreetmap.org/node/6476775203"
+      ],
+      "source_attribution": "OpenStreetMap contributors",
+      "coordinate_role": "community_mapped_display_location_not_route_access",
+      "description": "Community-mapped place. Current opening conditions, public access and itinerary feasibility have not been verified."
+    },
+    {
+      "place_id": "osm_node_6476775204",
+      "name": "Orpheus",
+      "display_coordinate": {
+        "latitude": 37.4322271,
+        "longitude": -122.1708632
+      },
+      "place_categories": [
+        "culture"
+      ],
+      "source_refs": [
+        "https://www.openstreetmap.org/node/6476775204"
+      ],
+      "source_attribution": "OpenStreetMap contributors",
+      "coordinate_role": "community_mapped_display_location_not_route_access",
+      "description": "Community-mapped place. Current opening conditions, public access and itinerary feasibility have not been verified."
+    },
+    {
+      "place_id": "osm_node_6476775209",
+      "name": "Jules Bastien Lepage",
+      "display_coordinate": {
+        "latitude": 37.4320983,
+        "longitude": -122.1710481
+      },
+      "place_categories": [
+        "culture"
+      ],
+      "source_refs": [
+        "https://www.openstreetmap.org/node/6476775209"
+      ],
+      "source_attribution": "OpenStreetMap contributors",
+      "coordinate_role": "community_mapped_display_location_not_route_access",
+      "description": "Community-mapped place. Current opening conditions, public access and itinerary feasibility have not been verified."
+    },
+    {
+      "place_id": "osm_node_6476775210",
+      "name": "Claude Lorrain",
+      "display_coordinate": {
+        "latitude": 37.4321478,
+        "longitude": -122.1708311
+      },
+      "place_categories": [
+        "culture"
+      ],
+      "source_refs": [
+        "https://www.openstreetmap.org/node/6476775210"
+      ],
+      "source_attribution": "OpenStreetMap contributors",
+      "coordinate_role": "community_mapped_display_location_not_route_access",
+      "description": "Community-mapped place. Current opening conditions, public access and itinerary feasibility have not been verified."
+    },
+    {
+      "place_id": "osm_node_6476775211",
+      "name": "Meditation",
+      "display_coordinate": {
+        "latitude": 37.43245,
+        "longitude": -122.1706293
+      },
+      "place_categories": [
+        "culture"
+      ],
+      "source_refs": [
+        "https://www.openstreetmap.org/node/6476775211"
+      ],
+      "source_attribution": "OpenStreetMap contributors",
+      "coordinate_role": "community_mapped_display_location_not_route_access",
+      "description": "Community-mapped place. Current opening conditions, public access and itinerary feasibility have not been verified."
+    },
+    {
+      "place_id": "osm_node_6476775212",
+      "name": "Fallen Caryatid with Stone",
+      "display_coordinate": {
+        "latitude": 37.4322367,
+        "longitude": -122.1707845
+      },
+      "place_categories": [
+        "culture"
+      ],
+      "source_refs": [
+        "https://www.openstreetmap.org/node/6476775212"
+      ],
+      "source_attribution": "OpenStreetMap contributors",
+      "coordinate_role": "community_mapped_display_location_not_route_access",
+      "description": "Community-mapped place. Current opening conditions, public access and itinerary feasibility have not been verified."
+    },
+    {
+      "place_id": "osm_node_6477042804",
+      "name": "Angel of Grief",
+      "display_coordinate": {
+        "latitude": 37.4373687,
+        "longitude": -122.1688001
+      },
+      "place_categories": [
+        "culture"
+      ],
+      "source_refs": [
+        "https://www.openstreetmap.org/node/6477042804"
+      ],
+      "source_attribution": "OpenStreetMap contributors",
+      "coordinate_role": "community_mapped_display_location_not_route_access",
+      "description": "Community-mapped place. Current opening conditions, public access and itinerary feasibility have not been verified."
+    },
+    {
+      "place_id": "osm_node_6527889816",
+      "name": "Pillars of Hercules III",
+      "display_coordinate": {
+        "latitude": 37.4292355,
+        "longitude": -122.1678447
+      },
+      "place_categories": [
+        "culture"
+      ],
+      "source_refs": [
+        "https://www.openstreetmap.org/node/6527889816"
+      ],
+      "source_attribution": "OpenStreetMap contributors",
+      "coordinate_role": "community_mapped_display_location_not_route_access",
+      "description": "Community-mapped place. Current opening conditions, public access and itinerary feasibility have not been verified."
+    },
+    {
+      "place_id": "osm_node_6532987276",
+      "name": "Griffins",
+      "display_coordinate": {
+        "latitude": 37.4348544,
+        "longitude": -122.168014
+      },
+      "place_categories": [
+        "culture"
+      ],
+      "source_refs": [
+        "https://www.openstreetmap.org/node/6532987276"
+      ],
+      "source_attribution": "OpenStreetMap contributors",
+      "coordinate_role": "community_mapped_display_location_not_route_access",
+      "description": "Community-mapped place. Current opening conditions, public access and itinerary feasibility have not been verified."
+    },
+    {
+      "place_id": "osm_node_6532987277",
+      "name": "Griffins",
+      "display_coordinate": {
+        "latitude": 37.4348052,
+        "longitude": -122.1680573
+      },
+      "place_categories": [
+        "culture"
+      ],
+      "source_refs": [
+        "https://www.openstreetmap.org/node/6532987277"
+      ],
+      "source_attribution": "OpenStreetMap contributors",
+      "coordinate_role": "community_mapped_display_location_not_route_access",
+      "description": "Community-mapped place. Current opening conditions, public access and itinerary feasibility have not been verified."
+    },
+    {
+      "place_id": "osm_node_6558649951",
+      "name": "The Claw",
+      "display_coordinate": {
+        "latitude": 37.4249612,
+        "longitude": -122.1693802
+      },
+      "place_categories": [
+        "culture"
+      ],
+      "source_refs": [
+        "https://www.openstreetmap.org/node/6558649951"
+      ],
+      "source_attribution": "OpenStreetMap contributors",
+      "coordinate_role": "community_mapped_display_location_not_route_access",
+      "description": "Community-mapped place. Current opening conditions, public access and itinerary feasibility have not been verified."
+    },
+    {
+      "place_id": "osm_node_6559580258",
+      "name": "Ella",
+      "display_coordinate": {
+        "latitude": 37.4414268,
+        "longitude": -122.1723811
+      },
+      "place_categories": [
+        "culture"
+      ],
+      "source_refs": [
+        "https://www.openstreetmap.org/node/6559580258"
+      ],
+      "source_attribution": "OpenStreetMap contributors",
+      "coordinate_role": "community_mapped_display_location_not_route_access",
+      "description": "Community-mapped place. Current opening conditions, public access and itinerary feasibility have not been verified."
+    },
+    {
+      "place_id": "osm_node_6574013075",
+      "name": "Big Ram Skull and Horn",
+      "display_coordinate": {
+        "latitude": 37.4264359,
+        "longitude": -122.1662251
+      },
+      "place_categories": [
+        "culture"
+      ],
+      "source_refs": [
+        "https://www.openstreetmap.org/node/6574013075"
+      ],
+      "source_attribution": "OpenStreetMap contributors",
+      "coordinate_role": "community_mapped_display_location_not_route_access",
+      "description": "Community-mapped place. Current opening conditions, public access and itinerary feasibility have not been verified."
+    },
+    {
+      "place_id": "osm_node_6581120881",
+      "name": "Tilted Donut #5",
+      "display_coordinate": {
+        "latitude": 37.4229607,
+        "longitude": -122.1424317
+      },
+      "place_categories": [
+        "culture"
+      ],
+      "source_refs": [
+        "https://www.openstreetmap.org/node/6581120881"
+      ],
+      "source_attribution": "OpenStreetMap contributors",
+      "coordinate_role": "community_mapped_display_location_not_route_access",
+      "description": "Community-mapped place. Current opening conditions, public access and itinerary feasibility have not been verified."
+    },
+    {
+      "place_id": "osm_node_6592335032",
+      "name": "Six #1",
+      "display_coordinate": {
+        "latitude": 37.4314889,
+        "longitude": -122.1759418
+      },
+      "place_categories": [
+        "culture"
+      ],
+      "source_refs": [
+        "https://www.openstreetmap.org/node/6592335032"
+      ],
+      "source_attribution": "OpenStreetMap contributors",
+      "coordinate_role": "community_mapped_display_location_not_route_access",
+      "description": "Community-mapped place. Current opening conditions, public access and itinerary feasibility have not been verified."
+    },
+    {
+      "place_id": "osm_node_6701766786",
+      "name": "Black Arch Tree",
+      "display_coordinate": {
+        "latitude": 36.5657678,
+        "longitude": -118.754077
+      },
+      "place_categories": [
+        "nature",
+        "outdoor"
+      ],
+      "source_refs": [
+        "https://www.openstreetmap.org/node/6701766786"
+      ],
+      "source_attribution": "OpenStreetMap contributors",
+      "coordinate_role": "community_mapped_display_location_not_route_access",
+      "description": "Community-mapped place. Current opening conditions, public access and itinerary feasibility have not been verified."
+    },
+    {
+      "place_id": "osm_node_6701845685",
+      "name": "McKinley Tree",
+      "display_coordinate": {
+        "latitude": 36.5735919,
+        "longitude": -118.753615
+      },
+      "place_categories": [
+        "nature",
+        "outdoor"
+      ],
+      "source_refs": [
+        "https://www.openstreetmap.org/node/6701845685"
+      ],
+      "source_attribution": "OpenStreetMap contributors",
+      "coordinate_role": "community_mapped_display_location_not_route_access",
+      "description": "Community-mapped place. Current opening conditions, public access and itinerary feasibility have not been verified."
+    },
+    {
+      "place_id": "osm_node_6725257273",
+      "name": "Rebel Without a Cause Monument",
+      "display_coordinate": {
+        "latitude": 34.1187267,
+        "longitude": -118.3008493
+      },
+      "place_categories": [
+        "culture"
+      ],
+      "source_refs": [
+        "https://www.openstreetmap.org/node/6725257273"
+      ],
+      "source_attribution": "OpenStreetMap contributors",
+      "coordinate_role": "community_mapped_display_location_not_route_access",
+      "description": "Community-mapped place. Current opening conditions, public access and itinerary feasibility have not been verified."
+    },
+    {
+      "place_id": "osm_node_6818593407",
+      "name": "The Dead Giant",
+      "display_coordinate": {
+        "latitude": 36.5563673,
+        "longitude": -118.754139
+      },
+      "place_categories": [
+        "nature",
+        "outdoor"
+      ],
+      "source_refs": [
+        "https://www.openstreetmap.org/node/6818593407"
+      ],
+      "source_attribution": "OpenStreetMap contributors",
+      "coordinate_role": "community_mapped_display_location_not_route_access",
+      "description": "Community-mapped place. Current opening conditions, public access and itinerary feasibility have not been verified."
+    },
+    {
+      "place_id": "osm_node_6916483741",
+      "name": "Solar System",
+      "display_coordinate": {
+        "latitude": 34.1185808,
+        "longitude": -118.3003729
+      },
+      "place_categories": [
+        "culture"
+      ],
+      "source_refs": [
+        "https://www.openstreetmap.org/node/6916483741"
+      ],
+      "source_attribution": "OpenStreetMap contributors",
+      "coordinate_role": "community_mapped_display_location_not_route_access",
+      "description": "Community-mapped place. Current opening conditions, public access and itinerary feasibility have not been verified."
+    },
+    {
+      "place_id": "osm_node_6919444062",
+      "name": "Reclining Figure",
+      "display_coordinate": {
+        "latitude": 37.4281072,
+        "longitude": -122.1631416
+      },
+      "place_categories": [
+        "culture"
+      ],
+      "source_refs": [
+        "https://www.openstreetmap.org/node/6919444062"
+      ],
+      "source_attribution": "OpenStreetMap contributors",
+      "coordinate_role": "community_mapped_display_location_not_route_access",
+      "description": "Community-mapped place. Current opening conditions, public access and itinerary feasibility have not been verified."
+    },
+    {
+      "place_id": "osm_node_7132221675",
+      "name": "OY/YO",
+      "display_coordinate": {
+        "latitude": 37.4329548,
+        "longitude": -122.1703859
+      },
+      "place_categories": [
+        "culture"
+      ],
+      "source_refs": [
+        "https://www.openstreetmap.org/node/7132221675"
+      ],
+      "source_attribution": "OpenStreetMap contributors",
+      "coordinate_role": "community_mapped_display_location_not_route_access",
+      "description": "Community-mapped place. Current opening conditions, public access and itinerary feasibility have not been verified."
+    },
+    {
+      "place_id": "osm_node_7137832385",
+      "name": "Jennifer Garner",
+      "display_coordinate": {
+        "latitude": 34.1015224,
+        "longitude": -118.3249781
+      },
+      "place_categories": [
+        "culture"
+      ],
+      "source_refs": [
+        "https://www.openstreetmap.org/node/7137832385"
+      ],
+      "source_attribution": "OpenStreetMap contributors",
+      "coordinate_role": "community_mapped_display_location_not_route_access",
+      "description": "Community-mapped place. Current opening conditions, public access and itinerary feasibility have not been verified."
+    },
+    {
+      "place_id": "osm_node_8105582994",
+      "name": "Atherton Fine Art",
+      "display_coordinate": {
+        "latitude": 37.451911,
+        "longitude": -122.1787735
+      },
+      "place_categories": [
+        "culture"
+      ],
+      "source_refs": [
+        "https://www.openstreetmap.org/node/8105582994",
+        "https://artgallerymenlopark.com/"
+      ],
+      "source_attribution": "OpenStreetMap contributors",
+      "coordinate_role": "community_mapped_display_location_not_route_access",
+      "description": "Community-mapped place. Current opening conditions, public access and itinerary feasibility have not been verified."
+    },
+    {
+      "place_id": "osm_node_8363994411",
+      "name": "Sequence",
+      "display_coordinate": {
+        "latitude": 37.4333105,
+        "longitude": -122.170882
+      },
+      "place_categories": [
+        "culture"
+      ],
+      "source_refs": [
+        "https://www.openstreetmap.org/node/8363994411"
+      ],
+      "source_attribution": "OpenStreetMap contributors",
+      "coordinate_role": "community_mapped_display_location_not_route_access",
+      "description": "Community-mapped place. Current opening conditions, public access and itinerary feasibility have not been verified."
+    },
+    {
+      "place_id": "osm_node_8401071650",
+      "name": "Tyrolean Tank Hollywood Sign Viewpoint",
+      "display_coordinate": {
+        "latitude": 34.1306282,
+        "longitude": -118.3188281
+      },
+      "place_categories": [
+        "nature",
+        "outdoor"
+      ],
+      "source_refs": [
+        "https://www.openstreetmap.org/node/8401071650"
+      ],
+      "source_attribution": "OpenStreetMap contributors",
+      "coordinate_role": "community_mapped_display_location_not_route_access",
+      "description": "Community-mapped place. Current opening conditions, public access and itinerary feasibility have not been verified."
+    },
+    {
+      "place_id": "osm_node_8574018948",
+      "name": "The Falcon",
+      "display_coordinate": {
+        "latitude": 37.4243177,
+        "longitude": -122.1679227
+      },
+      "place_categories": [
+        "culture"
+      ],
+      "source_refs": [
+        "https://www.openstreetmap.org/node/8574018948"
+      ],
+      "source_attribution": "OpenStreetMap contributors",
+      "coordinate_role": "community_mapped_display_location_not_route_access",
+      "description": "Community-mapped place. Current opening conditions, public access and itinerary feasibility have not been verified."
+    },
+    {
+      "place_id": "osm_node_9025610847",
+      "name": "Hugh Hefner Overlook",
+      "display_coordinate": {
+        "latitude": 34.1345629,
+        "longitude": -118.3232032
+      },
+      "place_categories": [
+        "nature",
+        "outdoor"
+      ],
+      "source_refs": [
+        "https://www.openstreetmap.org/node/9025610847"
+      ],
+      "source_attribution": "OpenStreetMap contributors",
+      "coordinate_role": "community_mapped_display_location_not_route_access",
+      "description": "Community-mapped place. Current opening conditions, public access and itinerary feasibility have not been verified."
+    },
+    {
+      "place_id": "osm_node_9077641365",
+      "name": "Cathy's Corner",
+      "display_coordinate": {
+        "latitude": 34.139304,
+        "longitude": -118.30819
+      },
+      "place_categories": [
+        "nature",
+        "outdoor"
+      ],
+      "source_refs": [
+        "https://www.openstreetmap.org/node/9077641365"
+      ],
+      "source_attribution": "OpenStreetMap contributors",
+      "coordinate_role": "community_mapped_display_location_not_route_access",
+      "description": "Community-mapped place. Current opening conditions, public access and itinerary feasibility have not been verified."
+    },
+    {
+      "place_id": "osm_node_9115350845",
+      "name": "Kinnara Lamppost",
+      "display_coordinate": {
+        "latitude": 34.1018418,
+        "longitude": -118.305732
+      },
+      "place_categories": [
+        "culture"
+      ],
+      "source_refs": [
+        "https://www.openstreetmap.org/node/9115350845"
+      ],
+      "source_attribution": "OpenStreetMap contributors",
+      "coordinate_role": "community_mapped_display_location_not_route_access",
+      "description": "Community-mapped place. Current opening conditions, public access and itinerary feasibility have not been verified."
+    },
+    {
+      "place_id": "osm_node_9115365281",
+      "name": "Kinnara Lamppost",
+      "display_coordinate": {
+        "latitude": 34.1016617,
+        "longitude": -118.305825
+      },
+      "place_categories": [
+        "culture"
+      ],
+      "source_refs": [
+        "https://www.openstreetmap.org/node/9115365281"
+      ],
+      "source_attribution": "OpenStreetMap contributors",
+      "coordinate_role": "community_mapped_display_location_not_route_access",
+      "description": "Community-mapped place. Current opening conditions, public access and itinerary feasibility have not been verified."
+    },
+    {
+      "place_id": "osm_node_9393660196",
+      "name": "Pars pro Toto",
+      "display_coordinate": {
+        "latitude": 37.4284559,
+        "longitude": -122.1746879
+      },
+      "place_categories": [
+        "culture"
+      ],
+      "source_refs": [
+        "https://www.openstreetmap.org/node/9393660196"
+      ],
+      "source_attribution": "OpenStreetMap contributors",
+      "coordinate_role": "community_mapped_display_location_not_route_access",
+      "description": "Community-mapped place. Current opening conditions, public access and itinerary feasibility have not been verified."
+    },
+    {
+      "place_id": "osm_node_9435319756",
+      "name": "Aperture #2",
+      "display_coordinate": {
+        "latitude": 37.4132671,
+        "longitude": -122.1435235
+      },
+      "place_categories": [
+        "culture"
+      ],
+      "source_refs": [
+        "https://www.openstreetmap.org/node/9435319756"
+      ],
+      "source_attribution": "OpenStreetMap contributors",
+      "coordinate_role": "community_mapped_display_location_not_route_access",
+      "description": "Community-mapped place. Current opening conditions, public access and itinerary feasibility have not been verified."
+    },
+    {
+      "place_id": "osm_node_9516528203",
+      "name": "Museum of Quarantine on Quebec",
+      "display_coordinate": {
+        "latitude": 34.1132438,
+        "longitude": -118.3258781
+      },
+      "place_categories": [
+        "culture"
+      ],
+      "source_refs": [
+        "https://www.openstreetmap.org/node/9516528203",
+        "https://www.instagram.com/museumofquarantineonquebec/"
+      ],
+      "source_attribution": "OpenStreetMap contributors",
+      "coordinate_role": "community_mapped_display_location_not_route_access",
+      "description": "Community-mapped place. Current opening conditions, public access and itinerary feasibility have not been verified."
+    },
+    {
+      "place_id": "osm_node_9561062273",
+      "name": "Samuel-Novarro House",
+      "display_coordinate": {
+        "latitude": 34.1110655,
+        "longitude": -118.3118724
+      },
+      "place_categories": [
+        "nature",
+        "outdoor"
+      ],
+      "source_refs": [
+        "https://www.openstreetmap.org/node/9561062273"
+      ],
+      "source_attribution": "OpenStreetMap contributors",
+      "coordinate_role": "community_mapped_display_location_not_route_access",
+      "description": "Community-mapped place. Current opening conditions, public access and itinerary feasibility have not been verified."
+    },
+    {
+      "place_id": "osm_node_9701718600",
+      "name": "Squatters Cabin",
+      "display_coordinate": {
+        "latitude": 36.5589354,
+        "longitude": -118.7545481
+      },
+      "place_categories": [
+        "nature",
+        "outdoor"
+      ],
+      "source_refs": [
+        "https://www.openstreetmap.org/node/9701718600"
+      ],
+      "source_attribution": "OpenStreetMap contributors",
+      "coordinate_role": "community_mapped_display_location_not_route_access",
+      "description": "Community-mapped place. Current opening conditions, public access and itinerary feasibility have not been verified."
+    },
+    {
+      "place_id": "osm_node_9747925124",
+      "name": "Giraffe",
+      "display_coordinate": {
+        "latitude": 34.4187993,
+        "longitude": -119.6637293
+      },
+      "place_categories": [
+        "nature",
+        "outdoor"
+      ],
+      "source_refs": [
+        "https://www.openstreetmap.org/node/9747925124"
+      ],
+      "source_attribution": "OpenStreetMap contributors",
+      "coordinate_role": "community_mapped_display_location_not_route_access",
+      "description": "Community-mapped place. Current opening conditions, public access and itinerary feasibility have not been verified."
+    },
+    {
+      "place_id": "osm_node_9747925126",
+      "name": "Black Swan",
+      "display_coordinate": {
+        "latitude": 34.4203399,
+        "longitude": -119.6668494
+      },
+      "place_categories": [
+        "nature",
+        "outdoor"
+      ],
+      "source_refs": [
+        "https://www.openstreetmap.org/node/9747925126"
+      ],
+      "source_attribution": "OpenStreetMap contributors",
+      "coordinate_role": "community_mapped_display_location_not_route_access",
+      "description": "Community-mapped place. Current opening conditions, public access and itinerary feasibility have not been verified."
+    },
+    {
+      "place_id": "osm_node_9747925152",
+      "name": "Capybara",
+      "display_coordinate": {
+        "latitude": 34.4190834,
+        "longitude": -119.6652796
+      },
+      "place_categories": [
+        "nature",
+        "outdoor"
+      ],
+      "source_refs": [
+        "https://www.openstreetmap.org/node/9747925152"
+      ],
+      "source_attribution": "OpenStreetMap contributors",
+      "coordinate_role": "community_mapped_display_location_not_route_access",
+      "description": "Community-mapped place. Current opening conditions, public access and itinerary feasibility have not been verified."
+    },
+    {
+      "place_id": "osm_node_9747925158",
+      "name": "Fennic Fox",
+      "display_coordinate": {
+        "latitude": 34.4185363,
+        "longitude": -119.6641987
+      },
+      "place_categories": [
+        "nature",
+        "outdoor"
+      ],
+      "source_refs": [
+        "https://www.openstreetmap.org/node/9747925158"
+      ],
+      "source_attribution": "OpenStreetMap contributors",
+      "coordinate_role": "community_mapped_display_location_not_route_access",
+      "description": "Community-mapped place. Current opening conditions, public access and itinerary feasibility have not been verified."
+    },
+    {
+      "place_id": "osm_node_9747925159",
+      "name": "African Lions",
+      "display_coordinate": {
+        "latitude": 34.418476,
+        "longitude": -119.6639875
+      },
+      "place_categories": [
+        "nature",
+        "outdoor"
+      ],
+      "source_refs": [
+        "https://www.openstreetmap.org/node/9747925159"
+      ],
+      "source_attribution": "OpenStreetMap contributors",
+      "coordinate_role": "community_mapped_display_location_not_route_access",
+      "description": "Community-mapped place. Current opening conditions, public access and itinerary feasibility have not been verified."
+    },
+    {
+      "place_id": "osm_node_9962908816",
+      "name": "Return on Investment",
+      "display_coordinate": {
+        "latitude": 37.4500975,
+        "longitude": -122.185517
+      },
+      "place_categories": [
+        "culture"
+      ],
+      "source_refs": [
+        "https://www.openstreetmap.org/node/9962908816"
+      ],
+      "source_attribution": "OpenStreetMap contributors",
+      "coordinate_role": "community_mapped_display_location_not_route_access",
+      "description": "Community-mapped place. Current opening conditions, public access and itinerary feasibility have not been verified."
+    },
+    {
+      "place_id": "osm_node_10152480147",
+      "name": "The Last House on Mulholland",
+      "display_coordinate": {
+        "latitude": 34.1312431,
+        "longitude": -118.3204566
+      },
+      "place_categories": [
+        "nature",
+        "outdoor"
+      ],
+      "source_refs": [
+        "https://www.openstreetmap.org/node/10152480147"
+      ],
+      "source_attribution": "OpenStreetMap contributors",
+      "coordinate_role": "community_mapped_display_location_not_route_access",
+      "description": "Community-mapped place. Current opening conditions, public access and itinerary feasibility have not been verified."
+    },
+    {
+      "place_id": "osm_node_10612756691",
+      "name": "Under The Wide Sky We Gather",
+      "display_coordinate": {
+        "latitude": 37.4497709,
+        "longitude": -122.1862721
+      },
+      "place_categories": [
+        "culture"
+      ],
+      "source_refs": [
+        "https://www.openstreetmap.org/node/10612756691"
+      ],
+      "source_attribution": "OpenStreetMap contributors",
+      "coordinate_role": "community_mapped_display_location_not_route_access",
+      "description": "Community-mapped place. Current opening conditions, public access and itinerary feasibility have not been verified."
+    },
+    {
+      "place_id": "osm_node_10612756692",
+      "name": "More Silent Than More",
+      "display_coordinate": {
+        "latitude": 37.4511004,
+        "longitude": -122.1851982
+      },
+      "place_categories": [
+        "culture"
+      ],
+      "source_refs": [
+        "https://www.openstreetmap.org/node/10612756692"
+      ],
+      "source_attribution": "OpenStreetMap contributors",
+      "coordinate_role": "community_mapped_display_location_not_route_access",
+      "description": "Community-mapped place. Current opening conditions, public access and itinerary feasibility have not been verified."
+    },
+    {
+      "place_id": "osm_node_10612899264",
+      "name": "Portola Art Gallery",
+      "display_coordinate": {
+        "latitude": 37.4417945,
+        "longitude": -122.1793155
+      },
+      "place_categories": [
+        "culture"
+      ],
+      "source_refs": [
+        "https://www.openstreetmap.org/node/10612899264"
+      ],
+      "source_attribution": "OpenStreetMap contributors",
+      "coordinate_role": "community_mapped_display_location_not_route_access",
+      "description": "Community-mapped place. Current opening conditions, public access and itinerary feasibility have not been verified."
+    },
+    {
+      "place_id": "osm_node_10682270352",
+      "name": "Golden Gate Bridge overlook",
+      "display_coordinate": {
+        "latitude": 37.804076,
+        "longitude": -122.4778056
+      },
+      "place_categories": [
+        "nature",
+        "outdoor"
+      ],
+      "source_refs": [
+        "https://www.openstreetmap.org/node/10682270352"
+      ],
+      "source_attribution": "OpenStreetMap contributors",
+      "coordinate_role": "community_mapped_display_location_not_route_access",
+      "description": "Community-mapped place. Current opening conditions, public access and itinerary feasibility have not been verified."
+    },
+    {
+      "place_id": "osm_node_10713147946",
+      "name": "Stanford Columns",
+      "display_coordinate": {
+        "latitude": 37.4339257,
+        "longitude": -122.1695267
+      },
+      "place_categories": [
+        "culture"
+      ],
+      "source_refs": [
+        "https://www.openstreetmap.org/node/10713147946"
+      ],
+      "source_attribution": "OpenStreetMap contributors",
+      "coordinate_role": "community_mapped_display_location_not_route_access",
+      "description": "Community-mapped place. Current opening conditions, public access and itinerary feasibility have not been verified."
+    },
+    {
+      "place_id": "osm_node_11026848518",
+      "name": "MOCNA, 2018",
+      "display_coordinate": {
+        "latitude": 37.4236446,
+        "longitude": -122.1737102
+      },
+      "place_categories": [
+        "culture"
+      ],
+      "source_refs": [
+        "https://www.openstreetmap.org/node/11026848518",
+        "https://news.stanford.edu/2018/09/17/sculpture-installed-stanford-universitys-denning-house-anchors-new-art-collection/"
+      ],
+      "source_attribution": "OpenStreetMap contributors",
+      "coordinate_role": "community_mapped_display_location_not_route_access",
+      "description": "Community-mapped place. Current opening conditions, public access and itinerary feasibility have not been verified."
+    },
+    {
+      "place_id": "osm_node_11189350637",
+      "name": "Stem Cell Research information placards",
+      "display_coordinate": {
+        "latitude": 37.4317709,
+        "longitude": -122.1769859
+      },
+      "place_categories": [
+        "nature",
+        "outdoor"
+      ],
+      "source_refs": [
+        "https://www.openstreetmap.org/node/11189350637"
+      ],
+      "source_attribution": "OpenStreetMap contributors",
+      "coordinate_role": "community_mapped_display_location_not_route_access",
+      "description": "Community-mapped place. Current opening conditions, public access and itinerary feasibility have not been verified."
+    },
+    {
+      "place_id": "osm_node_11189350737",
+      "name": "Significant Events in Cell Biology walkway",
+      "display_coordinate": {
+        "latitude": 37.4315324,
+        "longitude": -122.1759879
+      },
+      "place_categories": [
+        "nature",
+        "outdoor"
+      ],
+      "source_refs": [
+        "https://www.openstreetmap.org/node/11189350737"
+      ],
+      "source_attribution": "OpenStreetMap contributors",
+      "coordinate_role": "community_mapped_display_location_not_route_access",
+      "description": "Community-mapped place. Current opening conditions, public access and itinerary feasibility have not been verified."
+    },
+    {
+      "place_id": "osm_node_11203875337",
+      "name": "Tower Well structure (historic)",
+      "display_coordinate": {
+        "latitude": 37.4459789,
+        "longitude": -122.1673413
+      },
+      "place_categories": [
+        "nature",
+        "outdoor"
+      ],
+      "source_refs": [
+        "https://www.openstreetmap.org/node/11203875337"
+      ],
+      "source_attribution": "OpenStreetMap contributors",
+      "coordinate_role": "community_mapped_display_location_not_route_access",
+      "description": "Community-mapped place. Current opening conditions, public access and itinerary feasibility have not been verified."
+    },
+    {
+      "place_id": "osm_node_11203952137",
+      "name": "El Palo Alto (city’s namesake redwood tree)",
+      "display_coordinate": {
+        "latitude": 37.4473006,
+        "longitude": -122.1702444
+      },
+      "place_categories": [
+        "nature",
+        "outdoor"
+      ],
+      "source_refs": [
+        "https://www.openstreetmap.org/node/11203952137"
+      ],
+      "source_attribution": "OpenStreetMap contributors",
+      "coordinate_role": "community_mapped_display_location_not_route_access",
+      "description": "Community-mapped place. Current opening conditions, public access and itinerary feasibility have not been verified."
+    },
+    {
+      "place_id": "osm_node_11216891437",
+      "name": "Buckyball",
+      "display_coordinate": {
+        "latitude": 37.4341143,
+        "longitude": -122.1767308
+      },
+      "place_categories": [
+        "culture"
+      ],
+      "source_refs": [
+        "https://www.openstreetmap.org/node/11216891437"
+      ],
+      "source_attribution": "OpenStreetMap contributors",
+      "coordinate_role": "community_mapped_display_location_not_route_access",
+      "description": "Community-mapped place. Current opening conditions, public access and itinerary feasibility have not been verified."
+    },
+    {
+      "place_id": "osm_node_11216893837",
+      "name": "Folded Square Alphabet S",
+      "display_coordinate": {
+        "latitude": 37.4336305,
+        "longitude": -122.1773414
+      },
+      "place_categories": [
+        "culture"
+      ],
+      "source_refs": [
+        "https://www.openstreetmap.org/node/11216893837"
+      ],
+      "source_attribution": "OpenStreetMap contributors",
+      "coordinate_role": "community_mapped_display_location_not_route_access",
+      "description": "Community-mapped place. Current opening conditions, public access and itinerary feasibility have not been verified."
+    },
+    {
+      "place_id": "osm_node_11216900137",
+      "name": "Song of the Vowels",
+      "display_coordinate": {
+        "latitude": 37.433442,
+        "longitude": -122.1767562
+      },
+      "place_categories": [
+        "culture"
+      ],
+      "source_refs": [
+        "https://www.openstreetmap.org/node/11216900137"
+      ],
+      "source_attribution": "OpenStreetMap contributors",
+      "coordinate_role": "community_mapped_display_location_not_route_access",
+      "description": "Community-mapped place. Current opening conditions, public access and itinerary feasibility have not been verified."
+    },
+    {
+      "place_id": "osm_node_11238376116",
+      "name": "Gloriette R1",
+      "display_coordinate": {
+        "latitude": 34.1312388,
+        "longitude": -118.320517
+      },
+      "place_categories": [
+        "culture"
+      ],
+      "source_refs": [
+        "https://www.openstreetmap.org/node/11238376116"
+      ],
+      "source_attribution": "OpenStreetMap contributors",
+      "coordinate_role": "community_mapped_display_location_not_route_access",
+      "description": "Community-mapped place. Current opening conditions, public access and itinerary feasibility have not been verified."
+    },
+    {
+      "place_id": "osm_node_11267473287",
+      "name": "Hollywood Sign Vista at Last House",
+      "display_coordinate": {
+        "latitude": 34.1306411,
+        "longitude": -118.320373
+      },
+      "place_categories": [
+        "nature",
+        "outdoor"
+      ],
+      "source_refs": [
+        "https://www.openstreetmap.org/node/11267473287"
+      ],
+      "source_attribution": "OpenStreetMap contributors",
+      "coordinate_role": "community_mapped_display_location_not_route_access",
+      "description": "Community-mapped place. Current opening conditions, public access and itinerary feasibility have not been verified."
+    },
+    {
+      "place_id": "osm_node_11267501779",
+      "name": "Blood Drop Sculpture",
+      "display_coordinate": {
+        "latitude": 34.1259052,
+        "longitude": -118.3254435
+      },
+      "place_categories": [
+        "culture"
+      ],
+      "source_refs": [
+        "https://www.openstreetmap.org/node/11267501779"
+      ],
+      "source_attribution": "OpenStreetMap contributors",
+      "coordinate_role": "community_mapped_display_location_not_route_access",
+      "description": "Community-mapped place. Current opening conditions, public access and itinerary feasibility have not been verified."
+    },
+    {
+      "place_id": "osm_node_11269928668",
+      "name": "Cat Sculpture",
+      "display_coordinate": {
+        "latitude": 34.1201543,
+        "longitude": -118.3215167
+      },
+      "place_categories": [
+        "culture"
+      ],
+      "source_refs": [
+        "https://www.openstreetmap.org/node/11269928668"
+      ],
+      "source_attribution": "OpenStreetMap contributors",
+      "coordinate_role": "community_mapped_display_location_not_route_access",
+      "description": "Community-mapped place. Current opening conditions, public access and itinerary feasibility have not been verified."
+    },
+    {
+      "place_id": "osm_node_11269984582",
+      "name": "The Diver",
+      "display_coordinate": {
+        "latitude": 34.1272321,
+        "longitude": -118.3223981
+      },
+      "place_categories": [
+        "culture"
+      ],
+      "source_refs": [
+        "https://www.openstreetmap.org/node/11269984582"
+      ],
+      "source_attribution": "OpenStreetMap contributors",
+      "coordinate_role": "community_mapped_display_location_not_route_access",
+      "description": "Community-mapped place. Current opening conditions, public access and itinerary feasibility have not been verified."
+    },
+    {
+      "place_id": "osm_node_11302343394",
+      "name": "Roosevelt Point",
+      "display_coordinate": {
+        "latitude": 37.722875,
+        "longitude": -119.5933606
+      },
+      "place_categories": [
+        "nature",
+        "outdoor"
+      ],
+      "source_refs": [
+        "https://www.openstreetmap.org/node/11302343394"
+      ],
+      "source_attribution": "OpenStreetMap contributors",
+      "coordinate_role": "community_mapped_display_location_not_route_access",
+      "description": "Community-mapped place. Current opening conditions, public access and itinerary feasibility have not been verified."
+    },
+    {
+      "place_id": "osm_node_11449833948",
+      "name": "Sun Flowers",
+      "display_coordinate": {
+        "latitude": 37.4260524,
+        "longitude": -122.1451925
+      },
+      "place_categories": [
+        "culture"
+      ],
+      "source_refs": [
+        "https://www.openstreetmap.org/node/11449833948"
+      ],
+      "source_attribution": "OpenStreetMap contributors",
+      "coordinate_role": "community_mapped_display_location_not_route_access",
+      "description": "Community-mapped place. Current opening conditions, public access and itinerary feasibility have not been verified."
+    },
+    {
+      "place_id": "osm_node_11458667332",
+      "name": "Bloom",
+      "display_coordinate": {
+        "latitude": 37.428759,
+        "longitude": -122.1426301
+      },
+      "place_categories": [
+        "culture"
+      ],
+      "source_refs": [
+        "https://www.openstreetmap.org/node/11458667332"
+      ],
+      "source_attribution": "OpenStreetMap contributors",
+      "coordinate_role": "community_mapped_display_location_not_route_access",
+      "description": "Community-mapped place. Current opening conditions, public access and itinerary feasibility have not been verified."
+    },
+    {
+      "place_id": "osm_node_11471910560",
+      "name": "Aeolis 10",
+      "display_coordinate": {
+        "latitude": 37.4239766,
+        "longitude": -122.1443082
+      },
+      "place_categories": [
+        "culture"
+      ],
+      "source_refs": [
+        "https://www.openstreetmap.org/node/11471910560"
+      ],
+      "source_attribution": "OpenStreetMap contributors",
+      "coordinate_role": "community_mapped_display_location_not_route_access",
+      "description": "Community-mapped place. Current opening conditions, public access and itinerary feasibility have not been verified."
+    },
+    {
+      "place_id": "osm_node_11590561443",
+      "name": "Air Tank Wind Chime",
+      "display_coordinate": {
+        "latitude": 37.4207078,
+        "longitude": -122.1723632
+      },
+      "place_categories": [
+        "culture"
+      ],
+      "source_refs": [
+        "https://www.openstreetmap.org/node/11590561443"
+      ],
+      "source_attribution": "OpenStreetMap contributors",
+      "coordinate_role": "community_mapped_display_location_not_route_access",
+      "description": "Community-mapped place. Current opening conditions, public access and itinerary feasibility have not been verified."
+    },
+    {
+      "place_id": "osm_node_11590561444",
+      "name": "Bike Tree",
+      "display_coordinate": {
+        "latitude": 37.4207046,
+        "longitude": -122.1724544
+      },
+      "place_categories": [
+        "culture"
+      ],
+      "source_refs": [
+        "https://www.openstreetmap.org/node/11590561444"
+      ],
+      "source_attribution": "OpenStreetMap contributors",
+      "coordinate_role": "community_mapped_display_location_not_route_access",
+      "description": "Community-mapped place. Current opening conditions, public access and itinerary feasibility have not been verified."
+    },
+    {
+      "place_id": "osm_node_11608850025",
+      "name": "Haunted Picnic Table 29",
+      "display_coordinate": {
+        "latitude": 34.1371859,
+        "longitude": -118.3067867
+      },
+      "place_categories": [
+        "nature",
+        "outdoor"
+      ],
+      "source_refs": [
+        "https://www.openstreetmap.org/node/11608850025",
+        "https://pinintheatlas.com/travel-blogs/haunted-picnic-table-29-griffith-park-california/"
+      ],
+      "source_attribution": "OpenStreetMap contributors",
+      "coordinate_role": "community_mapped_display_location_not_route_access",
+      "description": "Community-mapped place. Current opening conditions, public access and itinerary feasibility have not been verified."
+    },
+    {
+      "place_id": "osm_node_11690174664",
+      "name": "Apsonsi",
+      "display_coordinate": {
+        "latitude": 34.101853,
+        "longitude": -118.3017528
+      },
+      "place_categories": [
+        "culture"
+      ],
+      "source_refs": [
+        "https://www.openstreetmap.org/node/11690174664"
+      ],
+      "source_attribution": "OpenStreetMap contributors",
+      "coordinate_role": "community_mapped_display_location_not_route_access",
+      "description": "Community-mapped place. Current opening conditions, public access and itinerary feasibility have not been verified."
+    },
+    {
+      "place_id": "osm_node_11690174665",
+      "name": "Apsonsi",
+      "display_coordinate": {
+        "latitude": 34.1016723,
+        "longitude": -118.3016931
+      },
+      "place_categories": [
+        "culture"
+      ],
+      "source_refs": [
+        "https://www.openstreetmap.org/node/11690174665"
+      ],
+      "source_attribution": "OpenStreetMap contributors",
+      "coordinate_role": "community_mapped_display_location_not_route_access",
+      "description": "Community-mapped place. Current opening conditions, public access and itinerary feasibility have not been verified."
+    },
+    {
+      "place_id": "osm_node_11690174666",
+      "name": "Apsonsi",
+      "display_coordinate": {
+        "latitude": 34.101861,
+        "longitude": -118.308285
+      },
+      "place_categories": [
+        "culture"
+      ],
+      "source_refs": [
+        "https://www.openstreetmap.org/node/11690174666"
+      ],
+      "source_attribution": "OpenStreetMap contributors",
+      "coordinate_role": "community_mapped_display_location_not_route_access",
+      "description": "Community-mapped place. Current opening conditions, public access and itinerary feasibility have not been verified."
+    },
+    {
+      "place_id": "osm_node_11690174667",
+      "name": "Apsonsi",
+      "display_coordinate": {
+        "latitude": 34.1016263,
+        "longitude": -118.3083197
+      },
+      "place_categories": [
+        "culture"
+      ],
+      "source_refs": [
+        "https://www.openstreetmap.org/node/11690174667"
+      ],
+      "source_attribution": "OpenStreetMap contributors",
+      "coordinate_role": "community_mapped_display_location_not_route_access",
+      "description": "Community-mapped place. Current opening conditions, public access and itinerary feasibility have not been verified."
+    },
+    {
+      "place_id": "osm_node_11722152053",
+      "name": "Lauren Powell Projects",
+      "display_coordinate": {
+        "latitude": 34.1018908,
+        "longitude": -118.3043833
+      },
+      "place_categories": [
+        "culture"
+      ],
+      "source_refs": [
+        "https://www.openstreetmap.org/node/11722152053",
+        "https://www.laurenpowellprojects.com/"
+      ],
+      "source_attribution": "OpenStreetMap contributors",
+      "coordinate_role": "community_mapped_display_location_not_route_access",
+      "description": "Community-mapped place. Current opening conditions, public access and itinerary feasibility have not been verified."
+    },
+    {
+      "place_id": "osm_node_11722152055",
+      "name": "Sarah Brook Gallery",
+      "display_coordinate": {
+        "latitude": 34.1018898,
+        "longitude": -118.3044936
+      },
+      "place_categories": [
+        "culture"
+      ],
+      "source_refs": [
+        "https://www.openstreetmap.org/node/11722152055",
+        "https://sarahbrookgallery.com/"
+      ],
+      "source_attribution": "OpenStreetMap contributors",
+      "coordinate_role": "community_mapped_display_location_not_route_access",
+      "description": "Community-mapped place. Current opening conditions, public access and itinerary feasibility have not been verified."
+    },
+    {
+      "place_id": "osm_node_11732274898",
+      "name": "Waterhouse Gallery",
+      "display_coordinate": {
+        "latitude": 34.4230908,
+        "longitude": -119.7032383
+      },
+      "place_categories": [
+        "culture"
+      ],
+      "source_refs": [
+        "https://www.openstreetmap.org/node/11732274898",
+        "https://www.waterhousegallery.com/"
+      ],
+      "source_attribution": "OpenStreetMap contributors",
+      "coordinate_role": "community_mapped_display_location_not_route_access",
+      "description": "Community-mapped place. Current opening conditions, public access and itinerary feasibility have not been verified."
+    },
+    {
+      "place_id": "osm_node_11732274900",
+      "name": "Gallery 113",
+      "display_coordinate": {
+        "latitude": 34.4230371,
+        "longitude": -119.7033409
+      },
+      "place_categories": [
+        "culture"
+      ],
+      "source_refs": [
+        "https://www.openstreetmap.org/node/11732274900",
+        "https://gallery113sb.com/"
+      ],
+      "source_attribution": "OpenStreetMap contributors",
+      "coordinate_role": "community_mapped_display_location_not_route_access",
+      "description": "Community-mapped place. Current opening conditions, public access and itinerary feasibility have not been verified."
+    },
+    {
+      "place_id": "osm_node_11991078747",
+      "name": "Battery East",
+      "display_coordinate": {
+        "latitude": 37.8076013,
+        "longitude": -122.472601
+      },
+      "place_categories": [
+        "nature",
+        "outdoor"
+      ],
+      "source_refs": [
+        "https://www.openstreetmap.org/node/11991078747"
+      ],
+      "source_attribution": "OpenStreetMap contributors",
+      "coordinate_role": "community_mapped_display_location_not_route_access",
+      "description": "Community-mapped place. Current opening conditions, public access and itinerary feasibility have not been verified."
+    },
+    {
+      "place_id": "osm_node_12064311245",
+      "name": "Passenger Pigeon",
+      "display_coordinate": {
+        "latitude": 37.433666,
+        "longitude": -122.1704013
+      },
+      "place_categories": [
+        "culture"
+      ],
+      "source_refs": [
+        "https://www.openstreetmap.org/node/12064311245"
+      ],
+      "source_attribution": "OpenStreetMap contributors",
+      "coordinate_role": "community_mapped_display_location_not_route_access",
+      "description": "Community-mapped place. Current opening conditions, public access and itinerary feasibility have not been verified."
+    },
+    {
+      "place_id": "osm_node_12064311246",
+      "name": "Fear",
+      "display_coordinate": {
+        "latitude": 37.4335202,
+        "longitude": -122.1703894
+      },
+      "place_categories": [
+        "culture"
+      ],
+      "source_refs": [
+        "https://www.openstreetmap.org/node/12064311246"
+      ],
+      "source_attribution": "OpenStreetMap contributors",
+      "coordinate_role": "community_mapped_display_location_not_route_access",
+      "description": "Community-mapped place. Current opening conditions, public access and itinerary feasibility have not been verified."
+    },
+    {
+      "place_id": "osm_node_12064311248",
+      "name": "Cloud",
+      "display_coordinate": {
+        "latitude": 37.433608,
+        "longitude": -122.1701633
+      },
+      "place_categories": [
+        "culture"
+      ],
+      "source_refs": [
+        "https://www.openstreetmap.org/node/12064311248"
+      ],
+      "source_attribution": "OpenStreetMap contributors",
+      "coordinate_role": "community_mapped_display_location_not_route_access",
+      "description": "Community-mapped place. Current opening conditions, public access and itinerary feasibility have not been verified."
+    },
+    {
+      "place_id": "osm_node_12064311249",
+      "name": "@",
+      "display_coordinate": {
+        "latitude": 37.4335971,
+        "longitude": -122.1702233
+      },
+      "place_categories": [
+        "culture"
+      ],
+      "source_refs": [
+        "https://www.openstreetmap.org/node/12064311249"
+      ],
+      "source_attribution": "OpenStreetMap contributors",
+      "coordinate_role": "community_mapped_display_location_not_route_access",
+      "description": "Community-mapped place. Current opening conditions, public access and itinerary feasibility have not been verified."
+    },
+    {
+      "place_id": "osm_node_12064311252",
+      "name": "Rocket",
+      "display_coordinate": {
+        "latitude": 37.4330701,
+        "longitude": -122.170238
+      },
+      "place_categories": [
+        "culture"
+      ],
+      "source_refs": [
+        "https://www.openstreetmap.org/node/12064311252"
+      ],
+      "source_attribution": "OpenStreetMap contributors",
+      "coordinate_role": "community_mapped_display_location_not_route_access",
+      "description": "Community-mapped place. Current opening conditions, public access and itinerary feasibility have not been verified."
+    },
+    {
+      "place_id": "osm_node_12064311257",
+      "name": "Stanford Wall",
+      "display_coordinate": {
+        "latitude": 37.4309175,
+        "longitude": -122.1681543
+      },
+      "place_categories": [
+        "culture"
+      ],
+      "source_refs": [
+        "https://www.openstreetmap.org/node/12064311257"
+      ],
+      "source_attribution": "OpenStreetMap contributors",
+      "coordinate_role": "community_mapped_display_location_not_route_access",
+      "description": "Community-mapped place. Current opening conditions, public access and itinerary feasibility have not been verified."
+    },
+    {
+      "place_id": "osm_node_12064314969",
+      "name": "Stainless Garden",
+      "display_coordinate": {
+        "latitude": 37.4280009,
+        "longitude": -122.1661256
+      },
+      "place_categories": [
+        "culture"
+      ],
+      "source_refs": [
+        "https://www.openstreetmap.org/node/12064314969"
+      ],
+      "source_attribution": "OpenStreetMap contributors",
+      "coordinate_role": "community_mapped_display_location_not_route_access",
+      "description": "Community-mapped place. Current opening conditions, public access and itinerary feasibility have not been verified."
+    },
+    {
+      "place_id": "osm_node_12064315028",
+      "name": "The Flame Birds",
+      "display_coordinate": {
+        "latitude": 37.4278702,
+        "longitude": -122.1634816
+      },
+      "place_categories": [
+        "culture"
+      ],
+      "source_refs": [
+        "https://www.openstreetmap.org/node/12064315028"
+      ],
+      "source_attribution": "OpenStreetMap contributors",
+      "coordinate_role": "community_mapped_display_location_not_route_access",
+      "description": "Community-mapped place. Current opening conditions, public access and itinerary feasibility have not been verified."
+    },
+    {
+      "place_id": "osm_node_12064315037",
+      "name": "Monument to Change as a Verb",
+      "display_coordinate": {
+        "latitude": 37.4281675,
+        "longitude": -122.1620167
+      },
+      "place_categories": [
+        "culture"
+      ],
+      "source_refs": [
+        "https://www.openstreetmap.org/node/12064315037"
+      ],
+      "source_attribution": "OpenStreetMap contributors",
+      "coordinate_role": "community_mapped_display_location_not_route_access",
+      "description": "Community-mapped place. Current opening conditions, public access and itinerary feasibility have not been verified."
+    },
+    {
+      "place_id": "osm_node_12121069537",
+      "name": "Luz De Jesus",
+      "display_coordinate": {
+        "latitude": 34.1003514,
+        "longitude": -118.289957
+      },
+      "place_categories": [
+        "culture"
+      ],
+      "source_refs": [
+        "https://www.openstreetmap.org/node/12121069537",
+        "https://laluzdejesus.com/"
+      ],
+      "source_attribution": "OpenStreetMap contributors",
+      "coordinate_role": "community_mapped_display_location_not_route_access",
+      "description": "Community-mapped place. Current opening conditions, public access and itinerary feasibility have not been verified."
+    },
+    {
+      "place_id": "osm_node_12271819782",
+      "name": "Santa Barbara Fine Art",
+      "display_coordinate": {
+        "latitude": 34.4246765,
+        "longitude": -119.7065862
+      },
+      "place_categories": [
+        "culture"
+      ],
+      "source_refs": [
+        "https://www.openstreetmap.org/node/12271819782",
+        "https://www.santabarbarafineart.com/"
+      ],
+      "source_attribution": "OpenStreetMap contributors",
+      "coordinate_role": "community_mapped_display_location_not_route_access",
+      "description": "Community-mapped place. Current opening conditions, public access and itinerary feasibility have not been verified."
+    },
+    {
+      "place_id": "osm_node_12462037901",
+      "name": "Chief Sequoyah",
+      "display_coordinate": {
+        "latitude": 36.5736968,
+        "longitude": -118.74994
+      },
+      "place_categories": [
+        "nature",
+        "outdoor"
+      ],
+      "source_refs": [
+        "https://www.openstreetmap.org/node/12462037901"
+      ],
+      "source_attribution": "OpenStreetMap contributors",
+      "coordinate_role": "community_mapped_display_location_not_route_access",
+      "description": "Community-mapped place. Current opening conditions, public access and itinerary feasibility have not been verified."
+    },
+    {
+      "place_id": "osm_node_12641812702",
+      "name": "Fort Point Viewpoint",
+      "display_coordinate": {
+        "latitude": 37.8084683,
+        "longitude": -122.4729743
+      },
+      "place_categories": [
+        "nature",
+        "outdoor"
+      ],
+      "source_refs": [
+        "https://www.openstreetmap.org/node/12641812702"
+      ],
+      "source_attribution": "OpenStreetMap contributors",
+      "coordinate_role": "community_mapped_display_location_not_route_access",
+      "description": "Community-mapped place. Current opening conditions, public access and itinerary feasibility have not been verified."
+    },
+    {
+      "place_id": "osm_node_12978819796",
+      "name": "Syuxtun Story Circle",
+      "display_coordinate": {
+        "latitude": 34.4102558,
+        "longitude": -119.6913282
+      },
+      "place_categories": [
+        "culture"
+      ],
+      "source_refs": [
+        "https://www.openstreetmap.org/node/12978819796"
+      ],
+      "source_attribution": "OpenStreetMap contributors",
+      "coordinate_role": "community_mapped_display_location_not_route_access",
+      "description": "Community-mapped place. Current opening conditions, public access and itinerary feasibility have not been verified."
+    },
+    {
+      "place_id": "osm_node_13020179105",
+      "name": "The Deepwater Diving Monument",
+      "display_coordinate": {
+        "latitude": 34.4043928,
+        "longitude": -119.6940458
+      },
+      "place_categories": [
+        "culture"
+      ],
+      "source_refs": [
+        "https://www.openstreetmap.org/node/13020179105",
+        "https://www.deepwaterdivingmonument.com/"
+      ],
+      "source_attribution": "OpenStreetMap contributors",
+      "coordinate_role": "community_mapped_display_location_not_route_access",
+      "description": "Community-mapped place. Current opening conditions, public access and itinerary feasibility have not been verified."
+    },
+    {
+      "place_id": "osm_node_13020179106",
+      "name": "Boy On a Seahorse",
+      "display_coordinate": {
+        "latitude": 34.4036162,
+        "longitude": -119.6926417
+      },
+      "place_categories": [
+        "culture"
+      ],
+      "source_refs": [
+        "https://www.openstreetmap.org/node/13020179106"
+      ],
+      "source_attribution": "OpenStreetMap contributors",
+      "coordinate_role": "community_mapped_display_location_not_route_access",
+      "description": "Community-mapped place. Current opening conditions, public access and itinerary feasibility have not been verified."
+    },
+    {
+      "place_id": "osm_node_13042209249",
+      "name": "Museum Of Contemporary Art Santa Barbara",
+      "display_coordinate": {
+        "latitude": 34.4187549,
+        "longitude": -119.7001613
+      },
+      "place_categories": [
+        "culture"
+      ],
+      "source_refs": [
+        "https://www.openstreetmap.org/node/13042209249",
+        "https://www.mcasantabarbara.org/"
+      ],
+      "source_attribution": "OpenStreetMap contributors",
+      "coordinate_role": "community_mapped_display_location_not_route_access",
+      "description": "Community-mapped place. Current opening conditions, public access and itinerary feasibility have not been verified."
+    },
+    {
+      "place_id": "osm_node_13099277456",
+      "name": "The Stanford Legacy",
+      "display_coordinate": {
+        "latitude": 37.4246633,
+        "longitude": -122.1675828
+      },
+      "place_categories": [
+        "culture"
+      ],
+      "source_refs": [
+        "https://www.openstreetmap.org/node/13099277456"
+      ],
+      "source_attribution": "OpenStreetMap contributors",
+      "coordinate_role": "community_mapped_display_location_not_route_access",
+      "description": "Community-mapped place. Current opening conditions, public access and itinerary feasibility have not been verified."
+    },
+    {
+      "place_id": "osm_node_13175625087",
+      "name": "The Yes Store",
+      "display_coordinate": {
+        "latitude": 34.421739,
+        "longitude": -119.7024998
+      },
+      "place_categories": [
+        "culture"
+      ],
+      "source_refs": [
+        "https://www.openstreetmap.org/node/13175625087"
+      ],
+      "source_attribution": "OpenStreetMap contributors",
+      "coordinate_role": "community_mapped_display_location_not_route_access",
+      "description": "Community-mapped place. Current opening conditions, public access and itinerary feasibility have not been verified."
+    },
+    {
+      "place_id": "osm_node_13175669975",
+      "name": "Fazzino 3D Studio Gallery",
+      "display_coordinate": {
+        "latitude": 34.4216356,
+        "longitude": -119.7023515
+      },
+      "place_categories": [
+        "culture"
+      ],
+      "source_refs": [
+        "https://www.openstreetmap.org/node/13175669975",
+        "https://www.fazzino.com/"
+      ],
+      "source_attribution": "OpenStreetMap contributors",
+      "coordinate_role": "community_mapped_display_location_not_route_access",
+      "description": "Community-mapped place. Current opening conditions, public access and itinerary feasibility have not been verified."
+    },
+    {
+      "place_id": "osm_node_13415065076",
+      "name": "Node",
+      "display_coordinate": {
+        "latitude": 37.4445252,
+        "longitude": -122.162777
+      },
+      "place_categories": [
+        "culture"
+      ],
+      "source_refs": [
+        "https://www.openstreetmap.org/node/13415065076",
+        "https://nodefoundation.com"
+      ],
+      "source_attribution": "OpenStreetMap contributors",
+      "coordinate_role": "community_mapped_display_location_not_route_access",
+      "description": "Community-mapped place. Current opening conditions, public access and itinerary feasibility have not been verified."
+    },
+    {
+      "place_id": "osm_node_13415109121",
+      "name": "Pamela Walsh Gallery",
+      "display_coordinate": {
+        "latitude": 37.4447356,
+        "longitude": -122.1615077
+      },
+      "place_categories": [
+        "culture"
+      ],
+      "source_refs": [
+        "https://www.openstreetmap.org/node/13415109121",
+        "https://www.coupacafe.com"
+      ],
+      "source_attribution": "OpenStreetMap contributors",
+      "coordinate_role": "community_mapped_display_location_not_route_access",
+      "description": "Community-mapped place. Current opening conditions, public access and itinerary feasibility have not been verified."
+    },
+    {
+      "place_id": "osm_node_13474218670",
+      "name": "Sullivan Goss",
+      "display_coordinate": {
+        "latitude": 34.4238449,
+        "longitude": -119.7041436
+      },
+      "place_categories": [
+        "culture"
+      ],
+      "source_refs": [
+        "https://www.openstreetmap.org/node/13474218670",
+        "https://www.sullivangoss.com/"
+      ],
+      "source_attribution": "OpenStreetMap contributors",
+      "coordinate_role": "community_mapped_display_location_not_route_access",
+      "description": "Community-mapped place. Current opening conditions, public access and itinerary feasibility have not been verified."
+    },
+    {
+      "place_id": "osm_node_13513466511",
+      "name": "Reagan Ranch Center",
+      "display_coordinate": {
+        "latitude": 34.4142627,
+        "longitude": -119.6925876
+      },
+      "place_categories": [
+        "culture"
+      ],
+      "source_refs": [
+        "https://www.openstreetmap.org/node/13513466511",
+        "https://yaf.org/reagan-ranch-center/"
+      ],
+      "source_attribution": "OpenStreetMap contributors",
+      "coordinate_role": "community_mapped_display_location_not_route_access",
+      "description": "Community-mapped place. Current opening conditions, public access and itinerary feasibility have not been verified."
+    },
+    {
+      "place_id": "osm_node_13513466535",
+      "name": "Art & Soul",
+      "display_coordinate": {
+        "latitude": 34.424664,
+        "longitude": -119.7067124
+      },
+      "place_categories": [
+        "culture"
+      ],
+      "source_refs": [
+        "https://www.openstreetmap.org/node/13513466535",
+        "https://artandsoulsb.com/"
+      ],
+      "source_attribution": "OpenStreetMap contributors",
+      "coordinate_role": "community_mapped_display_location_not_route_access",
+      "description": "Community-mapped place. Current opening conditions, public access and itinerary feasibility have not been verified."
+    },
+    {
+      "place_id": "osm_node_13518346916",
+      "name": "MOXI, The Wolf Museum of Exploration + Innovation",
+      "display_coordinate": {
+        "latitude": 34.4134617,
+        "longitude": -119.6916752
+      },
+      "place_categories": [
+        "culture"
+      ],
+      "source_refs": [
+        "https://www.openstreetmap.org/node/13518346916",
+        "https://www.moxi.org/"
+      ],
+      "source_attribution": "OpenStreetMap contributors",
+      "coordinate_role": "community_mapped_display_location_not_route_access",
+      "description": "Community-mapped place. Current opening conditions, public access and itinerary feasibility have not been verified."
+    },
+    {
+      "place_id": "osm_node_13641439573",
+      "name": "Santa Barbara Surfing Museum",
+      "display_coordinate": {
+        "latitude": 34.4128456,
+        "longitude": -119.6892281
+      },
+      "place_categories": [
+        "culture"
+      ],
+      "source_refs": [
+        "https://www.openstreetmap.org/node/13641439573",
+        "https://www.santabarbarasurfingmuseum.com/"
+      ],
+      "source_attribution": "OpenStreetMap contributors",
+      "coordinate_role": "community_mapped_display_location_not_route_access",
+      "description": "Community-mapped place. Current opening conditions, public access and itinerary feasibility have not been verified."
+    },
+    {
+      "place_id": "osm_node_14028962331",
+      "name": "The Small Cow",
+      "display_coordinate": {
+        "latitude": 34.4292486,
+        "longitude": -119.6914994
+      },
+      "place_categories": [
+        "culture"
+      ],
+      "source_refs": [
+        "https://www.openstreetmap.org/node/14028962331"
+      ],
+      "source_attribution": "OpenStreetMap contributors",
+      "coordinate_role": "community_mapped_display_location_not_route_access",
+      "description": "Community-mapped place. Current opening conditions, public access and itinerary feasibility have not been verified."
+    },
+    {
+      "place_id": "osm_node_14040493589",
+      "name": "Lil' Toot Boat Tours",
+      "display_coordinate": {
+        "latitude": 34.4043631,
+        "longitude": -119.6935279
+      },
+      "place_categories": [
+        "nature",
+        "outdoor"
+      ],
+      "source_refs": [
+        "https://www.openstreetmap.org/node/14040493589",
+        "https://liltootsb.com/"
+      ],
+      "source_attribution": "OpenStreetMap contributors",
+      "coordinate_role": "community_mapped_display_location_not_route_access",
+      "description": "Community-mapped place. Current opening conditions, public access and itinerary feasibility have not been verified."
+    },
+    {
+      "place_id": "osm_node_14052217155",
+      "name": "L",
+      "display_coordinate": {
+        "latitude": 34.40631,
+        "longitude": -119.6951534
+      },
+      "place_categories": [
+        "culture"
+      ],
+      "source_refs": [
+        "https://www.openstreetmap.org/node/14052217155"
+      ],
+      "source_attribution": "OpenStreetMap contributors",
+      "coordinate_role": "community_mapped_display_location_not_route_access",
+      "description": "Community-mapped place. Current opening conditions, public access and itinerary feasibility have not been verified."
+    },
+    {
+      "place_id": "osm_node_14078263554",
+      "name": "Matter",
+      "display_coordinate": {
+        "latitude": 37.434274,
+        "longitude": -122.1770018
+      },
+      "place_categories": [
+        "culture"
+      ],
+      "source_refs": [
+        "https://www.openstreetmap.org/node/14078263554"
+      ],
+      "source_attribution": "OpenStreetMap contributors",
+      "coordinate_role": "community_mapped_display_location_not_route_access",
+      "description": "Community-mapped place. Current opening conditions, public access and itinerary feasibility have not been verified."
+    },
+    {
+      "place_id": "osm_way_26249820",
+      "name": "Papua New Guinea Sculpture Garden",
+      "display_coordinate": {
+        "latitude": 37.4247909,
+        "longitude": -122.1737251
+      },
+      "place_categories": [
+        "culture"
+      ],
+      "source_refs": [
+        "https://www.openstreetmap.org/way/26249820"
+      ],
+      "source_attribution": "OpenStreetMap contributors",
+      "coordinate_role": "community_mapped_display_location_not_route_access",
+      "description": "Community-mapped place. Current opening conditions, public access and itinerary feasibility have not been verified."
+    },
+    {
+      "place_id": "osm_way_132666335",
+      "name": "Palo Alto History Museum",
+      "display_coordinate": {
+        "latitude": 37.4436084,
+        "longitude": -122.1574107
+      },
+      "place_categories": [
+        "culture"
+      ],
+      "source_refs": [
+        "https://www.openstreetmap.org/way/132666335",
+        "https://www.paloaltohistorymuseum.org/"
+      ],
+      "source_attribution": "OpenStreetMap contributors",
+      "coordinate_role": "community_mapped_display_location_not_route_access",
+      "description": "Community-mapped place. Current opening conditions, public access and itinerary feasibility have not been verified."
+    },
+    {
+      "place_id": "osm_way_132666336",
+      "name": "Museum of American Heritage",
+      "display_coordinate": {
+        "latitude": 37.4444825,
+        "longitude": -122.157509
+      },
+      "place_categories": [
+        "culture"
+      ],
+      "source_refs": [
+        "https://www.openstreetmap.org/way/132666336",
+        "https://www.moah.org/"
+      ],
+      "source_attribution": "OpenStreetMap contributors",
+      "coordinate_role": "community_mapped_display_location_not_route_access",
+      "description": "Community-mapped place. Current opening conditions, public access and itinerary feasibility have not been verified."
+    },
+    {
+      "place_id": "osm_way_164018036",
+      "name": "Ansel Adams residence",
+      "display_coordinate": {
+        "latitude": 37.7489035,
+        "longitude": -119.5867517
+      },
+      "place_categories": [
+        "culture"
+      ],
+      "source_refs": [
+        "https://www.openstreetmap.org/way/164018036"
+      ],
+      "source_attribution": "OpenStreetMap contributors",
+      "coordinate_role": "community_mapped_display_location_not_route_access",
+      "description": "Community-mapped place. Current opening conditions, public access and itinerary feasibility have not been verified."
+    },
+    {
+      "place_id": "osm_way_164018041",
+      "name": "Indian Village",
+      "display_coordinate": {
+        "latitude": 37.7491628,
+        "longitude": -119.5882753
+      },
+      "place_categories": [
+        "culture"
+      ],
+      "source_refs": [
+        "https://www.openstreetmap.org/way/164018041"
+      ],
+      "source_attribution": "OpenStreetMap contributors",
+      "coordinate_role": "community_mapped_display_location_not_route_access",
+      "description": "Community-mapped place. Current opening conditions, public access and itinerary feasibility have not been verified."
+    },
+    {
+      "place_id": "osm_way_164018047",
+      "name": "Yosemite Museum & Library",
+      "display_coordinate": {
+        "latitude": 37.7485963,
+        "longitude": -119.5879492
+      },
+      "place_categories": [
+        "culture"
+      ],
+      "source_refs": [
+        "https://www.openstreetmap.org/way/164018047",
+        "https://www.nps.gov/yose/learn/historyculture/yosemite-museum.htm"
+      ],
+      "source_attribution": "OpenStreetMap contributors",
+      "coordinate_role": "community_mapped_display_location_not_route_access",
+      "description": "Community-mapped place. Current opening conditions, public access and itinerary feasibility have not been verified."
+    },
+    {
+      "place_id": "osm_way_164018059",
+      "name": "Yosemite Exploration Center",
+      "display_coordinate": {
+        "latitude": 37.7487369,
+        "longitude": -119.5873217
+      },
+      "place_categories": [
+        "culture"
+      ],
+      "source_refs": [
+        "https://www.openstreetmap.org/way/164018059",
+        "https://www.nps.gov/yose/planyourvisit/yv.htm"
+      ],
+      "source_attribution": "OpenStreetMap contributors",
+      "coordinate_role": "community_mapped_display_location_not_route_access",
+      "description": "Community-mapped place. Current opening conditions, public access and itinerary feasibility have not been verified."
+    },
+    {
+      "place_id": "osm_way_164026487",
+      "name": "Yosemite Conservation Heritage Center",
+      "display_coordinate": {
+        "latitude": 37.7399079,
+        "longitude": -119.5795404
+      },
+      "place_categories": [
+        "culture"
+      ],
+      "source_refs": [
+        "https://www.openstreetmap.org/way/164026487"
+      ],
+      "source_attribution": "OpenStreetMap contributors",
+      "coordinate_role": "community_mapped_display_location_not_route_access",
+      "description": "Community-mapped place. Current opening conditions, public access and itinerary feasibility have not been verified."
+    },
+    {
+      "place_id": "osm_way_164569681",
+      "name": "Welcome Center",
+      "display_coordinate": {
+        "latitude": 37.8077769,
+        "longitude": -122.4748645
+      },
+      "place_categories": [
+        "nature",
+        "outdoor"
+      ],
+      "source_refs": [
+        "https://www.openstreetmap.org/way/164569681",
+        "https://www.parksconservancy.org/park-improvements/past-accomplishments/golden-gate-bridge-pavilion.html"
+      ],
+      "source_attribution": "OpenStreetMap contributors",
+      "coordinate_role": "community_mapped_display_location_not_route_access",
+      "description": "Community-mapped place. Current opening conditions, public access and itinerary feasibility have not been verified."
+    },
+    {
+      "place_id": "osm_way_170797902",
+      "name": "Marshall's Beach",
+      "display_coordinate": {
+        "latitude": 37.8018486,
+        "longitude": -122.4800506
+      },
+      "place_categories": [
+        "nature",
+        "outdoor"
+      ],
+      "source_refs": [
+        "https://www.openstreetmap.org/way/170797902"
+      ],
+      "source_attribution": "OpenStreetMap contributors",
+      "coordinate_role": "community_mapped_display_location_not_route_access",
+      "description": "Community-mapped place. Current opening conditions, public access and itinerary feasibility have not been verified."
+    },
+    {
+      "place_id": "osm_way_229138120",
+      "name": "Giant Forest Museum",
+      "display_coordinate": {
+        "latitude": 36.5646758,
+        "longitude": -118.7727263
+      },
+      "place_categories": [
+        "culture"
+      ],
+      "source_refs": [
+        "https://www.openstreetmap.org/way/229138120"
+      ],
+      "source_attribution": "OpenStreetMap contributors",
+      "coordinate_role": "community_mapped_display_location_not_route_access",
+      "description": "Community-mapped place. Current opening conditions, public access and itinerary feasibility have not been verified."
+    },
+    {
+      "place_id": "osm_way_231246595",
+      "name": "Palo Alto Junior Museum and Zoo",
+      "display_coordinate": {
+        "latitude": 37.4434622,
+        "longitude": -122.1446039
+      },
+      "place_categories": [
+        "culture"
+      ],
+      "source_refs": [
+        "https://www.openstreetmap.org/way/231246595",
+        "https://www.cityofpaloalto.org/gov/depts/csd/jmz/default.asp"
+      ],
+      "source_attribution": "OpenStreetMap contributors",
+      "coordinate_role": "community_mapped_display_location_not_route_access",
+      "description": "Community-mapped place. Current opening conditions, public access and itinerary feasibility have not been verified."
+    },
+    {
+      "place_id": "osm_way_232805678",
+      "name": "Stanford Art Gallery",
+      "display_coordinate": {
+        "latitude": 37.4280023,
+        "longitude": -122.1677005
+      },
+      "place_categories": [
+        "culture"
+      ],
+      "source_refs": [
+        "https://www.openstreetmap.org/way/232805678",
+        "https://art.stanford.edu/exhibition-spaces/stanford-art-gallery/"
+      ],
+      "source_attribution": "OpenStreetMap contributors",
+      "coordinate_role": "community_mapped_display_location_not_route_access",
+      "description": "Community-mapped place. Current opening conditions, public access and itinerary feasibility have not been verified."
+    },
+    {
+      "place_id": "osm_way_232805688",
+      "name": "Hoover Tower",
+      "display_coordinate": {
+        "latitude": 37.4276208,
+        "longitude": -122.1669949
+      },
+      "place_categories": [
+        "culture"
+      ],
+      "source_refs": [
+        "https://www.openstreetmap.org/way/232805688"
+      ],
+      "source_attribution": "OpenStreetMap contributors",
+      "coordinate_role": "community_mapped_display_location_not_route_access",
+      "description": "Community-mapped place. Current opening conditions, public access and itinerary feasibility have not been verified."
+    },
+    {
+      "place_id": "osm_way_243609086",
+      "name": "Casa de la Guerra",
+      "display_coordinate": {
+        "latitude": 34.4203168,
+        "longitude": -119.6992764
+      },
+      "place_categories": [
+        "culture"
+      ],
+      "source_refs": [
+        "https://www.openstreetmap.org/way/243609086",
+        "https://www.sbthp.org/casa.htm"
+      ],
+      "source_attribution": "OpenStreetMap contributors",
+      "coordinate_role": "community_mapped_display_location_not_route_access",
+      "description": "Community-mapped place. Current opening conditions, public access and itinerary feasibility have not been verified."
+    },
+    {
+      "place_id": "osm_way_244119293",
+      "name": "Carriage and Western Art Museum of Santa Barbara",
+      "display_coordinate": {
+        "latitude": 34.408951,
+        "longitude": -119.6976928
+      },
+      "place_categories": [
+        "culture"
+      ],
+      "source_refs": [
+        "https://www.openstreetmap.org/way/244119293",
+        "https://www.carriagemuseum.org/"
+      ],
+      "source_attribution": "OpenStreetMap contributors",
+      "coordinate_role": "community_mapped_display_location_not_route_access",
+      "description": "Community-mapped place. Current opening conditions, public access and itinerary feasibility have not been verified."
+    },
+    {
+      "place_id": "osm_way_275865140",
+      "name": "Santa Barbara Maritime Museum",
+      "display_coordinate": {
+        "latitude": 34.4039511,
+        "longitude": -119.6938331
+      },
+      "place_categories": [
+        "culture"
+      ],
+      "source_refs": [
+        "https://www.openstreetmap.org/way/275865140",
+        "https://sbmm.org/"
+      ],
+      "source_attribution": "OpenStreetMap contributors",
+      "coordinate_role": "community_mapped_display_location_not_route_access",
+      "description": "Community-mapped place. Current opening conditions, public access and itinerary feasibility have not been verified."
+    },
+    {
+      "place_id": "osm_way_276162625",
+      "name": "Susan Quinlan Doll & Teddy Bear Museum & Library",
+      "display_coordinate": {
+        "latitude": 34.4189676,
+        "longitude": -119.7027214
+      },
+      "place_categories": [
+        "culture"
+      ],
+      "source_refs": [
+        "https://www.openstreetmap.org/way/276162625",
+        "https://www.quinlanmuseum.com/"
+      ],
+      "source_attribution": "OpenStreetMap contributors",
+      "coordinate_role": "community_mapped_display_location_not_route_access",
+      "description": "Community-mapped place. Current opening conditions, public access and itinerary feasibility have not been verified."
+    },
+    {
+      "place_id": "osm_way_288340246",
+      "name": "Walt Disney Family Museum",
+      "display_coordinate": {
+        "latitude": 37.8013693,
+        "longitude": -122.4587099
+      },
+      "place_categories": [
+        "culture"
+      ],
+      "source_refs": [
+        "https://www.openstreetmap.org/way/288340246",
+        "https://waltdisney.org/"
+      ],
+      "source_attribution": "OpenStreetMap contributors",
+      "coordinate_role": "community_mapped_display_location_not_route_access",
+      "description": "Community-mapped place. Current opening conditions, public access and itinerary feasibility have not been verified."
+    },
+    {
+      "place_id": "osm_way_288365549",
+      "name": "Greater Farallones Marine Sanctuary Visitor Center",
+      "display_coordinate": {
+        "latitude": 37.805428,
+        "longitude": -122.4670591
+      },
+      "place_categories": [
+        "culture"
+      ],
+      "source_refs": [
+        "https://www.openstreetmap.org/way/288365549",
+        "https://farallones.noaa.gov/about/"
+      ],
+      "source_attribution": "OpenStreetMap contributors",
+      "coordinate_role": "community_mapped_display_location_not_route_access",
+      "description": "Community-mapped place. Current opening conditions, public access and itinerary feasibility have not been verified."
+    },
+    {
+      "place_id": "osm_way_288376862",
+      "name": "Military Intelligence Service Historic Learning Center",
+      "display_coordinate": {
+        "latitude": 37.8028313,
+        "longitude": -122.4627073
+      },
+      "place_categories": [
+        "culture"
+      ],
+      "source_refs": [
+        "https://www.openstreetmap.org/way/288376862",
+        "https://www.njahs.org/building-640/"
+      ],
+      "source_attribution": "OpenStreetMap contributors",
+      "coordinate_role": "community_mapped_display_location_not_route_access",
+      "description": "Community-mapped place. Current opening conditions, public access and itinerary feasibility have not been verified."
+    },
+    {
+      "place_id": "osm_way_316033708",
+      "name": "Cattle Cabin",
+      "display_coordinate": {
+        "latitude": 36.57073,
+        "longitude": -118.7540857
+      },
+      "place_categories": [
+        "nature",
+        "outdoor"
+      ],
+      "source_refs": [
+        "https://www.openstreetmap.org/way/316033708"
+      ],
+      "source_attribution": "OpenStreetMap contributors",
+      "coordinate_role": "community_mapped_display_location_not_route_access",
+      "description": "Community-mapped place. Current opening conditions, public access and itinerary feasibility have not been verified."
+    },
+    {
+      "place_id": "osm_way_383939405",
+      "name": "Walk of Fame",
+      "display_coordinate": {
+        "latitude": 34.1016533,
+        "longitude": -118.3224708
+      },
+      "place_categories": [
+        "nature",
+        "outdoor"
+      ],
+      "source_refs": [
+        "https://www.openstreetmap.org/way/383939405"
+      ],
+      "source_attribution": "OpenStreetMap contributors",
+      "coordinate_role": "community_mapped_display_location_not_route_access",
+      "description": "Community-mapped place. Current opening conditions, public access and itinerary feasibility have not been verified."
+    },
+    {
+      "place_id": "osm_way_383939406",
+      "name": "Walk of Fame",
+      "display_coordinate": {
+        "latitude": 34.1017615,
+        "longitude": -118.323799
+      },
+      "place_categories": [
+        "nature",
+        "outdoor"
+      ],
+      "source_refs": [
+        "https://www.openstreetmap.org/way/383939406"
+      ],
+      "source_attribution": "OpenStreetMap contributors",
+      "coordinate_role": "community_mapped_display_location_not_route_access",
+      "description": "Community-mapped place. Current opening conditions, public access and itinerary feasibility have not been verified."
+    },
+    {
+      "place_id": "osm_way_383939407",
+      "name": "Walk of Fame",
+      "display_coordinate": {
+        "latitude": 34.1015311,
+        "longitude": -118.3230703
+      },
+      "place_categories": [
+        "nature",
+        "outdoor"
+      ],
+      "source_refs": [
+        "https://www.openstreetmap.org/way/383939407"
+      ],
+      "source_attribution": "OpenStreetMap contributors",
+      "coordinate_role": "community_mapped_display_location_not_route_access",
+      "description": "Community-mapped place. Current opening conditions, public access and itinerary feasibility have not been verified."
+    },
+    {
+      "place_id": "osm_way_383939408",
+      "name": "Walk of Fame",
+      "display_coordinate": {
+        "latitude": 34.1036215,
+        "longitude": -118.3267026
+      },
+      "place_categories": [
+        "nature",
+        "outdoor"
+      ],
+      "source_refs": [
+        "https://www.openstreetmap.org/way/383939408"
+      ],
+      "source_attribution": "OpenStreetMap contributors",
+      "coordinate_role": "community_mapped_display_location_not_route_access",
+      "description": "Community-mapped place. Current opening conditions, public access and itinerary feasibility have not been verified."
+    },
+    {
+      "place_id": "osm_way_383939451",
+      "name": "Walk of Fame",
+      "display_coordinate": {
+        "latitude": 34.1022686,
+        "longitude": -118.3265589
+      },
+      "place_categories": [
+        "nature",
+        "outdoor"
+      ],
+      "source_refs": [
+        "https://www.openstreetmap.org/way/383939451"
+      ],
+      "source_attribution": "OpenStreetMap contributors",
+      "coordinate_role": "community_mapped_display_location_not_route_access",
+      "description": "Community-mapped place. Current opening conditions, public access and itinerary feasibility have not been verified."
+    },
+    {
+      "place_id": "osm_way_383939454",
+      "name": "Walk of Fame",
+      "display_coordinate": {
+        "latitude": 34.1026991,
+        "longitude": -118.3268493
+      },
+      "place_categories": [
+        "nature",
+        "outdoor"
+      ],
+      "source_refs": [
+        "https://www.openstreetmap.org/way/383939454"
+      ],
+      "source_attribution": "OpenStreetMap contributors",
+      "coordinate_role": "community_mapped_display_location_not_route_access",
+      "description": "Community-mapped place. Current opening conditions, public access and itinerary feasibility have not been verified."
+    },
+    {
+      "place_id": "osm_way_420183344",
+      "name": "Los Angeles Municipal Art Gallery",
+      "display_coordinate": {
+        "latitude": 34.1004021,
+        "longitude": -118.2936452
+      },
+      "place_categories": [
+        "culture"
+      ],
+      "source_refs": [
+        "https://www.openstreetmap.org/way/420183344",
+        "https://www.lamag.org/"
+      ],
+      "source_attribution": "OpenStreetMap contributors",
+      "coordinate_role": "community_mapped_display_location_not_route_access",
+      "description": "Community-mapped place. Current opening conditions, public access and itinerary feasibility have not been verified."
+    },
+    {
+      "place_id": "osm_way_422130706",
+      "name": "Griffith Park Merry-Go-Round",
+      "display_coordinate": {
+        "latitude": 34.1327053,
+        "longitude": -118.2838104
+      },
+      "place_categories": [
+        "nature",
+        "outdoor"
+      ],
+      "source_refs": [
+        "https://www.openstreetmap.org/way/422130706",
+        "https://www.laparks.org/dos/parks/griffithPK/mgr.htm"
+      ],
+      "source_attribution": "OpenStreetMap contributors",
+      "coordinate_role": "community_mapped_display_location_not_route_access",
+      "description": "Community-mapped place. Current opening conditions, public access and itinerary feasibility have not been verified."
+    },
+    {
+      "place_id": "osm_way_422130707",
+      "name": "Griffith Park Train Rides",
+      "display_coordinate": {
+        "latitude": 34.1218839,
+        "longitude": -118.2734114
+      },
+      "place_categories": [
+        "nature",
+        "outdoor"
+      ],
+      "source_refs": [
+        "https://www.openstreetmap.org/way/422130707",
+        "https://www.griffithparktrainrides.com/"
+      ],
+      "source_attribution": "OpenStreetMap contributors",
+      "coordinate_role": "community_mapped_display_location_not_route_access",
+      "description": "Community-mapped place. Current opening conditions, public access and itinerary feasibility have not been verified."
+    },
+    {
+      "place_id": "osm_way_493811440",
+      "name": "Anderson Collection at Stanford University",
+      "display_coordinate": {
+        "latitude": 37.4337669,
+        "longitude": -122.1707829
+      },
+      "place_categories": [
+        "culture"
+      ],
+      "source_refs": [
+        "https://www.openstreetmap.org/way/493811440",
+        "https://anderson.stanford.edu/"
+      ],
+      "source_attribution": "OpenStreetMap contributors",
+      "coordinate_role": "community_mapped_display_location_not_route_access",
+      "description": "Community-mapped place. Current opening conditions, public access and itinerary feasibility have not been verified."
+    },
+    {
+      "place_id": "osm_way_623256480",
+      "name": "Carriage Museum",
+      "display_coordinate": {
+        "latitude": 34.426289,
+        "longitude": -119.697618
+      },
+      "place_categories": [
+        "culture"
+      ],
+      "source_refs": [
+        "https://www.openstreetmap.org/way/623256480"
+      ],
+      "source_attribution": "OpenStreetMap contributors",
+      "coordinate_role": "community_mapped_display_location_not_route_access",
+      "description": "Community-mapped place. Current opening conditions, public access and itinerary feasibility have not been verified."
+    },
+    {
+      "place_id": "osm_way_695742276",
+      "name": "Stone River",
+      "display_coordinate": {
+        "latitude": 37.4332494,
+        "longitude": -122.1692992
+      },
+      "place_categories": [
+        "culture"
+      ],
+      "source_refs": [
+        "https://www.openstreetmap.org/way/695742276"
+      ],
+      "source_attribution": "OpenStreetMap contributors",
+      "coordinate_role": "community_mapped_display_location_not_route_access",
+      "description": "Community-mapped place. Current opening conditions, public access and itinerary feasibility have not been verified."
+    },
+    {
+      "place_id": "osm_way_935703175",
+      "name": "Courthouse Clock Tower",
+      "display_coordinate": {
+        "latitude": 34.4242305,
+        "longitude": -119.7024667
+      },
+      "place_categories": [
+        "nature",
+        "outdoor"
+      ],
+      "source_refs": [
+        "https://www.openstreetmap.org/way/935703175"
+      ],
+      "source_attribution": "OpenStreetMap contributors",
+      "coordinate_role": "community_mapped_display_location_not_route_access",
+      "description": "Community-mapped place. Current opening conditions, public access and itinerary feasibility have not been verified."
+    },
+    {
+      "place_id": "osm_way_1005686536",
+      "name": "Hollywood Sculpture Garden",
+      "display_coordinate": {
+        "latitude": 34.113902,
+        "longitude": -118.3235423
+      },
+      "place_categories": [
+        "culture"
+      ],
+      "source_refs": [
+        "https://www.openstreetmap.org/way/1005686536"
+      ],
+      "source_attribution": "OpenStreetMap contributors",
+      "coordinate_role": "community_mapped_display_location_not_route_access",
+      "description": "Community-mapped place. Current opening conditions, public access and itinerary feasibility have not been verified."
+    },
+    {
+      "place_id": "osm_way_1059255187",
+      "name": "Walk of Fame",
+      "display_coordinate": {
+        "latitude": 34.1031907,
+        "longitude": -118.3265684
+      },
+      "place_categories": [
+        "nature",
+        "outdoor"
+      ],
+      "source_refs": [
+        "https://www.openstreetmap.org/way/1059255187"
+      ],
+      "source_attribution": "OpenStreetMap contributors",
+      "coordinate_role": "community_mapped_display_location_not_route_access",
+      "description": "Community-mapped place. Current opening conditions, public access and itinerary feasibility have not been verified."
+    },
+    {
+      "place_id": "osm_way_1067461716",
+      "name": "Bicentennial Friendship Fountain",
+      "display_coordinate": {
+        "latitude": 34.4120544,
+        "longitude": -119.6890177
+      },
+      "place_categories": [
+        "culture"
+      ],
+      "source_refs": [
+        "https://www.openstreetmap.org/way/1067461716"
+      ],
+      "source_attribution": "OpenStreetMap contributors",
+      "coordinate_role": "community_mapped_display_location_not_route_access",
+      "description": "Community-mapped place. Current opening conditions, public access and itinerary feasibility have not been verified."
+    },
+    {
+      "place_id": "osm_way_1078027190",
+      "name": "Field Station",
+      "display_coordinate": {
+        "latitude": 37.8036624,
+        "longitude": -122.4557607
+      },
+      "place_categories": [
+        "culture"
+      ],
+      "source_refs": [
+        "https://www.openstreetmap.org/way/1078027190"
+      ],
+      "source_attribution": "OpenStreetMap contributors",
+      "coordinate_role": "community_mapped_display_location_not_route_access",
+      "description": "Community-mapped place. Current opening conditions, public access and itinerary feasibility have not been verified."
+    },
+    {
+      "place_id": "osm_way_1151639044",
+      "name": "Sculpture Garden",
+      "display_coordinate": {
+        "latitude": 37.4328292,
+        "longitude": -122.1709483
+      },
+      "place_categories": [
+        "culture"
+      ],
+      "source_refs": [
+        "https://www.openstreetmap.org/way/1151639044"
+      ],
+      "source_attribution": "OpenStreetMap contributors",
+      "coordinate_role": "community_mapped_display_location_not_route_access",
+      "description": "Community-mapped place. Current opening conditions, public access and itinerary feasibility have not been verified."
+    },
+    {
+      "place_id": "osm_way_1259317303",
+      "name": "Know Where Bar Mural",
+      "display_coordinate": {
+        "latitude": 34.1015903,
+        "longitude": -118.3127233
+      },
+      "place_categories": [
+        "culture"
+      ],
+      "source_refs": [
+        "https://www.openstreetmap.org/way/1259317303"
+      ],
+      "source_attribution": "OpenStreetMap contributors",
+      "coordinate_role": "community_mapped_display_location_not_route_access",
+      "description": "Community-mapped place. Current opening conditions, public access and itinerary feasibility have not been verified."
+    },
+    {
+      "place_id": "osm_way_1259317307",
+      "name": "Zen Gallery",
+      "display_coordinate": {
+        "latitude": 34.1015264,
+        "longitude": -118.3129555
+      },
+      "place_categories": [
+        "culture"
+      ],
+      "source_refs": [
+        "https://www.openstreetmap.org/way/1259317307"
+      ],
+      "source_attribution": "OpenStreetMap contributors",
+      "coordinate_role": "community_mapped_display_location_not_route_access",
+      "description": "Community-mapped place. Current opening conditions, public access and itinerary feasibility have not been verified."
+    },
+    {
+      "place_id": "osm_way_1281075467",
+      "name": "Walk of Fame",
+      "display_coordinate": {
+        "latitude": 34.1017545,
+        "longitude": -118.3259517
+      },
+      "place_categories": [
+        "nature",
+        "outdoor"
+      ],
+      "source_refs": [
+        "https://www.openstreetmap.org/way/1281075467"
+      ],
+      "source_attribution": "OpenStreetMap contributors",
+      "coordinate_role": "community_mapped_display_location_not_route_access",
+      "description": "Community-mapped place. Current opening conditions, public access and itinerary feasibility have not been verified."
+    },
+    {
+      "place_id": "osm_way_1281075469",
+      "name": "Walk of Fame",
+      "display_coordinate": {
+        "latitude": 34.1015195,
+        "longitude": -118.3259514
+      },
+      "place_categories": [
+        "nature",
+        "outdoor"
+      ],
+      "source_refs": [
+        "https://www.openstreetmap.org/way/1281075469"
+      ],
+      "source_attribution": "OpenStreetMap contributors",
+      "coordinate_role": "community_mapped_display_location_not_route_access",
+      "description": "Community-mapped place. Current opening conditions, public access and itinerary feasibility have not been verified."
+    },
+    {
+      "place_id": "osm_way_1281075475",
+      "name": "Walk of Fame",
+      "display_coordinate": {
+        "latitude": 34.1015241,
+        "longitude": -118.3244772
+      },
+      "place_categories": [
+        "nature",
+        "outdoor"
+      ],
+      "source_refs": [
+        "https://www.openstreetmap.org/way/1281075475"
+      ],
+      "source_attribution": "OpenStreetMap contributors",
+      "coordinate_role": "community_mapped_display_location_not_route_access",
+      "description": "Community-mapped place. Current opening conditions, public access and itinerary feasibility have not been verified."
+    },
+    {
+      "place_id": "osm_way_1425760583",
+      "name": "Walk of Fame",
+      "display_coordinate": {
+        "latitude": 34.1036488,
+        "longitude": -118.3268402
+      },
+      "place_categories": [
+        "nature",
+        "outdoor"
+      ],
+      "source_refs": [
+        "https://www.openstreetmap.org/way/1425760583"
+      ],
+      "source_attribution": "OpenStreetMap contributors",
+      "coordinate_role": "community_mapped_display_location_not_route_access",
+      "description": "Community-mapped place. Current opening conditions, public access and itinerary feasibility have not been verified."
+    },
+    {
+      "place_id": "osm_way_1547858061",
+      "name": "Liquid Light",
+      "display_coordinate": {
+        "latitude": 37.4345063,
+        "longitude": -122.1770087
+      },
+      "place_categories": [
+        "culture"
+      ],
+      "source_refs": [
+        "https://www.openstreetmap.org/way/1547858061"
+      ],
+      "source_attribution": "OpenStreetMap contributors",
+      "coordinate_role": "community_mapped_display_location_not_route_access",
+      "description": "Community-mapped place. Current opening conditions, public access and itinerary feasibility have not been verified."
+    },
+    {
+      "place_id": "osm_relation_1706337",
+      "name": "Hollywood Sign",
+      "display_coordinate": {
+        "latitude": 34.1340628,
+        "longitude": -118.3216464
+      },
+      "place_categories": [
+        "nature",
+        "outdoor"
+      ],
+      "source_refs": [
+        "https://www.openstreetmap.org/relation/1706337"
+      ],
+      "source_attribution": "OpenStreetMap contributors",
+      "coordinate_role": "community_mapped_display_location_not_route_access",
+      "description": "Community-mapped place. Current opening conditions, public access and itinerary feasibility have not been verified."
+    },
+    {
+      "place_id": "osm_relation_2400284",
+      "name": "Hollywood Walk of Fame",
+      "display_coordinate": {
+        "latitude": 34.1008789,
+        "longitude": -118.3337938
+      },
+      "place_categories": [
+        "nature",
+        "outdoor"
+      ],
+      "source_refs": [
+        "https://www.openstreetmap.org/relation/2400284"
+      ],
+      "source_attribution": "OpenStreetMap contributors",
+      "coordinate_role": "community_mapped_display_location_not_route_access",
+      "description": "Community-mapped place. Current opening conditions, public access and itinerary feasibility have not been verified."
+    },
+    {
+      "place_id": "osm_relation_5504536",
+      "name": "Fort Point",
+      "display_coordinate": {
+        "latitude": 37.8105085,
+        "longitude": -122.4771042
+      },
+      "place_categories": [
+        "nature",
+        "outdoor"
+      ],
+      "source_refs": [
+        "https://www.openstreetmap.org/relation/5504536"
+      ],
+      "source_attribution": "OpenStreetMap contributors",
+      "coordinate_role": "community_mapped_display_location_not_route_access",
+      "description": "Community-mapped place. Current opening conditions, public access and itinerary feasibility have not been verified."
+    },
+    {
+      "place_id": "osm_relation_6246565",
+      "name": "Hollyhock House",
+      "display_coordinate": {
+        "latitude": 34.1000128,
+        "longitude": -118.2943686
+      },
+      "place_categories": [
+        "culture"
+      ],
+      "source_refs": [
+        "https://www.openstreetmap.org/relation/6246565"
+      ],
+      "source_attribution": "OpenStreetMap contributors",
+      "coordinate_role": "community_mapped_display_location_not_route_access",
+      "description": "Community-mapped place. Current opening conditions, public access and itinerary feasibility have not been verified."
+    },
+    {
+      "place_id": "osm_relation_6260731",
+      "name": "Baker Beach (Clothing-Optional Area)",
+      "display_coordinate": {
+        "latitude": 37.7976374,
+        "longitude": -122.4818363
+      },
+      "place_categories": [
+        "nature",
+        "outdoor"
+      ],
+      "source_refs": [
+        "https://www.openstreetmap.org/relation/6260731",
+        "https://nudebeachmap.com/places/baker-beach/"
+      ],
+      "source_attribution": "OpenStreetMap contributors",
+      "coordinate_role": "community_mapped_display_location_not_route_access",
+      "description": "Community-mapped place. Current opening conditions, public access and itinerary feasibility have not been verified."
+    },
+    {
+      "place_id": "osm_relation_6260732",
+      "name": "Baker Beach",
+      "display_coordinate": {
+        "latitude": 37.7931528,
+        "longitude": -122.4847402
+      },
+      "place_categories": [
+        "nature",
+        "outdoor"
+      ],
+      "source_refs": [
+        "https://www.openstreetmap.org/relation/6260732"
+      ],
+      "source_attribution": "OpenStreetMap contributors",
+      "coordinate_role": "community_mapped_display_location_not_route_access",
+      "description": "Community-mapped place. Current opening conditions, public access and itinerary feasibility have not been verified."
+    },
+    {
+      "place_id": "osm_relation_9704740",
+      "name": "White Memorial Fountain",
+      "display_coordinate": {
+        "latitude": 37.4249636,
+        "longitude": -122.1693806
+      },
+      "place_categories": [
+        "nature",
+        "outdoor"
+      ],
+      "source_refs": [
+        "https://www.openstreetmap.org/relation/9704740"
+      ],
+      "source_attribution": "OpenStreetMap contributors",
+      "coordinate_role": "community_mapped_display_location_not_route_access",
+      "description": "Community-mapped place. Current opening conditions, public access and itinerary feasibility have not been verified."
+    },
+    {
+      "place_id": "osm_relation_12236339",
+      "name": "Cantor Arts Center",
+      "display_coordinate": {
+        "latitude": 37.4330227,
+        "longitude": -122.1709108
+      },
+      "place_categories": [
+        "culture"
+      ],
+      "source_refs": [
+        "https://www.openstreetmap.org/relation/12236339"
+      ],
+      "source_attribution": "OpenStreetMap contributors",
+      "coordinate_role": "community_mapped_display_location_not_route_access",
+      "description": "Community-mapped place. Current opening conditions, public access and itinerary feasibility have not been verified."
+    }
+  ]
+}

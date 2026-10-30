@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import {test} from "node:test";
 import { reduceConfirmedMapDraftOperations } from "../../src/itinerary_system/product_app/static/js/map.js";
 
 const WAYPOINT_ID = `waypoint_${"a".repeat(32)}`;
@@ -15,8 +16,9 @@ const DURATION = Object.freeze({
   maximum_minutes: 60,
 });
 
-function routeLeg({ hashCharacter, originId, destinationId, coordinates }) {
+function routeLeg({ hashCharacter, originId, destinationId, coordinates, provider = "runtime_osrm" }) {
   const queryHash = hashCharacter.repeat(64);
+  const prefix = provider === "openrouteservice" ? "ors" : "osrm";
   return {
     route_leg_id: `preview_leg_${queryHash.slice(0, 16)}`,
     origin_id: originId,
@@ -26,11 +28,11 @@ function routeLeg({ hashCharacter, originId, destinationId, coordinates }) {
     geometry: { type: "LineString", coordinates },
     distance_m: 1250,
     duration_s: 180,
-    provider: "runtime_osrm",
-    routing_status: "osrm_route_validated",
-    geometry_source: "runtime_osrm_geojson",
-    distance_source: "runtime_osrm_route",
-    duration_source: "runtime_osrm_route",
+    provider,
+    routing_status: `${prefix}_route_validated`,
+    geometry_source: `runtime_${prefix}_geojson`,
+    distance_source: `runtime_${prefix}_route`,
+    duration_source: `runtime_${prefix}_route`,
     road_validated: true,
     fallback_used: false,
     query_hash: queryHash,
@@ -48,16 +50,19 @@ function operation({
   accessCharacter = "f",
   access = [-118.25, 34.05],
   hashCharacters = ["1", "2"],
+  provider = "runtime_osrm",
 } = {}) {
   const legs = [
     routeLeg({
       hashCharacter: hashCharacters[0],
+      provider,
       originId: INSERTION.predecessor_id,
       destinationId: WAYPOINT_ID,
       coordinates: [[-118.3, 34.0], access],
     }),
     routeLeg({
       hashCharacter: hashCharacters[1],
+      provider,
       originId: WAYPOINT_ID,
       destinationId: INSERTION.successor_id,
       coordinates: [access, [-118.2, 34.1]],
@@ -81,7 +86,7 @@ function operation({
         access_point_id: `access_${accessCharacter.repeat(32)}`,
         access_type: "road_snap",
         coordinate: { latitude: access[1], longitude: access[0] },
-        source: "runtime_osrm",
+        source: provider,
         road_validated: true,
         access_confidence: "road_snap_only",
         evidence_refs: legs.map((leg) => `route_query:${leg.query_hash}`),
@@ -179,3 +184,33 @@ const relocationWithoutAdd = reduceConfirmedMapDraftOperations([relocated], 7);
 assert.equal(relocationWithoutAdd.waypoints.length, 0);
 
 console.log("confirmed waypoint reducer adversarial cases passed");
+
+test("server-confirmed ORS waypoint additions and relocations retain exact route provenance", () => {
+  const added = operation({provider: "openrouteservice"});
+  const relocated = operation({provider: "openrouteservice", type: "relocate_custom_waypoint",
+    operationCharacter: "d", snapCharacter: "e", accessCharacter: "9", access: [-118.24, 34.06], hashCharacters: ["3", "4"]});
+  const result = reduceConfirmedMapDraftOperations([added, relocated], 7);
+  assert.equal(result.waypoints.length, 1);
+  assert.deepEqual(result.waypoints[0].coordinate, [-118.24, 34.06]);
+  assert.deepEqual(result.routeLegs, relocated.parameters.affected_route_legs.map(leg => ({...leg, waypoint_id: WAYPOINT_ID})));
+  assert.ok(result.routeLegs.every(leg => leg.provider === "openrouteservice" && leg.routing_status === "ors_route_validated"));
+});
+
+for (const field of ["routing_status", "geometry_source", "distance_source", "duration_source"]) {
+  test(`ORS legs cannot borrow OSRM ${field}`, () => {
+    const candidate = operation({provider: "openrouteservice"});
+    candidate.parameters.affected_route_legs[0][field] = operation().parameters.affected_route_legs[0][field];
+    assert.deepEqual(reduceConfirmedMapDraftOperations([candidate], 7), {waypoints: [], routeLegs: []});
+  });
+}
+
+for (const provider of ["runtime_osrm", "openrouteservice"]) {
+  test(`${provider} access evidence rejects a route pair with a different provider`, () => {
+    const candidate = operation({provider});
+    const other = operation({provider: provider === "runtime_osrm" ? "openrouteservice" : "runtime_osrm"});
+    candidate.parameters.affected_route_legs[1] = other.parameters.affected_route_legs[1];
+    assert.deepEqual(reduceConfirmedMapDraftOperations([candidate], 7), {waypoints: [], routeLegs: []});
+    candidate.parameters.affected_route_legs = other.parameters.affected_route_legs;
+    assert.deepEqual(reduceConfirmedMapDraftOperations([candidate], 7), {waypoints: [], routeLegs: []});
+  });
+}

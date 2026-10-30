@@ -185,6 +185,8 @@ def build_interest_surface(
     manifest: dict,
     bandwidth_m: float = 1000.0,
     grid_size: int = 128,
+    search_center: np.ndarray | None = None,
+    search_radius_m: float | None = None,
 ) -> dict:
     points = np.asarray(coordinates, dtype=float)
     draws = np.asarray(probability_draws, dtype=float)
@@ -207,6 +209,20 @@ def build_interest_surface(
     ):
         raise ValueError("interest_surface_input_invalid")
     center = points.mean(axis=0)
+    if search_center is not None:
+        search_center = np.asarray(search_center, dtype=float)
+        if (
+            search_center.shape != (2,)
+            or not np.isfinite(search_center).all()
+            or np.any(np.abs(search_center) > [180, 85])
+            or isinstance(search_radius_m, bool)
+            or not isinstance(search_radius_m, (int, float))
+            or not np.isfinite(search_radius_m)
+            or not 1000 <= search_radius_m <= 25000
+        ):
+            raise ValueError("interest_search_area_invalid")
+    elif search_radius_m is not None:
+        raise ValueError("interest_search_area_invalid")
     projected = _project(points, center)
     low, high = projected.min(axis=0) - 3 * bandwidth_m, projected.max(axis=0) + 3 * bandwidth_m
     if np.max(high - low) > 250_000:
@@ -218,6 +234,14 @@ def build_interest_surface(
     window = shapely.box(*(corners.min(axis=0) - 0.01), *(corners.max(axis=0) + 0.01))
     geographic_support = _local_support(geometry, manifest["coverage_bbox"], window)
     projected_support = shapely.transform(geographic_support, lambda coordinates: _project(coordinates, center))
+    if search_center is not None:
+        local_center = _project(search_center[None, :], center)[0]
+        projected_support = projected_support.intersection(
+            shapely.Point(local_center).buffer(search_radius_m, quad_segs=64)
+        )
+        geographic_support = shapely.transform(
+            projected_support, lambda coordinates: _project(coordinates, center, inverse=True)
+        )
     shapely.prepare(projected_support)
     cells = shapely.box(
         np.tile(x[:-1], grid_size),

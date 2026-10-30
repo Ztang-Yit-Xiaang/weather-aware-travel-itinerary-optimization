@@ -263,7 +263,8 @@ def test_compare_and_evidence_preserve_nulls_and_selected_plan_ownership() -> No
     assert "const methods = selectedEvidence?.methods || {};" in app
     assert "const sourceHashCount = Object.keys(selectedEvidence?.source_hashes || {}).length;" in app
     assert "routeSummaryForPlan(selectedPlan)" in app
-    assert "evidence-bundle?plan_id=${encodeURIComponent(selectedAlternative.plan_id)}" in app
+    assert "downloadEvidenceBundle(runId, selectedAlternative.plan_id, event.currentTarget)" in app
+    assert "evidence-bundle?plan_id=${encodeURIComponent(planId)}" in app
     assert "2 · Policy and modeled-feasibility checks" in app
     assert app.index("3 · Route and source evidence") < app.index("5 · Technical lineage")
     assert "Typed drafts can produce independently evaluated children" in index
@@ -274,7 +275,8 @@ def test_w3_restores_session_without_putting_the_mutation_token_in_a_url() -> No
     source = APP_JS.read_text(encoding="utf-8")
 
     assert 'const SESSION_STORAGE_KEY = "itinerary-repair-copilot.session.v1"' in source
-    assert "sessionStorage.setItem" in source
+    assert "workspaceStorage.setItem" in source
+    assert "persistent: localStorage, tab: sessionStorage" in source
     assert "mutation_token: payload.mutation_token" in source
     assert "X-Session-Token" in source
     assert "?mutation_token=" not in source

@@ -67,15 +67,34 @@ test("the observed narrow Compare tile footprint remains below the unchanged rea
 });
 
 test("camera padding scales to the actual pane instead of consuming half a narrow viewport", () => {
-  const source = readFileSync(new URL("../../src/itinerary_system/product_app/static/js/map-controller-v2.js", import.meta.url), "utf8");
+  const source = readFileSync(new URL("../../src/itinerary_system/product_app/static/js/map-controller-v2.js", import.meta.url), "utf8").replaceAll("\r\n", "\n");
   const match = source.match(/const fitBoundsOptions = (\{[\s\S]*?\n      \});/);
   assert.ok(match, "Both construction and final fitting must use the same bounded viewport options");
   const options = new Function("container", `return (${match[1]});`);
   assert.deepEqual(options({ clientWidth:204, clientHeight:334 }), {padding:25.5,maxZoom:13,duration:0});
   assert.deepEqual(options({ clientWidth:720, clientHeight:650 }), {padding:54,maxZoom:13,duration:0});
-  assert.ok(source.includes("fitBoundsOptions,\n"));
+  const construction = source.match(/new window\.maplibregl\.Map\((\{[\s\S]*?\n      \})\)/);
+  assert.ok(construction, "Map construction must retain the canonical fit options");
+  const fitOptions = options({clientWidth:204, clientHeight:334});
+  const initial = new Function("container", "basemap", "initialCamera", "fittedBounds", "fitBoundsOptions", `return (${construction[1]});`)(
+    {}, {style: "test-style"}, null, [-123, 34, -118, 39], fitOptions);
+  assert.equal(initial.fitBoundsOptions, fitOptions, "Initial fitting uses the same bounded options as refitting");
   assert.ok(source.includes("nextMap.fitBounds(fittedBounds, fitBoundsOptions)"));
-  assert.ok(source.includes("nextMap.resize();\n        refitBounds();"), "Resize must refit canonical selection bounds, not just repaint tiles");
-  assert.match(source, /observeMapSize\(nextMap, renderGeneration, validateReady, \(\) => \{\s*nextMap\.fitBounds\(fittedBounds, \{\s*\.\.\.fitBoundsOptions,\s*padding: Math\.min\(54, Math\.min\(container\.clientWidth, container\.clientHeight\) \/ 8\)/,
-    "Resize padding must be recomputed from the current map viewport");
+  const observe = source.slice(source.indexOf("  function observeMapSize("), source.indexOf("  async function render("));
+  assert.ok(observe.startsWith("  function observeMapSize("));
+  const frames = [];
+  let resizes = 0, repaints = 0;
+  const nextMap = {resize: () => resizes++, triggerRepaint: () => repaints++,
+    fitBounds() { assert.fail("Pane resizing must preserve the user's current camera"); }};
+  new Function("nextMap", "container", "ResizeObserver", "requestAnimationFrame", "window", `
+    let generation = 1, map = nextMap, resizeFrame = null, resizeObserver;
+    ${observe}
+    observeMapSize(nextMap, 1, () => {});
+  `)(nextMap, {isConnected: true, dataset: {}, getBoundingClientRect: () => ({width:204, height:334})},
+    class {constructor(callback) { this.callback = callback; } observe() { this.callback(); }},
+    callback => { frames.push(callback); return 1; }, {addEventListener() {}, removeEventListener() {}});
+  assert.equal(frames.length, 1);
+  frames[0]();
+  assert.equal(resizes, 1);
+  assert.equal(repaints, 1);
 });

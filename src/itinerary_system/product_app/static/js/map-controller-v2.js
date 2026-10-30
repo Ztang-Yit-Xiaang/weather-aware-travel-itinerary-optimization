@@ -282,6 +282,24 @@ function loadScript(url, id, ready) {
 }
 
 async function loadMapRuntime(config) {
+  if (config?.schema_version === EXPECTED_MAP_SCHEMA && config.status === "ready"
+      && config.provider === "maplibre_raster") {
+    const base = new URL(config.base_url);
+    const expected = window.PRODUCT_DEPLOYMENT?.api_origin || location.origin;
+    const local = base.protocol === "http:" && LOOPBACK_HOSTS.has(base.hostname)
+      && LOOPBACK_HOSTS.has(location.hostname);
+    if (base.origin !== expected || (base.protocol !== "https:" && !local)
+        || base.username || base.password || base.pathname !== "/" || base.search || base.hash
+        || config.script_url !== `${base.origin}/static/vendor/maplibre-gl.js`
+        || config.stylesheet_url !== `${base.origin}/static/vendor/maplibre-gl.css`
+        || config.style_url !== `${base.origin}/public/map-style.json`
+        || config.range_requests_required !== false || config.protocol_script_url !== null) {
+      throw new Error("hosted_map_asset_invalid");
+    }
+    await loadStylesheet(config.stylesheet_url);
+    await loadScript(config.script_url, "hosted-maplibre-runtime", () => Boolean(window.maplibregl?.Map));
+    return config.style_url;
+  }
   if (config?.schema_version !== EXPECTED_MAP_SCHEMA
       || config.status !== "ready" || config.provider !== "maplibre_pmtiles") {
     throw new Error("map_runtime_unavailable");
@@ -1275,9 +1293,14 @@ export function createGeographicMapController({
       const currentInterest = interestRegions?.exploration_plan_id === activePlanId
         && interestRegions.exploration_plan_content_hash === activePlan?.content_hash
         && interestRegions.context?.day === selectedDay ? interestRegions : null;
+      const search = currentInterest?.search_context;
+      const latitudeSpan = search ? search.radius_km / 111.195 : 0;
+      const longitudeSpan = search ? latitudeSpan / Math.cos(search.coordinate.latitude * Math.PI / 180) : 0;
       const interestPositions = currentInterest ? [
+        ...(search ? [[search.coordinate.longitude - longitudeSpan, search.coordinate.latitude - latitudeSpan],
+          [search.coordinate.longitude + longitudeSpan, search.coordinate.latitude + latitudeSpan]] : []),
         ...currentInterest.poi_predictions.map(point => [point.display_coordinate.longitude, point.display_coordinate.latitude]),
-        ...currentInterest.required_points.filter(point => point.coordinate).map(point => point.coordinate),
+        ...currentInterest.required_points.filter(point => point.coordinate && !search).map(point => point.coordinate),
         ...currentInterest.surface.regions_geojson.features.flatMap(feature => feature.geometry.coordinates.flat(2)),
       ] : [];
       const interestBounds = interestPositions.length ? [

@@ -55,6 +55,14 @@ export function normalizeInterestResponse(payload, expected) {
       || payload.context?.day !== expected.day || payload.context?.route_leg_id !== expected.routeLegId
       || payload.nature_preference !== expected.naturePreference
       || payload.context?.replacement_target_id !== expected.replacementTargetId) throw new Error("interest_context_stale");
+  const search = payload.search_context;
+  if (!search || typeof search.stop_id !== "string" || !search.stop_id || typeof search.name !== "string" || !search.name
+      || !position([search.coordinate?.longitude, search.coordinate?.latitude])
+      || !validNumber(search.radius_km) || search.radius_km < 1 || search.radius_km > 25
+      || search.distance_kind !== "straight_line"
+      || expected.focusStopId && search.stop_id !== expected.focusStopId
+      || expected.searchArea && search.area_mode !== expected.searchArea
+      || expected.radiusKm != null && search.radius_km !== expected.radiusKm) throw new Error("interest_context_stale");
   if (payload.candidate_universe?.truncated !== false || !/^[a-f0-9]{64}$/.test(payload.candidate_universe.sha256 || "")
       || !Array.isArray(payload.poi_predictions) || payload.poi_predictions.length > 500
       || payload.candidate_universe.count !== payload.poi_predictions.length
@@ -70,6 +78,16 @@ export function normalizeInterestResponse(payload, expected) {
         || !Array.isArray(interval) || interval.length !== 2 || !interval.every(validNumber)
         || interval[0] < 0 || interval[1] > 1 || interval[0] > interval[1]
         || point.interval_level !== 0.9) throw new Error("interest_prediction_invalid");
+    if (!validNumber(point.distance_from_focus_km) || point.distance_from_focus_km < 0
+        || point.distance_from_focus_km > search.radius_km) throw new Error("interest_distance_invalid");
+    const radians = Math.PI / 180;
+    const latitude = point.display_coordinate.latitude * radians, originLat = search.coordinate.latitude * radians;
+    const haversine = Math.sin((latitude - originLat) / 2) ** 2 + Math.cos(latitude) * Math.cos(originLat)
+      * Math.sin((point.display_coordinate.longitude - search.coordinate.longitude) * radians / 2) ** 2;
+    const distance = 2 * 6371.0088 * Math.asin(Math.sqrt(Math.min(1, Math.max(0, haversine))));
+    if (distance > search.radius_km + 1e-6 || Math.abs(distance - point.distance_from_focus_km) > 0.01) {
+      throw new Error("interest_distance_invalid");
+    }
     ids.add(point.place_id);
   }
   if (!Array.isArray(payload.required_points) || payload.required_points.length > 500) throw new Error("interest_required_invalid");

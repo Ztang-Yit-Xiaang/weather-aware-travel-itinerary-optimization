@@ -27,6 +27,7 @@ from .interaction_contracts import (
 )
 from .models import DraftOperationV1, ProductSession, utc_now
 from .persistence import SessionSnapshotError, SessionSnapshotStore, StateLockTimeoutError
+from .routing_runtime import RUNTIME_ROUTING_PROVIDERS, valid_runtime_route_provenance
 
 
 class WorkspaceError(ValueError):
@@ -64,8 +65,8 @@ class WorkspaceStore:
     MAX_DRAFT_OPERATIONS = 32
     MAX_PERMISSION_DECISIONS = 32
     MAX_MUTATION_RECEIPTS = 256
-    SESSION_TTL = timedelta(hours=24)
-    SESSION_RETENTION = timedelta(days=30)
+    SESSION_TTL = timedelta(days=90)
+    SESSION_RETENTION = timedelta(days=365)
     _CONVERSATION_ID = re.compile(r"conversation_[0-9a-f]{32}\Z")
 
     def __init__(
@@ -563,7 +564,8 @@ class WorkspaceStore:
             }
             or re.fullmatch(r"access_[0-9a-f]{32}", str(access.get("access_point_id") or "")) is None
             or access.get("access_type") != "road_snap"
-            or access.get("source") != "runtime_osrm"
+            or not isinstance(access.get("source"), str)
+            or access.get("source") not in RUNTIME_ROUTING_PROVIDERS
             or access.get("road_validated") is not True
             or access.get("access_confidence") != "road_snap_only"
             or access.get("coordinate") != snapped_coordinate
@@ -586,6 +588,8 @@ class WorkspaceStore:
         query_refs: list[str] = []
         for leg in legs:
             query_refs.append(cls._validate_confirmed_route_leg(leg))
+            if leg.get("provider") != access["source"]:
+                raise WorkspaceError("invalid_confirmed_map_operation", 422)
         if (
             legs[0]["origin_id"] != insertion["predecessor_id"]
             or legs[1]["destination_id"] != insertion["successor_id"]
@@ -688,11 +692,7 @@ class WorkspaceStore:
             or len(value["destination_id"]) > 128
             or value.get("travel_mode") != "driving"
             or value.get("validation_status") != "road_validated"
-            or value.get("provider") != "runtime_osrm"
-            or value.get("routing_status") != "osrm_route_validated"
-            or value.get("geometry_source") != "runtime_osrm_geojson"
-            or value.get("distance_source") != "runtime_osrm_route"
-            or value.get("duration_source") != "runtime_osrm_route"
+            or not valid_runtime_route_provenance({**value, "routing_profile": value.get("travel_mode")})
             or value.get("road_validated") is not True
             or value.get("fallback_used") is not False
             or not isinstance(query_hash, str)

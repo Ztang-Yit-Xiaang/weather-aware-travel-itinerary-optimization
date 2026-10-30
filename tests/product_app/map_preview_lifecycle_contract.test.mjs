@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import test from "node:test";
 import { recordedJson } from "./recorded-runtime-fixture.mjs";
 import { invalidateMapReadiness } from "../../src/itinerary_system/product_app/static/js/map-controller-v2.js";
+import { restoreInterestPreferences } from "../../src/itinerary_system/product_app/static/js/workspace-storage.js";
 
 const appSource = readFileSync(new URL("../../src/itinerary_system/product_app/static/js/app.js", import.meta.url), "utf8");
 const mapSource = readFileSync(new URL("../../src/itinerary_system/product_app/static/js/map-controller-v2.js", import.meta.url), "utf8");
@@ -343,18 +344,21 @@ test("Keep original uses the same explicit confirmation boundary", async () => {
 });
 
 test("boot restores the selected child stop inspector before the first render", async () => {
-  const state = { route: "/app/itinerary", mapInteraction: { selectionKind: null, selectedStopPlanId: null } };
+  const state = { route: "/app/itinerary", interestRegions: {}, mapInteraction: { selectionKind: null, selectedStopPlanId: null } };
   const selected = { id: "pfeiffer", plan_id: "child", day: 5 };
   let firstRender = null;
   let startupError = null;
-  const boot = loadFunction(sourceSection(appSource, "async function boot()", "\nasync function restoreOrCreateSession()"), "boot", {
+  const boot = loadFunction(sourceSection(appSource, "async function boot()", "\nasync function refreshMapRuntime()"), "boot", {
     state,
     api: async (path) => path === "/api/health"
       ? { schema_version: "product-health-v2", product_id: "itinerary-repair-copilot", core_ready: true }
       : { schema_version: "product-map-configuration-v2" },
     restorePendingMutationInput() {},
+    restoreInterestPreferences, workspaceStorage: { getItem: () => null },
+    interestPreferencesKey: () => `itinerary-repair-copilot.interest.v1:${state.session.trip_id}`,
+    refreshMapRuntime: async () => {},
     mutationRecovery: { restore: async () => null, pending: null },
-    restoreOrCreateSession: async () => ({ workspace: {}, registry: {}, session: { selected_stop_id: "pfeiffer", selected_day: 5 } }),
+    restoreOrCreateSession: async () => ({ workspace: {}, registry: {}, session: { trip_id: "trip", selected_stop_id: "pfeiffer", selected_day: 5 } }),
     syncPreviewRuntimeFromSession() {},
     loadDraftImpactPreview: async () => {},
     bindEvents() {},

@@ -30,3 +30,8 @@ runs/e3ux-weather-repair-demo-v6/manifest.json text eol=lf
 
 # Small portfolio previews are stored as regular Git blobs.
 docs/portfolio-previews/*.gif -filter -diff -merge -text
+
+# Preserve upstream renderer/license bytes and retained raw test receipts.
+src/itinerary_system/product_app/static/vendor/** -text
+docs/reports/full_app_release_20261029/*.xml -text
+docs/reports/full_app_release_20261029/frontend-focused.txt -text

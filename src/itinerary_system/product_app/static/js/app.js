@@ -18,6 +18,9 @@ import {
 import { createMutationRecovery } from "./mutation-recovery.js";
 import { interestPlacesInRegion, normalizeInterestResponse } from "./interest-regions.js";
 
+import { createWorkspaceStorage, restoreInterestPreferences } from "./workspace-storage.js";
+import { productFetch as fetch, currentAppPath, appRouteUrl, ensureHostedLogin, signOutHosted } from "./deployment-client.js";
+
 const state = {
   clientBuildId: document.querySelector('meta[name="product-build-id"]')?.content || "",
   buildRecovery: null,
@@ -32,7 +35,7 @@ const state = {
   sessionRecoveryNotice: null,
   mutationRecovery: { status: "idle", blocked: false, message: "" },
   registry: null,
-  route: normalizeRoute(location.pathname),
+  route: normalizeRoute(currentAppPath()),
   tripPreviewPlanId: null,
   acknowledgedPreviewPlanId: null,
   mapInteraction: {
@@ -59,7 +62,7 @@ const state = {
   interestRegions: {
     enabled: false, status: "idle", response: null, error: null,
     naturePreference: 0, massLevel: 0.8, selectedId: null, generation: 0, controller: null,
-    placeSearch: "", placeScope: "all",
+    placeSearch: "", placeScope: "all", radiusKm: 5, focusStopId: null, searchArea: "visitor_area",
   },
   typedImpact: {
     request: null,
@@ -83,6 +86,25 @@ const SESSION_STORAGE_KEY = "itinerary-repair-copilot.session.v1";
 const PENDING_MUTATION_KEY = "itinerary-repair-copilot.pending-mutation.v1";
 const PENDING_INPUT_KEY = "itinerary-repair-copilot.pending-input.v1";
 
+const workspaceStorage = createWorkspaceStorage({
+  persistent: localStorage, tab: sessionStorage, sessionKey: SESSION_STORAGE_KEY,
+  scopedKeys: [PENDING_MUTATION_KEY, PENDING_INPUT_KEY],
+});
+let interestRefreshRunning = false;
+let interestRefreshTimer = null;
+const interestPreferencesKey = () => `itinerary-repair-copilot.interest.v1:${state.session.trip_id}`;
+function saveInterestPreferences() {
+  const {enabled, radiusKm, naturePreference, massLevel, searchArea} = state.interestRegions;
+  try { workspaceStorage.setItem(interestPreferencesKey(), JSON.stringify({enabled, radiusKm, naturePreference, massLevel, searchArea})); }
+  catch { toast("Interest settings could not be saved for reopening.", true); }
+}
+function scheduleInterestRefresh() {
+  if (!state.interestRegions.enabled || state.interestRegions.status !== "idle"
+      || interestRefreshRunning || pendingSelection || state.route !== "/app/map") return;
+  clearTimeout(interestRefreshTimer);
+  interestRefreshTimer = setTimeout(() => { void fetchInterestRegions(); }, 0);
+}
+
 const $ = (selector, root = document) => root.querySelector(selector);
 const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
 
@@ -105,9 +127,9 @@ const copilot = createCopilotController({
 const mutationRecovery = createMutationRecovery({
   api: (path, options = {}) => api(path, {...options, pendingMutation: true}),
   storage: {
-    getItem: key => sessionStorage.getItem(key),
-    setItem: (key, value) => sessionStorage.setItem(key, value),
-    removeItem: key => sessionStorage.removeItem(key),
+    getItem: key => workspaceStorage.getItem(key),
+    setItem: (key, value) => workspaceStorage.setItem(key, value),
+    removeItem: key => workspaceStorage.removeItem(key),
   },
   key: PENDING_MUTATION_KEY,
   getSession: () => state.session,
@@ -121,7 +143,7 @@ const mutationRecovery = createMutationRecovery({
 function savePendingMutationInput() {
   if (!state.session) return;
   try {
-    sessionStorage.setItem(PENDING_INPUT_KEY, JSON.stringify({
+    workspaceStorage.setItem(PENDING_INPUT_KEY, JSON.stringify({
       session_id: state.session.session_id, text: $("#copilot-input")?.value || "",
     }));
   } catch {
@@ -131,7 +153,7 @@ function savePendingMutationInput() {
 
 function restorePendingMutationInput() {
   try {
-    const saved = JSON.parse(sessionStorage.getItem(PENDING_INPUT_KEY) || "null");
+    const saved = JSON.parse(workspaceStorage.getItem(PENDING_INPUT_KEY) || "null");
     if (saved?.session_id === state.session.session_id && typeof saved.text === "string" && saved.text.length <= 20_000) {
       $("#copilot-input").value = saved.text;
     }
@@ -3525,6 +3547,11 @@ function normalizeRoute(path) {
 }
 
 const API_ERROR_COPY = {
+  owner_sign_in_required: "Please sign in again to open your private workspace.",
+  hosted_auth_unavailable: "Sign-in is temporarily unavailable. Your workspace has been kept. Please try again.",
+  hosted_state_unavailable: "Your workspace is temporarily unavailable. Saved changes are protected; please try again after the service restarts.",
+  invalid_copilot_stream: "The reply could not be read. Check the saved conversation before trying again.",
+  copilot_stream_incomplete: "The connection closed before the reply finished. Check its saved status before sending it again.",
   copilot_outcome_unknown: "The provider outcome is unknown. This message will not be sent again automatically; checking it only reconciles saved status.",
   copilot_result_context_stale: "The itinerary changed while the reply was running. The reply is retained in history but cannot stage changes for this newer itinerary.",
   conversation_turn_limit_reached: "This conversation is full. Start a new conversation before sending another message. No provider call was made.",
@@ -3748,6 +3775,7 @@ async function boot() {
     syncPreviewRuntimeFromSession({ invalidate: false });
     if (payload.mutation_token) state.token = payload.mutation_token;
     state.registry = payload.registry;
+    Object.assign(state.interestRegions, restoreInterestPreferences(workspaceStorage, interestPreferencesKey()));
     restorePendingMutationInput();
     try { await mutationRecovery.restore(); } catch { /* The recovery panel retains an unreadable record. */ }
     await loadDraftImpactPreview({ render: false });
@@ -3802,30 +3830,30 @@ async function refreshMapRuntime() {
 async function restoreOrCreateSession() {
   let saved = null;
   try {
-    saved = JSON.parse(sessionStorage.getItem(SESSION_STORAGE_KEY) || "null");
+    saved = JSON.parse(workspaceStorage.getItem(SESSION_STORAGE_KEY) || "null");
   } catch {
-    sessionStorage.removeItem(SESSION_STORAGE_KEY);
+    workspaceStorage.removeItem(SESSION_STORAGE_KEY);
   }
   if (saved?.session_id && saved?.mutation_token) {
     state.token = saved.mutation_token;
     try {
       return await api(`/api/sessions/${encodeURIComponent(saved.session_id)}`);
     } catch (error) {
-      if (isBuildMismatch(error?.code) || sessionStorage.getItem(PENDING_MUTATION_KEY)
+      if (isBuildMismatch(error?.code) || workspaceStorage.getItem(PENDING_MUTATION_KEY)
           || error.status !== 404 || !["unknown_session", "session_not_found", "session_expired"].includes(error.code)) throw error;
       if (error.code === "session_expired") {
         state.sessionRecoveryNotice = "Your editing session expired. Your accepted itinerary is current. Earlier drafts are retained for recovery and have not been reapplied.";
       }
       state.token = null;
-      sessionStorage.removeItem(SESSION_STORAGE_KEY);
+      workspaceStorage.removeItem(SESSION_STORAGE_KEY);
     }
   }
-  if (sessionStorage.getItem(PENDING_MUTATION_KEY)) {
+  if (workspaceStorage.getItem(PENDING_MUTATION_KEY)) {
     throw new Error("The pending action's workspace credentials could not be restored. Its saved record has been preserved.");
   }
   const payload = await api("/api/sessions", { method: "POST", body: {} });
   state.token = payload.mutation_token;
-  sessionStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify({
+  workspaceStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify({
     session_id: payload.session.session_id,
     mutation_token: payload.mutation_token,
   }));
@@ -3870,6 +3898,7 @@ function renderCoreRecovery(health) {
 }
 
 function renderStartupFailure(error) {
+  if ($("#loading-screen")?.querySelector?.(".hosted-login")) return;
   if (isBuildMismatch(error?.code)) return renderBuildRecovery(error.code);
   const code = error?.message === "invalid_product_health" ? "invalid_product_health" : "health_unavailable";
   $("#loading-screen").classList.add("recovery-screen");
@@ -3918,6 +3947,12 @@ function applyRuntimeAvailability() {
 }
 
 function bindEvents() {
+  const signOut = $("#hosted-sign-out");
+  signOut.hidden = window.PRODUCT_DEPLOYMENT?.static_frontend !== true;
+  if (!signOut.hidden) signOut.addEventListener("click", () => {
+    signOutHosted();
+    location.reload();
+  });
   $$("[data-route]").forEach((button) => button.addEventListener("click", () => navigate(button.dataset.route)));
   copilot.bind();
   bindWorkspaceSynchronization();
@@ -3927,7 +3962,7 @@ function bindEvents() {
   $("#map-edit-button").addEventListener("click", () => setMapInteractionMode("edit"));
   $("#map-interest-button").addEventListener("click", () => {
     if (state.interestRegions.enabled) {
-      resetInterestRegions();
+      resetInterestRegions({hide: true});
       renderMap();
     } else {
       void fetchInterestRegions();
@@ -3971,7 +4006,7 @@ function bindEvents() {
     }
   });
   window.addEventListener("popstate", () => {
-    state.route = normalizeRoute(location.pathname);
+    state.route = normalizeRoute(currentAppPath());
     renderAll();
   });
   setupDockResize();
@@ -3979,7 +4014,7 @@ function bindEvents() {
 
 function navigate(route) {
   const normalized = normalizeRoute(route);
-  if (location.pathname !== normalized) history.pushState({}, "", normalized);
+  if (currentAppPath() !== normalized) history.pushState({}, "", appRouteUrl(normalized));
   state.route = normalized;
   if (normalized === "/app/compare" && !state.session.selected_alternative_id && !activeProposalPlan()) {
     const recommendedId = recommendedAlternativeId();
@@ -4544,6 +4579,9 @@ function currentInterestResponse() {
     && value.exploration_plan_id === displayed?.plan_id
     && value.exploration_plan_content_hash === displayed?.content_hash
     && value.context.day === state.session.selected_day
+    && value.search_context?.area_mode === state.interestRegions.searchArea
+    && value.search_context?.radius_km === state.interestRegions.radiusKm
+    && value.search_context?.stop_id === state.interestRegions.focusStopId
     && value.context.route_leg_id === state.session.selected_segment_id ? value : null;
 }
 
@@ -4561,14 +4599,55 @@ function interestPlaceListHtml(response) {
   const inside = new Set(regionPoints.map(point => point.place_id));
   const points = (view.placeScope === "region" ? regionPoints : response.poi_predictions)
     .filter(point => `${point.name} ${(point.place_categories || []).join(" ")}`.toLocaleLowerCase().includes(query))
-    .slice().sort((a, b) => b.interest_probability_mean - a.interest_probability_mean || a.name.localeCompare(b.name));
+    .slice().sort((a, b) => (a.distance_from_focus_km || 0) - (b.distance_from_focus_km || 0)
+      || b.interest_probability_mean - a.interest_probability_mean || a.name.localeCompare(b.name));
   const hasRegion = response.surface.status === "ready";
   return `<p role="status">${points.length} matching places · ${response.poi_predictions.length} nearby in this catalog.</p>
     ${points.length ? `<ol class="interest-place-list">${points.map(point => `<li><button type="button" data-interest-place="${escapeHtml(point.place_id)}" aria-pressed="${point.place_id === view.selectedId}">
-      <strong>${escapeHtml(point.name)}</strong><span>${Math.round(point.interest_probability_mean * 100)}% estimated interest</span>
+      <strong>${escapeHtml(point.name)}</strong><span>${Math.round(point.interest_probability_mean * 100)}% estimated interest${Number.isFinite(point.distance_from_focus_km) ? ` · ${point.distance_from_focus_km.toFixed(1)} km away` : ""}</span>
       <small>${escapeHtml((point.place_categories || []).map(humanLabel).join(", ") || "Category unavailable")} · ${hasRegion ? inside.has(point.place_id) ? "Inside selected boundary" : "Outside selected boundary" : "Boundary unavailable"}</small>
       <small>90% model interval: ${point.interest_probability_interval.map(value => `${Math.round(value * 100)}%`).join("–")} · ${escapeHtml(humanLabel(point.feasibility_status))} · Locate on map</small>
     </button></li>`).join("")}</ol>` : response.poi_predictions.length ? "<p>No catalog places match this filter. Try All nearby places or another search.</p>" : "<p>No nearby places are recorded for this route yet. Choose another day or route to explore.</p>"}`;
+}
+
+function interestPlaceDataHtml(data) {
+  if (!data) return "";
+  const label = {live: "Online places", fresh_cache: "Saved online places", stale_cache: "Older saved online places", bundled_fallback: "Saved place catalog"}[data.status] || "Place data";
+  const date = Date.parse(data.fetched_at || data.bundled_snapshot_at || "");
+  const updated = Number.isFinite(date) ? ` · ${data.fetched_at ? "fetched" : "map snapshot"} ${new Date(date).toLocaleString()}` : "";
+  const note = data.error_code === "nearby_cache_write_failed" ? " These online results could not be saved for reopening."
+    : data.error_code === "nearby_response_limit_exceeded" ? " Online search was too broad; try a smaller radius."
+    : ["nearby_refresh_cooldown", "nearby_refresh_in_progress"].includes(data.error_code) ? " Online refresh is temporarily paused; saved places remain available."
+    : data.error_code ? " Online refresh is unavailable; showing saved places." : "";
+  return `<small class="interest-place-source" role="status">${escapeHtml(label + updated + note)}</small>`;
+}
+
+function interestMapSummaryHtml(response) {
+  const view = state.interestRegions;
+  if (!view.enabled) return "";
+  if (!response) {
+    const failed = view.status === "failed";
+    const message = view.error === "poi_route_matrix_invalid"
+      ? "The route evidence could not be read. Retry to check again."
+      : view.error || "Finding nearby places for this route…";
+    return `<aside class="interest-map-summary" aria-label="Interest places">
+      <strong>${failed ? "Interest region unavailable" : "Loading interest region…"}</strong>
+      <span role="${failed ? "alert" : "status"}">${escapeHtml(message)}</span>
+      ${failed ? '<button type="button" id="retry-interest-regions">Retry interest region</button>' : ""}</aside>`;
+  }
+  const selected = response.poi_predictions.find(point => point.place_id === view.selectedId);
+  const required = response.required_points.find(point => point.place_id === view.selectedId);
+  const search = response.search_context;
+  return `<aside class="interest-map-summary" aria-label="Interest places"><strong>${response.poi_predictions.length} nearby ${response.poi_predictions.length === 1 ? "place" : "places"}</strong>
+    <span>Around ${escapeHtml(search.name)}</span>
+    <label>Search radius <select id="interest-radius" aria-label="Nearby search radius">${[1, 2, 5, 10].map(radius => `<option value="${radius}" ${radius === search.radius_km ? "selected" : ""}>${radius} km</option>`).join("")}</select></label>
+    ${search.visitor_area ? `<label>Search area <select id="interest-search-area" aria-label="Nearby search area"><option value="visitor_area" ${view.searchArea === "visitor_area" ? "selected" : ""}>${escapeHtml(search.visitor_area.name)}</option><option value="itinerary_pin" ${view.searchArea === "itinerary_pin" ? "selected" : ""}>Original itinerary pin</option></select></label>` : ""}
+    <small>Straight-line distance from this search center</small>
+    ${response.place_data ? interestPlaceDataHtml(response.place_data) : ""}
+    ${selected ? `<span>${escapeHtml(selected.name)} · ${selected.distance_from_focus_km.toFixed(1)} km away</span><small>${Math.round(selected.interest_probability_mean * 100)}% estimated interest · 90% interval ${selected.interest_probability_interval.map(value => `${Math.round(value * 100)}%`).join("–")}</small>` : required ? `<span>Must-go: ${escapeHtml(required.name)}</span><small>Confirmed itinerary constraint</small>` : response.poi_predictions.length ? "<span>Click a blue point or browse the place list.</span>" : "<span>No nearby places are recorded within this radius. Try a larger radius.</span>"}
+    ${response.poi_predictions.length && response.surface.status !== "ready" ? '<small role="status">Continuous shading is unavailable for this route. You can still inspect the listed places.</small>' : ""}
+    <button type="button" id="browse-interest-places">Browse places ↓</button>
+    ${view.selectedId ? '<button type="button" id="show-whole-interest-region">Show whole region</button>' : ""}</aside>`;
 }
 
 function interestExplorerHtml() {
@@ -4584,6 +4663,7 @@ function interestExplorerHtml() {
   const percent = value => `${Math.round(value * 100)}%`;
   return `<section class="interest-region-panel" aria-labelledby="interest-region-heading">
     <header><div><span class="eyebrow">Explore places</span><h2 id="interest-region-heading">Your interest region</h2></div><button type="button" id="close-interest-regions">Hide interest layer</button></header>
+    ${response ? `<p>Searching within ${response.search_context.radius_km} km of <strong>${escapeHtml(response.search_context.name)}</strong>. Distances are straight-line distances from the displayed search center. Your itinerary stops are unchanged.</p>` : ""}
     <p>Same-hue shading shows model interest density. The darkest markers are confirmed must-go constraints. Interest does not establish itinerary feasibility.</p>
     ${previewExploration ? '<p class="interest-region-caveat">Exploring the evaluated preview. This itinerary has not been accepted. Place browsing is read only. Road and official-source evidence may have aged; accepting the trip still requires current evidence.</p>' : ""}
     <div class="interest-region-legend" aria-label="Interest layer legend"><span><i class="interest-density-swatch" aria-hidden="true"></i>Lower → higher model density</span><span><i class="interest-required-swatch" aria-hidden="true"></i>Confirmed must-go</span></div>
@@ -4591,7 +4671,9 @@ function interestExplorerHtml() {
       <label>Stated preference<select id="interest-preference"><option value="1" ${view.naturePreference === 1 ? "selected" : ""}>More nature</option><option value="0" ${view.naturePreference === 0 ? "selected" : ""}>Balanced</option><option value="-1" ${view.naturePreference === -1 ? "selected" : ""}>More culture</option></select></label>
       <label>Model interest mass<select id="interest-mass-level">${[0.5, 0.8, 0.95].map(level => `<option value="${level}" ${view.massLevel === level ? "selected" : ""}>${percent(level)} region</option>`).join("")}</select></label>
       <button type="button" id="refresh-interest-regions" ${view.status === "loading" ? "disabled" : ""}>Refresh estimates</button>
+      <button type="button" id="refresh-interest-place-data" ${view.status === "loading" ? "disabled" : ""}>Refresh online places</button>
     </div>
+    ${response?.place_data ? interestPlaceDataHtml(response.place_data) : ""}
     <div class="interest-region-status" role="status">${view.status === "loading" ? "Estimating interest for this route context…" : view.error ? escapeHtml(view.error) : response ? `${response.model.evidence_mode === "prior_only" ? "Prior estimate" : "Feedback-based estimate"} · not calibrated · ${points.length} places · ${response.candidate_universe.route_checked_candidate_count} route-checked candidates. ${region ? `Boundary contains ${percent(region.properties.achieved_mass)} of the model distribution.` : points.length ? `Continuous region unavailable: ${humanLabel(response.surface.unavailable_reason)}. Places remain inspectable.` : "No nearby places are recorded for this route yet. Choose another day or route to explore."}` : "Route context changed. Select a validated route leg and refresh."}</div>
     ${response ? `<p class="interest-region-caveat">${escapeHtml(response.surface.support_note || "Geographic support is unavailable.")} ${response.surface.excluded_candidate_count || 0} places excluded from the land-supported density. The boundary percentage describes model mass, not the chance that every place is suitable.</p>` : ""}
     ${points.length ? `<label>Inspect a place<select id="interest-place-selector"><option value="">Choose a place (${points.length})</option>${points.map(point => `<option value="${escapeHtml(point.place_id)}" ${point.place_id === view.selectedId ? "selected" : ""}>${escapeHtml(point.name)}</option>`).join("")}</select></label>` : ""}
@@ -5010,6 +5092,7 @@ function yosemiteGuideHtml(planId) {
 }
 
 function renderMap() {
+  scheduleInterestRefresh();
   const interestButton = $("#map-interest-button");
   if (interestButton) {
     interestButton.classList.toggle("is-active", state.interestRegions.enabled);
@@ -5079,8 +5162,6 @@ function renderMap() {
   }).join("");
   const draftCount = state.session.draft.length;
   const interest = currentInterestResponse();
-  const selectedInterest = interest?.poi_predictions.find(point => point.place_id === state.interestRegions.selectedId);
-  const selectedRequiredInterest = interest?.required_points.find(point => point.place_id === state.interestRegions.selectedId);
   const routeCheckedOnly = hasRouteCheckedOnlyDraft();
   const impactSummary = state.typedImpact.response?.summary;
   const impactCurrent = state.typedImpact.response?.session_revision === state.session.revision;
@@ -5093,10 +5174,7 @@ function renderMap() {
     <div class="map-note">${islandTrips.length ? `<strong>Ventura ↔ Channel Islands · Day ${escapeHtml(islandTrips[0].properties.day)}</strong><br>Purple dashed sea route · schematic; sailing unverified.<br>` : ""}<strong>Day ${escapeHtml(state.session.selected_day)} highlighted</strong><br>${displayed?.plan_id === original?.plan_id ? `${escapeHtml(state.workspace.issue.label)} · ${escapeHtml(state.workspace.issue.summary)}` : "Current evaluated route shown with the original route for reference."}</div>
     ${mapInspectorHtml(geography, displayed)}
     ${candidateExplorerHtml()}
-    ${interest ? `<aside class="interest-map-summary" aria-label="Interest places"><strong>${interest.poi_predictions.length} nearby places</strong>
-      ${selectedInterest ? `<span>${escapeHtml(selectedInterest.name)}</span><small>${Math.round(selectedInterest.interest_probability_mean * 100)}% estimated interest · 90% interval ${selectedInterest.interest_probability_interval.map(value => `${Math.round(value * 100)}%`).join("–")}</small>` : selectedRequiredInterest ? `<span>Must-go: ${escapeHtml(selectedRequiredInterest.name)}</span><small>Confirmed itinerary constraint</small>` : "<span>Click a blue point or browse the place list.</span>"}
-      <button type="button" id="browse-interest-places">Browse places ↓</button>
-      ${state.interestRegions.selectedId ? '<button type="button" id="show-whole-interest-region">Show whole region</button>' : ""}</aside>` : ""}
+    ${interestMapSummaryHtml(interest)}
     <div class="map-accessibility-panel">
     <div id="map-render-status" class="map-render-status" role="status">
       ${geographyReady ? "Loading verified local geography…" : "Geographic evidence is unavailable. Use the text route description."}
@@ -5183,6 +5261,16 @@ function renderMap() {
   $("#find-route-candidates")?.addEventListener("click", fetchPoiCandidates);
   $("#explore-interest-regions")?.addEventListener("click", fetchInterestRegions);
   $("#refresh-interest-regions")?.addEventListener("click", fetchInterestRegions);
+  $("#refresh-interest-place-data")?.addEventListener("click", () => fetchInterestRegions({refreshPlaces: true}));
+  $("#retry-interest-regions")?.addEventListener("click", fetchInterestRegions);
+  $("#interest-search-area")?.addEventListener("change", event => {
+    state.interestRegions.searchArea = event.currentTarget.value;
+    void fetchInterestRegions();
+  });
+  $("#interest-radius")?.addEventListener("change", event => {
+    state.interestRegions.radiusKm = Number(event.currentTarget.value);
+    void fetchInterestRegions();
+  });
   $("#browse-interest-places")?.addEventListener("click", () => {
     $(".interest-region-panel")?.scrollIntoView({block: "start"});
     $("#interest-place-search")?.focus({preventScroll: true});
@@ -5201,13 +5289,14 @@ function renderMap() {
     if (!button) return;
     selectInterestPlace(button.dataset.interestPlace);
   });
-  $("#close-interest-regions")?.addEventListener("click", () => { resetInterestRegions(); renderMap(); });
+  $("#close-interest-regions")?.addEventListener("click", () => { resetInterestRegions({hide: true}); renderMap(); });
   $("#interest-preference")?.addEventListener("change", event => {
     state.interestRegions.naturePreference = Number(event.currentTarget.value);
     void fetchInterestRegions();
   });
   $("#interest-mass-level")?.addEventListener("change", event => {
     state.interestRegions.massLevel = Number(event.currentTarget.value);
+    saveInterestPreferences();
     renderMap();
   });
   $("#interest-place-selector")?.addEventListener("change", event => {
@@ -5888,6 +5977,35 @@ function renderCompare() {
   });
 }
 
+async function downloadEvidenceBundle(runId, planId, button) {
+  if (button.disabled) return;
+  button.disabled = true;
+  let objectUrl;
+  let download;
+  try {
+    const headers = {Accept: "application/zip", "X-Product-Build-Id": state.clientBuildId || ""};
+    if (state.token) headers["X-Session-Token"] = state.token;
+    const response = await fetch(`/api/runs/${encodeURIComponent(runId)}/evidence-bundle?plan_id=${encodeURIComponent(planId)}`, {headers});
+    if (!response.ok) {
+      const payload = (response.headers.get("content-type") || "").includes("application/json") ? await response.json() : null;
+      if (isBuildMismatch(payload?.detail)) renderBuildRecovery(payload.detail);
+      throw new Error("evidence_download_failed");
+    }
+    objectUrl = URL.createObjectURL(await response.blob());
+    download = document.createElement("a");
+    download.href = objectUrl;
+    download.download = `${runId}-${planId}-evidence.zip`.replace(/[^\w.-]/g, "_");
+    document.body.append(download);
+    download.click();
+  } catch {
+    toast("Evidence could not be downloaded. Please try again.", true);
+  } finally {
+    download?.remove();
+    if (objectUrl) setTimeout(() => URL.revokeObjectURL(objectUrl), 1000);
+    button.disabled = false;
+  }
+}
+
 function renderEvidence() {
   const context = evidencePresentationContext();
   const resolution = resolveCompareSelection(context?.workspace || state.workspace, context?.session || state.session);
@@ -5938,7 +6056,7 @@ function renderEvidence() {
       <article class="evidence-card"><h3>3 · Route and source evidence</h3>
         <p>${escapeHtml(routeDescription)}</p>
         <p>${sourceHashCount || "No"} selected-plan source hashes are available.</p>
-        ${proposalMatches ? '<p class="truth-note">This is evaluated preview evidence, not an accepted change. Explicit acceptance persists the child and its lineage.</p>' : context?.scope === "accepted" ? '<p class="truth-note">This is the persisted accepted itinerary, with its exact inspected certificate and parent-child diff. It is not a new preview.</p>' : `<a class="download-link" href="/api/runs/${encodeURIComponent(state.session.run_id)}/evidence-bundle?plan_id=${encodeURIComponent(selectedAlternative.plan_id)}">Download selected-plan evidence</a>`}
+        ${proposalMatches ? '<p class="truth-note">This is evaluated preview evidence, not an accepted change. Explicit acceptance persists the child and its lineage.</p>' : context?.scope === "accepted" ? '<p class="truth-note">This is the persisted accepted itinerary, with its exact inspected certificate and parent-child diff. It is not a new preview.</p>' : '<button class="download-link" id="evidence-download" type="button">Download selected-plan evidence</button>'}
       </article>
       <article class="evidence-card"><h3>4 · Requested and executed methods</h3>
         <details open><summary>Requested methods</summary><p>${escapeHtml((methods.requested || []).join(", ") || "Unavailable")}</p></details>
@@ -5949,6 +6067,8 @@ function renderEvidence() {
     </div>
   </div>`;
   $("#evidence-back").addEventListener("click", () => navigate("/app/itinerary"));
+  const runId = state.session.run_id;
+  $("#evidence-download")?.addEventListener("click", event => downloadEvidenceBundle(runId, selectedAlternative.plan_id, event.currentTarget));
 }
 
 function renderRepairHistory() {
@@ -6552,6 +6672,7 @@ function selectContext(patch) {
   pendingSelection = request;
   return request.finally(() => {
     if (pendingSelection === request) pendingSelection = null;
+    scheduleInterestRefresh();
   });
 }
 
@@ -6565,18 +6686,39 @@ function resetPoiDiscovery({ keepReplacementTarget = true } = {}) {
   if (!keepReplacementTarget) state.poiDiscovery.replacementTargetId = null;
 }
 
-function resetInterestRegions() {
+function resetInterestRegions({hide = false} = {}) {
   state.interestRegions.controller?.abort();
   state.interestRegions.controller = null;
   state.interestRegions.generation += 1;
-  state.interestRegions.enabled = false;
+  if (hide) { state.interestRegions.enabled = false; saveInterestPreferences(); }
   state.interestRegions.status = "idle";
   state.interestRegions.response = null;
   state.interestRegions.selectedId = null;
+  state.interestRegions.focusStopId = null;
   state.interestRegions.error = null;
 }
 
-async function fetchInterestRegions() {
+async function fetchInterestRegions(options = {}) {
+  if (interestRefreshRunning) return false;
+  interestRefreshRunning = true;
+  state.interestRegions.enabled = true;
+  const originSession = state.session.session_id;
+  const originRevision = state.session.revision;
+  clearTimeout(interestRefreshTimer);
+  try {
+    const loaded = await loadInterestRegions({refreshPlaces: options?.refreshPlaces === true});
+    if (!loaded && state.interestRegions.enabled && ["idle", "loading"].includes(state.interestRegions.status)) {
+      const changed = state.session.session_id !== originSession || state.session.revision !== originRevision;
+      state.interestRegions.status = changed ? "idle" : "failed";
+      state.interestRegions.error = changed ? null : "Choose an available day or retry the interest region.";
+      renderMap();
+    }
+    return loaded;
+  }
+  finally { interestRefreshRunning = false; scheduleInterestRefresh(); }
+}
+
+async function loadInterestRegions({refreshPlaces = false} = {}) {
   if (pendingSelection && !(await pendingSelection)) {
     toast("Selection could not be updated. Interest estimates were not requested.", true);
     return false;
@@ -6584,8 +6726,19 @@ async function fetchInterestRegions() {
   const displayed = activeRenderPlan();
   const parent = acceptedPlan(activeGeography());
   if (!displayed || !parent) return false;
+  const stops = displayed.stops?.features?.filter(feature => feature.properties.day === state.session.selected_day) || [];
+  const focusedStopId = stops.find(feature => feature.properties.stop_id === state.session.selected_stop_id)?.properties.stop_id
+    || stops.find(feature => feature.properties.stop_id === state.interestRegions.focusStopId)?.properties.stop_id;
   let route = state.mapInteraction.selectedRouteLeg;
   const legs = displayed.validated_legs?.features || [];
+  if (!route) {
+    const savedLeg = legs.find(feature => feature.properties?.route_leg_id === state.session.selected_segment_id
+      && feature.properties?.day === state.session.selected_day);
+    if (savedLeg) {
+      route = {...savedLeg.properties, plan_id: displayed.plan_id};
+      state.mapInteraction.selectedRouteLeg = route;
+    }
+  }
   if (route?.plan_id !== displayed.plan_id || route.day !== state.session.selected_day
       || !legs.some(feature => feature.properties?.route_leg_id === route.route_leg_id)) {
     const leg = legs.find(feature => feature.properties?.day === state.session.selected_day);
@@ -6601,6 +6754,10 @@ async function fetchInterestRegions() {
     return false;
   }
   const view = state.interestRegions;
+  if (!view.enabled) return false;
+  view.radiusKm ??= 5;
+  view.focusStopId = focusedStopId || stops.find(feature => feature.properties.stop_id === route.destination_id)?.properties.stop_id
+    || stops[0]?.properties.stop_id || null;
   view.controller?.abort();
   const controller = new AbortController();
   const generation = ++view.generation;
@@ -6608,12 +6765,18 @@ async function fetchInterestRegions() {
     planId: parent.plan_id, planHash: parent.content_hash, day: route.day,
     explorationPlanId: displayed.plan_id, explorationPlanHash: displayed.content_hash,
     routeLegId: route.route_leg_id, naturePreference: view.naturePreference,
+    focusStopId: view.focusStopId, radiusKm: view.radiusKm, searchArea: view.searchArea,
     replacementTargetId: displayed.plan_id === state.session.accepted_plan_id ? state.poiDiscovery.replacementTargetId : null};
-  view.controller = controller; view.enabled = true; view.status = "loading"; view.response = null; view.error = null;
+  view.controller = controller; view.status = "loading"; view.response = null; view.error = null;
+  saveInterestPreferences();
   const query = new URLSearchParams({expected_revision: String(expected.revision), day: String(expected.day),
     route_leg_id: expected.routeLegId, nature_preference: String(expected.naturePreference),
     plan_id: expected.explorationPlanId,
     max_detour_minutes: String(state.poiDiscovery.maxDetourMinutes)});
+  query.set("radius_km", String(expected.radiusKm));
+  query.set("search_area", expected.searchArea);
+  if (refreshPlaces) query.set("refresh_places", "true");
+  if (expected.focusStopId) query.set("focus_stop_id", expected.focusStopId);
   if (expected.replacementTargetId) query.set("replacement_target_id", expected.replacementTargetId);
   renderMap();
   const timeout = setTimeout(() => controller.abort(), 20000);
@@ -7502,4 +7665,4 @@ function toast(message, error = false) {
   setTimeout(() => item.remove(), 5000);
 }
 
-boot();
+ensureHostedLogin().then(boot).catch(renderStartupFailure);

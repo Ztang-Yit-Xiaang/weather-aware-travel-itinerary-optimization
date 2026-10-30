@@ -1,0 +1,144 @@
+{
+  "schema_version": "readme-browser-capture-v1",
+  "captured_at_utc": "2026-10-30T04:14:34.101839+00:00",
+  "git_commit": "5efca3138fb462bebe6803ed5c2a954d1c098fa4",
+  "runtime_build_id": "63c1ceabf8bcccbb",
+  "runtime_source_modified": false,
+  "source_sha256": {
+    "scripts/run_product_app.py": "3802178f286a87608177dd8cebaeb7124b7b686d3f478ac514e621529db2e273",
+    "configs/product_app_registry.json": "5ef94b434eed04a8dc3ebb246c3e9a6405a6a4c7a8e8ba0554214bb6dc61abc9",
+    "configs/product_route_delta.json": "4e1afd61e74f34f4f4db58bb6fb6dac50f0998169589948ff121b04cb036d28d",
+    "src/itinerary_system/product_app/trip_solver.py": "9e6578bede5cd482d67f4872f8f6eabfe6a0b20016394e99e2ce0a62816df2e0",
+    "src/itinerary_system/product_app/trip_replanner.py": "c1bc7886295316fa29888913c76da7dc738c0dea03859346d97475229a35f572",
+    "src/itinerary_system/product_app/interest_regions.py": "6e1f837edd0bd915a43ef369533bea9534fc9a324e7fc66cfd622e86b204cdea",
+    "src/itinerary_system/product_app/static/js/app.js": "01b7719ce64bb9b88a902b443f4df03efaab2085282640f36213e1d0933e7887",
+    "src/itinerary_system/product_app/candidate_discovery.py": "6e15da17b549087eaec0aa5d5b1ccca3e02eb86d6cf7ac4bddd510005520c063",
+    "src/itinerary_system/interest_model.py": "b3e38a3d98adb89329af310494dbc74f765751d155ff646328f8666814ca9b28",
+    "src/itinerary_system/interest_surface.py": "a1d0916512ebbb883a92c844c197403f6eeff9d33e2fbea284b532b66714362e"
+  },
+  "scenario": "Synthetic registered California coast seven-day demo; isolated state and app origin.",
+  "adapter": "deterministic",
+  "paid_openai_calls": 0,
+  "app_port": 8139,
+  "map_port": 8140,
+  "map_delivery": "Existing local MapLibre/PMTiles assets served read-only through a disposable server. Style URLs rebased from port 8080 to 8140; the derived style SHA256 was updated in the served provenance. Source asset files were not modified or copied.",
+  "request": "Replace Bixby Creek Bridge Viewpoint with Pfeiffer Big Sur State Park and keep the other stops.",
+  "observed_outcomes": {
+    "replacement": "Bixby Creek Bridge Viewpoint -> Pfeiffer Big Sur State Park",
+    "evaluation_status": "PASSED",
+    "eligibility": "eligible",
+    "before_route_minutes": 1951.69,
+    "after_route_minutes": 1992.62,
+    "preservation_display_percent": 88,
+    "edit_cost": 6,
+    "contextual_risk": "Unavailable",
+    "accepted": false,
+    "whole_trip_milp_executed": false,
+    "interest_plan_scope": "evaluated_preview",
+    "nearby_places": 19,
+    "route_checked_candidates": 0,
+    "interest_evidence_mode": "prior_only; uncalibrated",
+    "stated_preference": "More nature",
+    "model_mass_level": 0.8,
+    "inspected_place": "Point Lobos State Natural Reserve",
+    "inspected_place_estimate_display_percent": 74,
+    "inspected_place_90_percent_interval_display": [
+      29,
+      98
+    ]
+  },
+  "known_capture_issue": {
+    "status": "unresolved_in_captured_source",
+    "code": "poi_route_matrix_invalid",
+    "scope": "Default accepted parent, observed on Days 5 and 1 before evaluated preview.",
+    "successful_scope": "Interest exploration on the evaluated repair child succeeded.",
+    "screenshot": "interest-parent-limitation.jpg"
+  },
+  "media": {
+    "type": "timed_actual_screenshots",
+    "continuous_video": false,
+    "width": 1440,
+    "height": 652,
+    "frames": 8,
+    "duration_ms": 29000,
+    "loop": true
+  },
+  "steps": [
+    {
+      "frame": 1,
+      "source_capture": "01-map.jpg",
+      "source_sha256": "1ed893d164ff6918dbd4ecfe5787acb683c3c425b4bafb415af9076ee25ca191",
+      "duration_ms": 2000,
+      "description": "Inspect the original seven-day route."
+    },
+    {
+      "frame": 2,
+      "source_capture": "04-typed-proposal.jpg",
+      "source_sha256": "870aa3be80bf88bbc98be5896245e89d67fcbfc4db84fd4c5d4d33ce8ac4d709",
+      "duration_ms": 3500,
+      "description": "The deterministic Copilot proposes a typed Bixby-to-Pfeiffer replacement."
+    },
+    {
+      "frame": 3,
+      "source_capture": "05-staged-draft.jpg",
+      "source_sha256": "b4ff7b079de83dc3093aca2e122579bd10b8e49e81bdcd34ac5afd7c96d4c4bd",
+      "duration_ms": 3000,
+      "description": "Explicitly stage one draft; the accepted route remains unchanged."
+    },
+    {
+      "frame": 4,
+      "source_capture": "06-evaluated-preview.jpg",
+      "source_sha256": "e140ac719b84203eec49849a7a89051589ab5e880bd95b2185886d301fecd636",
+      "duration_ms": 4500,
+      "description": "Independent evaluation passes and the map displays the child plan."
+    },
+    {
+      "frame": 5,
+      "source_capture": "07-interest-map.jpg",
+      "source_sha256": "20757313344b3abd5f67ff60da551bbfaa16eb61ccad9e58fa297ae021eece69",
+      "duration_ms": 3500,
+      "description": "Explore 19 nearby places on the evaluated preview."
+    },
+    {
+      "frame": 6,
+      "source_capture": "08-interest-controls.jpg",
+      "source_sha256": "131b17976f0529903f26e2cb0faf1d18218d7eba01de42368ea8e98964d8206b",
+      "duration_ms": 4500,
+      "description": "Inspect uncalibrated interest estimates and 80% spatial model mass."
+    },
+    {
+      "frame": 7,
+      "source_capture": "09-inspect-place.jpg",
+      "source_sha256": "78970dfbd1771caa52edc765851c6e4b3a55f2a5ad3b01a502634e9b409f417b",
+      "duration_ms": 4000,
+      "description": "Locate Point Lobos and inspect its model estimate; do not add a stop."
+    },
+    {
+      "frame": 8,
+      "source_capture": "10-compare.jpg",
+      "source_sha256": "8f1f7dc5933b2e49e532c5367822624d7e68d6f5884ece8d0784a621965dc07e",
+      "duration_ms": 4000,
+      "description": "Compare the accepted parent with the evaluated repair; do not accept."
+    }
+  ],
+  "assets": {
+    "interest-and-repair.gif": {
+      "sha256": "676026a001f563b4d8b979b317b3b81153d67f4bf2d3c3bb734f8e4510b82e4d",
+      "bytes": 2268081
+    },
+    "interest-preview.jpg": {
+      "sha256": "20757313344b3abd5f67ff60da551bbfaa16eb61ccad9e58fa297ae021eece69",
+      "bytes": 140565
+    },
+    "interest-parent-limitation.jpg": {
+      "sha256": "fbfb4516055c5e0a27541494a95e24a9e94661d1f8246ac93922845136c087c0",
+      "bytes": 136428
+    }
+  },
+  "limitations": [
+    "UI demonstration, not a benchmark or release qualification.",
+    "No live LLM inference, whole-trip optimization, or plan acceptance in this capture.",
+    "Default-parent interest failure retained separately; successful child exploration does not repair or qualify the parent flow.",
+    "Original temporary captures and disposable state are removed after packaging the GIF and selected screenshots."
+  ]
+}

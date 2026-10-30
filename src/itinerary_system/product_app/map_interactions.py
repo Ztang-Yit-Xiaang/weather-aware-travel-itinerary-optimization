@@ -12,20 +12,17 @@ from uuid import uuid4
 from itinerary_system.routing.models import RouteLegResult
 from itinerary_system.routing.provider import RouteLegRequest
 
-from .routing_runtime import RuntimeRoutingError, RuntimeSnapResult
+from .routing_runtime import (
+    RUNTIME_ROUTING_PROVIDERS,
+    RuntimeRoutingError,
+    RuntimeSnapResult,
+    valid_runtime_route_provenance,
+)
 
 SNAP_PREVIEW_TTL = timedelta(minutes=10)
 _NORMAL_SNAP_MAX_M = 100.0
 _WARNING_SNAP_MAX_M = 500.0
 _SHA256_PATTERN = re.compile(r"[0-9a-f]{64}")
-_RUNTIME_ROUTE_PROVENANCE = {
-    "provider": "runtime_osrm",
-    "routing_status": "osrm_route_validated",
-    "routing_profile": "driving",
-    "geometry_source": "runtime_osrm_geojson",
-    "distance_source": "runtime_osrm_route",
-    "duration_source": "runtime_osrm_route",
-}
 ALLOWED_SNAP_INTENTS = frozenset(
     {
         "explore_only",
@@ -205,6 +202,9 @@ class MapInteractionService:
         except RuntimeRoutingError as exc:
             raise MapInteractionError(exc.code) from None
 
+        if any(leg.provider != snap.provider for leg in affected):
+            raise MapInteractionError("route_provider_mismatch")
+
         if predecessor is None and successor is None:
             code = "snap_ready_route_context_required"
             append_allowed = False
@@ -255,7 +255,7 @@ def _validated_route_leg(
         or any(not _valid_route_point(point) for point in leg.geometry)
         or not _positive_finite(leg.distance_m)
         or not _positive_finite(leg.duration_s)
-        or any(getattr(leg, field) != expected for field, expected in _RUNTIME_ROUTE_PROVENANCE.items())
+        or not valid_runtime_route_provenance(leg)
         or _SHA256_PATTERN.fullmatch(leg.query_hash) is None
         or not _aware_datetime(leg.retrieved_at)
         or not _nonnegative_finite(leg.snap_distance_origin_m)
@@ -285,7 +285,8 @@ def _validate_runtime_snap(
 ) -> None:
     if (
         snap.entity_id != entity_id
-        or snap.provider != "runtime_osrm"
+        or not isinstance(snap.provider, str)
+        or snap.provider not in RUNTIME_ROUTING_PROVIDERS
         or not _valid_route_point(snap.raw_point)
         or tuple(snap.raw_point) != tuple(raw_coordinate)
         or snap.snapped_point is None

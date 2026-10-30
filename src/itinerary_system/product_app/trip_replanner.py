@@ -235,7 +235,7 @@ def _catalog(compiler, parameters):
             )
             return (-len(interest_set & set(row["place_categories"])), distance, row["place_id"])
 
-        router = RuntimeRoutingService(
+        router = getattr(compiler, "planning_router", None) or RuntimeRoutingService(
             base_url=compiler.planning_routing_url
             or os.environ.get("PRODUCT_ROUTING_BASE_URL", "http://127.0.0.1:5000")
         )
@@ -329,8 +329,12 @@ def _road_leg(routing, origin, destination, points, avoid_big_sur):
         duration_s=sum(p.duration_s for p in legs),
         distance_m=sum(p.distance_m for p in legs),
         query_hash=stable_content_hash([p.query_hash for p in legs]),
-        routing_status="osrm_waypoint_detour_validated",
-        geometry_source="runtime_osrm_geojson_via_highway_101",
+        routing_status="ors_waypoint_detour_validated"
+        if leg.provider == "openrouteservice"
+        else "osrm_waypoint_detour_validated",
+        geometry_source="runtime_ors_geojson_via_highway_101"
+        if leg.provider == "openrouteservice"
+        else "runtime_osrm_geojson_via_highway_101",
     )
 
 
@@ -569,7 +573,7 @@ def compile_trip_replan(compiler, operations, *, read_only=False, refresh_expire
                     "official": official,
                 }
             )
-            routing = RuntimeRoutingService(
+            routing = getattr(compiler, "planning_router", None) or RuntimeRoutingService(
                 base_url=compiler.planning_routing_url
                 or os.environ.get("PRODUCT_ROUTING_BASE_URL", "http://127.0.0.1:5000")
             )

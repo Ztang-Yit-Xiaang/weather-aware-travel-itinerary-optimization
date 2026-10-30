@@ -37,6 +37,7 @@ from .poi_catalog import (
     RouteAccessPointV1,
     load_product_poi_catalog,
 )
+from .routing_runtime import valid_runtime_route_provenance
 
 SCHEMA_VERSION = "product-poi-candidates-v1"
 DEFAULT_LIMIT = 5
@@ -386,15 +387,19 @@ def _route_matrix(
     context_snapshot_id = record.get("context_snapshot_id")
     source_bundle_id = record.get("source_bundle_id")
     source_content_sha256 = record.get("source_content_sha256")
+    composite_identity = isinstance(source_content_sha256, str) and (matrix_id, source_bundle_id) == (
+        f"route_matrix_delta_{source_content_sha256[:16]}",
+        f"route_bundle_composite_{source_content_sha256[:16]}",
+    )
     if (
         set(record) != _ROUTE_MATRIX_FIELDS
         or record.get("schema_version") != "route-matrix-v1"
         or not isinstance(matrix_id, str)
-        or not _MATRIX_ID.fullmatch(matrix_id)
+        or not (_MATRIX_ID.fullmatch(matrix_id) or composite_identity)
         or not isinstance(context_snapshot_id, str)
         or not _CONTEXT_ID.fullmatch(context_snapshot_id)
         or not isinstance(source_bundle_id, str)
-        or not _ROUTE_BUNDLE_ID.fullmatch(source_bundle_id)
+        or not (_ROUTE_BUNDLE_ID.fullmatch(source_bundle_id) or composite_identity)
         or not isinstance(source_content_sha256, str)
         or not _SHA256.fullmatch(source_content_sha256)
     ):
@@ -481,13 +486,7 @@ def _raw_route_cell_is_exact(
         allow_runtime_routes
         and isinstance(query_hash, str)
         and _SHA256.fullmatch(query_hash)
-        and raw.get("provider") == "runtime_osrm"
-        and (raw.get("routing_status"), raw.get("geometry_source"))
-        in {
-            ("osrm_route_validated", "runtime_osrm_geojson"),
-            ("osrm_waypoint_detour_validated", "runtime_osrm_geojson_via_highway_101"),
-        }
-        and raw.get("distance_source") == raw.get("duration_source") == "runtime_osrm_route"
+        and valid_runtime_route_provenance(raw, allow_detours=True)
     )
     if (
         set(raw) != _ROUTE_CELL_FIELDS

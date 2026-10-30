@@ -9,15 +9,46 @@ function example() {
     accepted_plan_id:"plan_test",accepted_plan_content_hash:"abc",nature_preference:0,
     exploration_plan_id:"plan_test",exploration_plan_content_hash:"abc",plan_scope:"accepted",
     context:{day:1,route_leg_id:"leg_test",replacement_target_id:null},
+    search_context:{stop_id:"stop1",name:"Current stop",coordinate:{longitude:-119.7,latitude:34.4},radius_km:5,distance_kind:"straight_line"},
     candidate_universe:{count:1,truncated:false,sha256:"a".repeat(64)},
     model:{calibration_status:"not_calibrated",evidence_mode:"prior_only"},
     poi_predictions:[{place_id:"p1",name:"Optional place",display_coordinate:{longitude:-119.7,latitude:34.4},
-      interest_probability_mean:.3,interest_probability_interval:[.1,.8],interval_level:.9}],
+      interest_probability_mean:.3,interest_probability_interval:[.1,.8],interval_level:.9,distance_from_focus_km:0}],
     required_points:[{place_id:"required",name:"Required",coordinate:[-119.69,34.42],constraint_ids:["c1"],conflict_status:"required_stop_missing"}],
     surface:{status:"unavailable",density_geojson:empty(),regions_geojson:empty()},
   };
 }
 const expected={sessionId:"session_test",revision:2,planId:"plan_test",planHash:"abc",explorationPlanId:"plan_test",explorationPlanHash:"abc",day:1,routeLegId:"leg_test",replacementTargetId:null,naturePreference:0};
+
+test("nearby responses are bound to the focus and radius and reject distant or misreported points",()=>{
+  const nearby={...expected,focusStopId:"stop1",radiusKm:5};
+  assert.equal(normalizeInterestResponse(example(),nearby).search_context.name,"Current stop");
+  for(const change of [{focusStopId:"other"},{radiusKm:2}]) {
+    assert.throws(()=>normalizeInterestResponse(example(),{...nearby,...change}),/stale/);
+  }
+  const far=example();far.poi_predictions[0].display_coordinate.longitude=-122.5;
+  assert.throws(()=>normalizeInterestResponse(far,nearby),/distance/);
+  const misleading=example();misleading.poi_predictions[0].distance_from_focus_km=1;
+  assert.throws(()=>normalizeInterestResponse(misleading,nearby),/distance/);
+});
+
+test("the selected stop survives automatic route selection and the chosen radius is sent",async()=>{
+  const app=readFileSync(new URL("../../src/itinerary_system/product_app/static/js/app.js",import.meta.url),"utf8");
+  const body=app.slice(app.indexOf("async function fetchInterestRegions("),app.indexOf("function prepareReplacementDiscovery("));
+  const state={session:{session_id:"session_test",revision:2,accepted_plan_id:"plan_test",selected_day:1,selected_stop_id:"stop2",selected_segment_id:null},
+    mapInteraction:{mode:"select",selectedRouteLeg:null},interestRegions:{naturePreference:0,radiusKm:2,generation:0},poiDiscovery:{maxDetourMinutes:60,replacementTargetId:null}};
+  const leg={plan_id:"plan_test",route_leg_id:"leg_test",day:1,destination_id:"stop1"};
+  const plan={plan_id:"plan_test",content_hash:"abc",validated_legs:{features:[{properties:leg}]},
+    stops:{features:[{properties:{stop_id:"stop1",day:1}},{properties:{stop_id:"stop2",day:1}}]}};
+  let request;
+  const payload=example();Object.assign(payload.search_context,{stop_id:"stop2",radius_km:2});
+  const explore=new Function("state","pendingSelection","activeGeography","acceptedPlan","toast","renderMap","api","normalizeInterestResponse","activeRenderPlan","selectRouteLeg",("let interestRefreshRunning=false, interestRefreshTimer=null; const scheduleInterestRefresh=()=>{}, saveInterestPreferences=()=>{};"+body)+";return fetchInterestRegions;")(
+    state,null,()=>({}),()=>plan,message=>assert.fail(message),()=>{},async url=>{request=url;return payload;},normalizeInterestResponse,()=>plan,
+    async value=>{state.session.selected_stop_id=null;state.session.selected_segment_id=value.route_leg_id;state.mapInteraction.selectedRouteLeg=value;return true;});
+  assert.equal(await explore(),true);
+  assert.match(request,/focus_stop_id=stop2/);assert.match(request,/radius_km=2/);
+  assert.equal(state.interestRegions.focusStopId,"stop2");
+});
 
 test("rejects stale revision, accepted parent, route, day, and preference",()=>{
   for(const changed of [{revision:3},{planId:"other"},{planHash:"different"},{explorationPlanId:"other"},{explorationPlanHash:"different"},{day:2},{routeLegId:"other"},{naturePreference:1}]) {
@@ -120,7 +151,7 @@ test("interest exploration works in Select mode without staging or acceptance",a
     interestRegions:{naturePreference:0,generation:0,controller:null},poiDiscovery:{replacementTargetId:null,maxDetourMinutes:60}};
   const plan={plan_id:"plan_test",content_hash:"abc",validated_legs:{features:[{properties:{route_leg_id:"leg_test",day:1}}]}};
   const explore=new Function("state","pendingSelection","activeGeography","acceptedPlan","toast","renderMap","api","normalizeInterestResponse","activeRenderPlan",
-    body+";return fetchInterestRegions;")(state,null,()=>({}),()=>({plan_id:"plan_test",content_hash:"abc"}),
+    ("let interestRefreshRunning=false, interestRefreshTimer=null; const scheduleInterestRefresh=()=>{}, saveInterestPreferences=()=>{};"+body)+";return fetchInterestRegions;")(state,null,()=>({}),()=>({plan_id:"plan_test",content_hash:"abc"}),
       message=>assert.fail(message),()=>{},async url=>{requests.push(url);return value;},normalizeInterestResponse,()=>plan);
   assert.equal(await explore(),true);
   assert.equal(requests.length,1);
@@ -128,6 +159,38 @@ test("interest exploration works in Select mode without staging or acceptance",a
   assert.equal(state.mapInteraction.mode,"select");
   assert.equal(state.session.revision,2);
   assert.equal(state.interestRegions.response,value);
+});
+
+test("map summary makes loading, failure and empty results visible without scrolling",()=>{
+  const app=readFileSync(new URL("../../src/itinerary_system/product_app/static/js/app.js",import.meta.url),"utf8");
+  const body=app.slice(app.indexOf("function interestMapSummaryHtml("),app.indexOf("function interestExplorerHtml("));
+  const state={interestRegions:{enabled:false,status:"idle",error:null,selectedId:null}};
+  const render=new Function("state","escapeHtml",body+";return interestMapSummaryHtml;")(
+    state,s=>String(s).replaceAll("<","&lt;"));
+  assert.equal(render(null),"");
+  Object.assign(state.interestRegions,{enabled:true,status:"loading"});
+  assert.match(render(null),/Loading interest region/);
+  assert.match(render(null),/role="status"/);
+  Object.assign(state.interestRegions,{status:"failed",error:"poi_route_matrix_invalid"});
+  const failed=render(null);
+  assert.match(failed,/Interest region unavailable/);
+  assert.match(failed,/route evidence could not be read/);
+  assert.match(failed,/role="alert"/);
+  assert.match(failed,/id="retry-interest-regions"/);
+  assert.match(app,/#retry-interest-regions"\)\?\.addEventListener\("click", fetchInterestRegions\)/);
+  Object.assign(state.interestRegions,{status:"ready",error:null});
+  const empty=render({...example(),poi_predictions:[],required_points:[]});
+  assert.match(empty,/0 nearby places/);
+  assert.match(empty,/No nearby places are recorded within this radius/);
+  assert.doesNotMatch(empty,/Click a blue point/);
+  state.interestRegions.selectedId="p1";
+  const ready=render(example());
+  assert.match(ready,/Optional place/);
+  assert.match(ready,/90% interval 10%–80%/);
+  const unavailable=example();unavailable.surface.status="unavailable";
+  assert.match(render(unavailable),/Continuous shading is unavailable for this route/);
+  state.interestRegions.error="<untrusted>";
+  assert.match(render(null),/&lt;untrusted>/);
 });
 
 test("must-go details are keyboard reachable and preserve the model probability",()=>{
@@ -160,7 +223,7 @@ test("Interest region selects the displayed 14-day preview route without accepti
     mapInteraction:{mode:"edit",selectedRouteLeg:null},interestRegions:{naturePreference:0,generation:0},poiDiscovery:{replacementTargetId:null,maxDetourMinutes:60}};
   Object.assign(value,{session_revision:3,exploration_plan_id:plan.plan_id,exploration_plan_content_hash:plan.content_hash,plan_scope:"evaluated_preview"});
   Object.assign(value.context,{day:14,route_leg_id:"preview-leg14"});
-  const explore=new Function("state","pendingSelection","activeGeography","acceptedPlan","activeRenderPlan","selectRouteLeg","toast","renderMap","api","normalizeInterestResponse",body+";return fetchInterestRegions;")(
+  const explore=new Function("state","pendingSelection","activeGeography","acceptedPlan","activeRenderPlan","selectRouteLeg","toast","renderMap","api","normalizeInterestResponse",("let interestRefreshRunning=false, interestRefreshTimer=null; const scheduleInterestRefresh=()=>{}, saveInterestPreferences=()=>{};"+body)+";return fetchInterestRegions;")(
     state,null,()=>({}),()=>({plan_id:"plan_test",content_hash:"abc"}),()=>plan,
     async route=>{selections.push(route);state.mapInteraction.selectedRouteLeg=route;state.session.selected_segment_id=route.route_leg_id;state.session.revision++;return true;},
     message=>assert.fail(message),()=>{},async url=>{requests.push(url);return value;},normalizeInterestResponse);
@@ -185,4 +248,33 @@ test("the displayed preview route card renders an enabled interest action",()=>{
   const html=render({plans:[{plan_id:"preview14"}]},{plan_id:"preview14"});
   assert.match(html,/<button type="button" id="explore-interest-regions" >Explore interest region<\/button>/);
   assert.match(html,/id="find-route-candidates" disabled/);
+});
+
+
+test("reopening uses the saved route without a selection write or revision loop",async()=>{
+  const app=readFileSync(new URL("../../src/itinerary_system/product_app/static/js/app.js",import.meta.url),"utf8");
+  const body=app.slice(app.indexOf("async function fetchInterestRegions("),app.indexOf("function prepareReplacementDiscovery("));
+  const state={session:{session_id:"session_test",revision:2,accepted_plan_id:"plan_test",selected_day:1,selected_segment_id:"leg_test"},
+    mapInteraction:{selectedRouteLeg:null},interestRegions:{naturePreference:0,generation:0},poiDiscovery:{replacementTargetId:null,maxDetourMinutes:60}};
+  const plan={plan_id:"plan_test",content_hash:"abc",validated_legs:{features:[{properties:{route_leg_id:"leg_test",day:1}}]}};
+  const explore=new Function("state","pendingSelection","activeGeography","acceptedPlan","activeRenderPlan","selectRouteLeg","toast","renderMap","api","normalizeInterestResponse",
+    "let interestRefreshRunning=false, interestRefreshTimer=null; const scheduleInterestRefresh=()=>{}, saveInterestPreferences=()=>{};"+body+";return fetchInterestRegions;")(
+      state,null,()=>({}),()=>plan,()=>plan,()=>assert.fail("Reopening must not write selection"),message=>assert.fail(message),()=>{},async()=>example(),normalizeInterestResponse);
+  assert.equal(await explore(),true);
+  assert.equal(state.session.revision,2);
+  assert.equal(state.mapInteraction.selectedRouteLeg.route_leg_id,"leg_test");
+});
+
+
+test("place source shows live, cached and offline freshness without pretending access is verified",()=>{
+  const app=readFileSync(new URL("../../src/itinerary_system/product_app/static/js/app.js",import.meta.url),"utf8");
+  const body=app.slice(app.indexOf("function interestPlaceDataHtml("),app.indexOf("function interestMapSummaryHtml("));
+  const render=new Function("escapeHtml",body+";return interestPlaceDataHtml;")(String);
+  assert.match(render({status:"live",fetched_at:"2026-10-29T12:00:00Z"}),/Online places.*fetched/);
+  assert.match(render({status:"fresh_cache"}),/Saved online places/);
+  assert.match(render({status:"stale_cache",error_code:"nearby_api_unavailable"}),/Older saved online places.*showing saved places/);
+  assert.match(render({status:"bundled_fallback",error_code:"nearby_api_rate_limited"}),/Saved place catalog.*unavailable/);
+  assert.match(render({status:"live",error_code:"nearby_cache_write_failed"}),/could not be saved/);
+  assert.match(app,/Refresh online places/);
+  assert.match(app,/query.set\("refresh_places", "true"\)/);
 });

@@ -7,6 +7,7 @@ import io
 import json
 import math
 import mimetypes
+import os
 import re
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import asynccontextmanager
@@ -107,20 +108,25 @@ def create_product_app(
     application_port: int = 8127,
     additional_allowed_authorities: tuple[str, ...] = (),
     copilot: CopilotAdapter | None = None,
+    runtime: ProductRuntime | None = None,
 ) -> FastAPI:
     root = (repository_root or Path(__file__).resolve().parents[3]).resolve()
     registry_file = registry_path or root / "configs" / "product_app_registry.json"
-    local_state = state_root or root / ".product_app_state"
-    config = ProductRuntimeConfig.from_environment(
-        repository_root=root,
-        registry_path=registry_file,
-        state_root=local_state,
-        application_host=application_host,
-        application_port=application_port,
-        enable_legacy=enable_legacy,
-        additional_allowed_authorities=additional_allowed_authorities,
+    local_state = state_root or Path(os.environ.get("PRODUCT_STATE_ROOT") or root / ".product_app_state")
+    config = (
+        runtime.config
+        if runtime is not None
+        else ProductRuntimeConfig.from_environment(
+            repository_root=root,
+            registry_path=registry_file,
+            state_root=local_state,
+            application_host=application_host,
+            application_port=application_port,
+            enable_legacy=enable_legacy,
+            additional_allowed_authorities=additional_allowed_authorities,
+        )
     )
-    runtime = ProductRuntime(config, copilot=copilot)
+    runtime = runtime or ProductRuntime(config, copilot=copilot)
     runtime.initialize()
     security = ProductSecurityBoundary(config)
     static_dir = Path(__file__).resolve().parent / "static"
@@ -1257,6 +1263,7 @@ def _poi_candidate_query(request: Request, *, interest_regions: bool = False) ->
         allowed.remove("limit")
         allowed.add("nature_preference")
         allowed.add("plan_id")
+        allowed.update({"focus_stop_id", "radius_km", "search_area", "refresh_places"})
     values: dict[str, str] = {}
     for key, value in request.query_params.multi_items():
         if key not in allowed:
@@ -1300,6 +1307,20 @@ def _poi_candidate_query(request: Request, *, interest_regions: bool = False) ->
         if not -1 <= preference <= 1:
             raise HTTPException(status_code=422, detail="interest_preference_invalid")
         result["nature_preference"] = preference
+        radius = _query_float(values.get("radius_km"), default=5.0, code="interest_radius_invalid")
+        if not 1 <= radius <= 25:
+            raise HTTPException(status_code=422, detail="interest_radius_invalid")
+        result["radius_km"] = radius
+        area = values.get("search_area", "visitor_area")
+        if area not in {"visitor_area", "itinerary_pin"}:
+            raise HTTPException(status_code=422, detail="interest_search_area_invalid")
+        result["search_area"] = area
+        refresh = values.get("refresh_places", "false")
+        if refresh not in {"true", "false"}:
+            raise HTTPException(status_code=422, detail="interest_refresh_invalid")
+        result["refresh_places"] = refresh == "true"
+        if "focus_stop_id" in values:
+            result["focus_stop_id"] = validate_identifier(values["focus_stop_id"])
         if "plan_id" in values:
             result["plan_id"] = validate_identifier(values["plan_id"])
     return result

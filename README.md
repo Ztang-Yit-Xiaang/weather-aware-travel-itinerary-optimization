@@ -42,7 +42,7 @@ The current walkthrough captures real browser steps in a disposable seven-day Ca
 
 This is a timed sequence of actual screenshots, rather than a continuous screen recording. It uses the **deterministic adapter** and makes **no paid LLM calls**. See the [capture record](docs/assets/readme/capture-20261029.json) for source identity, steps, and media hashes. It demonstrates the interface and a supported local repair; it does not demonstrate a new whole-trip MILP solve or acceptance.
 
-The same capture found an unresolved default-parent interest issue (`poi_route_matrix_invalid`). Exploration succeeded on the evaluated child, with 19 places and no route-checked candidate recommendations. The [failure screenshot](docs/assets/readme/interest-parent-limitation.jpg) and capture record retain that boundary separately from the successful walkthrough.
+That earlier capture found a default-parent interest issue (`poi_route_matrix_invalid`). The newer release source now accepts the registered, hash-bound additive route matrix; the [release verification](docs/reports/full_app_release_20261029/README.md) records the subsequent checks. The [original failure screenshot](docs/assets/readme/interest-parent-limitation.jpg) remains historical evidence for the older captured source.
 
 <details>
 <summary>Earlier workspace, comparison, and mobile captures</summary>
@@ -120,6 +120,27 @@ python scripts/serve_dashboard.py
 
 Open the URL printed in the terminal. GitHub does not render the repository's local HTML dashboards inline, so they must be served or opened locally.
 
+### Low-cost interactive hosting
+
+The deployment package keeps **GitHub Pages** for the interface, uses **Railway**
+for FastAPI and the optimizer, **Supabase PostgreSQL/Auth** for private saved state
+and owner sign-in, and **OpenRouteService** for road routing. The hosted map uses
+attributed OSM raster tiles, so it does not need a separate OSRM or PMTiles host.
+
+Start with free development tiers. Railway Hobby, if later approved, starts at
+$5/month including $5 of usage; the intended budget is $5–10 with a spending cap
+and sleeping enabled. Continuous uptime within the free allowance is not
+guaranteed, and Supabase can pause inactive free projects. Hosted defaults keep
+paid OpenAI disabled. See the [deployment guide](docs/deployment/railway_supabase_ors.md)
+for current limits, setup, recovery and the exact private/public settings.
+
+**Prepared, not deployed:** no cloud resources or paid plans were created. The
+existing public site remains until an authenticated backend is configured and
+the manual Pages workflow verifies its matching build. This first hosted version
+supports one owner and one backend worker/replica; it is not a public multi-user
+service. Its interest map uses the labelled saved place catalog, and hosted chat
+delivers its response after the database commit rather than streaming tokens live.
+
 ## How it works
 
 ```mermaid
@@ -156,7 +177,9 @@ The LLM does not calculate or certify an optimal route. It has no direct tool ac
 
 ### Personalized interest regions
 
-Choose **Map → Interest region** to explore the displayed trip. Change the stated nature/culture preference, choose a model-mass level, inspect individual places, and browse by name or category. Exploration can use the accepted itinerary or a current eligible evaluated preview; browsing a preview does not accept it.
+The map opens **Interest region** automatically and refreshes it when you select a day or stop. Change the nearby search radius, nature/culture preference, and model-mass level; inspect individual places and browse by name or category. Radius, preference, mass, and explicit hide choices persist per trip. Broad park destinations offer a labeled visitor-area search center alongside the original itinerary pin. Exploration can use the accepted itinerary or a current eligible evaluated preview; browsing a preview does not accept it.
+
+Nearby places combine source-attributed local catalogs with a bounded online lookup and durable cache. The interface distinguishes online, saved, older saved, and bundled-catalog results. A source failure retains usable saved data. **Refresh online places** requests source data; **Refresh estimates** follows the normal cache policy. Cache freshness and access/route validation are separate. See [persistence, search centers, and cache behavior](docs/current/interest_regions.md).
 
 The model combines place features with an explicit stated preference and, when available, explicit feedback. Without feedback it uses an elicited prior. It exposes both point estimates and uncertainty, then builds a land-supported geographic density. These quantities mean different things:
 
@@ -329,7 +352,7 @@ Start with the [documentation index](docs/README.md), then use the focused refer
 - Live sources may fall back to cached or curated data; provenance and uncertainty remain visible in audit artifacts.
 - Congestion and waiting time use proxy signals rather than direct ground-truth queue measurements.
 - Interest estimates are uncalibrated; region mass is not a suitability or safety guarantee.
-- The 29 October capture rejected interest exploration on the default accepted parent with `poi_route_matrix_invalid`; exploration on the evaluated repair child succeeded. That observation is retained rather than presented as full interest-flow acceptance.
+- The older walkthrough retains a default-parent interest failure. The release source includes its registered-matrix fix; newer focused and browser checks are recorded separately from that historical media.
 - Official-source checks describe retrieval-time evidence; they do not guarantee future access, wildfire conditions, transport availability, or bookings.
 - Quantitative risk coverage is incomplete. A configured evaluation pass does not establish a complete weather-risk assessment or production readiness.
 - Generated artifacts can become stale after code or configuration changes and should be rebuilt before being cited as final evidence.

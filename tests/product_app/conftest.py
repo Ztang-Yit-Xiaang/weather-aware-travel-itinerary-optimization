@@ -45,3 +45,16 @@ def deterministic_product_routing_health(monkeypatch: pytest.MonkeyPatch) -> Non
         "_probe_routing",
         lambda self: ComponentHealthV1("routing", "ready", False, "runtime_osrm_ready"),
     )
+
+
+@pytest.fixture(autouse=True)
+def offline_nearby_transport(monkeypatch):
+    from itinerary_system.product_app import nearby_places
+
+    original = nearby_places._fetch
+
+    def unavailable(_query):
+        raise OSError("network disabled in automated tests")
+
+    monkeypatch.setattr("itinerary_system.product_app.nearby_places._fetch", unavailable)
+    return original

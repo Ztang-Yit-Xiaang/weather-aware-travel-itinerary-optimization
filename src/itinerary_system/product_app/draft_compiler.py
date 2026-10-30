@@ -124,9 +124,11 @@ class FrozenDraftCompiler:
         route_matrix: dict[str, Any] | None = None,
         planning_state_root: Path | None = None,
         planning_routing_url: str | None = None,
+        planning_router: Any = None,
     ) -> None:
         self.planning_state_root = planning_state_root
         self.planning_routing_url = planning_routing_url
+        self.planning_router = planning_router
         self._planning_baseline_bundle = None
         self.parent_plan = parent_plan
         self.parent_plan_id = str(parent_plan.get("plan_id") or "")
@@ -174,6 +176,7 @@ class FrozenDraftCompiler:
             route_matrix=planning_bundle["route_matrix"] if planning_bundle else self._base_bundle.route_matrix,
             planning_state_root=self.planning_state_root,
             planning_routing_url=self.planning_routing_url,
+            planning_router=self.planning_router,
         )
         if planning_bundle:
             if (

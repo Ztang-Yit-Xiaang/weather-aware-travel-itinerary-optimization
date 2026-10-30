@@ -193,7 +193,9 @@ def test_expired_snapshot_is_retained_without_authentication_or_active_capacity(
     expired, _ = store.create_session("run", "parent", 1)
     path = state_root / "sessions" / f"{expired.session_id}.json"
     payload = json.loads(path.read_text(encoding="utf-8"))
-    payload["session"]["last_accessed_at"] = (datetime.now(UTC) - timedelta(hours=25)).isoformat()
+    payload["session"]["last_accessed_at"] = (
+        datetime.now(UTC) - (WorkspaceStore.SESSION_TTL + timedelta(hours=1))
+    ).isoformat()
     path.write_text(json.dumps(payload), encoding="utf-8")
 
     before = path.read_bytes()

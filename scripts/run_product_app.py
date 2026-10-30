@@ -39,6 +39,7 @@ LOCAL_ENV_ALLOWED_KEYS = frozenset(
         "PRODUCT_COPILOT_ADAPTER",
         "PRODUCT_MAP_BASE_URL",
         "PRODUCT_MAP_PROVIDER",
+        "PRODUCT_STATE_ROOT",
     }
 )
 
@@ -148,7 +149,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--port", type=_port_number, default=8127)
     parser.add_argument("--open", action="store_true", help="Open /app after the health check passes.")
     parser.add_argument("--enable-legacy", action="store_true", help="Enable labeled debug-only legacy routes.")
-    parser.add_argument("--state-root", type=Path, default=REPOSITORY_ROOT / ".product_app_state")
+    parser.add_argument(
+        "--state-root",
+        type=Path,
+        default=Path(os.environ.get("PRODUCT_STATE_ROOT") or REPOSITORY_ROOT / ".product_app_state"),
+    )
     parser.add_argument("--registry", type=Path, default=None, help="Use an explicit local run registry.")
     return parser.parse_args()
 

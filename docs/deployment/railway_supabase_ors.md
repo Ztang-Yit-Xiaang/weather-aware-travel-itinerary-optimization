@@ -9,6 +9,12 @@ The existing Pages site remains in place until a real backend is configured and
 the explicit publish workflow passes. The initial deployment is a private,
 single-owner research prototype, with one backend worker and one replica.
 
+The owner's current rollout decision is to retain GitHub Pages, prepare the
+free Supabase database and ORS key first, and wait to complete Railway
+registration. Do not switch hosting providers as part of the CI repair. A
+Render migration is an optional later decision only if an urgent launch makes
+waiting unsuitable. Publish only after the backend's live acceptance checks pass.
+
 ```mermaid
 flowchart LR
   Visitor[Browser on GitHub Pages] -->|Email and password| Auth[Supabase Auth]

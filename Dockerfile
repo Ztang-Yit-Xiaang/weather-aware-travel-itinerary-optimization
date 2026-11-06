@@ -36,7 +36,7 @@ COPY ["results/route_deltas/product_pfeiffer_point_lobos_20260908_v1/", "./resul
 
 USER 10001:10001
 # Verify the actual slim dependency set without creating an app or contacting DB/providers.
-RUN --network=none PYTHONPATH=/app/src python -c "from itinerary_system.product_app.api import create_product_app; from itinerary_system.product_app.hosted import HostedSettings; import openai, psycopg"
+RUN PYTHONPATH=/app/src python -c "from itinerary_system.product_app.api import create_product_app; from itinerary_system.product_app.hosted import HostedSettings; import openai, psycopg"
 EXPOSE 8080
 # The launcher reads Railway's PORT and explicitly enforces one worker.
 CMD ["python", "scripts/run_hosted_app.py"]

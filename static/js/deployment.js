@@ -1,0 +1,1 @@
+window.PRODUCT_DEPLOYMENT = {"api_origin": "https://itinerary-api-production-19d3.up.railway.app", "supabase_url": "https://wklgziduvbdxninnwlsn.supabase.co", "supabase_publishable_key": "sb_publishable_BBGrnQMnyVgirTFkYmbrLQ_FGpoEDAk", "static_frontend": true};

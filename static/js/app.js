@@ -766,18 +766,22 @@ const STABLE_FLOAT_FIELDS = new Set([
 ]);
 const STABLE_FLOAT_OBJECTS = new Set(["metrics", "constraint_strength_weights", "change_type_weights", "schedule_metrics"]);
 
-function pythonStableJson(value, parentKey = null) {
+function pythonStableJson(value, parentKey = null, assessmentSection = null) {
   if (value === null) return "null";
   if (typeof value === "boolean" || typeof value === "string") return JSON.stringify(value);
   if (typeof value === "number") {
     if (!Number.isFinite(value)) return null;
-    if (STABLE_FLOAT_OBJECTS.has(parentKey) || STABLE_FLOAT_FIELDS.has(parentKey)) {
+    const assessmentFloat = (assessmentSection === "weather"
+      && ["mean", "total", "reference_mean", "mean_change"].includes(parentKey))
+      || (assessmentSection === "preservation" && parentKey === "rate")
+      || (assessmentSection === "edit_cost" && parentKey === "weighted");
+    if (assessmentFloat || STABLE_FLOAT_OBJECTS.has(parentKey) || STABLE_FLOAT_FIELDS.has(parentKey)) {
       return Number.isInteger(value) ? `${value}.0` : String(value);
     }
     return JSON.stringify(value);
   }
   if (Array.isArray(value)) {
-    const items = value.map((item) => pythonStableJson(item, parentKey));
+    const items = value.map((item) => pythonStableJson(item, parentKey, assessmentSection));
     return items.includes(null) ? null : `[${items.join(",")}]`;
   }
   if (!value || typeof value !== "object") return null;
@@ -786,7 +790,8 @@ function pythonStableJson(value, parentKey = null) {
     // Guide-reference durations are integer metadata, unlike itinerary-stop durations.
     const scopeKey = parentKey === "destination_places" && key === "visit_duration_minutes"
       ? null : STABLE_FLOAT_OBJECTS.has(parentKey) ? parentKey : key;
-    const serialized = pythonStableJson(value[key], scopeKey);
+    const section = value.schema_version === "plan-assessment-v1" ? key : assessmentSection;
+    const serialized = pythonStableJson(value[key], scopeKey, section);
     if (serialized === null) return null;
     fields.push(`${JSON.stringify(key)}:${serialized}`);
   }
@@ -2535,6 +2540,7 @@ function normalizePreviewRepair(value, proposal) {
   if (!exactKeys(value, [
     "status", "status_state", "result", "changed", "unchanged", "permissions",
     "tradeoffs", "accepted_radius", "certificate", "primary_action",
+    ...(Object.hasOwn(value || {}, "plan_assessment") ? ["plan_assessment"] : []),
   ])
       || !exactKeys(value.changed, [
         "added", "removed", "affected_day_count", "road_change_count", "lodging_change_count",
@@ -2578,6 +2584,8 @@ function normalizePreviewRepair(value, proposal) {
     if (!changedDays || value.changed.affected_day_count !== changedDays.length
         || !sameJson(value.unchanged.days, diff.unchanged_days)) return null;
   }
+  // Preserve optional assessment data here; presentation binds it to the exact
+  // certificate and diff without adding dependencies to this normalizer slice.
   return value;
 }
 
@@ -2840,6 +2848,7 @@ function previewProposalBinding(value) {
     } : null,
     compiled_request: value?.compiled_request,
     repair_certificate: value?.repair?.certificate ?? null,
+    plan_assessment: value?.repair?.plan_assessment ?? null,
     plan_diff: value?.plan_diff ?? null,
     schedule_impact: value?.schedule_impact ?? null,
     schedule_impact_identity: value?.schedule_impact_identity ?? null,
@@ -4286,6 +4295,76 @@ function proposalCertificate(proposal) {
     && record?.content_hash === proposal?.certificate_content_hash ? record : null;
 }
 
+function boundPlanAssessment(value, plan, certificate = null, diff = null, proposal = null) {
+  if (!value || value.schema_version !== "plan-assessment-v1"
+      || !plan?.plan_id || !plan.content_hash
+      || value.plan_id !== plan.plan_id || value.plan_content_hash !== plan.content_hash
+      || value.source_scope !== "saved_plan_context"
+      || typeof value.parent_plan_id !== "string" || !value.parent_plan_id
+      || typeof value.context_snapshot_id !== "string" || !value.context_snapshot_id
+      || ![value.parent_plan_content_hash, value.certificate_content_hash,
+        value.diff_content_hash, value.content_hash].every(hash => typeof hash === "string" && /^[0-9a-f]{16}$/.test(hash))
+      || typeof value.diff_id !== "string" || !value.diff_id) return null;
+  const record = value.certificate;
+  if (!record || record.plan_id !== plan.plan_id || record.plan_content_hash !== plan.content_hash
+      || !value.certificate_id || record.certificate_id !== value.certificate_id
+      || record.content_hash !== value.certificate_content_hash
+      || record.route_validation?.context_snapshot_id !== value.context_snapshot_id
+      || !["PASSED", "PASSED_WITH_WARNINGS", "FAILED"].includes(record.evaluation_status)
+      || !Array.isArray(record.failures) || !Array.isArray(record.warnings)
+      || record.failure_count !== record.failures.length || record.warning_count !== record.warnings.length
+      || (certificate && (certificate.certificate_id !== value.certificate_id
+        || certificate.content_hash !== value.certificate_content_hash
+        || certificate.plan_id !== plan.plan_id || certificate.plan_content_hash !== plan.content_hash))
+      || (diff && (diff.diff_id !== value.diff_id || diff.child_plan_id !== plan.plan_id
+        || diff.parent_plan_id !== value.parent_plan_id))
+      || (value.parent_plan_id === plan.plan_id && value.parent_plan_content_hash !== plan.content_hash)) return null;
+  if (proposal && (!certificate || !diff
+      || proposal.parent_plan_id !== value.parent_plan_id
+      || proposal.parent_plan_content_hash !== value.parent_plan_content_hash
+      || proposal.certificate_id !== value.certificate_id
+      || proposal.certificate_content_hash !== value.certificate_content_hash
+      || proposal.diff_id !== value.diff_id || proposal.diff_content_hash !== value.diff_content_hash)) return null;
+  const weather = value.weather, preservation = value.preservation, cost = value.edit_cost;
+  const count = number => Number.isInteger(number) && number >= 0;
+  const nonnegative = number => Number.isFinite(number) && number >= 0;
+  if (!weather || !preservation || !cost
+      || !["complete", "partial", "unavailable"].includes(weather.state)
+      || !count(weather.known_stop_count) || !count(weather.stop_count)
+      || weather.known_stop_count > weather.stop_count || !Array.isArray(weather.missing_stop_ids)
+      || weather.missing_stop_ids.length !== weather.stop_count - weather.known_stop_count
+      || !weather.missing_stop_ids.every(id => typeof id === "string" && id)
+      || new Set(weather.missing_stop_ids).size !== weather.missing_stop_ids.length
+      || (weather.state === "complete") !== (weather.stop_count > 0 && weather.known_stop_count === weather.stop_count)
+      || (weather.state === "unavailable") !== (weather.known_stop_count === 0)
+      || (weather.state === "complete"
+        ? !nonnegative(weather.mean) || !nonnegative(weather.total)
+          || Math.abs(weather.mean * weather.known_stop_count - weather.total) > 1e-8
+        : weather.mean !== null || weather.total !== null)
+      || !(weather.reference_mean === null || nonnegative(weather.reference_mean))
+      || typeof weather.comparable !== "boolean"
+      || (weather.comparable
+        ? weather.state !== "complete" || !nonnegative(weather.reference_mean)
+          || value.reference_context_snapshot_id !== value.context_snapshot_id
+          || !Number.isFinite(weather.mean_change)
+          || Math.abs(weather.mean - weather.reference_mean - weather.mean_change) > 1e-8
+        : weather.mean_change !== null)
+      || ![preservation.preserved_stop_count, preservation.reference_stop_count,
+        preservation.unchanged_day_count, preservation.reference_day_count].every(count)
+      || preservation.preserved_stop_count > preservation.reference_stop_count
+      || preservation.unchanged_day_count > preservation.reference_day_count
+      || (preservation.reference_stop_count === 0 ? preservation.rate !== null
+        : !nonnegative(preservation.rate) || preservation.rate > 1
+          || Math.abs(preservation.rate - preservation.preserved_stop_count / preservation.reference_stop_count) > 1e-8)
+      || !nonnegative(cost.weighted) || !count(cost.change_count) || !Array.isArray(cost.components)
+      || cost.components.some(row => !row || typeof row.kind !== "string" || !row.kind
+        || !count(row.count) || !nonnegative(row.cost))
+      || cost.components.reduce((sum, row) => sum + row.count, 0) !== cost.change_count
+      || Math.abs(cost.components.reduce((sum, row) => sum + row.cost, 0) - cost.weighted) > 1e-8
+      || (diff && cost.weighted !== diff.weighted_edit_cost)) return null;
+  return value;
+}
+
 function planPresentationEvidence(plan) {
   const proposal = state.session.proposal;
   const proposalExact = Boolean(plan?.plan_id && plan?.content_hash)
@@ -4293,22 +4372,43 @@ function planPresentationEvidence(plan) {
     && proposal?.child_plan_content_hash === plan?.content_hash
     && proposal?.certificate_identity?.plan_id === plan?.plan_id
     && proposal?.certificate_identity?.plan_content_hash === plan?.content_hash;
-  if (proposalExact) return {
-    eligibility: proposal.eligibility || "Not evaluated",
-    certificateId: proposal.certificate_id,
-    permissions: proposal.repair?.permissions || null,
-    repair: proposal.repair || null,
-    metrics: proposalCertificate(proposal)?.metrics || {},
-    weightedEditCost: proposal.repair?.tradeoffs?.weighted_edit_cost ?? null,
-  };
+  const proposalRecord = proposalExact ? proposalCertificate(proposal) : null;
   const record = state.workspace.alternative_evidence?.[plan?.plan_id];
   const certificate = record?.certificate;
   const exact = Boolean(plan?.plan_id && plan?.content_hash)
     && record?.plan_id === plan?.plan_id && record?.plan_content_hash === plan?.content_hash
     && certificate?.plan_id === plan?.plan_id && certificate?.plan_content_hash === plan?.content_hash;
+  const rawAssessment = proposalExact ? proposal.repair?.plan_assessment : state.workspace.plan_assessments?.[plan?.plan_id];
+  const diff = proposalExact ? proposal.plan_diff || proposal.runtime_execution?.plan_diff : record?.diff;
+  const assessment = (proposalExact || !record || exact) ? boundPlanAssessment(
+    rawAssessment, plan, proposalExact ? proposalRecord : exact ? certificate : null,
+    diff, proposalExact ? proposal : null,
+  ) : null;
+  const parent = state.workspace.geography?.plans?.find(row => row.plan_id === assessment?.parent_plan_id);
+  const assessmentExact = assessment
+    && (!parent || parent.content_hash === assessment.parent_plan_content_hash)
+    && (!record?.parent_plan_id || record.parent_plan_id === assessment.parent_plan_id)
+    && (!record?.certificate_id || record.certificate_id === assessment.certificate_id)
+    && (!record?.diff_id || record.diff_id === assessment.diff_id)
+    && (!record?.source_hashes?.diff || record.source_hashes.diff === assessment.diff_content_hash);
+  const assessmentFacts = {
+    assessment: assessmentExact ? assessment : null,
+    assessmentUnavailable: rawAssessment != null && !assessmentExact,
+    certificate: proposalExact ? proposalRecord : exact ? certificate : assessmentExact ? assessment.certificate : null,
+  };
+  if (proposalExact) return {
+    ...assessmentFacts,
+    eligibility: proposalRecord?.comparison_eligibility || "Not evaluated",
+    certificateId: proposalRecord?.certificate_id || null,
+    permissions: proposalRecord ? proposal.repair?.permissions || null : null,
+    repair: proposalRecord ? proposal.repair || null : null,
+    metrics: proposalRecord?.metrics || {},
+    weightedEditCost: proposalRecord ? proposal.repair?.tradeoffs?.weighted_edit_cost ?? null : null,
+  };
   return {
-    eligibility: exact ? certificate.comparison_eligibility || "Not evaluated" : "Not evaluated",
-    certificateId: exact ? certificate.certificate_id : null,
+    ...assessmentFacts,
+    eligibility: assessmentExact ? assessment.certificate.comparison_eligibility : exact ? certificate.comparison_eligibility || "Not evaluated" : "Not evaluated",
+    certificateId: assessmentExact ? assessment.certificate_id : exact ? certificate.certificate_id : null,
     permissions: exact && plan?.role === "registered_repair" ? state.workspace.repair?.permissions : null,
     repair: exact && plan?.role === "registered_repair" ? state.workspace.repair : null,
     metrics: exact ? certificate.metrics || {} : {},
@@ -5817,6 +5917,7 @@ function renderRepair() {
   const unevaluated = proposal?.schema_version === "draft-preview-v1" && !evaluated && !registered;
   const acceptedBaseline = acceptedPlan(state.workspace.geography);
   const hasAcceptedRepair = state.workspace.accepted_plan_pointer?.decision_id
+    && acceptedBaseline?.plan_id !== state.workspace.accepted_plan_pointer.original_plan_id
     && acceptedBaseline?.content_hash === state.workspace.accepted_plan_pointer.accepted_plan_content_hash
     && planPresentationEvidence(acceptedBaseline).certificateId;
   const acceptedChild = !proposal && hasAcceptedRepair && activeRenderPlan()?.plan_id === acceptedBaseline.plan_id;
@@ -5825,6 +5926,11 @@ function renderRepair() {
     && displayed?.content_hash === proposal.child_plan_content_hash);
   const canAccept = eligible && previewCanBeAccepted();
   const repair = evaluated || registered ? proposal.repair : state.workspace.repair;
+  const repairPlan = proposal?.geography_plan || state.workspace.geography?.plans?.find(plan =>
+    plan.plan_id === proposal?.child_plan_id && plan.content_hash === proposal?.child_plan_content_hash);
+  const repairFacts = (evaluated || registered) && repairPlan?.plan_id === proposal?.child_plan_id
+    && repairPlan?.content_hash === proposal?.child_plan_content_hash ? planPresentationEvidence(repairPlan) : null;
+  const assessment = repairFacts?.assessment;
   const statusLabel = eligible ? "Evaluated eligible proposal" : evaluated ? "Evaluated ineligible proposal" : unevaluated ? "No independent evaluation" : acceptedChild ? "Accepted evaluated itinerary" : registered ? "Registered fixture proposal" : "Preview required";
   const repairTitle = eligible ? "Evaluated draft repair" : evaluated ? "No eligible draft repair" : unevaluated ? "Preview did not produce an evaluated child" : acceptedChild ? "Accepted repair is displayed" : registered ? "Registered repair fixture" : "Recommendation — not applied";
   const repairBody = unevaluated
@@ -5838,7 +5944,11 @@ function renderRepair() {
         <li>${repair.changed.affected_day_count} affected day</li>
         <li>${repair.permissions.booked_change_count} booked changes</li>
         <li>${repair.permissions.locked_change_count} locked changes</li>
-        <li>Contextual risk delta: ${formatMetric(repair.tradeoffs.weather_risk_delta)}</li>
+        <li>${assessment ? `Saved weather mean change: ${assessment.weather.comparable
+          ? `${assessment.weather.mean_change > 0 ? "+" : ""}${Number(assessment.weather.mean_change.toFixed(4))}`
+          : "Unavailable; saved coverage or reference context is not comparable"}`
+          : repairFacts && !repairFacts.certificateId ? "Contextual risk delta: Unavailable"
+          : `Contextual risk delta: ${formatMetric(repair.tradeoffs.weather_risk_delta)}`}</li>
       </ul>` : `<p>The evaluated draft produced no eligible child. Reason: ${escapeHtml(proposal?.reason || "Unavailable")}</p>`;
   $("#repair-panel").innerHTML = `
     <span class="eyebrow">Repair review</span>
@@ -5942,13 +6052,57 @@ function renderMetrics() {
   const risk = facts.repair?.tradeoffs?.weather_risk_delta ?? facts.metrics.weather_risk_delta;
   const routeMinutes = planRouteMinutes(plan);
   const scope = facts.certificateId ? "Exact displayed-plan evidence" : "Not evaluated for this plan";
-  const metrics = [
-    ["Route time", routeMinutes === null ? "Unavailable" : `${formatMetric(routeMinutes)} min`, "Exact road-evidence duration"],
-    ["Contextual risk", risk == null ? "Unavailable" : formatMetric(risk), scope],
-    ["Preservation", preservation == null ? "Unavailable" : `${Math.round(preservation * 100)}%`, scope],
-    ["Edit cost", facts.weightedEditCost == null ? "Unavailable" : formatMetric(facts.weightedEditCost), scope],
-    ["Certificate", facts.eligibility, scope],
+  const assessment = facts.assessment;
+  const certificate = facts.certificate;
+  const readable = value => String(value).replaceAll("_", " ");
+  const exposure = value => Number(value.toFixed(4)).toString();
+  const disclosure = (title, paragraphs, items = []) => `<details class="metric-details"><summary>${escapeHtml(title)}</summary>${paragraphs.map(text => `<p>${escapeHtml(text)}</p>`).join("")}${items.length ? `<ul>${items.map(text => `<li>${escapeHtml(text)}</li>`).join("")}</ul>` : ""}</details>`;
+  const missingNote = facts.assessmentUnavailable
+    ? "Assessment identity or accounting does not match this plan; only existing exact evidence is shown."
+    : facts.certificateId ? "This certificate does not supply this metric." : "No exact independent evaluation is available for this plan.";
+  const evaluationStatus = certificate?.evaluation_status;
+  const evaluationLabel = {PASSED: "Passed", PASSED_WITH_WARNINGS: "Passed with warnings", FAILED: "Failed"}[evaluationStatus];
+  const evaluationNote = certificate
+    ? `${certificate.failure_count ?? certificate.failures?.length ?? 0} failures · ${certificate.warning_count ?? certificate.warnings?.length ?? 0} warnings`
+    : scope;
+  const findings = [
+    ...(certificate?.failures || []).map(finding => `Failure: ${readable(finding.code)}${finding.message ? ` — ${finding.message}` : ""}`),
+    ...(certificate?.warnings || []).map(finding => `Warning: ${readable(finding.code)}${finding.message ? ` — ${finding.message}` : ""}`),
   ];
+  const evaluationDetails = disclosure("Evaluation details", certificate ? [
+    `Eligibility: ${certificate.comparison_eligibility || facts.eligibility}. Evaluation checks modeled feasibility and saved evidence; it is not a guarantee of current travel conditions.`,
+    assessment ? "Source: saved plan context. Acceptance is a separate decision." : scope,
+  ] : [missingNote], findings);
+  const metrics = [
+    ["Route time", routeMinutes === null ? "Unavailable" : `${formatMetric(routeMinutes)} min`, routeMinutes === null ? "Complete road duration evidence is missing." : "Exact road-evidence duration"],
+    ["Contextual risk delta", risk == null ? "Unavailable" : formatMetric(risk), risk == null ? missingNote : "Legacy contextual-risk change; not an exposure mean.", disclosure("Risk source", [risk == null ? missingNote : scope, "This legacy value is a change in the saved contextual-risk metric, not a probability or current forecast."])],
+    ["Preservation", preservation == null ? "Unavailable" : `${Math.round(preservation * 100)}%`, preservation == null ? missingNote : "Stop retention; attribute changes may still occur."],
+    ["Edit cost", facts.weightedEditCost == null ? "Unavailable" : `${formatMetric(facts.weightedEditCost)} points`, facts.weightedEditCost == null ? missingNote : "Weighted change points, not money."],
+    ["Certificate", evaluationLabel || facts.eligibility, evaluationNote, evaluationDetails],
+  ];
+  if (assessment) {
+    const weather = assessment.weather, retained = assessment.preservation, cost = assessment.edit_cost;
+    const selfBaseline = assessment.parent_plan_id === assessment.plan_id;
+    const reference = selfBaseline ? "This plan is its own comparison baseline." : "Compared with the saved parent at evaluation, including after acceptance.";
+    const weatherChange = weather.comparable
+      ? `Mean change: ${weather.mean_change > 0 ? "+" : ""}${exposure(weather.mean_change)} vs saved parent mean ${exposure(weather.reference_mean)}.`
+      : "Mean change is unavailable because coverage or reference evidence is not comparable.";
+    metrics[1] = ["Weather exposure", weather.mean === null ? "Unavailable" : exposure(weather.mean),
+      `${weather.known_stop_count}/${weather.stop_count} stops · ${weather.state} saved context`,
+      disclosure("Weather source and change", [
+        "Arithmetic mean of per-stop saved scores; not duration-weighted. Raw saved model index, not a probability or current forecast. Lower values mean less modeled exposure.",
+        weather.state === "partial" ? "No mean is computed until every stop has a saved value; missing data is not zero." : weather.state === "unavailable" ? "No saved exposure values are available; no zero is inferred." : "Saved exposure values cover every stop.",
+        weather.total === null ? "Known-stop total unavailable." : `Known-stop total: ${exposure(weather.total)}.`,
+        weatherChange, reference,
+      ], weather.missing_stop_ids.map(id => `Missing saved exposure: ${readable(id)}`))];
+    metrics[2] = ["Stop preservation", retained.rate === null ? "Unavailable" : `${Math.round(retained.rate * 100)}%`,
+      `${retained.preserved_stop_count}/${retained.reference_stop_count} parent stops retained`,
+      disclosure("What is preserved", [reference,
+        `${retained.unchanged_day_count}/${retained.reference_day_count} parent days unchanged. Stop retention does not mean order, duration, role, or other attributes are unchanged.`])];
+    metrics[3] = ["Edit cost", `${formatMetric(cost.weighted)} points`, `${cost.change_count} recorded changes · not money`,
+      disclosure("Change cost components", [reference, "Weighted plan-change points; these are not prices or travel minutes."],
+        cost.components.map(row => `${readable(row.kind)}: ${row.count} changes · ${formatMetric(row.cost)} points`))];
+  }
   const strip = $("#metric-strip");
   // Compare and Evidence render their own selected-artifact summaries. Keep
   // the Trip summary from appearing as an unlabeled competing plan there.
@@ -5956,7 +6110,8 @@ function renderMetrics() {
   strip.dataset.planId = plan?.plan_id || "";
   strip.dataset.planContentHash = plan?.content_hash || "";
   strip.dataset.evaluationId = facts.certificateId || "";
-  strip.innerHTML = metrics.map(([label, value, note]) => `<div class="metric" data-plan-id="${escapeHtml(plan?.plan_id || "")}" data-plan-content-hash="${escapeHtml(plan?.content_hash || "")}"><span>${label}</span><strong>${escapeHtml(value)}</strong><small>${escapeHtml(note)}</small></div>`).join("");
+  strip.dataset.assessmentHash = assessment?.content_hash || "";
+  strip.innerHTML = metrics.map(([label, value, note, details]) => `<div class="metric" data-plan-id="${escapeHtml(plan?.plan_id || "")}" data-plan-content-hash="${escapeHtml(plan?.content_hash || "")}"><span>${label}</span><strong>${escapeHtml(value)}</strong><small>${escapeHtml(note)}</small>${details || ""}</div>`).join("");
 }
 
 function evaluatedProposalCompareContext() {
@@ -6030,10 +6185,23 @@ function evidencePresentationContext() {
 
 function renderCompare() {
   const context = evaluatedProposalCompareContext();
+  const sourceWorkspace = context?.workspace || state.workspace;
+  const assessments = {};
+  for (const plan of sourceWorkspace.geography?.plans || []) {
+    const proposal = context?.scope === "preview" && state.session.proposal?.child_plan_id === plan.plan_id
+      ? state.session.proposal : null;
+    const evidence = sourceWorkspace.alternative_evidence?.[plan.plan_id];
+    const raw = proposal ? proposal.repair?.plan_assessment : sourceWorkspace.plan_assessments?.[plan.plan_id];
+    const facts = planPresentationEvidence(plan);
+    const assessment = facts.assessment && boundPlanAssessment(raw, plan,
+      evidence?.certificate || facts.certificate, evidence?.diff, proposal);
+    if (assessment) assessments[plan.plan_id] = assessment;
+  }
   renderCompareWorkspace({
     container: $("#workspace-content"),
-    workspace: context?.workspace || state.workspace,
+    workspace: sourceWorkspace,
     session: context?.session || state.session,
+    assessments,
     mapConfig: state.mapConfig,
     onBack: () => navigate("/app/itinerary"),
     onSelectAlternative: context
@@ -6105,6 +6273,26 @@ function renderEvidence() {
   } : {};
   const methods = selectedEvidence?.methods || {};
   const certificate = selectedEvidence?.certificate;
+  const rawAssessment = proposalMatches ? state.session.proposal?.repair?.plan_assessment
+    : state.workspace.plan_assessments?.[selectedPlan.plan_id];
+  const assessment = rawAssessment && certificate && selectedEvidence.diff
+    ? boundPlanAssessment(rawAssessment, selectedPlan, certificate, selectedEvidence.diff,
+      proposalMatches ? state.session.proposal : null) : null;
+  const assessmentMetrics = assessment ? (() => {
+    const weather = assessment.weather, retained = assessment.preservation, cost = assessment.edit_cost;
+    const exposure = value => Number(value.toFixed(4)).toString();
+    const change = weather.comparable
+      ? `${weather.mean_change > 0 ? "+" : ""}${exposure(weather.mean_change)} vs parent mean ${exposure(weather.reference_mean)}`
+      : "Unavailable; coverage or reference evidence is not comparable";
+    return `<dl><dt>Weather exposure</dt><dd>${weather.mean === null ? "Unavailable" : escapeHtml(exposure(weather.mean))} · ${weather.known_stop_count}/${weather.stop_count} stops · ${weather.state}</dd>
+      <dt>Exposure mean change</dt><dd>${escapeHtml(change)}</dd>
+      <dt>Stop preservation</dt><dd>${retained.preserved_stop_count}/${retained.reference_stop_count} parent stops${retained.rate === null ? "" : ` · ${Math.round(retained.rate * 100)}%`}</dd>
+      <dt>Unchanged days</dt><dd>${retained.unchanged_day_count}/${retained.reference_day_count} parent days</dd>
+      <dt>Weighted edit cost</dt><dd>${escapeHtml(formatMetric(cost.weighted))} points · ${cost.change_count} recorded changes</dd></dl>
+      <p>Exposure is the arithmetic mean of per-stop saved scores; it is not duration-weighted. This saved model index is not a probability or current forecast. Incomplete weather coverage has no mean; missing data is not zero. Stop retention allows attribute edits. Cost points are not money.</p>
+      <details><summary>Assessment source and change costs</summary><p>Saved plan context; ${assessment.parent_plan_id === assessment.plan_id ? "this plan is its own baseline" : "comparison uses its saved parent at evaluation, including after acceptance"}.</p>
+      ${cost.components.length ? `<ul>${cost.components.map(row => `<li>${escapeHtml(row.kind.replaceAll("_", " "))}: ${row.count} changes · ${escapeHtml(formatMetric(row.cost))} points</li>`).join("")}</ul>` : "<p>No recorded changes.</p>"}</details>`;
+  })() : "";
   const certVisible = Boolean(certificate);
   const checks = certVisible ? {
     artifact_grounding: certificate.artifact_grounding_status,
@@ -6119,7 +6307,7 @@ function renderEvidence() {
     <div class="evidence-grid">
       <article class="evidence-card"><h3>1 · Eligibility and certificate</h3>
         <p><strong>${escapeHtml(selectedAlternative?.method_label || "Registered repair")}</strong></p>
-        <span class="status-pill ${certVisible ? "success" : "warning"}">${certVisible ? escapeHtml(certificate.evaluation_status) : "Certificate unavailable"}</span>
+        <span class="status-pill ${certificate?.evaluation_status === "PASSED" ? "success" : "warning"}">${certVisible ? escapeHtml(certificate.evaluation_status) : "Certificate unavailable"}</span>
         <p>${certVisible ? `This plan is ${escapeHtml(certificate.comparison_eligibility)} with ${escapeHtml(certificate.route_validation?.road_validated_leg_count ?? "Unavailable")}/${escapeHtml(certificate.route_validation?.required_leg_count ?? "Unavailable")} road-validated legs.` : "No exact certificate is available for this selected plan and content hash."}</p>
       </article>
       <article class="evidence-card"><h3>2 · Policy and modeled-feasibility checks</h3><dl>${objectDl(checks)}</dl></article>
@@ -6133,7 +6321,8 @@ function renderEvidence() {
         <details><summary>Executed methods</summary><p>${escapeHtml((methods.executed || []).join(", ") || "Unavailable")}</p></details>
       </article>
       <article class="evidence-card"><h3>5 · Technical lineage</h3><dl>${objectDl(lineage)}</dl></article>
-      <article class="evidence-card"><h3>6 · Exact selected-plan metrics</h3><dl>${objectDl(certificate?.metrics || {})}</dl><p>Values come from the selected plan's evaluator certificate; compare against the accepted baseline in Compare.</p></article>
+      <article class="evidence-card"><h3>6 · Exact selected-plan metrics</h3>${assessmentMetrics || `<p>${rawAssessment ? "Assessment identity or accounting does not match this selected plan." : "No assessment is supplied; existing certificate metrics follow."}</p>`}
+        ${assessment ? `<details><summary>Evaluator certificate metrics</summary><dl>${objectDl(certificate?.metrics || {})}</dl></details>` : `<dl>${objectDl(certificate?.metrics || {})}</dl>`}<p>Values belong to this exact selected plan; comparisons retain the saved parent reference.</p></article>
     </div>
   </div>`;
   $("#evidence-back").addEventListener("click", () => navigate("/app/itinerary"));

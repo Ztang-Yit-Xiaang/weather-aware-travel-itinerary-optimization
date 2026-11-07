@@ -101,19 +101,45 @@ function optionCard(option, selectedId) {
   </article>`;
 }
 
-function selectedMetricsTable(baseline, resolution) {
+function selectedMetricsTable(baseline, resolution, assessments = {}) {
   const option = resolution.state === "selected" ? resolution.option : null;
+  // The application supplies accounting-validated assessments. Keep this table
+  // bound to the same maps and certificate even when selection changes.
+  const exactAssessment = (plan, certificate = null) => {
+    const value = assessments[plan?.plan_id];
+    return value?.plan_id === plan?.plan_id && value?.plan_content_hash === plan?.content_hash
+      && value.certificate?.plan_id === plan?.plan_id
+      && value.certificate?.plan_content_hash === plan?.content_hash
+      && value.certificate?.certificate_id === value.certificate_id
+      && value.certificate?.content_hash === value.certificate_content_hash
+      && (!certificate || certificate.certificate_id === value.certificate_id
+        && certificate.content_hash === value.certificate_content_hash) ? value : null;
+  };
+  const current = exactAssessment(baseline);
+  const selected = resolution.evidenceExact ? exactAssessment(resolution.plan, resolution.evidence?.certificate) : null;
+  const sameParent = selected && selected.parent_plan_id === baseline?.plan_id
+    && selected.parent_plan_content_hash === baseline?.content_hash;
+  const exposure = value => Number.isFinite(value) ? Number(value.toFixed(4)).toString() : "Unavailable";
+  const selectedCost = selected
+    ? sameParent ? displayMetric(selected.edit_cost.weighted, " points") : "Different comparison parent"
+    : displayMetric(option?.weighted_edit_cost);
   const baselineRouteState = routeMinutes(baseline) !== null ? "Validated" : "Unavailable";
   const rows = [
-    ["Independent eligibility", "required", "Current accepted baseline", option?.display_status || option?.status || "Unavailable"],
+    ["Independent eligibility", "required", current?.certificate.evaluation_status || "Current accepted baseline",
+      selected?.certificate.evaluation_status || option?.display_status || option?.status || "Unavailable"],
     ["Strict route time", "lower", displayMetric(routeMinutes(baseline), " minutes"), displayMetric(routeMinutes(resolution.plan), " minutes")],
-    ["Ownership-weighted edit cost", "lower", "0 (reference)", displayMetric(option?.weighted_edit_cost)],
+    ["Weather exposure · saved model index", "lower", exposure(current?.weather.mean), exposure(selected?.weather.mean)],
+    ["Weather mean change", "lower", "0 (reference)", selected
+      ? sameParent && selected.weather.comparable ? exposure(selected.weather.mean_change) : "Not comparable" : "Unavailable"],
+    ["Stop preservation", "higher", current ? `${current.weather.stop_count}/${current.weather.stop_count} (reference)` : "Unavailable",
+      selected ? sameParent ? `${selected.preservation.preserved_stop_count}/${selected.preservation.reference_stop_count}` : "Different comparison parent" : "Unavailable"],
+    ["Ownership-weighted edit cost", "lower", "0 (reference)", selectedCost],
     ["Road-validated route", "required", baselineRouteState, option ? (option.route_validated ? "Validated" : "Unavailable") : "Unavailable"],
     ["Primary tradeoff", "review", "Keep the current trip", option ? `${displayMetric(option.route_total_minutes, " route minutes")} with ${displayMetric(option.weighted_edit_cost, " edit cost")}` : "Unavailable"],
   ];
   return `<table class="comparison-table"><thead><tr><th>Metric</th><th>Direction</th><th>Accepted baseline</th><th>Selected option</th></tr></thead><tbody>${rows.map((row) => `<tr>
     <th scope="row">${escapeHtml(row[0])}</th><td>${escapeHtml(row[1])}</td>${row.slice(2).map((value) => `<td class="${value === "Unavailable" ? "unavailable" : ""}">${escapeHtml(value)}</td>`).join("")}
-  </tr>`).join("")}</tbody></table>`;
+  </tr>`).join("")}</tbody></table><p class="truth-note">Weather values use saved context, not a probability or current forecast. Missing coverage stays unavailable. Stop preservation counts retained stops, not unchanged order or duration. Edit costs are weighted change points, not money. Changes are comparable only when the selected option was evaluated against this accepted baseline.</p>`;
 }
 
 function diffSummary(resolution) {
@@ -274,6 +300,7 @@ export function renderCompareWorkspace({
   container,
   workspace,
   session,
+  assessments = {},
   mapConfig,
   onBack,
   onSelectAlternative,
@@ -304,7 +331,7 @@ export function renderCompareWorkspace({
       <button type="button" id="compare-evidence" ${resolution.evidenceExact ? "" : "disabled"}>View advanced Evidence</button>
     </div>
     ${diffSummary(resolution)}
-    ${selectedMetricsTable(baseline, resolution)}
+    ${selectedMetricsTable(baseline, resolution, assessments)}
   </div>`;
   container.querySelector("#compare-back").addEventListener("click", onBack);
   container.querySelectorAll("[data-compare-option]").forEach((button) => {

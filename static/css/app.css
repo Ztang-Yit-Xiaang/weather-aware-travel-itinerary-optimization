@@ -258,6 +258,13 @@ button:disabled { cursor: not-allowed; opacity: 0.55; }
 .metric span { display: block; color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: .06em; }
 .metric strong { display: block; margin-top: 2px; font-size: 15px; overflow-wrap: anywhere; }
 .metric small { color: var(--muted); font-size: 12px; }
+.metric-details { margin-top: 4px; color: var(--ink); font-size: 12px; line-height: 1.5; overflow-wrap: anywhere; }
+.metric-details > summary { min-height: 44px; padding-block: 12px; cursor: pointer; color: var(--teal-dark); font-weight: 700; }
+.metric-details > summary:hover { text-decoration: underline; text-underline-offset: 3px; }
+.metric-details > summary:focus-visible { outline: 2px solid var(--teal-dark); outline-offset: 2px; }
+.metric-details p { margin: 6px 0; }
+.metric-details ul { margin: 6px 0; padding-left: 18px; }
+.metric-strip:has(.metric-details[open]) { max-height: min(50dvh, 360px); overflow-y: auto; align-items: start; }
 
 .repair-panel h2 { margin: 6px 0 10px; font-size: 20px; line-height: 1.2; }
 .status-pill { display: inline-flex; align-items: center; gap: 6px; padding: 6px 9px; border-radius: 999px; font-size: 12px; font-weight: 800; }

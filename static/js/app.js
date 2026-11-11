@@ -19,7 +19,7 @@ import { createMutationRecovery } from "./mutation-recovery.js";
 import { interestPlacesInRegion, normalizeInterestResponse } from "./interest-regions.js";
 
 import { createWorkspaceStorage, restoreInterestPreferences } from "./workspace-storage.js";
-import { productFetch as fetch, currentAppPath, appRouteUrl, ensureHostedLogin, signOutHosted } from "./deployment-client.js";
+import { productFetch as fetch, currentAppPath, appRouteUrl, ensureHostedLogin, signOutHosted, workspaceAccountScope } from "./deployment-client.js";
 
 const state = {
   clientBuildId: document.querySelector('meta[name="product-build-id"]')?.content || "",
@@ -90,6 +90,7 @@ const PENDING_INPUT_KEY = "itinerary-repair-copilot.pending-input.v1";
 const workspaceStorage = createWorkspaceStorage({
   persistent: localStorage, tab: sessionStorage, sessionKey: SESSION_STORAGE_KEY,
   scopedKeys: [PENDING_MUTATION_KEY, PENDING_INPUT_KEY],
+  accountScope: workspaceAccountScope,
 });
 let interestRefreshRunning = false;
 let interestRefreshTimer = null;

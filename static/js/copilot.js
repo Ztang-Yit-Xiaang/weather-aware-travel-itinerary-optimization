@@ -35,7 +35,9 @@ export function copilotDraftability(intent, workspace) {
   const capabilities = workspace?.draft_capabilities;
   const typed = TYPED_EDIT_INTENT_TYPES.has(intent?.type);
   const operation = (typed ? workspace?.typed_edit_capabilities : capabilities)?.operations?.[intent?.type];
-  if (typed && (operation?.preview_executable !== true || !typedEditParameters(intent))) {
+  if (typed && (operation?.preview_executable !== true || !typedEditParameters(intent)
+      || intent.type === "set_stop_duration" && !operation.supported_evaluated_modes?.includes(intent.parameters.duration.mode)
+      || intent.type === "set_stop_role" && !operation.supported_evaluated_roles?.includes(intent.parameters.role))) {
     return { allowed: false, reason: "This typed stop edit has invalid parameters or is not enabled for evaluated preview." };
   }
   if (intent?.type === "add_candidate" && Array.isArray(operation?.candidate_day_readiness)) {
@@ -133,9 +135,15 @@ function typedEditParameters(intent) {
   if (intent.type === "set_stop_duration") {
     const duration = parameters?.duration;
     if (!fields(parameters, ["duration"]) || !fields(duration, ["mode", "preferred_minutes", "minimum_minutes", "maximum_minutes"])
-        || duration.mode !== "exact" || !Number.isInteger(duration.preferred_minutes)
-        || duration.preferred_minutes < 15 || duration.preferred_minutes > 480
-        || duration.minimum_minutes !== duration.preferred_minutes || duration.maximum_minutes !== duration.preferred_minutes) return null;
+    ) return null;
+    const {mode, preferred_minutes: preferred, minimum_minutes: minimum, maximum_minutes: maximum} = duration;
+    const minutes = value => Number.isInteger(value) && value >= 15 && value <= 480;
+    const valid = mode === "exact" ? minutes(preferred) && minimum === preferred && maximum === preferred
+      : mode === "preferred" ? minutes(preferred) && minimum === null && maximum === null
+        : mode === "minimum" ? preferred === null && minutes(minimum) && maximum === null
+          : mode === "maximum" ? preferred === null && minimum === null && minutes(maximum)
+            : mode === "range" && preferred === null && minutes(minimum) && minutes(maximum) && minimum <= maximum;
+    if (!valid) return null;
   } else if (intent.type === "set_stop_order") {
     if (!fields(parameters, ["day", "sequence_index"]) || !Number.isInteger(parameters.day)
         || parameters.day < 1 || parameters.day > 21 || !Number.isInteger(parameters.sequence_index)
@@ -145,7 +153,7 @@ function typedEditParameters(intent) {
     if (!fields(parameters, ["earliest_arrival", "latest_departure"]) || !time(parameters.earliest_arrival)
         || !time(parameters.latest_departure) || parameters.earliest_arrival === null && parameters.latest_departure === null
         || parameters.earliest_arrival !== null && parameters.latest_departure !== null && parameters.earliest_arrival > parameters.latest_departure) return null;
-  } else if (!fields(parameters, ["role"]) || !["attraction", "activity", "meal", "rest_stop", "scenic_stop"].includes(parameters.role)) return null;
+  } else if (!fields(parameters, ["role"]) || !["attraction", "activity", "meal", "rest_stop", "scenic_stop", "origin", "destination"].includes(parameters.role)) return null;
   return JSON.parse(JSON.stringify(parameters));
 }
 
@@ -566,12 +574,21 @@ export function createCopilotController({
     if (intent.type === "lock_stop") return `Preserve ${stopName(intent.target_stop_id)} as a locked commitment.`;
     if (intent.type === "mark_flexible") return `Mark ${stopName(intent.target_stop_id)} as flexible.`;
     if (intent.type === "set_stop_duration") {
-      return `Set ${stopName(intent.target_stop_id)} to exactly ${intent.parameters.duration.preferred_minutes} minutes.`;
+      const duration = typedEditParameters(intent)?.duration;
+      const name = stopName(intent.target_stop_id);
+      if (!duration) return `Review the visit-duration request for ${name}.`;
+      if (duration.mode === "exact") return `Set ${name} to exactly ${duration.preferred_minutes} minutes.`;
+      if (duration.mode === "preferred") return `Prefer ${duration.preferred_minutes} minutes at ${name}; the evaluated plan may select a different duration.`;
+      if (duration.mode === "minimum") return `Spend at least ${duration.minimum_minutes} minutes at ${name}.`;
+      if (duration.mode === "maximum") return `Spend at most ${duration.maximum_minutes} minutes at ${name}.`;
+      return `Spend between ${duration.minimum_minutes} and ${duration.maximum_minutes} minutes at ${name}.`;
     }
     if (intent.type === "set_stop_order") {
       return `Place ${stopName(intent.target_stop_id)} at position ${intent.parameters.sequence_index + 1} on Day ${intent.parameters.day}.`;
     }
     if (intent.type === "set_stop_role") {
+      if (intent.parameters.role === "origin") return `Use ${stopName(intent.target_stop_id)} as the trip origin on the first day.`;
+      if (intent.parameters.role === "destination") return `Use ${stopName(intent.target_stop_id)} as the trip destination on the last day.`;
       return `Use ${stopName(intent.target_stop_id)} as a ${intent.parameters.role.replaceAll("_", " ")}.`;
     }
     if (intent.type === "set_stop_time_window") {

@@ -499,21 +499,23 @@ function normalizeTypedEditCapabilities(value) {
     if (orderOperation
         && (capability.supported_scope !== "same_day"
           || capability.sequence_index_base !== 0)) return null;
+    const historicalReadOnlyRoles = acceptedReadOnly
+      && exactStringArray(capability.supported_evaluated_roles, EVALUATED_STOP_ROLES)
+      && exactStringArray(capability.draft_only_roles, ["lodging", "transport_hub", "route_waypoint", "origin", "destination"]);
     if (roleOperation
-        && (!exactStringArray(capability.supported_evaluated_roles, [
-          "attraction", "activity", "meal", "rest_stop", "scenic_stop",
-        ])
-          || !exactStringArray(capability.draft_only_roles, [
-            "lodging", "transport_hub", "route_waypoint", "origin", "destination",
-          ])
+        && ((!historicalReadOnlyRoles && (!exactStringArray(capability.supported_evaluated_roles, [...EVALUATED_STOP_ROLES, ...ENDPOINT_STOP_ROLES])
+          || !exactStringArray(capability.draft_only_roles, ["lodging", "transport_hub", "route_waypoint"])))
           || capability.unsupported_role_blocking_code !== "stop_role_evaluation_not_supported"
           || capability.typed_plan_field !== "itinerary_role"
           || capability.typed_source_field !== "itinerary_role_source"
           || capability.typed_source_value !== "user_declared_itinerary_role"
           || !exactStringArray(capability.combinable_operation_types, combinable))) return null;
+    const historicalReadOnlyDuration = acceptedReadOnly
+      && exactStringArray(capability.supported_evaluated_modes, ["exact"])
+      && exactStringArray(capability.draft_only_modes, ["preferred", "minimum", "maximum", "range"]);
     if (durationOperation
-        && (!exactStringArray(capability.supported_evaluated_modes, ["exact"])
-          || !exactStringArray(capability.draft_only_modes, ["preferred", "minimum", "maximum", "range"])
+        && ((!historicalReadOnlyDuration && (!exactStringArray(capability.supported_evaluated_modes, TYPED_EDIT_VOCABULARIES.duration_modes)
+          || !exactStringArray(capability.draft_only_modes, [])))
           || capability.unsupported_mode_blocking_code !== "duration_mode_evaluation_not_supported"
           || capability.scalar_plan_field !== "visit_duration_minutes"
           || capability.typed_plan_field !== "duration_constraint")) return null;
@@ -529,7 +531,7 @@ function normalizeTypedEditCapabilities(value) {
 
 function draftCombinationBlocker(draft) {
   const directTypes = new Set([
-    "set_stop_order", "set_stop_role", "set_stop_duration", "set_stop_time_window",
+    "set_stop_day", "move_day", "set_stop_order", "set_stop_role", "set_stop_duration", "set_stop_time_window",
   ]);
   const present = new Set(draft.map(operation => operation.type).filter(type => directTypes.has(type)));
   const modes = new Set(draft.filter(operation => operation.type === "set_stop_duration")
@@ -538,8 +540,8 @@ function draftCombinationBlocker(draft) {
   const combination = state.workspace?.draft_capabilities?.executable_combinations?.some(
     (row) => draft.length <= row.cardinality && draft.every((operation) => row.operations.includes(operation.type)),
   );
-  return (mixed && (!combination || [...modes].some((mode) => mode !== "exact")))
-    || (modes.has("exact") && modes.size > 1)
+  const supportedModes = state.workspace?.typed_edit_capabilities?.operations?.set_stop_duration?.supported_evaluated_modes || ["exact"];
+  return (mixed && !combination) || [...modes].some(mode => !supportedModes.includes(mode))
     ? "draft_evaluated_operation_combination_unsupported" : null;
 }
 
@@ -576,6 +578,7 @@ function normalizeDraftImpactPreview(value) {
   const changedAttributes = {
     set_stop_role: ["itinerary_role"],
     set_stop_day: ["day"],
+    move_day: ["day"],
     set_stop_order: ["day", "sequence_order"],
     set_stop_duration: ["duration"],
     set_stop_time_window: ["time_window"],
@@ -839,12 +842,30 @@ async function normalizeRoleProposalIntegrity(value, proposal) {
   return digest !== null && digest === value.digest ? value : null;
 }
 
-function canonicalExactDuration(value) {
+function canonicalDurationConstraint(value) {
   if (!exactKeys(value, ["mode", "preferred_minutes", "minimum_minutes", "maximum_minutes"])) return null;
-  const minutes = value.preferred_minutes;
-  if (value.mode !== "exact" || !Number.isInteger(minutes) || minutes < 15 || minutes > 480
-      || value.minimum_minutes !== minutes || value.maximum_minutes !== minutes) return null;
-  return { mode: "exact", preferred_minutes: minutes, minimum_minutes: minutes, maximum_minutes: minutes };
+  const {mode, preferred_minutes: preferred, minimum_minutes: minimum, maximum_minutes: maximum} = value;
+  const minutes = number => Number.isInteger(number) && number >= 15 && number <= 480;
+  const valid = mode === "exact" ? minutes(preferred) && minimum === preferred && maximum === preferred
+    : mode === "preferred" ? minutes(preferred) && minimum === null && maximum === null
+      : mode === "minimum" ? preferred === null && minutes(minimum) && maximum === null
+        : mode === "maximum" ? preferred === null && minimum === null && minutes(maximum)
+          : mode === "range" && preferred === null && minutes(minimum) && minutes(maximum) && minimum <= maximum;
+  return valid ? {mode, preferred_minutes: preferred, minimum_minutes: minimum, maximum_minutes: maximum} : null;
+}
+
+function durationContainsMinutes(constraint, minutes) {
+  const value = canonicalDurationConstraint(constraint);
+  return Boolean(value && Number.isInteger(minutes) && minutes >= 15 && minutes <= 480
+    && (value.mode !== "exact" || minutes === value.preferred_minutes)
+    && (value.minimum_minutes === null || minutes >= value.minimum_minutes)
+    && (value.maximum_minutes === null || minutes <= value.maximum_minutes));
+}
+
+function durationRuleSatisfaction(actual, required) {
+  const observed = canonicalDurationConstraint(actual);
+  if (!observed || observed.mode !== "exact") return "unavailable";
+  return durationContainsMinutes(required, observed.preferred_minutes) ? "satisfied" : "unsatisfied";
 }
 
 function validLocalClock(value) {
@@ -896,6 +917,18 @@ function timeWindowConstraintFromParameters(value) {
   } : null;
 }
 
+function acceptedScheduleGeography(proposal) {
+  const plan = state.workspace?.geography?.plans?.find(row => row.plan_id === state.session?.accepted_plan_id
+    && row.plan_id === proposal.parent_plan_id && row.content_hash === proposal.parent_plan_content_hash);
+  if (!Array.isArray(plan?.stops?.features) || !Array.isArray(plan?.validated_legs?.features)) return null;
+  const ids = plan.stops.features.map(feature => feature.properties?.stop_id);
+  const days = [...new Set([...plan.stops.features, ...plan.validated_legs.features].map(feature => feature.properties?.day))]
+    .sort((left, right) => left - right);
+  if (ids.some(id => typeof id !== "string" || !id) || new Set(ids).size !== ids.length
+      || !days.length || days.some(day => !Number.isInteger(day) || day < 1 || day > 21)) return null;
+  return {plan, days};
+}
+
 async function normalizeDurationPlanDiff(value, proposal, draft) {
   if (!exactKeys(value, [
     "diff_id", "parent_plan_id", "child_plan_id", "added_stops", "deleted_stops",
@@ -911,9 +944,11 @@ async function normalizeDurationPlanDiff(value, proposal, draft) {
       || !Array.isArray(value.duration_changes)
       || value.duration_changes.length !== draft.length
       || !Number.isFinite(value.weighted_edit_cost) || value.weighted_edit_cost < 0) return null;
+  const acceptedGeo = acceptedScheduleGeography(proposal);
+  if (!acceptedGeo) return null;
   const draftByTarget = new Map();
   for (const operation of draft) {
-    const requested = canonicalExactDuration(operation.parameters?.duration);
+    const requested = canonicalDurationConstraint(operation.parameters?.duration);
     if (operation.type !== "set_stop_duration" || !requested || draftByTarget.has(operation.target)) return null;
     draftByTarget.set(operation.target, requested);
   }
@@ -928,35 +963,30 @@ async function normalizeDurationPlanDiff(value, proposal, draft) {
     const requested = draftByTarget.get(change.stop_id);
     const fromConstraint = change.from_constraint === null
       ? null
-      : canonicalExactDuration(change.from_constraint);
-    const acceptedDay = state.workspace?.timeline?.find(
-      (day) => day.stops.some((stop) => stop.id === change.stop_id),
-    )?.day;
-    const acceptedOwnership = state.workspace?.geography?.plans?.find(
-      (plan) => plan.plan_id === state.session?.accepted_plan_id,
-    )?.stops?.features?.find(
+      : canonicalDurationConstraint(change.from_constraint);
+    const acceptedStop = acceptedGeo.plan.stops.features.find(
       (feature) => feature.properties?.stop_id === change.stop_id,
-    )?.properties?.ownership_strength;
-    if (!requested || change.day !== acceptedDay || !sameJson(change.to_constraint, requested)
+    )?.properties;
+    if (!requested || change.day !== acceptedStop?.day || !sameJson(change.to_constraint, requested)
         || (change.from_constraint !== null && !fromConstraint)
         || !(change.from_minutes === null || (
           Number.isInteger(change.from_minutes) && change.from_minutes >= 15 && change.from_minutes <= 480
         ))
-        || change.to_minutes !== requested.preferred_minutes
+        || !durationContainsMinutes(requested, change.to_minutes)
         || !["unavailable", "visit_duration_minutes", "duration_minutes", "service_minutes", "dwell_minutes"].includes(change.from_source)
         || change.to_source !== "visit_duration_minutes"
         || !Number.isFinite(change.accounting_from_minutes)
         || !Number.isFinite(change.accounting_to_minutes)
-        || change.accounting_to_minutes !== requested.preferred_minutes
+        || change.accounting_to_minutes !== change.to_minutes
         || !["configured_evaluator_default", "visit_duration_minutes", "duration_minutes", "service_minutes", "dwell_minutes"].includes(change.accounting_from_source)
         || change.accounting_to_source !== "visit_duration_minutes"
         || !Number.isFinite(change.delta_minutes)
-        || typeof acceptedOwnership !== "string" || change.owner_strength !== acceptedOwnership
+        || typeof acceptedStop?.ownership_strength !== "string" || change.owner_strength !== acceptedStop.ownership_strength
         || !Number.isFinite(change.cost) || change.cost < 0) return null;
     const rawUnavailable = change.from_source === "unavailable";
     if ((rawUnavailable && (change.from_minutes !== null || change.from_constraint !== null))
         || (!rawUnavailable && !Number.isFinite(change.from_minutes))
-        || (fromConstraint && fromConstraint.preferred_minutes !== change.from_minutes)
+        || (fromConstraint && !durationContainsMinutes(fromConstraint, change.from_minutes))
         || (change.accounting_from_source === "configured_evaluator_default" && !rawUnavailable)
         || (change.accounting_from_source !== "configured_evaluator_default" && (
           rawUnavailable
@@ -970,8 +1000,7 @@ async function normalizeDurationPlanDiff(value, proposal, draft) {
     totalCost += change.cost;
     draftByTarget.delete(change.stop_id);
   }
-  const allDays = (state.workspace?.timeline || []).map((day) => day.day);
-  const expectedUnchanged = allDays.filter((day) => !affectedDays.has(day));
+  const expectedUnchanged = acceptedGeo.days.filter((day) => !affectedDays.has(day));
   if (draftByTarget.size !== 0 || !exactStringArray(value.unchanged_days, expectedUnchanged)
       || Math.abs(totalCost - value.weighted_edit_cost) > 1e-9) return null;
   const hash = await computedStableContentHash(value);
@@ -1001,9 +1030,8 @@ async function normalizeTimeWindowPlanDiff(value, proposal, draft) {
     if (operation.type !== "set_stop_time_window" || !requested || draftByTarget.has(operation.target)) return null;
     draftByTarget.set(operation.target, requested);
   }
-  const parentPlan = state.workspace?.geography?.plans?.find(
-    (plan) => plan.plan_id === state.session?.accepted_plan_id,
-  );
+  const acceptedGeo = acceptedScheduleGeography(proposal);
+  if (!acceptedGeo) return null;
   const affectedDays = new Set();
   let totalCost = 0;
   for (const change of value.time_window_changes) {
@@ -1017,28 +1045,24 @@ async function normalizeTimeWindowPlanDiff(value, proposal, draft) {
       ? null
       : canonicalTimeWindowConstraint(change.from_constraint);
     const toConstraint = canonicalTimeWindowConstraint(change.to_constraint);
-    const acceptedDay = state.workspace?.timeline?.find(
-      (day) => day.stops.some((stop) => stop.id === change.stop_id),
-    )?.day;
-    const acceptedOwnership = parentPlan?.stops?.features?.find(
+    const acceptedStop = acceptedGeo.plan.stops.features.find(
       (feature) => feature.properties?.stop_id === change.stop_id,
-    )?.properties?.ownership_strength;
+    )?.properties;
     if (!requested || !toConstraint
-        || change.day !== acceptedDay
+        || change.day !== acceptedStop?.day
         || canonicalJson(toConstraint) !== canonicalJson(requested)
         || (change.from_constraint !== null && !fromConstraint)
         || change.from_earliest_arrival !== (fromConstraint?.earliest_arrival ?? null)
         || change.from_latest_departure !== (fromConstraint?.latest_departure ?? null)
         || change.to_earliest_arrival !== requested.earliest_arrival
         || change.to_latest_departure !== requested.latest_departure
-        || typeof acceptedOwnership !== "string" || change.owner_strength !== acceptedOwnership
+        || typeof acceptedStop?.ownership_strength !== "string" || change.owner_strength !== acceptedStop.ownership_strength
         || !Number.isFinite(change.cost) || change.cost < 0) return null;
     affectedDays.add(change.day);
     totalCost += change.cost;
     draftByTarget.delete(change.stop_id);
   }
-  const allDays = (state.workspace?.timeline || []).map((day) => day.day);
-  const expectedUnchanged = allDays.filter((day) => !affectedDays.has(day));
+  const expectedUnchanged = acceptedGeo.days.filter((day) => !affectedDays.has(day));
   if (draftByTarget.size !== 0 || !exactStringArray(value.unchanged_days, expectedUnchanged)
       || Math.abs(totalCost - value.weighted_edit_cost) > 1e-9) return null;
   const hash = await computedStableContentHash(value);
@@ -1048,6 +1072,7 @@ async function normalizeTimeWindowPlanDiff(value, proposal, draft) {
 }
 
 const EVALUATED_STOP_ROLES = ["attraction", "activity", "meal", "rest_stop", "scenic_stop"];
+const ENDPOINT_STOP_ROLES = ["origin", "destination"];
 const ROLE_SEMANTIC_SCOPE = {
   itinerary_role_semantics: "trip_specific_user_declared_use",
   place_identity_unchanged: true,
@@ -1575,10 +1600,13 @@ function acceptedPlanTimeWindowTraceStops() {
   for (const feature of path) {
     const properties = feature?.properties;
     if (properties?.selected_stop !== true) continue;
-    const day = properties.arrival_day;
+    const stopProperties = stopFeatures.get(properties.node_id)?.properties;
+    const day = properties.arrival_day ?? (
+      properties.occurrence_index === 0 && properties.departure_day === stopProperties?.day
+        ? properties.departure_day : null
+    );
     if (typeof properties.node_id !== "string" || !properties.node_id
         || !Number.isInteger(day) || day <= 0) return null;
-    const stopProperties = stopFeatures.get(properties.node_id)?.properties;
     const visitMinutes = stopProperties?.visit_duration_minutes;
     const visitSource = stopProperties?.visit_duration_source;
     const visitMissing = visitMinutes === null;
@@ -1618,9 +1646,12 @@ function normalizeTimeWindowTrace(
       || typeof value.stop_id !== "string" || !value.stop_id
       || !Number.isInteger(value.day) || value.day <= 0
       || !Number.isInteger(value.sequence_index) || value.sequence_index < 0
-      || typeof value.incoming_origin_id !== "string" || !value.incoming_origin_id
-      || !Number.isFinite(value.incoming_travel_minutes) || value.incoming_travel_minutes <= 0
-      || !/^[0-9a-f]{16}$/.test(value.incoming_route_query_hash)
+      || (incoming === null
+        ? value.sequence_index !== 0 || value.incoming_origin_id !== null
+          || value.incoming_travel_minutes !== 0 || value.incoming_route_query_hash !== null
+        : typeof value.incoming_origin_id !== "string" || !value.incoming_origin_id
+          || !Number.isFinite(value.incoming_travel_minutes) || value.incoming_travel_minutes <= 0
+          || !/^[0-9a-f]{16}$/.test(value.incoming_route_query_hash))
       || !Number.isFinite(value.road_arrival_minute) || value.road_arrival_minute < 0
       || !validFiniteOrNull(value.opening_start_minute)
       || !validFiniteOrNull(value.opening_end_minute)
@@ -1752,8 +1783,10 @@ async function normalizeTimeWindowScheduleAccounting(
   if (!timelineStops) return null;
   if (value.stop_traces.length !== timelineStops.length) return null;
   const incomingByStop = new Map();
+  const firstOriginByDay = new Map();
   const routeMinutesByDay = new Map();
   for (const leg of routeLegEvidence) {
+    if (!firstOriginByDay.has(leg.day)) firstOriginByDay.set(leg.day, leg.origin_id);
     const key = `${leg.day}:${leg.destination_id}`;
     if (incomingByStop.has(key)) return null;
     incomingByStop.set(key, leg);
@@ -1765,14 +1798,16 @@ async function normalizeTimeWindowScheduleAccounting(
   const priorDepartureByDay = new Map();
   for (const [index, rawTrace] of value.stop_traces.entries()) {
     const expected = timelineStops[index];
-    const incoming = incomingByStop.get(`${expected.day}:${expected.stop_id}`);
+    const startsAtStop = expected.sequence_index === 0
+      && firstOriginByDay.get(expected.day) === expected.stop_id;
+    const incoming = startsAtStop ? null : incomingByStop.get(`${expected.day}:${expected.stop_id}`);
     const expectedOrigin = expected.sequence_index === 0
       ? incoming?.origin_id
       : timelineStops[index - 1]?.stop_id;
+    if (!startsAtStop && (!incoming || incoming.origin_id !== expectedOrigin)) return null;
     const expectedRoadArrival = (
       priorDepartureByDay.get(expected.day) ?? configuredDayStartMinute
-    ) + (incoming?.duration_minutes ?? Number.NaN);
-    if (!incoming || incoming.origin_id !== expectedOrigin) return null;
+    ) + (incoming?.duration_minutes ?? 0);
     const trace = normalizeTimeWindowTrace(rawTrace, configuredDefaultVisitMinutes, {
       expected, incoming, expectedRoadArrival,
     });
@@ -2350,7 +2385,10 @@ function normalizeRouteValidation(value) {
   const compositeIdentity = deltaPrefix !== null
     && value.matrix_id === `route_matrix_delta_${deltaPrefix}`
     && value.source_bundle_id === `route_bundle_composite_${deltaPrefix}`;
-  if ((!originalIdentity && !compositeIdentity)
+  const editIdentity = deltaPrefix !== null
+    && value.matrix_id === `route_matrix_edit_${deltaPrefix}`
+    && value.source_bundle_id === `route_bundle_edit_${deltaPrefix}`;
+  if ((!originalIdentity && !compositeIdentity && !editIdentity)
       || typeof value.context_snapshot_id !== "string"
       || !value.context_snapshot_id || value.context_snapshot_id.length > 128
       || !/^[0-9a-f]{64}$/.test(value.source_content_sha256)
@@ -2619,7 +2657,7 @@ function lineDistanceMeters(coordinates) {
   return total;
 }
 
-function routeChainMatchesEvidence(value, routeValidation, planning = false) {
+function routeChainMatchesEvidence(value, routeValidation, planning = false, evaluatedDay = false) {
   const path = [...value.route_path.features].sort(
     (left, right) => left.properties?.occurrence_index - right.properties?.occurrence_index,
   );
@@ -2667,7 +2705,9 @@ function routeChainMatchesEvidence(value, routeValidation, planning = false) {
         || typeof properties.evidence_scope !== "string" || !properties.evidence_scope
         || properties.validation_status !== "road_validated"
         || properties.road_validated !== true || properties.fallback_used !== false
-        || !["cached_osrm_route_geometry", ...(planning ? ["runtime_osrm_geojson"] : [])].includes(properties.geometry_source)
+        || !["cached_osrm_route_geometry", ...(planning ? ["runtime_osrm_geojson"] : []),
+          ...(evaluatedDay && routeValidation.matrix_id.startsWith("route_matrix_edit_")
+            ? ["runtime_osrm_geojson", "runtime_ors_geojson"] : [])].includes(properties.geometry_source)
         || typeof properties.cross_day !== "boolean"
         || !Number.isInteger(properties.day) || !Number.isInteger(properties.from_day)
         || !Number.isInteger(properties.to_day)
@@ -2733,6 +2773,10 @@ function acceptedStopOrderByDay() {
   const plan = state.workspace?.geography?.plans?.find(row => row.plan_id === state.session?.accepted_plan_id);
   if (!plan?.stops?.features) return null;
   const days = new Map();
+  for (const row of state.workspace?.timeline || []) {
+    if (!Number.isInteger(row.day) || row.day <= 0 || row.day > 21 || days.has(row.day)) return null;
+    days.set(row.day, []);
+  }
   for (const feature of [...plan.stops.features].sort((a, b) => a.properties.sequence_index - b.properties.sequence_index)) {
     const {day, stop_id: id} = feature.properties;
     if (!Number.isInteger(day) || day <= 0 || day > 21 || typeof id !== "string"
@@ -2740,10 +2784,156 @@ function acceptedStopOrderByDay() {
     if (!days.has(day)) days.set(day, []);
     days.get(day).push(id);
   }
+  return new Map([...days].sort(([left], [right]) => left - right));
+}
+
+function acceptedStopRoles() {
+  const features = state.workspace?.geography?.plans?.find(plan => plan.plan_id === state.session?.accepted_plan_id)?.stops?.features;
+  return Array.isArray(features) ? new Map(features.map(feature => [feature.properties.stop_id, feature.properties.itinerary_role])) : null;
+}
+
+function endpointRoleEdit(draft) {
+  const roles = acceptedStopRoles();
+  return draft.some(row => row.type === "set_stop_role"
+    && (ENDPOINT_STOP_ROLES.includes(row.parameters?.role) || ENDPOINT_STOP_ROLES.includes(roles?.get(row.target))));
+}
+
+function draftEndpointRoles(draft) {
+  const roles = acceptedStopRoles();
+  if (!roles) return null;
+  const seen = new Set();
+  for (const row of draft.filter(operation => operation.type === "set_stop_role")) {
+    if (!roles.has(row.target) || seen.has(row.target) || !exactKeys(row.parameters, ["role"])
+        || ![...EVALUATED_STOP_ROLES, ...ENDPOINT_STOP_ROLES].includes(row.parameters.role)) return null;
+    seen.add(row.target);
+    roles.set(row.target, row.parameters.role);
+  }
+  const endpoints = new Map();
+  for (const [id, role] of roles) {
+    if (!ENDPOINT_STOP_ROLES.includes(role)) continue;
+    if (endpoints.has(role)) return null;
+    endpoints.set(role, id);
+  }
+  return endpoints;
+}
+
+function draftStopOrderByDay(draft) {
+  const days = acceptedStopOrderByDay();
+  if (!days) return null;
+  const moves = draft.filter(row => ["set_stop_day", "move_day"].includes(row.type));
+  const targets = new Set();
+  for (const operation of moves) {
+    const source = [...days].find(([, ids]) => ids.includes(operation.target));
+    if (!source || targets.has(operation.target) || !exactKeys(operation.parameters, ["day"])
+        || !days.has(operation.parameters.day) || source[0] === operation.parameters.day) return null;
+    targets.add(operation.target);
+  }
+  for (const [day, ids] of days) days.set(day, ids.filter(id => !targets.has(id)));
+  for (const operation of moves) days.get(operation.parameters.day).push(operation.target);
+  for (const operation of draft) {
+    if (operation.type === "replace_nearby") {
+      const order = [...days.values()].find(ids => ids.includes(operation.target));
+      if (!order) return null;
+      order.splice(order.indexOf(operation.target), 1, operation.parameters.candidate_id);
+    } else if (operation.type === "add_candidate") {
+      const order = days.get(operation.parameters.day);
+      if (!order || [...days.values()].some(ids => ids.includes(operation.target))) return null;
+      order.push(operation.target);
+    }
+  }
+  const endpoints = draftEndpointRoles(draft);
+  if (!endpoints) return null;
+  const endpointDays = {origin: [...days.keys()][0], destination: [...days.keys()].at(-1)};
+  for (const [role, id] of endpoints) {
+    const source = [...days.values()].find(ids => ids.includes(id));
+    if (!source || moves.some(row => row.target === id && row.parameters.day !== endpointDays[role])) return null;
+    source.splice(source.indexOf(id), 1);
+    if (role === "origin") days.get(endpointDays[role]).unshift(id);
+    else days.get(endpointDays[role]).push(id);
+  }
+  for (const operation of draft.filter(row => row.type === "set_stop_order")) {
+    const order = days.get(operation.parameters.day);
+    const index = order?.indexOf(operation.target) ?? -1;
+    if (index < 0 || !Number.isInteger(operation.parameters.sequence_index)
+        || operation.parameters.sequence_index < 0 || operation.parameters.sequence_index >= order.length) return null;
+    order.splice(index, 1);
+    order.splice(operation.parameters.sequence_index, 0, operation.target);
+  }
+  for (const [role, id] of endpoints) {
+    const order = days.get(endpointDays[role]);
+    if ((role === "origin" ? order[0] : order.at(-1)) !== id) return null;
+  }
   return days;
 }
 
+function normalizeDayMoves(diff, days) {
+  const parent = acceptedStopOrderByDay();
+  if (!parent || !Array.isArray(diff?.day_moves)) return null;
+  const before = new Map([...parent].flatMap(([day, ids]) => ids.map(id => [id, day])));
+  const expected = [...days].flatMap(([day, ids]) => ids.filter(id => before.has(id) && before.get(id) !== day)
+    .map(id => ({stop_id: id, from_day: before.get(id), to_day: day})));
+  if (diff.day_moves.some(row => !exactKeys(row, ["stop_id", "from_day", "to_day", "owner_strength", "cost"]))
+      || !sameJson(diff.day_moves.map(({stop_id, from_day, to_day}) => ({stop_id, from_day, to_day}))
+        .sort((a, b) => a.stop_id.localeCompare(b.stop_id)), expected.sort((a, b) => a.stop_id.localeCompare(b.stop_id)))) return null;
+  return diff;
+}
+
+async function normalizeDayPlanDiff(diff, proposal, draft) {
+  const days = draftStopOrderByDay(draft);
+  const groups = ["added_stops", "deleted_stops", "day_moves", "time_shifts", "reorder_changes", "lodging_changes", "road_changes"];
+  const owned = diff?.schema_version === "plan-diff-v5";
+  if (!days || !exactKeys(diff, ["diff_id", "parent_plan_id", "child_plan_id", ...groups,
+    "unchanged_days", "weighted_edit_cost", "schema_version", ...(owned ? ["attribute_ownership_evidence"] : [])])
+      || !["plan-diff-v1", "plan-diff-v5"].includes(diff.schema_version)
+      || !groups.every(key => Array.isArray(diff[key])) || !normalizeDayMoves(diff, days)
+      || ["added_stops", "deleted_stops", "time_shifts", "lodging_changes"].some(key => diff[key].length)) return null;
+  const costs = groups.flatMap(key => diff[key]);
+  if (!Number.isFinite(diff.weighted_edit_cost) || costs.some(row => !Number.isFinite(row?.cost) || row.cost < 0)
+      || Math.abs(costs.reduce((sum, row) => sum + row.cost, 0) - diff.weighted_edit_cost) > 1e-8) return null;
+  const before = acceptedStopOrderByDay();
+  const parentOrders = new Map([...before].flatMap(([, ids]) => ids.map((id, index) => [id, index + 1])));
+  const expectedReorders = [...days].flatMap(([day, ids]) => ids.flatMap((id, index) => parentOrders.get(id) !== index + 1
+    ? [{stop_id: id, day, from_order: parentOrders.get(id), to_order: index + 1}] : []));
+  if (!sameJson(diff.reorder_changes.map(({stop_id, day, from_order, to_order}) => ({stop_id, day, from_order, to_order}))
+    .sort((a, b) => a.stop_id.localeCompare(b.stop_id)), expectedReorders.sort((a, b) => a.stop_id.localeCompare(b.stop_id)))) return null;
+  const changed = [...days.keys()].filter(day => !sameJson(days.get(day), before.get(day)));
+  if (!sameJson(diff.road_changes.map(row => row.day).sort((a, b) => a - b), changed)
+      || !sameJson(diff.unchanged_days, [...days.keys()].filter(day => !changed.includes(day)))) return null;
+  const seed = {parent_plan_id: diff.parent_plan_id, child_plan_id: diff.child_plan_id,
+    added: diff.added_stops, deleted: diff.deleted_stops, day_moves: diff.day_moves, time_shifts: diff.time_shifts,
+    reorder: diff.reorder_changes, lodging: diff.lodging_changes, road: diff.road_changes,
+    unchanged_days: diff.unchanged_days, weighted_edit_cost: diff.weighted_edit_cost};
+  if (owned) seed.attribute_ownership_evidence = diff.attribute_ownership_evidence;
+  if (`diff_${await computedStableContentHash(seed)}` !== diff.diff_id) return null;
+  const requiresOwned = (state.workspace?.attribute_diff_context?.attribute_constraints || []).some(rule =>
+    ({day: diff.day_moves, order: diff.reorder_changes})[rule.attribute]?.some(row => row.stop_id === rule.target_stop_id));
+  if ((requiresOwned && !owned) || (owned && (proposal.evaluation_certificate?.evaluator_version !== "verify-001-plan-evaluator-v3"
+      || !await normalizeCombinedAttributeOwnership(diff, proposal, null)))) return null;
+  return diff;
+}
+
 function normalizePreviewGeography(value, proposal, routeValidation, draft) {
+  const parent = state.workspace?.geography?.plans?.find(plan => plan.plan_id === state.session?.accepted_plan_id);
+  if (!parent || parent.plan_id !== proposal.parent_plan_id
+      || parent.content_hash !== proposal.parent_plan_content_hash) return null;
+  const moved = draft.some(operation => ["set_stop_day", "move_day"].includes(operation.type));
+  const endpoints = draftEndpointRoles(draft);
+  if (!endpoints) return null;
+  const structural = proposal.execution_mode !== "trip_replan_independent_evaluation"
+    && (moved || endpointRoleEdit(draft) || endpoints.size > 0);
+  const assessment = state.workspace?.plan_assessments?.[state.session?.accepted_plan_id];
+  const acceptedRoute = assessment?.plan_id === proposal.parent_plan_id
+    && assessment.plan_content_hash === proposal.parent_plan_content_hash
+    && assessment.certificate?.plan_id === proposal.parent_plan_id
+    && assessment.certificate.plan_content_hash === proposal.parent_plan_content_hash
+    && assessment.context_snapshot_id === assessment.certificate.route_validation?.context_snapshot_id
+    ? assessment.certificate.route_validation : null;
+  const inheritedEditRoute = acceptedRoute && ["matrix_id", "context_snapshot_id", "source_bundle_id", "source_content_sha256"]
+    .every(key => acceptedRoute[key] === routeValidation[key]);
+  const unchangedCombinedRoute = proposal.execution_mode === "atomic_combined_independent_evaluation"
+    && !endpointRoleEdit(draft)
+    && draft.every(operation => ["set_stop_duration", "set_stop_time_window", "set_stop_role"].includes(operation.type));
+  if (unchangedCombinedRoute && (!inheritedEditRoute || !durationRouteEvidenceUnchanged(value))) return null;
   const marineKeys = proposal.execution_mode === "trip_replan_independent_evaluation"
     && proposal.runtime_execution?.planning_bundle?.plan?.sequence?.includes("channel_islands")
     ? ["marine_routes", "offshore_stops"] : [];
@@ -2766,7 +2956,8 @@ function normalizePreviewGeography(value, proposal, routeValidation, draft) {
       || value.coverage.required_leg_count !== routeValidation.required_leg_count
       || value.coverage.road_validated_leg_count !== routeValidation.road_validated_leg_count
       || value.coverage.gap_count !== 0
-      || !routeChainMatchesEvidence(value, routeValidation, proposal.execution_mode === "trip_replan_independent_evaluation")) return null;
+      || (structural && routeValidation.context_snapshot_id !== acceptedRoute?.context_snapshot_id)
+      || !routeChainMatchesEvidence(value, routeValidation, proposal.execution_mode === "trip_replan_independent_evaluation", structural || inheritedEditRoute)) return null;
   for (const name of ["route_path", "stops", "validated_legs", "gaps"]) {
     const collection = value[name];
     if (!exactKeys(collection, ["type", "features"])
@@ -2778,29 +2969,10 @@ function normalizePreviewGeography(value, proposal, routeValidation, draft) {
           || feature.properties.role !== "draft_preview") return null;
     }
   }
-  const acceptedByDay = acceptedStopOrderByDay();
+  const acceptedByDay = draftStopOrderByDay(draft);
   if (!acceptedByDay) return null;
-  const reorderedDays = new Set();
-  for (const operation of draft) {
-    if (operation.type === "replace_nearby") {
-      const order = [...acceptedByDay.values()].find((ids) => ids.includes(operation.target));
-      if (!order) return null;
-      order.splice(order.indexOf(operation.target), 1, operation.parameters.candidate_id);
-    } else if (operation.type === "add_candidate") {
-      const order = acceptedByDay.get(operation.parameters.day);
-      if (!order) return null;
-      order.push(operation.target);
-    }
-  }
-  for (const operation of draft) {
-    if (operation.type !== "set_stop_order") continue;
-    const order = acceptedByDay.get(operation.parameters.day);
-    const current = order?.indexOf(operation.target) ?? -1;
-    if (!order || current < 0 || operation.parameters.sequence_index >= order.length) return null;
-    order.splice(current, 1);
-    order.splice(operation.parameters.sequence_index, 0, operation.target);
-    reorderedDays.add(operation.parameters.day);
-  }
+  const reorderedDays = structural ? new Set(acceptedByDay.keys())
+    : new Set(draft.filter(operation => operation.type === "set_stop_order").map(operation => operation.parameters.day));
   for (const day of reorderedDays) {
     const expectedOrder = acceptedByDay.get(day);
     const actualOrder = value.stops.features
@@ -2808,6 +2980,37 @@ function normalizePreviewGeography(value, proposal, routeValidation, draft) {
       .sort((left, right) => left.properties.sequence_index - right.properties.sequence_index)
       .map((feature) => feature.properties.stop_id);
     if (!exactStringArray(actualOrder, expectedOrder)) return null;
+  }
+  if (structural) {
+    const stops = [...value.stops.features].sort((a, b) => a.properties.sequence_index - b.properties.sequence_index);
+    const expectedStops = [...acceptedByDay].flatMap(([day, ids]) => ids.map((id, index) => ({id, day, order: index + 1})));
+    if (stops.length !== expectedStops.length || stops.some((feature, index) => {
+      const expected = expectedStops[index];
+      return feature.properties.stop_id !== expected.id || feature.properties.day !== expected.day
+        || feature.properties.stop_order !== expected.order || feature.properties.sequence_index !== index + 1;
+    })) return null;
+    const parentEndpoints = new Map([...acceptedStopRoles()].filter(([, role]) => ENDPOINT_STOP_ROLES.includes(role))
+      .map(([id, role]) => [role, id]));
+    const firstDay = [...acceptedByDay.keys()][0], lastDay = [...acceptedByDay.keys()].at(-1);
+    const path = [...value.route_path.features].sort((a, b) => a.properties.occurrence_index - b.properties.occurrence_index);
+    if ((endpoints.has("origin") && path[0]?.properties.node_id !== endpoints.get("origin"))
+        || (endpoints.has("destination") && path.at(-1)?.properties.node_id !== endpoints.get("destination"))) return null;
+    for (const [day, ids] of acceptedByDay) {
+      const byDay = plan => [...plan.validated_legs.features].filter(row => row.properties.day === day)
+        .sort((a, b) => a.properties.leg_index - b.properties.leg_index);
+      const before = byDay(parent), after = byDay(value);
+      if (!before.length || !after.length) return null;
+      let origin = before[0].properties.origin_id, destination = before.at(-1).properties.destination_id;
+      if (day === firstDay) origin = endpoints.get("origin")
+        || (parentEndpoints.has("origin") ? after[0].properties.origin_id : origin);
+      if (day === lastDay) destination = endpoints.get("destination")
+        || (parentEndpoints.has("destination") ? after.at(-1).properties.destination_id : destination);
+      // Cleared endpoints use certificate-bound roads; declared fallback anchors are not public.
+      const nodes = [origin, ...ids, destination].filter((id, index, rows) => index === 0 || id !== rows[index - 1]);
+      if (after.length !== nodes.length - 1 || after.some((leg, index) =>
+        leg.properties.origin_id !== nodes[index] || leg.properties.destination_id !== nodes[index + 1])) return null;
+    }
+    if (value.validated_legs.features.some(leg => !acceptedByDay.has(leg.properties.day))) return null;
   }
   return value;
 }
@@ -2847,6 +3050,7 @@ function previewProposalBinding(value) {
       executed_method: value.evidence.executed_method,
     } : null,
     compiled_request: value?.compiled_request,
+    evaluation_certificate: value?.evaluation_certificate ?? null,
     repair_certificate: value?.repair?.certificate ?? null,
     plan_assessment: value?.repair?.plan_assessment ?? null,
     plan_diff: value?.plan_diff ?? null,
@@ -2946,6 +3150,9 @@ async function normalizeCombinedAttributeOwnership(diff, proposal, child) {
   const context = state.workspace?.attribute_diff_context;
   const evidence = diff.attribute_ownership_evidence;
   const mixed = diff.schema_version === "plan-diff-v7";
+  // Direct day responses expose geography and diff, not the hidden child record.
+  const directDay = child === null && proposal.execution_mode === "typed_direct_edit_independent_evaluation";
+  const selectedStops = directDay ? proposal.geography_plan?.stops?.features?.map(row => row.properties) : child?.selected_stops;
   if (!exactKeys(context, ["schema_version", "parent_plan_id", "parent_plan_content_hash",
     "owned_constraints", "attribute_constraints", "stops", "route_ids_by_day",
     "default_visit_minutes", "ownership_policy", "content_hash"])
@@ -2953,9 +3160,10 @@ async function normalizeCombinedAttributeOwnership(diff, proposal, child) {
       || context.parent_plan_id !== proposal.parent_plan_id
       || context.parent_plan_content_hash !== proposal.parent_plan_content_hash
       || !Array.isArray(context.stops) || !Array.isArray(context.attribute_constraints)
-      || !Array.isArray(context.owned_constraints) || !Array.isArray(child.owned_constraints)
-      || !sameJson([...child.owned_constraints].sort((a, b) => a.constraint_id.localeCompare(b.constraint_id)),
-        [...context.owned_constraints].sort((a, b) => a.constraint_id.localeCompare(b.constraint_id)))
+      || !Array.isArray(context.owned_constraints)
+      || (!directDay && (!Array.isArray(child?.owned_constraints)
+        || !sameJson([...child.owned_constraints].sort((a, b) => a.constraint_id.localeCompare(b.constraint_id)),
+          [...context.owned_constraints].sort((a, b) => a.constraint_id.localeCompare(b.constraint_id)))))
       || !exactKeys(evidence, ["schema_version", "parent_plan_id", "parent_plan_content_hash",
         "semantic_scope", "ownership_policy", "constraints", "changes", "content_hash"])
       || evidence.schema_version !== `plan-diff-attribute-ownership-evidence-v${mixed ? 2 : 1}`
@@ -2968,7 +3176,7 @@ async function normalizeCombinedAttributeOwnership(diff, proposal, child) {
         relation_specific_attributes: ["day", "duration", "end_time", "existence", "order", ...(mixed ? ["role"] : []), "start_time", "time_window"],
         lodging_and_road_relations: "not_migrated",
       }) || !Array.isArray(evidence.constraints) || !evidence.constraints.length
-      || !Array.isArray(evidence.changes) || !Array.isArray(child.selected_stops)) return null;
+      || !Array.isArray(evidence.changes) || !Array.isArray(selectedStops)) return null;
   for (const record of [context, evidence]) {
     const payload = {...record};
     delete payload.content_hash;
@@ -2980,11 +3188,12 @@ async function normalizeCombinedAttributeOwnership(diff, proposal, child) {
         || typeof weights !== "object" || Array.isArray(weights)
         || Object.values(weights).some(weight => !Number.isFinite(weight) || weight < 0))) return null;
   const parents = new Map(context.stops.map(stop => [stop.stop_id, stop]));
-  const children = new Map(child.selected_stops.map(stop => [stop.stop_id || stop.poi_id, stop]));
-  if (parents.size !== context.stops.length || children.size !== child.selected_stops.length) return null;
+  const children = new Map(selectedStops.map(stop => [stop.stop_id || stop.poi_id, stop]));
+  if (parents.size !== context.stops.length || children.size !== selectedStops.length) return null;
   const expected = [];
   const consumed = new Set();
   const families = {added_stops: ["added_stop", "existence"], deleted_stops: ["deleted_stop", "existence"],
+    day_moves: ["day_move", "day"],
     duration_changes: ["duration_change", "duration"], time_window_changes: ["time_window_change", "time_window"],
     role_changes: ["role_change", "role"], reorder_changes: ["order_change", "order"], road_changes: ["road_change", "road"]};
   for (const [group, [kind, attribute]] of Object.entries(families)) {
@@ -2997,14 +3206,17 @@ async function normalizeCombinedAttributeOwnership(diff, proposal, child) {
         if (before === after || (kind === "added_stop") !== after) return null;
       } else if (attribute === "road") {
         before = context.route_ids_by_day[row.day] ?? null;
-        after = child.route_ids_by_day?.[row.day] ?? null;
-        if (row.from_route_id !== before || row.to_route_id !== after) return null;
+        after = directDay ? row.to_route_id : child.route_ids_by_day?.[row.day] ?? null;
+        if (row.from_route_id !== before || row.to_route_id !== after
+            || (directDay && (typeof after !== "string" || !after))) return null;
       } else {
         if (!parent || !stop) return null;
-        if (attribute === "duration") {
-          const durationValue = (constraint, minutes) => constraint ?? (Number.isInteger(minutes) ? {
-            mode: "exact", preferred_minutes: minutes, minimum_minutes: minutes, maximum_minutes: minutes,
-          } : null);
+        if (attribute === "day") {
+          before = parent.day; after = stop.day;
+          if (row.from_day !== before || row.to_day !== after) return null;
+        } else if (attribute === "duration") {
+          const durationValue = (constraint, minutes) => minutes == null ? canonicalDurationConstraint(constraint)
+            : canonicalDurationConstraint({mode: "exact", preferred_minutes: minutes, minimum_minutes: minutes, maximum_minutes: minutes});
           before = durationValue(parent.duration_constraint, parent.duration_minutes);
           after = durationValue(stop.duration_constraint, stop.visit_duration_minutes);
           const accountingFrom = parent.duration_minutes ?? context.default_visit_minutes;
@@ -3028,7 +3240,9 @@ async function normalizeCombinedAttributeOwnership(diff, proposal, child) {
         }
       }
       const rules = context.attribute_constraints.filter(rule => rule.target_stop_id === id && rule.attribute === attribute);
-      if (proposal.eligibility === "eligible" && rules.some(rule => !sameJson(after, rule.canonical_value)
+      const satisfaction = (actual, required) => attribute === "duration" ? durationRuleSatisfaction(actual, required)
+        : actual === null ? "unavailable" : sameJson(actual, required) ? "satisfied" : "unsatisfied";
+      if (proposal.eligibility === "eligible" && rules.some(rule => satisfaction(after, rule.canonical_value) !== "satisfied"
           && (["locked", "booked", "hard"].includes(rule.strength)
             || !["auto_with_penalty", "always"].includes(rule.relaxation_policy)))) return null;
       for (const rule of rules) consumed.add(rule.constraint_id);
@@ -3039,15 +3253,14 @@ async function normalizeCombinedAttributeOwnership(diff, proposal, child) {
       const multiplier = weight(owner), base = policy.change_type_weights[kind] ?? 1;
       const cost = base * multiplier * scale;
       if (row.owner_strength !== owner || row.cost !== cost || before === undefined || after === undefined) return null;
-      const satisfaction = actual => actual === null ? "unavailable" : null;
       expected.push({change_kind: kind, target_stop_id: id, attributes: [attribute],
         applicable_constraint_ids: rules.map(rule => rule.constraint_id).sort(),
         selected_constraint_ids: rules.filter(rule => weight(rule.strength) === multiplier).map(rule => rule.constraint_id).sort(),
         before_value: {[attribute]: before}, after_value: {[attribute]: after},
         constraint_satisfaction: rules.map(rule => ({constraint_id: rule.constraint_id, attribute,
           canonical_value: rule.canonical_value,
-          satisfaction_before: satisfaction(before) || (sameJson(before, rule.canonical_value) ? "satisfied" : "unsatisfied"),
-          satisfaction_after: satisfaction(after) || (sameJson(after, rule.canonical_value) ? "satisfied" : "unsatisfied"),
+          satisfaction_before: satisfaction(before, rule.canonical_value),
+          satisfaction_after: satisfaction(after, rule.canonical_value),
         })), owner_strength: owner, base_change_weight: base, strength_multiplier: multiplier,
         delta_scale: scale, cost});
     }
@@ -3129,7 +3342,7 @@ async function normalizeCombinedRuntimeExecution(value, proposal, draft) {
   const typedGroups = ["duration_changes", "time_window_changes", "role_changes"];
   const typed = typedGroups.filter(key => diff?.[key]?.length);
   const owned = ["plan-diff-v5", "plan-diff-v7"].includes(diff?.schema_version);
-  const ownershipGroups = {added_stops: "existence", deleted_stops: "existence",
+  const ownershipGroups = {added_stops: "existence", deleted_stops: "existence", day_moves: "day",
     reorder_changes: "order", duration_changes: "duration", time_window_changes: "time_window"};
   const requiresOwnedEvidence = (state.workspace?.attribute_diff_context?.attribute_constraints || []).some(rule =>
     Object.entries(ownershipGroups).some(([key, attribute]) => rule.attribute === attribute
@@ -3145,7 +3358,7 @@ async function normalizeCombinedRuntimeExecution(value, proposal, draft) {
       || diff.schema_version !== schema || diff.diff_id !== proposal.diff_id
       || diff.parent_plan_id !== proposal.parent_plan_id || diff.child_plan_id !== child.plan_id
       || ![...groups, ...typedKeys].every(key => Array.isArray(diff[key]))
-      || diff.day_moves.length || diff.time_shifts.length || diff.lodging_changes.length
+      || diff.time_shifts.length || diff.lodging_changes.length
       || !Number.isFinite(diff.weighted_edit_cost)
       || await computedStableContentHash(diff) !== proposal.diff_content_hash) return null;
   if (owned && (certificate.evaluator_version !== "verify-001-plan-evaluator-v3"
@@ -3162,26 +3375,9 @@ async function normalizeCombinedRuntimeExecution(value, proposal, draft) {
   for (const key of typed) diffSeed[key] = diff[key];
   if (owned) diffSeed.attribute_ownership_evidence = diff.attribute_ownership_evidence;
   if (`diff_${await computedStableContentHash(diffSeed)}` !== diff.diff_id) return null;
-  const expectedDays = acceptedStopOrderByDay();
+  const expectedDays = draftStopOrderByDay(draft);
   if (!expectedDays) return null;
-  for (const operation of selection) {
-    if (operation.type === "replace_nearby") {
-      const order = [...expectedDays.values()].find(ids => ids.includes(operation.target));
-      if (!order) return null;
-      order.splice(order.indexOf(operation.target), 1, operation.parameters.candidate_id);
-    } else if (operation.type === "add_candidate") {
-      const order = expectedDays.get(operation.parameters.day);
-      if (!order || order.includes(operation.target)) return null;
-      order.push(operation.target);
-    }
-  }
-  for (const operation of draft.filter(row => row.type === "set_stop_order")) {
-    const order = expectedDays.get(operation.parameters.day);
-    const index = order?.indexOf(operation.target) ?? -1;
-    if (index < 0 || operation.parameters.sequence_index >= order.length) return null;
-    order.splice(index, 1);
-    order.splice(operation.parameters.sequence_index, 0, operation.target);
-  }
+  if (!normalizeDayMoves(diff, expectedDays)) return null;
   const orderedDays = [...expectedDays].map(([day, stop_ids]) => ({day, stop_ids}));
   const sequence = orderedDays.flatMap(day => day.stop_ids);
   const assignments = Object.fromEntries(orderedDays.flatMap(day => day.stop_ids.map(id => [id, day.day])));
@@ -3189,6 +3385,11 @@ async function normalizeCombinedRuntimeExecution(value, proposal, draft) {
       || !sameJson(child.day_assignments, assignments) || !Array.isArray(child.selected_stops)
       || child.selected_stops.length !== sequence.length) return null;
   const stops = new Map(child.selected_stops.map(stop => [stop.stop_id || stop.poi_id, stop]));
+  const endpoints = draftEndpointRoles(draft);
+  if (!endpoints || ENDPOINT_STOP_ROLES.some(role => !sameJson(
+    child.selected_stops.filter(stop => stop.itinerary_role === role).map(stop => stop.stop_id || stop.poi_id),
+    endpoints.has(role) ? [endpoints.get(role)] : [],
+  ))) return null;
   const geography = proposal.geography_plan?.stops?.features;
   if (stops.size !== sequence.length || !Array.isArray(geography) || geography.length !== sequence.length) return null;
   for (const [index, id] of sequence.entries()) {
@@ -3211,11 +3412,21 @@ async function normalizeCombinedRuntimeExecution(value, proposal, draft) {
       const stop = stops.get(operation.target);
       const change = changes.find(row => row.stop_id === operation.target);
       if (!stop || !change || change.day !== stop.day) return null;
+      if (!owned && type !== "set_stop_role") {
+        const acceptedStop = acceptedScheduleGeography(proposal)?.plan.stops.features
+          .find(feature => feature.properties.stop_id === operation.target)?.properties;
+        if (typeof acceptedStop?.ownership_strength !== "string"
+            || change.owner_strength !== acceptedStop.ownership_strength) return null;
+      }
       if (type === "set_stop_duration") {
-        const requested = canonicalExactDuration(operation.parameters.duration);
+        const requested = canonicalDurationConstraint(operation.parameters.duration);
         if (!requested || !sameJson(stop.duration_constraint, requested)
-            || stop.visit_duration_minutes !== requested.preferred_minutes
-            || !sameJson(change.to_constraint, requested) || change.to_minutes !== stop.visit_duration_minutes) return null;
+            || !durationContainsMinutes(requested, stop.visit_duration_minutes)
+            || !sameJson(change.to_constraint, requested) || change.to_minutes !== stop.visit_duration_minutes
+            || change.accounting_to_minutes !== stop.visit_duration_minutes
+            || change.to_source !== "visit_duration_minutes" || change.accounting_to_source !== "visit_duration_minutes"
+            || !Number.isFinite(change.accounting_from_minutes) || !Number.isFinite(change.delta_minutes)
+            || Math.abs(change.accounting_to_minutes - change.accounting_from_minutes - change.delta_minutes) > 1e-9) return null;
       } else if (type === "set_stop_time_window") {
         const requested = timeWindowConstraintFromParameters(operation.parameters);
         if (!requested || !sameJson(stop.time_window_constraint, requested)
@@ -3242,6 +3453,8 @@ async function normalizeEvaluatedPreviewResponse(value, expected) {
   const { proposal, session } = value;
   const orderOnly = expected.draft.length > 0
     && expected.draft.every((operation) => operation.type === "set_stop_order");
+  const dayOnly = expected.draft.length > 0
+    && expected.draft.every((operation) => ["set_stop_day", "move_day"].includes(operation.type));
   const durationDraftOnly = expected.draft.length > 0
     && expected.draft.every((operation) => operation.type === "set_stop_duration");
   const timeWindowDraftOnly = expected.draft.length > 0
@@ -3253,10 +3466,10 @@ async function normalizeEvaluatedPreviewResponse(value, expected) {
   const durationOnly = durationDraftOnly && !ownedScheduleEdit;
   const timeWindowOnly = timeWindowDraftOnly && !ownedScheduleEdit;
   const roleOnly = expected.draft.length > 0
-    && expected.draft.every((operation) => operation.type === "set_stop_role");
-  const directEditOnly = orderOnly || durationOnly || timeWindowOnly || roleOnly;
+    && expected.draft.every((operation) => operation.type === "set_stop_role") && !endpointRoleEdit(expected.draft);
+  const directEditOnly = dayOnly || orderOnly || durationOnly || timeWindowOnly || roleOnly;
   const combined = ownedScheduleEdit || (!directEditOnly && expected.draft.some(operation => [
-    "set_stop_order", "set_stop_duration", "set_stop_time_window", "set_stop_role",
+    "set_stop_day", "move_day", "set_stop_order", "set_stop_duration", "set_stop_time_window", "set_stop_role",
   ].includes(operation.type)));
   if (!exactKeys(session, [
     "schema_version", "session_id", "trip_id", "run_id", "revision", "accepted_plan_id",
@@ -3282,7 +3495,7 @@ async function normalizeEvaluatedPreviewResponse(value, expected) {
     ...(proposal?.child_plan_id === null ? ["blocking_findings"] : []),
     ...(["deterministic_repair_pipeline", "atomic_combined_independent_evaluation", "trip_replan_independent_evaluation"].includes(proposal?.execution_mode) ? ["runtime_execution"] : []),
     "decision_eligible", "ranking_eligible", "acceptance_eligible", "acceptance_blocking_code",
-    ...(orderOnly ? ["evaluation_certificate", "plan_diff"] : []),
+    ...((orderOnly || dayOnly) ? ["evaluation_certificate", "plan_diff"] : []),
     ...((durationOnly || timeWindowOnly) ? [
       "plan_diff", "schedule_impact", "schedule_impact_identity", "certificate_schedule_evidence",
     ] : []),
@@ -3383,13 +3596,22 @@ async function normalizeEvaluatedPreviewResponse(value, expected) {
       || proposal.certificate_identity.plan_id !== proposal.child_plan_id
       || proposal.certificate_identity.plan_content_hash !== proposal.child_plan_content_hash
       || proposal.certificate_identity.content_hash !== proposal.certificate_content_hash) return null;
-  if (orderOnly && (
+  if ((orderOnly || dayOnly) && (
     !await normalizeDirectCertificateRecord(proposal.evaluation_certificate, proposal)
     || proposal.plan_diff?.diff_id !== proposal.diff_id
     || proposal.plan_diff?.parent_plan_id !== proposal.parent_plan_id
     || proposal.plan_diff?.child_plan_id !== proposal.child_plan_id
     || await computedStableContentHash(proposal.plan_diff) !== proposal.diff_content_hash
   )) return null;
+  if (dayOnly) {
+    const certificate = proposal.evaluation_certificate;
+    if (!await normalizeDayPlanDiff(proposal.plan_diff, proposal, expected.draft)
+        || proposal.repair?.tradeoffs?.weighted_edit_cost !== proposal.plan_diff.weighted_edit_cost
+        || proposal.repair?.tradeoffs?.preservation_rate !== 1
+        || proposal.state !== (certificate.failure_count ? "ineligible" : "eligible")
+        || proposal.evaluation_status !== (certificate.failure_count ? "FAILED"
+          : certificate.warning_count ? "PASSED_WITH_WARNINGS" : "PASSED")) return null;
+  }
   const routeValidation = normalizeRouteValidation(proposal.route_validation);
   if (!routeValidation) return null;
   const planDiff = durationOnly
@@ -3437,6 +3659,11 @@ async function normalizeEvaluatedPreviewResponse(value, expected) {
           || !scheduleImpact
           || !certificateScheduleEvidence
           || !durationRouteEvidenceUnchanged(proposal.geography_plan)
+          || planDiff.duration_changes.some(change => {
+            const stop = proposal.geography_plan.stops.features.find(feature => feature.properties.stop_id === change.stop_id);
+            return !stop || stop.properties.visit_duration_minutes !== change.to_minutes
+              || !sameJson(stop.properties.inspector_metadata?.duration_constraint, change.to_constraint);
+          })
           || proposal.repair.changed.added.length !== 0
           || proposal.repair.changed.removed.length !== 0
           || proposal.repair.changed.road_change_count !== 0
@@ -5672,10 +5899,12 @@ function evaluatedEditEvidenceHtml(proposal) {
   const operations = proposal.compiled_request?.operations || [];
   const operationRows = operations.map((operation) => {
     const target = stopNameForId(operation.target, acceptedPlan(activeGeography()));
-    const request = operation.type === "set_stop_order"
+    const request = ["set_stop_day", "move_day"].includes(operation.type)
+      ? `Move to Day ${operation.parameters.day}`
+      : operation.type === "set_stop_order"
       ? `Day ${operation.parameters.day} · position ${operation.parameters.sequence_index + 1}`
       : operation.type === "set_stop_duration"
-        ? `${operation.parameters.duration.preferred_minutes} min · exact visit duration`
+        ? formatDurationConstraint(operation.parameters.duration)
         : operation.type === "set_stop_time_window"
           ? timeWindowLabel(operation.parameters)
           : operation.type === "set_stop_role"
@@ -5696,6 +5925,9 @@ function evaluatedEditEvidenceHtml(proposal) {
       ? "Hard feasibility passed; stop-by-stop schedule accounting is Unavailable in this response."
       : "Unavailable";
   const durationChanges = diff?.duration_changes || [];
+  const dayRows = (diff?.day_moves || []).map(change => `
+    <li><strong>${escapeHtml(stopNameForId(change.stop_id, acceptedPlan(activeGeography())))}</strong>
+      <span>Day ${escapeHtml(change.from_day)} → Day ${escapeHtml(change.to_day)} · ${escapeHtml(formatMetric(change.cost))} edit points</span></li>`).join("");
   const durationRows = durationChanges.map((change) => {
     const explicitFrom = change.from_minutes == null
       ? "Explicit parent duration Unavailable"
@@ -5703,7 +5935,7 @@ function evaluatedEditEvidenceHtml(proposal) {
     const accountingFrom = change.accounting_from_minutes == null
       ? "accounting baseline Unavailable"
       : `${formatMetric(change.accounting_from_minutes)} min accounting baseline (${humanLabel(change.accounting_from_source)})`;
-    return `<li><strong>${escapeHtml(stopNameForId(change.stop_id, acceptedPlan(activeGeography())))}</strong><span>${escapeHtml(explicitFrom)} · ${escapeHtml(accountingFrom)} → ${escapeHtml(formatMetric(change.to_minutes))} min exact · ${escapeHtml(formatMetric(change.delta_minutes))} min modeled change</span></li>`;
+    return `<li><strong>${escapeHtml(stopNameForId(change.stop_id, acceptedPlan(activeGeography())))}</strong><span>${escapeHtml(explicitFrom)} · ${escapeHtml(accountingFrom)} · requested ${escapeHtml(formatDurationConstraint(change.to_constraint))} → ${escapeHtml(formatMetric(change.to_minutes))} min solver-selected visit · ${escapeHtml(formatMetric(change.delta_minutes))} min modeled change</span></li>`;
   }).join("");
   const timeWindowChanges = diff?.time_window_changes || [];
   const timeWindowRows = timeWindowChanges.map((change) => `
@@ -5720,8 +5952,11 @@ function evaluatedEditEvidenceHtml(proposal) {
       const visitSource = trace.visit_duration_source === "configured_evaluator_default"
         ? "configured evaluator fallback; not source-observed"
         : humanLabel(trace.visit_duration_source);
+      const arrivalEvidence = trace.incoming_origin_id === null
+        ? "Starts at this stop"
+        : `Incoming road leg from ${escapeHtml(trace.incoming_origin_id)} · ${escapeHtml(formatMetric(trace.incoming_travel_minutes))} min · route query <code>${escapeHtml(trace.incoming_route_query_hash)}</code>`;
       return `<li><strong>${escapeHtml(stopNameForId(trace.stop_id, acceptedPlan(activeGeography())))}</strong><span>
-        Incoming road leg from ${escapeHtml(trace.incoming_origin_id)} · ${escapeHtml(formatMetric(trace.incoming_travel_minutes))} min · route query <code>${escapeHtml(trace.incoming_route_query_hash)}</code> · raw road arrival ${escapeHtml(scheduleClockLabel(trace.road_arrival_minute))} · opening-hours evidence ${escapeHtml(humanLabel(trace.opening_window_source))} · opening-hours wait ${escapeHtml(formatMetric(trace.opening_wait_minutes))} min · required-window wait ${escapeHtml(formatMetric(trace.required_window_wait_minutes))} min · service starts ${escapeHtml(scheduleClockLabel(trace.service_start_minute))} · visit ${escapeHtml(formatMetric(trace.visit_minutes))} min (${escapeHtml(visitSource)}) · departs ${escapeHtml(scheduleClockLabel(trace.departure_minute))} · latest-departure status ${escapeHtml(humanLabel(trace.latest_departure_status))} · overrun ${escapeHtml(formatMetric(trace.latest_departure_overrun_minutes))} min</span></li>`;
+        ${arrivalEvidence} · raw road arrival ${escapeHtml(scheduleClockLabel(trace.road_arrival_minute))} · opening-hours evidence ${escapeHtml(humanLabel(trace.opening_window_source))} · opening-hours wait ${escapeHtml(formatMetric(trace.opening_wait_minutes))} min · required-window wait ${escapeHtml(formatMetric(trace.required_window_wait_minutes))} min · service starts ${escapeHtml(scheduleClockLabel(trace.service_start_minute))} · visit ${escapeHtml(formatMetric(trace.visit_minutes))} min (${escapeHtml(visitSource)}) · departs ${escapeHtml(scheduleClockLabel(trace.departure_minute))} · latest-departure status ${escapeHtml(humanLabel(trace.latest_departure_status))} · overrun ${escapeHtml(formatMetric(trace.latest_departure_overrun_minutes))} min</span></li>`;
     }).join("") : "";
   const modeledSchedule = schedule ? schedule.affected_days.map((day) => {
     const metrics = scheduleAccounting.metrics;
@@ -5753,9 +5988,10 @@ function evaluatedEditEvidenceHtml(proposal) {
         <dt>Fallback legs</dt><dd>${escapeHtml(unavailable(route.fallback_leg_count))}</dd>
         <dt>Route matrix</dt><dd>${escapeHtml(unavailable(proposal.route_validation_identity?.matrix_id))}</dd>
       </dl>${scheduleDisclosure}${modeledSchedule ? `<ol>${modeledSchedule}</ol>` : ""}</section>
+      ${dayRows ? `<section><h4>Evaluated day changes</h4><ol>${dayRows}</ol><p>The proposed day assignments and route legs were independently evaluated. This preview has not been accepted.</p></section>` : ""}
       ${durationRows ? `<section><h4>Typed duration diff</h4><ol>${durationRows}</ol><p>Duration changes are ${escapeHtml(diff.schema_version)} evidence; they are not time shifts or road changes.</p></section>` : ""}
       ${timeWindowRows ? `<section><h4>Typed time-window diff</h4><ol>${timeWindowRows}</ol><p>Time-window changes are ${escapeHtml(diff.schema_version)} trip constraints. They are not place opening hours, latest-start bounds, or time shifts.</p></section>` : ""}
-      ${roleRows ? `<section><h4>Typed itinerary-role diff</h4><ol>${roleRows}</ol><p>Role changes are ${escapeHtml(diff.schema_version)} trip-use evidence. They do not change PlaceEntity identity or place categories; other edits in the draft may change road geometry or schedule.</p></section>` : ""}
+      ${roleRows ? `<section><h4>Typed itinerary-role diff</h4><ol>${roleRows}</ol><p>Role changes are ${escapeHtml(diff.schema_version)} trip-use evidence. They do not change PlaceEntity identity or place categories. Visit roles preserve road geometry; origin and destination change the global trip endpoints and require a complete route evaluation.</p></section>` : ""}
       ${traceRows ? `<section><h4>Required-window schedule trace</h4><ol>${traceRows}</ol></section>` : ""}
       ${proposal.execution_mode === "trip_replan_independent_evaluation" ? tripPlanningEvidenceHtml(proposal) : ""}
       <section><h4>Independent certificate</h4>${outcome}<dl>
@@ -6385,7 +6621,7 @@ function durationCapabilityNote(mode) {
     return '<p class="typed-capability-note is-blocked" data-duration-capability-note>Duration capability unavailable. Restart the local product.</p>';
   }
   if (semantics.feedback_tier === "evaluated") {
-    return '<p class="typed-capability-note is-evaluated" data-duration-capability-note>Exact duration is evaluated-preview capable after server validation.</p>';
+    return `<p class="typed-capability-note is-evaluated" data-duration-capability-note>${escapeHtml(humanLabel(mode))} duration is evaluated-preview capable after server validation. Preview reports the solver-selected visit minutes separately from the requested rule.</p>`;
   }
   return `<p class="typed-capability-note is-draft-only" data-duration-capability-note>This duration mode remains draft only; full evaluation is unavailable (${escapeHtml(humanLabel(semantics.blocking_code))}).</p>`;
 }
@@ -6422,6 +6658,9 @@ function roleCapabilityNote(role) {
     return '<p class="typed-capability-note is-blocked" data-role-capability-note>Role capability unavailable. Restart the local product.</p>';
   }
   if (semantics.feedback_tier === "evaluated") {
+    if (ENDPOINT_STOP_ROLES.includes(role)) {
+      return '<p class="typed-capability-note is-evaluated" data-role-capability-note>This global trip endpoint requires an evaluated route preview. Origin is first on the first trip day; destination is last on the last trip day. Clear the previous endpoint role in the same draft before replacing it.</p>';
+    }
     return '<p class="typed-capability-note is-evaluated" data-role-capability-note>This trip-specific user-declared use is evaluated-preview capable. Place identity and categories stay unchanged; semantic fit and recommendation remain Unavailable.</p>';
   }
   return `<p class="typed-capability-note is-draft-only" data-role-capability-note>This structural role remains draft only; evaluated repair is unavailable (${escapeHtml(humanLabel(semantics.blocking_code))}).</p>`;
@@ -6495,11 +6734,12 @@ function stopTypedEditorHtml(stop, properties) {
     <details open><summary>Role, day, and order</summary>
       <form class="typed-operation-form" data-typed-operation="set_stop_role">
         <label>Itinerary role<select name="role" data-role-select required>${roleOptionsHtml(properties?.itinerary_role ?? null)}</select></label>
-        <p class="field-help">This role records the stop's trip-specific user-declared use. It does not change the PlaceEntity identity or categories, infer semantic fit, create a recommendation, or affect the route and schedule for supported visit roles.</p>
+        <p class="field-help">This role records the stop's trip-specific user-declared use. It does not change the PlaceEntity identity or categories, infer semantic fit, create a recommendation, or affect the route and schedule for supported visit roles. Origin and destination change the global trip endpoints and require a complete evaluated route.</p>
         ${roleCapabilityNote(properties?.itinerary_role ?? "")}<button type="submit">Save role draft</button>
       </form>
       <form class="typed-operation-form" data-typed-operation="set_stop_day" data-current-day="${currentDay}">
         <label>Move to day<select name="day">${state.workspace.timeline.map((day) => `<option value="${day.day}" ${day.day === currentDay ? "selected" : ""}>Day ${day.day}</option>`).join("")}</select></label>
+        <p class="field-help">The stop is appended after the remaining stops on the chosen day. Preview repair recalculates the roads and checks the full itinerary. Missing road evidence blocks preview; an evaluated result can still be ineligible.</p>
         ${typedCapabilityNote("set_stop_day")}<button type="submit">Save day draft</button>
       </form>
       <form class="typed-operation-form" data-typed-operation="set_stop_order">

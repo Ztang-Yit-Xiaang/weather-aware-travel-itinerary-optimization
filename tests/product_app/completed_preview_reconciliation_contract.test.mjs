@@ -6,14 +6,14 @@ import test from "node:test";
 // separate browser journey exercises the real HTTP/optimizer/rendering path.
 assert.ok(process.env.R19_PREVIEW_IO, "R19_PREVIEW_IO must name a recorded real preview JSON");
 const capture = JSON.parse(readFileSync(process.env.R19_PREVIEW_IO, "utf8"));
-const actual = capture.first || capture;
+const actual = capture.first || capture.preview || capture;
 assert.equal(actual.proposal.state, "eligible");
 const source = readFileSync(new URL("../../src/itinerary_system/product_app/static/js/app.js", import.meta.url), "utf8");
 const contract = source.slice(source.indexOf("const TYPED_EDIT_OPERATIONS"), source.indexOf("function safeExternalLink"));
 const apiCode = source.slice(source.indexOf("function isBuildMismatch("), source.indexOf("function copilotStreamError("));
 const helper = source.slice(source.indexOf("function previewExpectedContext("), source.indexOf("async function addDraft("));
-const create = new Function("state", "fetch", "renderAll", "copilot", "apiErrorMessage",
-  `${contract}\n${apiCode}\n${helper}\nreturn { submitDraftMutation, previewExpectedContext, previewRequestIsCurrent };`);
+const create = new Function("state", "fetch", "renderAll", "copilot", "apiErrorMessage", "announceWorkspaceChange",
+  `const mutationRecovery = {submit: (action, body) => api(\`/api/sessions/\${state.session.session_id}/draft/\${action}\`, {method:"POST", body, pendingMutation:true})};\n${contract}\n${apiCode}\n${helper}\nreturn { submitDraftMutation, previewExpectedContext, previewRequestIsCurrent };`);
 const routeNormalizer = new Function(`${contract}; return normalizeRouteValidation;`)();
 
 test("frozen additive route identity binds matrix and composite bundle to the same descriptor hash", () => {
@@ -47,7 +47,7 @@ function setup({ status = 409, code = "stale_session_revision", mutate = () => {
   before.proposal = null;
   before.selected_stop_id = "bixby_creek_bridge_viewpoint";
   const state = {
-    session: before, token: "unit-only-not-a-secret", clientBuildId: "build_unit_fixture", workspace: { timeline: [] },
+    session: before, token: "unit-only-not-a-secret", clientBuildId: "build_unit_fixture", workspace: structuredClone(capture.workspace || { timeline: [] }),
     typedImpact: { response: { parent_plan_content_hash: actual.proposal.parent_plan_content_hash } },
     previewRuntime: { epoch: 8, status: phase, requestId: null },
   };
@@ -68,7 +68,7 @@ function setup({ status = 409, code = "stale_session_revision", mutate = () => {
       status: httpStatus, headers: { "Content-Type": "application/json" },
     });
   };
-  return { state, calls, after, ...create(state, fetch, () => {}, { previewStateChanged() {} }, code => code) };
+  return { state, calls, after, ...create(state, fetch, () => {}, { previewStateChanged() {} }, code => code, () => {}) };
 }
 
 test("completed exact preview permits only one unchanged draft retry and never installs old proposal", async () => {

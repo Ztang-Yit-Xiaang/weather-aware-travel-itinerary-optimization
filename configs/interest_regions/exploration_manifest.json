@@ -1,12 +1,68 @@
 {
   "schema_version": "interest-exploration-manifest-v1",
   "file": "exploration_catalog.json",
-  "sha256": "30fd28ce6668fead92b47b313c3c8925ebf2f34523baf3d62c0d0a0ff2c5c56e",
+  "sha256": "7789594b11100b609fa05051813b7a3a6b3b02e2e48365d626eb8faf991edf45",
   "source_file": "results\\outputs\\production_enriched_poi_catalog.csv",
   "source_sha256": "2cd06b29103a04fb7d52cadbad5786c9eed87b0953764fded6893e407608fb3d",
-  "count": 134,
+  "count": 380,
   "data_role": "existing_POI_metadata_not_user_feedback",
   "routing_status": "not_evaluated",
+  "local_sources": [
+    {
+      "file": "presidio_places.json",
+      "sha256": "8b16c58df65f2656dd9d9495f0b714df323f7f5c4bbc2689d122117ea78a9b58",
+      "count": 7,
+      "attribution": "Presidio Trust",
+      "license_url": null,
+      "retrieved_at": "2026-10-29T16:46:19.511419+00:00"
+    },
+    {
+      "file": "itinerary_places.json",
+      "sha256": "303287ec150ecdc2108033aec50efae3a57d3c877ec3f88b8733c7e23d36747a",
+      "count": 260,
+      "attribution": "OpenStreetMap contributors",
+      "license_url": "https://www.openstreetmap.org/copyright",
+      "retrieved_at": "2026-10-29T17:53:14.912916+00:00"
+    }
+  ],
+  "visitor_areas": [
+    {
+      "stop_id": "yosemite_national_park",
+      "name": "Yosemite Valley visitor area",
+      "coordinate": {
+        "latitude": 37.746508,
+        "longitude": -119.58445
+      },
+      "source_refs": [
+        "https://www.nps.gov/yose/planyourvisit/basicinfo.htm",
+        "https://www.nps.gov/planyourvisit/event-details.htm?id=EEE5D35C-CB34-4B78-28B492A82DAAC59A"
+      ]
+    },
+    {
+      "stop_id": "sequoia_national_park",
+      "name": "Giant Forest visitor area",
+      "coordinate": {
+        "latitude": 36.564688,
+        "longitude": -118.772683
+      },
+      "source_refs": [
+        "https://www.nps.gov/seki/planyourvisit/visitorcenters.htm",
+        "https://www.nps.gov/planyourvisit/event-details.htm?id=3BAB5234-B6BF-AC68-75B4DFA5C72CF6D0"
+      ]
+    },
+    {
+      "stop_id": "kings_canyon_national_park",
+      "name": "Grant Grove visitor area",
+      "coordinate": {
+        "latitude": 36.747062,
+        "longitude": -118.973092
+      },
+      "source_refs": [
+        "https://www.nps.gov/seki/grant-grove.htm",
+        "https://www.nps.gov/planyourvisit/event-details.htm?id=8E00E6B6-0BDA-676D-81AD59ED8E0B06EC"
+      ]
+    }
+  ],
   "supplemental_source": {
     "file": "monterey_park_entries.geojson",
     "sha256": "f5e45a3bdeaa401d8bc03e0452196e4dd6e20951265c25603f5a8e8ca1c4c259",

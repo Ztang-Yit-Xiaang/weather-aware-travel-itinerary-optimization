@@ -71,7 +71,11 @@ def test_current_html_assets_and_health_bind_the_same_startup_build(coherent_app
     assert f'<meta name="product-build-id" content="{runtime.build_id}">' in html.text
     assert "__PRODUCT_BUILD_ID__" not in html.text
     assets = re.findall(r'(?:href|src)="(/static/[^\"]+)"', html.text)
-    assert len(assets) == 2
+    assert assets == [
+        f"/static/css/app.css?v={runtime.build_id}",
+        f"/static/js/deployment.js?v={runtime.build_id}",
+        f"/static/js/app.js?v={runtime.build_id}",
+    ]
     for asset in assets:
         assert asset.endswith(f"?v={runtime.build_id}")
         response = client.get(asset)

@@ -1,0 +1,1 @@
+{"uid": 10001, "build_id": "d50d8ba9ec56a322", "health": "ready", "unauthenticated_status": 401, "session_create": 200, "selection": 200, "postgres_restart_restore": true, "peak_rss_mib": 318.62, "ors_calls": 0, "openai_calls": 0, "auth": "synthetic local verifier", "cloud_deployment": false}

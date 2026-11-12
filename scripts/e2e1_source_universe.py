@@ -18,11 +18,10 @@ def _repository_files() -> tuple[str, ...]:
         "poetry.lock",
         "package-lock.json",
         "src/itinerary_system/**/*.py",
-        "src/itinerary_system/product_app/static/**/*.css",
-        "src/itinerary_system/product_app/static/**/*.html",
-        "src/itinerary_system/product_app/static/**/*.js",
+        "src/itinerary_system/product_app/static/**/*",
         "configs/product_app_registry.json",
         "configs/product_poi_catalogs/**/*.json",
+        "configs/interest_regions/**/*",
         "runs/california-coast-coherent-demo-v1/**/*.json",
         "runs/california-coast-coherent-demo-v1/**/*.jsonl",
     ):

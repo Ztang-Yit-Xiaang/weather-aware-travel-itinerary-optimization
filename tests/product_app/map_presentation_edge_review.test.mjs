@@ -37,7 +37,8 @@ test("actual map markup preserves a native details toggle in either direction wh
     textualRouteEvidence: p => `Current route ${p.plan_id}`, textRoutePanelHtml: p => `<p>${p.plan_id}</p>`,
     validatedRouteFeatures: () => [], routeGapFeatures: () => [], hasRouteCheckedOnlyDraft: () => false,
     mapInspectorHtml: () => "", candidateExplorerHtml: () => "", mapAttribution: () => "", escapeHtml: value => String(value ?? ""),
-    currentInterestResponse: () => null, interestExplorerHtml: () => "", yosemiteGuideHtml: () => "",
+    currentInterestResponse: () => null, interestExplorerHtml: () => "", interestMapSummaryHtml: () => "", yosemiteGuideHtml: () => "",
+    scheduleInterestRefresh() {},
   });
   render(); assert.equal(details.open, false, "first load defaults closed");
   details.open = true; current = plan("second"); render();

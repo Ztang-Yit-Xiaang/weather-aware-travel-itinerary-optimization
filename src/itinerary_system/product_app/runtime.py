@@ -64,6 +64,7 @@ def product_build_id(repository_root: Path) -> str:
         repository_root / "src" / "itinerary_system" / "interest_model.py",
         repository_root / "src" / "itinerary_system" / "interest_surface.py",
     ]
+    candidates.extend((repository_root / "configs" / "interest_regions").glob("*.json"))
     try:
         registration = json.loads(route_registration.read_text(encoding="utf-8"))
         descriptor = registration.get("descriptor_path") if isinstance(registration, dict) else None
@@ -117,6 +118,7 @@ class ProductRuntime:
         config: ProductRuntimeConfig,
         *,
         copilot: CopilotAdapter | None = None,
+        routing: RuntimeRoutingService | None = None,
     ) -> None:
         self.config = config
         self._copilot = copilot
@@ -125,7 +127,7 @@ class ProductRuntime:
         self._build_lock = threading.Lock()
         self.registry: ProductRunRegistry | None = None
         self.service: ProductService | None = None
-        self.routing: RuntimeRoutingService | None = None
+        self.routing = routing
         self.state_layout = LocalStateLayout(config.state_root)
         self._components: dict[str, ComponentHealthV1] = {}
         self._initialized = False
@@ -163,6 +165,7 @@ class ProductRuntime:
                         self.config.state_root,
                         copilot=self._copilot,
                         runtime_config=self.config,
+                        planning_router=self.routing,
                     )
                     self.service.load(self.registry.default.run_id)
                 except ConversationError as exc:
@@ -197,10 +200,11 @@ class ProductRuntime:
             self._components["openai"] = self._openai_health()
             self._components["map"] = self._probe_map()
             try:
-                self.routing = RuntimeRoutingService(
-                    base_url=self.config.routing_base_url,
-                    timeout_seconds=1.0,
-                )
+                if self.routing is None:
+                    self.routing = RuntimeRoutingService(
+                        base_url=self.config.routing_base_url,
+                        timeout_seconds=1.0,
+                    )
             except RuntimeRoutingError as exc:
                 self._components["routing"] = _component("routing", "degraded", False, exc.code)
             else:

@@ -52,6 +52,7 @@ from .models import (
     DraftOperationV1,
     ProductSession,
 )
+from .nearby_places import NearbyPlaceCache
 from .poi_catalog import POICatalogError, ProductPOICatalogV1
 from .product_demo import load_product_demo_package
 from .registry import ProductRunRegistry
@@ -98,10 +99,13 @@ class ProductService:
         *,
         copilot: CopilotAdapter | None = None,
         runtime_config: ProductRuntimeConfig | None = None,
+        planning_router: Any = None,
     ) -> None:
         self.registry = registry
         self._planning_state_root = Path(state_root) / "trip_plans"
+        self.nearby_places = NearbyPlaceCache(Path(state_root) / "nearby_places")
         self._planning_routing_url = runtime_config.routing_base_url if runtime_config else None
+        self._planning_router = planning_router
         self.acceptance = AcceptanceStore(state_root)
         self.workspace = WorkspaceStore(
             state_root,
@@ -152,6 +156,7 @@ class ProductService:
                     route_matrix=configured_route_matrix(self.registry.repository_root, run_id, bundle.route_matrix),
                     planning_state_root=self._planning_state_root,
                     planning_routing_url=self._planning_routing_url,
+                    planning_router=self._planning_router,
                 )
             else:
                 bundle = load_product_dashboard_source(run_dir)
@@ -2094,6 +2099,10 @@ class ProductService:
         maximum_detour_minutes: float,
         nature_preference: float,
         plan_id: str | None = None,
+        focus_stop_id: str | None = None,
+        radius_km: float = 5.0,
+        search_area: str = "visitor_area",
+        refresh_places: bool = False,
     ) -> dict[str, Any]:
         self.workspace.expect_revision(session, expected_revision)
         accepted_pointer = self.acceptance.load_pointer(session.trip_id)
@@ -2118,7 +2127,13 @@ class ProductService:
             role=role,
             maximum_detour_minutes=maximum_detour_minutes,
             nature_preference=nature_preference,
+            focus_stop_id=focus_stop_id,
+            radius_km=radius_km,
+            search_area=search_area,
+            place_cache=self.nearby_places,
+            refresh_places=refresh_places,
         )
+        self.workspace.expect_revision(session, expected_revision)
         response.update(
             {
                 "exploration_plan_id": parent_plan["plan_id"],

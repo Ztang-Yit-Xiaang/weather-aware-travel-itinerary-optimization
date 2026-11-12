@@ -51,7 +51,7 @@ def age_snapshot(store, owner, age):
 @pytest.mark.parametrize("action", ["get", "authenticate", "authenticate_readonly", "mutation"])
 def test_expired_work_survives_restart_and_rejected_access(tmp_path, action):
     store, owner, token = saved_work(tmp_path)
-    path = age_snapshot(store, owner, timedelta(hours=25))
+    path = age_snapshot(store, owner, WorkspaceStore.SESSION_TTL + timedelta(hours=1))
     before = path.read_bytes()
     restarted = WorkspaceStore(tmp_path)
     assert path.exists(), "Authentication expiry must not erase saved draft/preview data"
@@ -69,7 +69,7 @@ def test_expired_work_survives_restart_and_rejected_access(tmp_path, action):
 @pytest.mark.parametrize("action", ["authenticate", "authenticate_readonly"])
 def test_wrong_token_against_expired_work_is_403_and_changes_nothing(tmp_path, action):
     store, owner, _ = saved_work(tmp_path)
-    path = age_snapshot(store, owner, timedelta(hours=25))
+    path = age_snapshot(store, owner, WorkspaceStore.SESSION_TTL + timedelta(hours=1))
     before = path.read_bytes()
     with pytest.raises(WorkspaceError, match="^invalid_session_token$") as error:
         getattr(store, action)(owner.session_id, "wrong-token")
@@ -79,7 +79,7 @@ def test_wrong_token_against_expired_work_is_403_and_changes_nothing(tmp_path, a
 
 def test_retained_expired_work_does_not_consume_active_capacity(tmp_path, monkeypatch):
     store, owner, _ = saved_work(tmp_path)
-    path = age_snapshot(store, owner, timedelta(days=29))
+    path = age_snapshot(store, owner, WorkspaceStore.SESSION_RETENTION - timedelta(days=1))
     before = path.read_bytes()
     monkeypatch.setattr(WorkspaceStore, "MAX_SESSIONS", 1)
     restarted = WorkspaceStore(tmp_path)
@@ -93,11 +93,11 @@ def test_retained_expired_work_does_not_consume_active_capacity(tmp_path, monkey
 @pytest.mark.parametrize(
     "age,retained",
     [
-        (timedelta(days=30), True),
-        (timedelta(days=30, seconds=1), False),
+        (WorkspaceStore.SESSION_RETENTION, True),
+        (WorkspaceStore.SESSION_RETENTION + timedelta(seconds=1), False),
     ],
 )
-def test_snapshot_retention_is_thirty_days_not_authentication_lifetime(tmp_path, monkeypatch, age, retained):
+def test_snapshot_retention_is_separate_from_authentication_lifetime(tmp_path, monkeypatch, age, retained):
     store, owner, _ = saved_work(tmp_path)
     now = datetime.now(UTC)
     owner.created_at = (now - age - timedelta(hours=1)).isoformat()
@@ -133,13 +133,13 @@ def test_cleanup_reloads_activity_from_another_store_under_shared_lock(tmp_path,
     monkeypatch.setattr(workspace_module, "datetime", Clock)
     monkeypatch.setattr(workspace_module, "utc_now", lambda: Clock.value.isoformat())
     # B stays active while A's cached record becomes older than even retention.
-    for _ in range(33):
+    for _ in range(384):
         Clock.value += timedelta(hours=23)
         second.authenticate(owner.session_id, token)
     Clock.value += timedelta(hours=2)
     path = first._snapshots.snapshot_path(owner.session_id)
     before = path.read_bytes()
-    assert Clock.value - datetime.fromisoformat(owner.last_accessed_at) > timedelta(days=30)
+    assert Clock.value - datetime.fromisoformat(owner.last_accessed_at) > WorkspaceStore.SESSION_RETENTION
     first.create_session("unrelated-run", "parent", 1)
     assert path.exists(), "An idle store must not delete another store's active work"
     assert path.read_bytes() == before
@@ -149,7 +149,7 @@ def test_cleanup_reloads_activity_from_another_store_under_shared_lock(tmp_path,
 
 def test_expired_rejection_does_not_reconcile_or_reactivate_old_preview(tmp_path):
     store, owner, token = saved_work(tmp_path)
-    path = age_snapshot(store, owner, timedelta(hours=25))
+    path = age_snapshot(store, owner, WorkspaceStore.SESSION_TTL + timedelta(hours=1))
     before = path.read_bytes()
     calls = []
     store._accepted_plan_resolver = lambda trip: calls.append(trip) or {"accepted_plan_id": "new-child"}
@@ -392,3 +392,14 @@ def test_restore_and_readonly_trip_compile_do_not_refresh_expired_evidence(expir
     compiler.compile(restored.draft, accepted_plan_id=restored.accepted_plan_id, read_only=True)
     official.assert_not_called()
     assert cache.read_bytes() == before and restored.proposal == proposal
+
+
+def test_saved_workspace_resumes_after_two_days_and_service_restart(tmp_path):
+    store, owner, token = saved_work(tmp_path)
+    age_snapshot(store, owner, timedelta(days=2))
+    before = deepcopy(owner.public_dict())
+    restored = WorkspaceStore(tmp_path).authenticate(owner.session_id, token)
+    assert restored.session_id == before["session_id"]
+    assert restored.public_dict()["draft"] == before["draft"] and restored.proposal == before["proposal"]
+    assert restored.accepted_plan_id == before["accepted_plan_id"]
+    assert restored.revision == before["revision"]

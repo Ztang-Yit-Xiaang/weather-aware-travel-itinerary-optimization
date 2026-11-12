@@ -30,6 +30,24 @@ DEFAULT_MAX_RESPONSE_BYTES = 1_000_000
 DEFAULT_MAX_TABLE_POINTS = 25
 
 _IDENTIFIER_PATTERN = re.compile(r"[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}")
+RUNTIME_ROUTING_PROVIDERS = frozenset({"runtime_osrm", "openrouteservice"})
+
+
+def valid_runtime_route_provenance(value: Any, *, allow_detours: bool = False) -> bool:
+    """Require a complete provider-specific evidence tuple, never mixed labels."""
+    get = value.get if isinstance(value, Mapping) else lambda key: getattr(value, key, None)
+    provider = get("provider")
+    if not isinstance(provider, str):
+        return False
+    prefix = {"runtime_osrm": "osrm", "openrouteservice": "ors"}.get(provider)
+    if prefix is None or get("routing_profile") != "driving":
+        return False
+    pairs = {(f"{prefix}_route_validated", f"runtime_{prefix}_geojson")}
+    if allow_detours:
+        pairs.add((f"{prefix}_waypoint_detour_validated", f"runtime_{prefix}_geojson_via_highway_101"))
+    return (get("routing_status"), get("geometry_source")) in pairs and (
+        get("distance_source") == get("duration_source") == f"runtime_{prefix}_route"
+    )
 
 
 class RuntimeRoutingError(RuntimeError):

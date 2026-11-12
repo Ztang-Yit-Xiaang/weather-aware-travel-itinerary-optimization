@@ -1,0 +1,16 @@
+# Hosted Python 3.12 runtime only; do not install the research pyproject extras.
+# Direct dependencies match the current working environment (2026-10-30).
+# Psycopg's binary extra supplies libpq without a compiler or system DB client.
+fastapi==0.141.1
+uvicorn==0.52.0
+numpy==1.26.4
+pandas==3.0.3
+scipy==1.17.1
+matplotlib==3.11.1
+geopy==2.4.1
+requests==2.34.2
+shapely==2.2.0
+pydantic==2.13.4
+openai==2.53.0
+psycopg[binary]==3.3.6
+PyYAML==6.0.3

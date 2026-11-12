@@ -76,6 +76,44 @@ def main() -> None:
                 "static_utility": None,
             }
         )
+    local_sources = []
+    visitor_areas = []
+    for filename in ("presidio_places.json", "itinerary_places.json"):
+        local_source = output / filename
+        local_payload = local_source.read_bytes()
+        local = json.loads(local_payload)
+        if local["schema_version"] != "interest-local-places-v1":
+            raise ValueError("exploration_local_source_invalid")
+        visitor_areas.extend(local.get("visitor_areas", []))
+        local_sources.append(
+            {
+                "file": filename,
+                "sha256": hashlib.sha256(local_payload).hexdigest(),
+                "count": len(local["places"]),
+                "attribution": local["attribution"],
+                "license_url": local.get("license_url"),
+                "retrieved_at": local["retrieved_at"],
+            }
+        )
+        for point in local["places"]:
+            coordinate = point["display_coordinate"]
+            if not (-180 <= coordinate["longitude"] <= 180 and -90 <= coordinate["latitude"] <= 90):
+                raise ValueError("exploration_local_coordinate_invalid")
+            # Merge nearby records with the same name, keeping official coordinates first.
+            duplicate = next(
+                (
+                    old
+                    for old in points
+                    if old["name"].casefold() == point["name"].casefold()
+                    and abs(old["display_coordinate"]["latitude"] - coordinate["latitude"]) < 0.002
+                    and abs(old["display_coordinate"]["longitude"] - coordinate["longitude"]) < 0.002
+                ),
+                None,
+            )
+            if duplicate:
+                duplicate["source_refs"] = list(dict.fromkeys(duplicate["source_refs"] + point["source_refs"]))
+            else:
+                points.append(point)
     if len({p["place_id"] for p in points}) != len(points):
         raise ValueError("exploration_duplicate_identity")
     output.mkdir(parents=True, exist_ok=True)
@@ -95,6 +133,8 @@ def main() -> None:
         "count": len(points),
         "data_role": "existing_POI_metadata_not_user_feedback",
         "routing_status": "not_evaluated",
+        "local_sources": local_sources,
+        "visitor_areas": visitor_areas,
         "supplemental_source": {
             "file": park_source.name,
             "sha256": hashlib.sha256(park_payload).hexdigest(),

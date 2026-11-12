@@ -1376,6 +1376,9 @@ def _private_build_id(repository, rows, registry_body):
     paths = {"scripts/run_product_app.py", "configs/product_app_registry.json", "configs/product_route_delta.json"}
     paths.add(core._load(repository / "configs/product_route_delta.json")["descriptor_path"])
     paths.update(
+        path.relative_to(repository).as_posix() for path in (repository / "configs/interest_regions").glob("*.json")
+    )
+    paths.update(
         row["path"]
         for row in rows
         if row["path"].startswith("src/itinerary_system/product_app/") and Path(row["path"]).suffix.lower() in suffixes

@@ -24,7 +24,7 @@ RUN = "california_coast_product_demo_v2"
 LEG = "leg_stearns_wharf_surf_n_wear_s_beach_house"
 
 
-def test_big_sur_exploration_includes_sourced_park_entries_without_readding_the_current_park():
+def test_big_sur_exploration_keeps_only_local_sourced_entries_without_readding_the_current_park():
     parent = {
         "plan_id": "test",
         "selected_stops": [
@@ -50,9 +50,13 @@ def test_big_sur_exploration_includes_sourced_park_entries_without_readding_the_
             }
         ]
     }
-    places, manifest = _exploration_places(ROOT, {"context": {"route_leg_id": "test_leg"}}, parent, geography, None)
+    search = {"coordinate": {"latitude": 36.2503, "longitude": -121.7831}, "radius_km": 10}
+    places, manifest = _exploration_places(
+        ROOT, {"context": {"route_leg_id": "test_leg"}}, parent, geography, None, search
+    )
     names = {point["name"] for point in places}
-    assert {"Andrew Molera State Park", "Garrapata State Park", "Point Lobos State Natural Reserve"} <= names
+    assert "Andrew Molera State Park" in names
+    assert not {"Garrapata State Park", "Point Lobos State Natural Reserve"} & names
     assert "Pfeiffer Big Sur State Park" not in names
     snapshot = json.loads((ROOT / "configs/interest_regions/monterey_park_entries.geojson").read_text())
     originals = {"csp_entry_" + feature["properties"]["GISID"].lower(): feature for feature in snapshot["features"]}
@@ -318,14 +322,15 @@ def test_complete_500_place_endpoint_over_loopback_http_is_read_only_and_concurr
         for point in baseline["poi_predictions"]
     ]
     rng = np.random.default_rng(20261021)
+    focus = baseline["search_context"]["coordinate"]
     for index in range(500 - len(rows)):
         rows.append(
             {
                 "place_id": f"load_only_{index:04d}",
                 "name": f"Synthetic load fixture {index:04d}",
                 "display_coordinate": {
-                    "longitude": float(rng.uniform(-119.76, -119.68)),
-                    "latitude": float(rng.uniform(34.43, 34.49)),
+                    "longitude": float(rng.uniform(focus["longitude"] - 0.01, focus["longitude"] + 0.01)),
+                    "latitude": float(rng.uniform(focus["latitude"] - 0.01, focus["latitude"] + 0.01)),
                 },
                 "place_categories": ["nature", "outdoor"],
                 "source_refs": ["synthetic_load_test_not_a_real_place"],

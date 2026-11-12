@@ -45,15 +45,19 @@ button:disabled { cursor: not-allowed; opacity: 0.55; }
 .skip-link { position: fixed; top: -60px; left: 12px; z-index: 100; background: var(--ink); color: white; padding: 10px 14px; border-radius: 8px; }
 .skip-link:focus { top: 12px; }
 
-.loading-screen { min-height: 100vh; display: grid; place-content: center; text-align: center; color: var(--muted); padding: 24px; }
+.loading-screen { min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; color: var(--muted); padding: 24px; }
 .direct-file-help { display: none; }
-.spinner { width: 36px; height: 36px; margin: auto; border: 3px solid var(--line); border-top-color: var(--teal); border-radius: 50%; animation: spin .8s linear infinite; }
+.spinner { width: 36px; height: 36px; margin: 0 auto; border: 3px solid var(--line); border-top-color: var(--teal); border-radius: 50%; animation: spin .8s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
 .recovery-screen { background: linear-gradient(145deg, #eef6f3, #fdf8f2); }
 .recovery-card { width: min(620px, calc(100vw - 32px)); padding: 30px; border: 1px solid var(--line); border-radius: 18px; background: white; box-shadow: var(--shadow); text-align: left; }
 .recovery-card h1 { margin: 7px 0 9px; color: var(--ink); font-size: clamp(25px, 4vw, 34px); }
 .recovery-card > p:not(.eyebrow) { margin: 0 0 18px; line-height: 1.55; }
 .recovery-card > code { display: block; width: fit-content; margin: 14px 0; padding: 7px 9px; border-radius: 7px; background: var(--wash); color: var(--ink); }
+.loading-screen .hosted-login { width: min(100%, 400px); max-height: none; overflow: visible; padding: 24px; }
+.hosted-login input:focus-visible { outline: 3px solid var(--teal); outline-offset: 2px; }
+.hosted-login .primary { width: 100%; margin-top: 18px; }
+.hosted-login [role="alert"] { color: var(--danger); margin: 12px 0 0; }
 .recovery-mark { display: grid; place-items: center; float: right; width: 44px; height: 44px; border-radius: 12px; background: var(--orange-soft); color: #9b471d; font-size: 24px; font-weight: 900; }
 .component-list { display: grid; gap: 8px; margin: 18px 0; padding: 0; list-style: none; }
 .component-list li { display: grid; grid-template-columns: minmax(120px, .45fr) 1.4fr auto; align-items: center; gap: 12px; padding: 11px 12px; border: 1px solid var(--line); border-radius: 10px; }
@@ -82,7 +86,7 @@ button:disabled { cursor: not-allowed; opacity: 0.55; }
 .brand { display: flex; align-items: center; gap: 11px; min-width: 0; }
 .brand-mark { display: grid; place-items: center; width: 42px; height: 42px; border-radius: 12px; background: var(--ink); color: white; font-weight: 800; letter-spacing: -.04em; }
 .brand div { display: grid; min-width: 0; }
-.brand strong { font-size: 17px; white-space: nowrap; }
+.brand strong { font-size: 17px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .brand span:last-child { color: var(--teal-dark); font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .flow { display: grid; grid-template-columns: repeat(5, 1fr); list-style: none; padding: 0; margin: 0; }
 .flow li { position: relative; display: flex; align-items: center; gap: 7px; color: var(--muted); font-size: 11px; }
@@ -90,6 +94,7 @@ button:disabled { cursor: not-allowed; opacity: 0.55; }
 .flow b { display: grid; place-items: center; width: 25px; height: 25px; border: 1px solid var(--line); border-radius: 50%; background: white; }
 .flow .is-complete b { background: var(--teal); color: white; border-color: var(--teal); }
 .top-actions { display: flex; align-items: center; justify-content: flex-end; gap: 9px; }
+#hosted-sign-out { white-space: nowrap; }
 .experiment-badge { padding: 7px 10px; border: 1px solid #c7bdf6; background: #f0edff; color: #433b96; border-radius: 999px; font-size: 12px; font-weight: 700; white-space: nowrap; }
 .icon-button { width: 44px; min-width: 44px; height: 44px; min-height: 44px; border: 1px solid var(--line); border-radius: 10px; background: white; cursor: pointer; font-size: 19px; }
 
@@ -298,7 +303,7 @@ button:disabled { cursor: not-allowed; opacity: 0.55; }
 .evidence-card dt { color: var(--muted); }
 .evidence-card dd { margin: 0; font-family: ui-monospace, SFMono-Regular, Consolas, monospace; overflow-wrap: anywhere; }
 .evidence-card details { padding: 0; border-bottom: 1px solid var(--line); font-size: 13px; }
-.download-link { display: inline-flex; align-items: center; min-height: 44px; margin-top: 12px; padding: 0 14px; background: var(--teal); color: white; border-radius: 9px; text-decoration: none; font-size: 13px; font-weight: 700; }
+.download-link { display: inline-flex; align-items: center; min-height: 44px; margin-top: 12px; padding: 0 14px; border: 0; background: var(--teal); color: white; border-radius: 9px; text-decoration: none; font-size: 13px; font-weight: 700; cursor: pointer; }
 
 .copilot-dock { position: fixed; z-index: 45; inset: 74px 0 0 auto; width: min(var(--copilot-width, 440px), 90vw); min-width: 320px; max-width: 560px; display: grid; grid-template-rows: auto auto auto auto minmax(0, 1fr) auto auto; background: white; border-left: 1px solid var(--line); box-shadow: -18px 0 50px rgba(18, 37, 53, .14); }
 .dock-resizer { position: absolute; inset: 0 auto 0 -5px; width: 10px; cursor: ew-resize; }
@@ -613,6 +618,8 @@ dialog::backdrop { background: rgba(12, 28, 38, .48); backdrop-filter: blur(3px)
 .interest-place-list small { color: var(--muted); font-weight: 400; }
 .interest-place-list button[aria-pressed="true"] { outline: 2px solid #0369a1; background: #e0f2fe; }
 .interest-map-summary { position: absolute; z-index: 8; right: 16px; top: 16px; width: min(280px, calc(100% - 32px)); display: grid; gap: 6px; padding: 12px; border: 1px solid #7dd3fc; border-radius: 10px; background: rgba(255,255,255,.97); font-size: 13px; overflow-wrap: anywhere; }
+.interest-map-summary select { max-width: 100%; min-height: 32px; }
+.interest-map-summary label { min-width: 0; }
 .interest-map-summary button { min-height: 44px; border: 1px solid #0369a1; border-radius: 8px; color: #075985; background: white; cursor: pointer; font-weight: 650; }
 .map-stage:has(.interest-map-summary) .map-note, .map-stage:has(.interest-map-summary) .map-context-card.guidance { display: none; }
 @media (max-width: 600px) { .interest-map-summary { top: 78px; right: 12px; width: min(230px, calc(100% - 24px)); } }

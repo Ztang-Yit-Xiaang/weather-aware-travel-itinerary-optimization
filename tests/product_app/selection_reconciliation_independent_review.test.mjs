@@ -8,7 +8,7 @@ const source = readFileSync(new URL("../../src/itinerary_system/product_app/stat
 const start = source.indexOf("async function updateSelection(");
 const end = source.indexOf("function operationEnabled(", start);
 assert.ok(start >= 0 && end > start);
-const handler = source.slice(start, end);
+const handler = "const mutationRecovery = {submit: (action, body) => api(`/api/sessions/${state.session.session_id}/${action === \"selection\" ? \"selection\" : `draft/${action}`}`, {method:\"POST\", body})};\n" + source.slice(start, end);
 const session = (conversation_id, revision = 1, extra = {}) => ({
   session_id: "s", trip_id: "t", run_id: "r", revision, conversation_id,
   accepted_plan_id: "parent", selected_day: 5, selected_stop_id: "bixby",

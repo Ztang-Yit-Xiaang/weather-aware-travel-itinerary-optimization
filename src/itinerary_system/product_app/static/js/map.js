@@ -394,6 +394,7 @@ function validLineString(geometry) {
 }
 
 function validRouteLeg(leg) {
+  const prefix = leg?.provider === "runtime_osrm" ? "osrm" : leg?.provider === "openrouteservice" ? "ors" : null;
   if (!exactKeys(leg, ROUTE_LEG_KEYS)
       || !QUERY_HASH_PATTERN.test(leg.query_hash || "")
       || leg.route_leg_id !== `preview_leg_${leg.query_hash.slice(0, 16)}`
@@ -401,11 +402,11 @@ function validRouteLeg(leg) {
       || typeof leg.destination_id !== "string" || !leg.destination_id || leg.destination_id.length > 128
       || leg.travel_mode !== "driving"
       || leg.validation_status !== "road_validated"
-      || leg.provider !== "runtime_osrm"
-      || leg.routing_status !== "osrm_route_validated"
-      || leg.geometry_source !== "runtime_osrm_geojson"
-      || leg.distance_source !== "runtime_osrm_route"
-      || leg.duration_source !== "runtime_osrm_route"
+      || !prefix
+      || leg.routing_status !== `${prefix}_route_validated`
+      || leg.geometry_source !== `runtime_${prefix}_geojson`
+      || leg.distance_source !== `runtime_${prefix}_route`
+      || leg.duration_source !== `runtime_${prefix}_route`
       || leg.road_validated !== true || leg.fallback_used !== false
       || !Number.isFinite(leg.distance_m) || leg.distance_m <= 0
       || !Number.isFinite(leg.duration_s) || leg.duration_s <= 0
@@ -423,7 +424,7 @@ function validAccessPoint(access, snapped, expectedEvidence) {
   if (!exactKeys(access, ACCESS_KEYS)
       || !ACCESS_ID_PATTERN.test(access.access_point_id || "")
       || access.access_type !== "road_snap"
-      || access.source !== "runtime_osrm"
+      || !["runtime_osrm", "openrouteservice"].includes(access.source)
       || access.road_validated !== true
       || access.access_confidence !== "road_snap_only"
       || !Array.isArray(access.evidence_refs)
@@ -487,6 +488,7 @@ function validateConfirmedOperation(operation, dayCount) {
   if (operation.evidence_refs.length !== 2
       || operation.evidence_refs.some((value, index) => value !== expectedEvidence[index])
       || !validAccessPoint(parameters.selected_access_point, snapped, expectedEvidence)) return null;
+  if (legs.some(leg => leg.provider !== parameters.selected_access_point.source)) return null;
   return { parameters, routeLegs: legs };
 }
 
@@ -603,7 +605,8 @@ export async function renderGeographicMap({
   const interestVisible = interestRegions?.exploration_plan_id === planId
     && interestRegions?.exploration_plan_content_hash === plan?.content_hash
     && interestRegions?.context?.day === selectedDay;
-  const viewKey = JSON.stringify([planId, plan?.content_hash, selectedDay, interestVisible, selectedInterestId]);
+  const viewKey = JSON.stringify([planId, plan?.content_hash, selectedDay, interestVisible, selectedInterestId,
+    interestRegions?.search_context?.stop_id, interestRegions?.search_context?.radius_km, interestRegions?.search_context?.area_mode]);
   const initialCamera = viewKey === activeViewKey ? activeController?.camera() || retainedCamera : null;
   disposeGeographicMap();
   if (!planId) {

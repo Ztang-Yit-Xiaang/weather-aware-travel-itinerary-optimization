@@ -14,7 +14,7 @@ async function updateSelection(patch) {
   Object.assign(state.session, patch, {revision:state.session.revision+1});
   return true;
 }
-const select = new Function("state", "updateSelection", `let pendingSelection=null; ${code}; return selectContext;`)(state,updateSelection);
+const select = new Function("state", "updateSelection", "scheduleInterestRefresh", `let pendingSelection=null; ${code}; return selectContext;`)(state,updateSelection,() => {});
 const first = select({selected_stop_id:"bixby"});
 const second = select({selected_alternative_id:"recommended"});
 await Promise.resolve();

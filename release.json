@@ -1,7 +1,7 @@
 {
   "schema_version": "hosted-pages-release-v1",
   "product_id": "itinerary-repair-copilot",
-  "build_id": "aa767a9a7e50c1ee",
+  "build_id": "1ac05e25d75142f6",
   "api_origin": "https://itinerary-api-production-19d3.up.railway.app",
   "backend_health": "ready"
 }

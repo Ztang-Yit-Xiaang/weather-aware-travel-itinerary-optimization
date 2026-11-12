@@ -8,7 +8,7 @@ import {
   copilotOperationForIntent,
   createCopilotController,
   sameCopilotDraftOperation,
-} from "./copilot.js?v=20260904-hci1";
+} from "./copilot.js?v=20261112-preview-navigation";
 import {
   disposeCompareWorkspace,
   renderCompareWorkspace,
@@ -36,6 +36,7 @@ const state = {
   mutationRecovery: { status: "idle", blocked: false, message: "" },
   registry: null,
   route: normalizeRoute(currentAppPath()),
+  navigationRevision: 0,
   tripPreviewPlanId: null,
   acknowledgedPreviewPlanId: null,
   mapInteraction: {
@@ -3836,6 +3837,8 @@ const API_ERROR_COPY = {
   preview_execution_timeout: "The repair did not finish in time. No result was applied; your accepted itinerary and staged draft are unchanged.",
   preview_client_disconnected: "The preview connection closed before its result could be applied. Your accepted itinerary is unchanged.",
   official_source_unavailable: "The official road or park bulletin could not be retrieved. The preview is paused, and your saved itinerary is still active. Try again later.",
+  trip_planning_evidence_expired: "The road or park checks expired before evaluation. Run Preview again to refresh the checks for this draft.",
+  trip_planning_official_access_unresolved: "The official source did not confirm access for this route. Check the park's current access notice before previewing again.",
   trip_planning_avoidance_route_unavailable: "A verified road connection avoiding the requested corridor is unavailable. Review the route and try again. Your draft is still saved.",
   trip_planning_road_connection_unavailable: "The routing service could not verify a driving connection. Your draft is still saved.",
   request_validation_failed: "The browser and local service use different API versions. Stop the service, restart it, then refresh this page.",
@@ -4286,6 +4289,7 @@ function bindEvents() {
   window.addEventListener("popstate", () => {
     const normalized = normalizeRoute(currentAppPath());
     const enteringView = state.route !== normalized && ["/app/itinerary", "/app/map", "/app/compare", "/app/evidence"].includes(normalized);
+    state.navigationRevision += 1;
     state.route = normalized;
     renderAll();
     if (enteringView) {
@@ -4300,6 +4304,7 @@ function navigate(route) {
   const normalized = normalizeRoute(route);
   const enteringView = state.route !== normalized && ["/app/itinerary", "/app/map", "/app/compare", "/app/evidence"].includes(normalized);
   if (currentAppPath() !== normalized) history.pushState({}, "", appRouteUrl(normalized));
+  state.navigationRevision += 1;
   state.route = normalized;
   const proposal = state.workspaceSyncPending ? null : state.session.proposal;
   const blockedDatedRepair = proposal?.state === "ineligible" && proposal.runtime_execution?.official_visit_schedule;
@@ -6484,6 +6489,12 @@ function renderCompareContextPanel() {
 }
 
 function renderEvidenceContextPanel() {
+  if (["PREVIEW_RUNNING", "PREVIEW_FAILED"].includes(state.previewRuntime?.status)) {
+    const running = state.previewRuntime.status === "PREVIEW_RUNNING";
+    $("#repair-panel").innerHTML = `<span class="eyebrow">Evidence summary</span><h2 id="repair-heading">Eligibility checks</h2>
+      <span class="status-pill warning">${running ? "Evaluation pending" : "Preview incomplete"}</span>`;
+    return;
+  }
   const proposal = state.session.proposal;
   const ineligible = proposal?.state === "ineligible";
   const exactPreview = ineligible ? ineligiblePreviewEvidence() : null;
@@ -6774,6 +6785,17 @@ function ineligiblePreviewResultHtml(proposal, { parent, certificate }) {
 }
 
 function renderEvidence() {
+  if (["PREVIEW_RUNNING", "PREVIEW_FAILED"].includes(state.previewRuntime?.status)) {
+    const running = state.previewRuntime.status === "PREVIEW_RUNNING";
+    const title = running ? "Evaluating your repair" : "Preview could not be completed";
+    const detail = running ? "The checks will appear here when the evaluation finishes."
+      : state.previewRuntime.message || "Open Trip to review your draft and try Preview again.";
+    $("#workspace-content").innerHTML = `<div class="route-view">
+      <header class="route-heading"><div><span class="eyebrow">Draft evidence</span><h2>${title}</h2></div><button class="secondary" id="evidence-back">Back to trip</button></header>
+      <article class="evidence-card" role="status"><p>${escapeHtml(detail)}</p></article></div>`;
+    $("#evidence-back").addEventListener("click", () => navigate("/app/itinerary"));
+    return;
+  }
   const proposal = state.session.proposal;
   const ineligible = proposal?.state === "ineligible";
   const exactPreview = ineligible ? ineligiblePreviewEvidence() : null;

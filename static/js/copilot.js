@@ -758,10 +758,14 @@ export function createCopilotController({
       actions.append(row);
     });
 
-    actions.append(
-      button("compare", "Compare", () => navigate("/app/compare"), previewActionActive),
-      button("evidence", "Review evidence", () => navigate("/app/evidence"), previewActionActive),
-    );
+    const evidence = button("evidence", "Review evidence", () => {
+      if (window.matchMedia?.("(max-width: 820px)")?.matches) close();
+      navigate("/app/evidence");
+    });
+    evidence.dataset.copilotAction = "evidence";
+    // Evidence is read-only, including while a draft save or evaluation is pending.
+    evidence.disabled = false;
+    actions.append(button("compare", "Compare", () => navigate("/app/compare"), previewActionActive), evidence);
     const unrelatedTrip = editIntents.some(({intent}) => intent.type === "replan_trip" && !intentAlreadyDrafted(intent));
     const previewCard = unrelatedTrip ? null : buildPreviewResult();
     if (previewCard) actions.append(previewCard);
@@ -950,6 +954,7 @@ export function createCopilotController({
     if (previewActionActive || requestActive) return;
     if ((getState().undoPending || getState().mutationRecovery?.blocked || getState().workspaceConflict || getState().workspaceSyncPending)) return;
     const origin = conversationOrigin();
+    const navigationRevision = getState().navigationRevision;
     const eligibility = () => Array.isArray(intent)
       ? copilotCombinedEligibility(intent, getState().workspace, getState().session)
       : copilotOneClickEligibility(intent, getState().workspace, getState().session);
@@ -958,7 +963,7 @@ export function createCopilotController({
     previewActionActive = true;
     setSubmitting(requestActive);
     $$(".copilot-proposal-actions button").forEach((buttonControl) => {
-      buttonControl.disabled = true;
+      if (buttonControl.dataset.copilotAction !== "evidence") buttonControl.disabled = true;
     });
     setLifecycle("preview_running", initial.alreadyStaged
       ? "Running the exact staged suggestion"
@@ -983,7 +988,7 @@ export function createCopilotController({
       ) });
       if (!originIsCurrent(origin)) return;
       if (!previewed) {
-        setLifecycle("failed", "The draft remains staged, but preview did not complete");
+        setLifecycle("failed", getPreviewState()?.message || "The draft remains staged, but preview did not complete");
         return;
       }
       const completed = getState();
@@ -997,7 +1002,8 @@ export function createCopilotController({
       const restored = await restore({ announce: false });
       if (!originIsCurrent(origin)) return;
       syncPreviewLifecycle();
-      if (restored && window.matchMedia?.("(max-width: 820px)")?.matches) {
+      if (restored && !$("#copilot-dock").hidden && getState().navigationRevision === navigationRevision
+          && window.matchMedia?.("(max-width: 820px)")?.matches) {
         const state = getState();
         const proposal = state.session.proposal;
         const preview = getPreviewState?.();

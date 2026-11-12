@@ -4279,10 +4279,10 @@ function bindEvents() {
   });
   window.addEventListener("popstate", () => {
     const normalized = normalizeRoute(currentAppPath());
-    const enteringMap = state.route !== normalized && ["/app/itinerary", "/app/map"].includes(normalized);
+    const enteringView = state.route !== normalized && ["/app/itinerary", "/app/map", "/app/compare", "/app/evidence"].includes(normalized);
     state.route = normalized;
     renderAll();
-    if (enteringMap) {
+    if (enteringView) {
       $("#workspace-content").scrollTop = 0;
       document.scrollingElement.scrollTop = 0;
     }
@@ -4292,10 +4292,12 @@ function bindEvents() {
 
 function navigate(route) {
   const normalized = normalizeRoute(route);
-  const enteringMap = state.route !== normalized && ["/app/itinerary", "/app/map"].includes(normalized);
+  const enteringView = state.route !== normalized && ["/app/itinerary", "/app/map", "/app/compare", "/app/evidence"].includes(normalized);
   if (currentAppPath() !== normalized) history.pushState({}, "", appRouteUrl(normalized));
   state.route = normalized;
-  if (normalized === "/app/compare" && !state.session.selected_alternative_id && !activeProposalPlan()) {
+  const proposal = state.workspaceSyncPending ? null : state.session.proposal;
+  const blockedDatedRepair = proposal?.state === "ineligible" && proposal.runtime_execution?.official_visit_schedule;
+  if (normalized === "/app/compare" && !blockedDatedRepair && !state.session.selected_alternative_id && !activeProposalPlan()) {
     const recommendedId = recommendedAlternativeId();
     if (recommendedId) {
       void selectContext({ selected_alternative_id: recommendedId });
@@ -4304,7 +4306,7 @@ function navigate(route) {
   }
   renderAll();
   $("#main-workspace").focus({ preventScroll: true });
-  if (enteringMap) {
+  if (enteringView) {
     $("#workspace-content").scrollTop = 0;
     document.scrollingElement.scrollTop = 0;
   }
@@ -5477,6 +5479,12 @@ function mapPreviewSummaryHtml(proposal, displayed, parent) {
       || proposal.child_plan_id !== displayed.plan_id
       || proposal.child_plan_content_hash !== displayed.content_hash
       || diff?.parent_plan_id !== parent?.plan_id || diff?.child_plan_id !== displayed.plan_id) return "";
+  if (proposal.runtime_execution?.official_visit_schedule) {
+    const details = datedRepairDetailsHtml(proposal, parent);
+    if (details) return `<section class="map-preview-summary" aria-label="Preview changes" data-plan-id="${escapeHtml(displayed.plan_id)}" data-plan-content-hash="${escapeHtml(displayed.content_hash)}">
+      ${details}<a class="repair-evidence-link" href="${escapeHtml(appRouteUrl("/app/evidence"))}">View all visit times and access checks</a>
+    </section>`;
+  }
   const days = diffChangedDays(diff) || [];
   const rows = days.map(day => {
     const changes = [];
@@ -6007,7 +6015,10 @@ function evaluatedEditEvidenceHtml(proposal) {
   const schedule = proposal.schedule_impact || proposal.role_impact;
   const scheduleAccounting = roleEvidence ? schedule?.child_schedule : schedule?.child;
   const timeWindowEvidence = diff?.schema_version === "plan-diff-v3";
-  const scheduleStatus = schedule
+  const datedSchedule = proposal.runtime_execution?.official_visit_schedule;
+  const scheduleStatus = datedSchedule
+    ? `${humanLabel(datedSchedule.status)} · see the arrival and opening-hours check in Evidence`
+    : schedule
     ? `${humanLabel(scheduleAccounting.status)} · evaluator-owned modeled accounting`
     : proposal.evidence?.hard_feasibility_status === "PASSED"
       ? "Hard feasibility passed; stop-by-stop schedule accounting is Unavailable in this response."
@@ -6100,6 +6111,76 @@ function tripPlanningEvidenceHtml(proposal) {
   return `<section><h4>Trip planning result</h4><p>${solver.status === "OPTIMAL" ? "Optimal within this finite candidate model" : "Feasible plan; optimality not proven"} · ${escapeHtml(solver.objective)}.</p><p>${escapeHtml(solver.scope)}. Gap: ${escapeHtml(solver.optimality_gap == null ? "Unavailable" : solver.optimality_gap)}.</p><h4>Official travel sources</h4><ul>${sources}</ul><ul>${notices}</ul></section>`;
 }
 
+function datedRepairDetailsHtml(proposal, parent, showDays = false) {
+  const execution = proposal?.runtime_execution;
+  const bundle = execution?.planning_bundle;
+  const diff = execution?.plan_diff;
+  const schedule = execution?.official_visit_schedule;
+  const child = proposal?.geography_plan;
+  if (!schedule || !bundle?.official_visit_access || !parent || !child
+      || !["eligible", "ineligible"].includes(proposal.state)
+      || parent.plan_id !== proposal.parent_plan_id || parent.content_hash !== proposal.parent_plan_content_hash
+      || child.plan_id !== proposal.child_plan_id || child.content_hash !== proposal.child_plan_content_hash
+      || bundle.plan?.plan_id !== child.plan_id || bundle.plan.content_hash !== child.content_hash
+      || diff?.parent_plan_id !== parent.plan_id || diff?.child_plan_id !== child.plan_id
+      || schedule.plan_id !== child.plan_id || schedule.plan_content_hash !== child.content_hash) return "";
+
+  const route = proposal.route_validation;
+  const changes = bundle.days.flatMap(({ day }) => {
+    const removed = diff.deleted_stops.filter(stop => stop.day === day).map(stop => stopNameForId(stop.stop_id, parent));
+    const added = diff.added_stops.filter(stop => stop.day === day).map(stop => stopNameForId(stop.stop_id, child));
+    return removed.length || added.length
+      ? [`<li><strong>Day ${day}</strong> · ${escapeHtml(removed.length && added.length
+        ? `${removed.join(", ")} → ${added.join(", ")}`
+        : removed.length ? `Removed ${removed.join(", ")}` : `Added ${added.join(", ")}`)}</li>`] : [];
+  });
+  for (const stop of bundle.plan.selected_stops.filter(stop =>
+    ["golden_gate_bridge", "kings_canyon_national_park"].includes(stop.poi_id) && stop.access_note)) {
+    const trace = schedule.stop_traces.find(row => row.stop_id === stop.poi_id);
+    if (!trace) continue;
+    changes.push(`<li><strong>Day ${trace.day} · ${escapeHtml(stop.attraction_name)}</strong><br>${escapeHtml(stop.access_note)}
+      ${safeExternalLink(bundle.official_visit_access[stop.poi_id]?.access_source_url, "Official access details")}
+      ${trace.failure_codes.length ? `<br>${escapeHtml(trace.failure_codes.map(humanLabel).join(" · "))}` : ""}</li>`);
+  }
+  const before = planRouteMinutes(parent);
+  const after = planRouteMinutes(child);
+  const driving = before === null || after === null ? "Driving comparison unavailable"
+    : `${formatMetric(before)} → ${formatMetric(after)} min${before === after ? "" : ` · ${formatMetric(Math.abs(after - before))} min ${after < before ? "less" : "more"}`}`;
+  const rerouted = new Set(diff.road_changes.map(row => row.day)).size;
+  const lodging = Object.values(bundle.plan.lodging_assignments || {}).length;
+  const retained = execution.evaluation_certificate?.metrics?.preserved_stop_count;
+  const parentStops = parent.stops?.features?.length;
+  const accessNotes = new Map(bundle.plan.selected_stops.map(stop => [stop.poi_id, stop.access_note]));
+  const days = showDays ? `<details><summary>See all ${bundle.days.length} days</summary><ol class="repair-day-list">
+    ${bundle.days.map(({ day, stop_ids }) => {
+      const original = parent.stops.features.filter(feature => feature.properties.day === day)
+        .sort((a, b) => a.properties.stop_order - b.properties.stop_order)
+        .map(feature => feature.properties.name).join(" → ");
+      const proposed = stop_ids.map(id => stopNameForId(id, child)).join(" → ");
+      const hotelId = bundle.plan.lodging_assignments?.[day];
+      const hotel = bundle.place_sources?.find(place => place.entity_id === hotelId)?.name;
+      const firstStop = stop_ids[0];
+      return `<li><strong>Day ${day} · ${escapeHtml(bundle.official_visit_access[firstStop]?.date)}</strong>
+        <p>${original === proposed ? escapeHtml(proposed) : `<strong>Current</strong> ${escapeHtml(original || "No visits")}<br><strong>Preview</strong> ${escapeHtml(proposed)}`}</p>
+        ${stop_ids.filter(id => accessNotes.get(id)).map(id => `<p>${escapeHtml(accessNotes.get(id))}</p>`).join("")}
+        ${hotelId ? `<p>Lodging assignment: ${escapeHtml(hotel || humanLabel(hotelId))}</p>` : ""}</li>`;
+    }).join("")}</ol></details>` : "";
+  return `<article class="dated-repair-details" data-repair-plan-id="${escapeHtml(child.plan_id)}">
+    <h3>What the repair changes</h3>
+    <p class="repair-decision-status">${proposal.state === "eligible" ? "Evaluated preview · awaiting your decision" : "Evaluated preview · acceptance blocked"}</p>
+    <ul class="repair-change-summary">${changes.join("")}</ul>
+    <dl class="repair-impact">
+      <dt>Estimated driving</dt><dd>${escapeHtml(driving)}</dd>
+      <dt>Original stops retained</dt><dd>${escapeHtml(Number.isInteger(retained) && parentStops ? `${retained} of ${parentStops}` : "Unavailable")}</dd>
+      <dt>Day and lodging changes</dt><dd>${diff.day_moves.length} stops moved between days · ${diff.lodging_changes.length} of ${lodging} lodging assignments changed</dd>
+      <dt>Road routing</dt><dd>${rerouted} of ${bundle.days.length} days rerouted · ${escapeHtml(route?.road_validated_leg_count ?? "?")}/${escapeHtml(route?.required_leg_count ?? "?")} legs verified</dd>
+    </dl>
+    ${bundle.enforced_avoid_big_sur === true ? `<p>Preview routes avoid the Big Sur corridor. ${safeExternalLink(bundle.official_sources.find(source => source.source_id === "highway_1")?.url, "Caltrans road conditions")}</p>` : ""}
+    ${days}
+    ${showDays ? `<details><summary>Route and booking notes</summary><ul>${bundle.notices.map(note => `<li>${escapeHtml(note)}</li>`).join("")}</ul></details>` : ""}
+  </article>`;
+}
+
 function officialVisitScheduleHtml(proposal) {
   const value = proposal?.runtime_execution;
   const schedule = value?.official_visit_schedule;
@@ -6118,15 +6199,16 @@ function officialVisitScheduleHtml(proposal) {
       ? trace.failure_codes.map(code => statusLabels[code] || humanLabel(code)).join(". ")
       : access.opens === null ? "Outdoor visit, hours not posted" : "Within modeled hours";
     const time = value => escapeHtml(scheduleClockLabel(Math.round(value)));
-    return `<tr><td>Day ${trace.day}<br>${escapeHtml(access.date)}</td><th scope="row">${escapeHtml(names.get(trace.stop_id) || humanLabel(trace.stop_id))}</th>
-      <td>${time(trace.road_arrival_minute)}</td><td>${time(trace.service_start_minute)}–${time(trace.departure_minute)}</td>
-      <td>${escapeHtml(status)}</td></tr>`;
+    return `<tr role="row"><td role="cell">Day ${trace.day}<br>${escapeHtml(access.date)}</td><th scope="row" role="rowheader">${escapeHtml(names.get(trace.stop_id) || humanLabel(trace.stop_id))}</th>
+      <td role="cell"><span class="visit-cell-label" aria-hidden="true">Road arrival</span>${time(trace.road_arrival_minute)}</td>
+      <td role="cell"><span class="visit-cell-label" aria-hidden="true">Visit time</span>${time(trace.service_start_minute)}–${time(trace.departure_minute)}</td>
+      <td role="cell"><span class="visit-cell-label" aria-hidden="true">Access check</span>${escapeHtml(status)}</td></tr>`;
   }).join("");
   const sources = Object.entries(bundle.official_visit_access).map(([id, access]) => `<li><strong>${escapeHtml(names.get(id) || humanLabel(id))}</strong> · ${escapeHtml(access.scope)} ${access.blocking_code ? escapeHtml(access.blocking_message) : ""} ${safeExternalLink(access.source_url, "Official source")} ${access.access_source_url ? safeExternalLink(access.access_source_url, "Access details") : ""}</li>`).join("");
   return `<article id="official-visit-schedule" class="evidence-card"><h3>Arrival and opening-hours check</h3>
     <p>Departure date ${escapeHtml(bundle.parameters.start_date)} · Daily start 09:00 · California local time</p>
     <p>${proposal.state === "ineligible" ? "This Point Lobos draft is blocked. Times for blocked stops are estimates only." : "This schedule fits the modeled access windows."} Hours reviewed on ${escapeHtml(Object.values(bundle.official_visit_access)[0].verified_on)}. Transfer allowances are estimates.</p>
-    <table class="comparison-table"><thead><tr><th>Day</th><th>Visit</th><th>Road arrival</th><th>Visit time</th><th>Access check</th></tr></thead><tbody>${rows}</tbody></table>
+    <div class="visit-schedule-scroll" role="region" aria-label="Visit times and access checks" tabindex="0"><table class="comparison-table" role="table"><thead role="rowgroup"><tr role="row"><th scope="col">Day</th><th scope="col">Visit</th><th scope="col">Road arrival</th><th scope="col">Visit time</th><th scope="col">Access check</th></tr></thead><tbody role="rowgroup">${rows}</tbody></table></div>
     <details><summary>Official hours and access sources</summary><ul>${sources}</ul></details></article>`;
 }
 
@@ -6280,6 +6362,8 @@ function renderRepair() {
   const hasRenderedRepair = hasAcceptedRepair || (eligible && displayed?.plan_id === proposal.child_plan_id
     && displayed?.content_hash === proposal.child_plan_content_hash);
   const canAccept = eligible && previewCanBeAccepted();
+  const datedDetails = evaluated && proposal.runtime_execution?.official_visit_schedule
+    ? datedRepairDetailsHtml(proposal, acceptedBaseline) : "";
   const repair = evaluated || registered ? proposal.repair : state.workspace.repair;
   const repairPlan = proposal?.geography_plan || state.workspace.geography?.plans?.find(plan =>
     plan.plan_id === proposal?.child_plan_id && plan.content_hash === proposal?.child_plan_content_hash);
@@ -6305,26 +6389,28 @@ function renderRepair() {
           : repairFacts && !repairFacts.certificateId ? "Contextual risk delta: Unavailable"
           : `Contextual risk delta: ${formatMetric(repair.tradeoffs.weather_risk_delta)}`}</li>
       </ul>` : `<p>The evaluated draft produced no eligible child. Reason: ${escapeHtml(proposal?.reason || "Unavailable")}</p>`;
+  const issueCard = `<article class="issue-card">
+    <h3>${hasRenderedRepair ? "Original repair context" : "Issue detected · Registered weather disruption"}</h3>
+    <p>${escapeHtml(issue.summary)}</p>
+  </article>`;
   $("#repair-panel").innerHTML = `
     <span class="eyebrow">Repair review</span>
     <h2 id="repair-heading">Decision workspace</h2>
     <span class="status-pill ${eligible || registered ? "success" : "warning"}">${escapeHtml(statusLabel)}</span>
-    <article class="issue-card">
-      <h3>${hasRenderedRepair ? "Original repair context" : "Issue detected · Registered weather disruption"}</h3>
-      <p>${escapeHtml(issue.summary)}</p>
-    </article>
+    ${datedDetails ? "" : issueCard}
     <article class="repair-card">
-      <h3>${repairTitle}</h3>
+      ${datedDetails || `<h3>${repairTitle}</h3>
       ${proposal?.message ? `<p class="truth-note">${escapeHtml(proposal.message)}</p>` : ""}
       ${repairBody}
-      ${evaluatedEditEvidenceHtml(proposal)}
+      ${evaluatedEditEvidenceHtml(proposal)}`}
     </article>
     <div class="action-stack">
       <button class="primary" id="accept-repair" ${canAccept ? "" : "disabled"}>Accept evaluated repair</button>
       <button id="compare-repair">Compare alternatives</button>
-      <button id="review-evidence">Review evidence</button>
+      <button id="review-evidence">${datedDetails ? "View repair details and visit times" : "Review evidence"}</button>
       <button id="keep-original">Keep original</button>
     </div>
+    ${datedDetails ? `${issueCard}${evaluatedEditEvidenceHtml(proposal)}` : ""}
     <p class="truth-note">Accept and Keep original require explicit confirmation. Decisions append to the durable ledger and atomically update the accepted-plan pointer; immutable plan artifacts are never overwritten. Rollback remains a separate audited action.</p>`;
   $("#compare-repair").addEventListener("click", () => navigate("/app/compare"));
   $("#review-evidence").addEventListener("click", () => navigate("/app/evidence"));
@@ -6367,6 +6453,11 @@ function renderDraftContextPanel() {
 }
 
 function renderCompareContextPanel() {
+  const proposal = state.workspaceSyncPending ? null : state.session.proposal;
+  if (proposal?.state === "ineligible" && proposal.runtime_execution?.official_visit_schedule) {
+    $("#repair-panel").innerHTML = `<h2 id="repair-heading">Comparison blocked</h2><p>Review the access checks for this draft in Evidence.</p>`;
+    return;
+  }
   const context = evaluatedProposalCompareContext();
   const resolution = resolveCompareSelection(
     context?.workspace || state.workspace,
@@ -6548,6 +6639,15 @@ function evidencePresentationContext() {
 }
 
 function renderCompare() {
+  const dated = state.workspaceSyncPending ? null : state.session.proposal;
+  if (dated?.state === "ineligible" && dated.runtime_execution?.official_visit_schedule) {
+    disposeCompareWorkspace();
+    $("#workspace-content").innerHTML = `<div class="route-view">
+      <header class="route-heading"><div><h2>Compare repairs</h2><p>This evaluated preview is blocked. Review its checks before choosing a repair.</p></div></header>
+      ${datedRepairDetailsHtml(dated, acceptedPlan(state.workspace.geography))}
+      <a class="repair-evidence-link" href="${escapeHtml(appRouteUrl("/app/evidence"))}">View repair details and blocked visits</a></div>`;
+    return;
+  }
   const context = evaluatedProposalCompareContext();
   const sourceWorkspace = context?.workspace || state.workspace;
   const assessments = {};
@@ -6566,6 +6666,8 @@ function renderCompare() {
     workspace: sourceWorkspace,
     session: context?.session || state.session,
     assessments,
+    repairDetails: context?.scope === "preview" && state.session.proposal.runtime_execution?.official_visit_schedule
+      ? datedRepairDetailsHtml(state.session.proposal, acceptedPlan(state.workspace.geography)) : "",
     mapConfig: state.mapConfig,
     onBack: () => navigate("/app/itinerary"),
     onSelectAlternative: context
@@ -6611,9 +6713,12 @@ async function downloadEvidenceBundle(runId, planId, button) {
 function renderEvidence() {
   const datedSchedule = state.workspaceSyncPending ? "" : officialVisitScheduleHtml(state.session.proposal);
   if (datedSchedule) {
+    const proposal = state.session.proposal;
+    const repairDetails = datedRepairDetailsHtml(proposal, acceptedPlan(state.workspace.geography), true);
     $("#workspace-content").innerHTML = `<div class="route-view">
-      <header class="route-heading"><div><span class="eyebrow">Evaluated preview</span><h2>Visit schedule</h2></div><button class="secondary" id="evidence-back">Back to trip</button></header>
-      ${datedSchedule}</div>`;
+      <header class="route-heading"><div><span class="eyebrow">Evaluated preview</span><h2>Repair details and visit times</h2></div><button class="secondary" id="evidence-back">Back to trip</button></header>
+      ${repairDetails}${datedSchedule}
+      ${evaluatedEditEvidenceHtml(proposal)}</div>`;
     $("#evidence-back").addEventListener("click", () => navigate("/app/itinerary"));
     return;
   }

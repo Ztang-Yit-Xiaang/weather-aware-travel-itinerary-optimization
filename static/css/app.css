@@ -406,6 +406,29 @@ button::before,
 .comparison-table th, .comparison-table td { padding: 11px; text-align: left; border-bottom: 1px solid var(--line); }
 .comparison-table th, .comparison-table td { overflow-wrap: anywhere; word-break: break-word; }
 .comparison-table th { background: #f7f9f8; color: var(--muted); }
+.dated-repair-details { min-width: 0; padding: 14px; border: 1px solid var(--line); border-radius: 12px; background: var(--paper); overflow-wrap: anywhere; }
+.repair-card > .dated-repair-details, .map-preview-summary > .dated-repair-details { padding: 0; border: 0; background: transparent; }
+.dated-repair-details h3 { margin: 0 0 5px; font-size: 16px; }
+.dated-repair-details p, .dated-repair-details li, .repair-impact { font-size: 13px; line-height: 1.45; }
+.dated-repair-details .repair-decision-status { margin: 0 0 10px; color: var(--muted); }
+.repair-change-summary, .repair-day-list { margin: 10px 0; padding-left: 20px; }
+.repair-change-summary li + li, .repair-day-list li + li { margin-top: 8px; }
+.repair-impact { display: grid; grid-template-columns: minmax(0, .8fr) minmax(0, 1.2fr); gap: 6px 12px; margin: 12px 0; }
+.repair-impact dt { color: var(--muted); }
+.repair-impact dd { margin: 0; font-weight: 650; }
+.repair-evidence-link { display: inline-flex; align-items: center; min-height: 44px; color: var(--teal-dark); font-weight: 650; }
+.visit-schedule-scroll { max-width: 100%; overflow-x: auto; }
+.visit-schedule-scroll .comparison-table { min-width: 520px; }
+.visit-cell-label { display: none; }
+@media (max-width: 560px) {
+  .visit-schedule-scroll .comparison-table { display: block; min-width: 0; }
+  .visit-schedule-scroll thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+  .visit-schedule-scroll tbody { display: grid; gap: 8px; }
+  .visit-schedule-scroll tbody tr { display: grid; grid-template-columns: minmax(0, .75fr) minmax(0, 1.25fr); padding: 6px; border: 1px solid var(--line); border-radius: 8px; }
+  .visit-schedule-scroll tbody :is(th, td) { border-bottom: 0; word-break: normal; }
+  .visit-schedule-scroll tbody td:last-child { grid-column: 1 / -1; }
+  .visit-cell-label { display: block; margin-bottom: 2px; color: var(--muted); font-size: 11px; }
+}
 .unavailable { color: var(--muted); font-style: italic; }
 .evidence-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
 .evidence-grid > .evidence-card:nth-child(3), .evidence-grid > .evidence-card:nth-child(5):last-child { grid-column: 1 / -1; }

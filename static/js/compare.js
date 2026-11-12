@@ -301,6 +301,7 @@ export function renderCompareWorkspace({
   workspace,
   session,
   assessments = {},
+  repairDetails = "",
   mapConfig,
   onBack,
   onSelectAlternative,
@@ -314,6 +315,7 @@ export function renderCompareWorkspace({
   const baselineUnavailable = baseline ? null : "compare_baseline_identity_mismatch";
   container.innerHTML = `<div class="route-view" data-compare-workspace>
     <header class="route-heading"><div><span class="eyebrow">Trip choices</span><h2>Compare repairs</h2><p>Review the current trip and one repair side by side. When no option is selected, an eligible recommended repair is selected automatically. Accepting a repair still requires an eligible evaluated preview and confirmation.</p></div><button class="secondary" id="compare-back" type="button">Back to trip</button></header>
+    ${repairDetails}
     <div class="action-stack" data-compare-mobile-toggle hidden aria-label="Compare map view">
       <button type="button" data-compare-mobile-view="baseline" aria-pressed="false">Baseline map</button>
       <button type="button" data-compare-mobile-view="option" aria-pressed="true">Option map</button>
@@ -328,7 +330,7 @@ export function renderCompareWorkspace({
     </div>
     <div class="action-stack compare-actions">
       <button type="button" id="compare-choose" ${resolution.state === "selected" ? "" : "disabled"} title="Selects this option for Trip preview; durable acceptance requires a current eligible evaluated preview and confirmation">Choose option for Trip preview</button>
-      <button type="button" id="compare-evidence" ${resolution.evidenceExact ? "" : "disabled"}>View advanced Evidence</button>
+      <button type="button" id="compare-evidence" ${resolution.evidenceExact ? "" : "disabled"}>${repairDetails ? "View repair details and visit times" : "View advanced Evidence"}</button>
     </div>
     ${diffSummary(resolution)}
     ${selectedMetricsTable(baseline, resolution, assessments)}

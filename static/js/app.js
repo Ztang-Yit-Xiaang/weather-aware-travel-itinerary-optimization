@@ -737,7 +737,8 @@ function previewRequestIsCurrent(epoch, expected) {
     && state.session?.accepted_plan_id === expected.accepted_plan_id
     && sameJson(state.session?.draft, expected.draft)
     && sameJson(state.session?.permission_decisions, expected.permission_decisions)
-    && state.session?.conversation_id === expected.conversation_id;
+    && state.session?.conversation_id === expected.conversation_id
+    && (!expected.replaySession || sameJson(state.session, expected.replaySession));
 }
 
 function draftHashRecords(draft) {
@@ -3483,6 +3484,11 @@ async function normalizeCombinedRuntimeExecution(value, proposal, draft) {
 async function normalizeEvaluatedPreviewResponse(value, expected) {
   if (!exactKeys(value, ["proposal", "session"])) return null;
   const { proposal, session } = value;
+  // A repeat may return the exact saved evaluation without advancing the revision.
+  const replay = session?.revision === expected.revision
+    && ["eligible", "ineligible"].includes(expected.replaySession?.proposal?.state)
+    && sameJson(session, expected.replaySession)
+    && sameJson(proposal, expected.replaySession.proposal);
   const orderOnly = expected.draft.length > 0
     && expected.draft.every((operation) => operation.type === "set_stop_order");
   const dayOnly = expected.draft.length > 0
@@ -3512,7 +3518,7 @@ async function normalizeEvaluatedPreviewResponse(value, expected) {
       || session.session_id !== expected.session_id
       || session.trip_id !== expected.trip_id || session.run_id !== expected.run_id
       || session.accepted_plan_id !== expected.accepted_plan_id
-      || session.revision !== expected.revision + 1
+      || (!replay && session.revision !== expected.revision + 1)
       || canonicalJson(session.draft) !== canonicalJson(expected.draft)
       || !sameJson(session.permission_decisions, expected.permission_decisions)
       || session.conversation_id !== expected.conversation_id) return null;
@@ -3546,7 +3552,7 @@ async function normalizeEvaluatedPreviewResponse(value, expected) {
       || !(proposal.reason === null || typeof proposal.reason === "string")
       || !["deterministic_repair_pipeline", "independent_evaluated_direct_edit", "independent_evaluated_combined_edit"].includes(proposal.provenance)
       || !["deterministic_repair_pipeline", "typed_direct_edit_independent_evaluation", "atomic_combined_independent_evaluation", "trip_replan_independent_evaluation"].includes(proposal.execution_mode)
-      || proposal.expected_revision !== expected.revision
+      || proposal.expected_revision !== session.revision - 1
       || proposal.session_revision !== session.revision
       || draftHash === null || proposal.draft_content_hash !== draftHash
       || !exactStringArray(proposal.draft_operation_ids, operationIds)
@@ -6099,7 +6105,9 @@ function evaluatedEditEvidenceHtml(proposal) {
         <dt>Artifact grounding</dt><dd>${escapeHtml(unavailable(proposal.evidence?.artifact_grounding_status))}</dd>
       </dl></section>
     </div>
-    <p class="truth-note">This is a route-validated, independently evaluated session preview. Accepting it requires explicit confirmation and a fresh server-side revalidation against the immutable parent, diff, route evidence, and certificate.</p>
+    <p class="truth-note">${proposal.state === "ineligible"
+      ? "This independently evaluated session preview is ineligible for acceptance."
+      : "This is a route-validated, independently evaluated session preview. Accepting it requires explicit confirmation and a fresh server-side revalidation against the immutable parent, diff, route evidence, and certificate."}</p>
   </details>`;
 }
 
@@ -6476,7 +6484,11 @@ function renderCompareContextPanel() {
 }
 
 function renderEvidenceContextPanel() {
-  const dated = !state.workspaceSyncPending && state.session.proposal?.runtime_execution?.official_visit_schedule;
+  const proposal = state.session.proposal;
+  const ineligible = proposal?.state === "ineligible";
+  const exactPreview = ineligible ? ineligiblePreviewEvidence() : null;
+  const dated = !state.workspaceSyncPending && (!ineligible || exactPreview)
+    && proposal?.runtime_execution?.official_visit_schedule;
   if (dated) {
     const eligible = state.session.proposal.state === "eligible";
     const coverage = state.session.proposal.route_validation;
@@ -6485,11 +6497,15 @@ function renderEvidenceContextPanel() {
       <article class="repair-card"><p>${escapeHtml(coverage.road_validated_leg_count)}/${escapeHtml(coverage.required_leg_count)} routed legs. ${eligible ? "Modeled visit access checked." : "See blocked visits in the schedule."}</p></article>`;
     return;
   }
+  if (ineligible) {
+    $("#repair-panel").innerHTML = `<span class="eyebrow">Evidence summary</span><h2 id="repair-heading">Eligibility checks</h2>
+      <span class="status-pill warning">${exactPreview ? "Evaluated ineligible" : "Evidence unavailable"}</span>`;
+    return;
+  }
   const context = evidencePresentationContext();
   const resolution = resolveCompareSelection(
     context?.workspace || state.workspace, context?.session || state.session,
   );
-  const proposal = state.session.proposal;
   const evaluated = proposal?.schema_version === "draft-preview-v1"
     && ["eligible", "ineligible"].includes(proposal.state);
   const exact = resolution.state === "selected" && resolution.evidenceExact;
@@ -6710,15 +6726,74 @@ async function downloadEvidenceBundle(runId, planId, button) {
   }
 }
 
+function ineligiblePreviewEvidence() {
+  const { proposal, draft, revision } = state.session;
+  if (state.workspaceSyncPending || state.workspaceConflict
+      || proposal?.schema_version !== "draft-preview-v1" || proposal.state !== "ineligible"
+      || proposal.acceptance_eligible !== false || proposal.session_revision !== revision
+      || !Array.isArray(draft) || !draft.length
+      || !exactStringArray(proposal.draft_operation_ids, draft.map(op => op.operation_id))
+      || !sameJson(proposal.compiled_request?.operations, draftHashRecords(draft))) return null;
+  const parent = acceptedPlan(state.workspace.geography);
+  const child = proposal.geography_plan;
+  const certificate = proposalCertificate(proposal);
+  const diff = proposal.plan_diff || proposal.runtime_execution?.plan_diff;
+  const schedule = proposal.schedule_impact?.child || proposal.role_impact?.child_schedule
+    || proposal.runtime_execution?.official_visit_schedule;
+  if (!parent?.content_hash || parent.plan_id !== proposal.parent_plan_id
+      || parent.content_hash !== proposal.parent_plan_content_hash
+      || !child?.content_hash || child.plan_id !== proposal.child_plan_id
+      || child.content_hash !== proposal.child_plan_content_hash || child.role !== "draft_preview"
+      || !certificate || certificate.comparison_eligibility !== "ineligible"
+      || certificate.evaluation_status !== proposal.evaluation_status
+      || diff?.diff_id !== proposal.diff_id || diff?.parent_plan_id !== parent.plan_id
+      || diff?.child_plan_id !== child.plan_id
+      || (schedule && (schedule.plan_id !== child.plan_id
+        || schedule.plan_content_hash !== child.content_hash))) return null;
+  return { parent, certificate };
+}
+
+function ineligiblePreviewResultHtml(proposal, { parent, certificate }) {
+  const findings = certificate.failures.map(({ code, message, evidence_refs }) => {
+    if (code === "stop_time_window_latest_departure_exceeded") {
+      const trace = proposal.schedule_impact?.child?.stop_traces?.find(row =>
+        evidence_refs.includes(row.stop_id) && row.failure_codes.includes(code));
+      const deadline = trace?.time_window_constraint?.latest_departure;
+      if (deadline) {
+        return `<li><strong>${escapeHtml(stopNameForId(trace.stop_id, parent))} misses the requested departure deadline.</strong>
+          <p>Required latest departure ${escapeHtml(deadline)}. Modeled road arrival ${escapeHtml(scheduleClockLabel(trace.road_arrival_minute))}.
+          After a ${escapeHtml(formatMetric(trace.visit_minutes))}-minute visit, modeled departure is ${escapeHtml(scheduleClockLabel(trace.departure_minute))}, ${escapeHtml(formatMetric(trace.latest_departure_overrun_minutes))} minutes late.</p></li>`;
+      }
+    }
+    return `<li>${escapeHtml(message || humanLabel(code))}</li>`;
+  }).join("");
+  return `<article class="evidence-card"><h3>Why the preview is ineligible</h3>
+    <span class="status-pill warning">${escapeHtml(certificate.evaluation_status)}</span>
+    ${findings ? `<ul>${findings}</ul>` : `<p>${escapeHtml(humanLabel(proposal.reason || "Unavailable"))}</p>`}
+    <p>The accepted itinerary remains active.</p></article>`;
+}
+
 function renderEvidence() {
-  const datedSchedule = state.workspaceSyncPending ? "" : officialVisitScheduleHtml(state.session.proposal);
+  const proposal = state.session.proposal;
+  const ineligible = proposal?.state === "ineligible";
+  const exactPreview = ineligible ? ineligiblePreviewEvidence() : null;
+  const datedSchedule = !state.workspaceSyncPending && (!ineligible || exactPreview)
+    && proposal?.runtime_execution?.official_visit_schedule ? officialVisitScheduleHtml(proposal) : "";
   if (datedSchedule) {
-    const proposal = state.session.proposal;
     const repairDetails = datedRepairDetailsHtml(proposal, acceptedPlan(state.workspace.geography), true);
     $("#workspace-content").innerHTML = `<div class="route-view">
       <header class="route-heading"><div><span class="eyebrow">Evaluated preview</span><h2>Repair details and visit times</h2></div><button class="secondary" id="evidence-back">Back to trip</button></header>
       ${repairDetails}${datedSchedule}
       ${evaluatedEditEvidenceHtml(proposal)}</div>`;
+    $("#evidence-back").addEventListener("click", () => navigate("/app/itinerary"));
+    return;
+  }
+  if (ineligible) {
+    $("#workspace-content").innerHTML = `<div class="route-view"${exactPreview
+      ? ` data-evidence-scope="preview" data-evidence-plan-id="${escapeHtml(proposal.child_plan_id)}" data-plan-content-hash="${escapeHtml(proposal.child_plan_content_hash)}" data-evaluation-id="${escapeHtml(proposal.certificate_id)}"` : ""}>
+      <header class="route-heading"><div><span class="eyebrow">Draft evidence</span><h2>${exactPreview ? "Ineligible preview evidence" : "Evidence unavailable"}</h2></div><button class="secondary" id="evidence-back">Back to trip</button></header>
+      ${exactPreview ? ineligiblePreviewResultHtml(proposal, exactPreview) + evaluatedEditEvidenceHtml(proposal)
+        : '<article class="evidence-card"><p>The evidence could not be matched to the current draft and accepted itinerary.</p></article>'}</div>`;
     $("#evidence-back").addEventListener("click", () => navigate("/app/itinerary"));
     return;
   }
@@ -8089,7 +8164,7 @@ async function openMapEdit() {
   $("#map-edit-dialog").showModal();
 }
 
-function previewExpectedContext() {
+function previewExpectedContext({ allowReplay = false } = {}) {
   return {
     session_id: state.session.session_id,
     trip_id: state.session.trip_id,
@@ -8100,6 +8175,8 @@ function previewExpectedContext() {
     draft: structuredClone(state.session.draft),
     permission_decisions: structuredClone(state.session.permission_decisions),
     conversation_id: state.session.conversation_id,
+    ...(allowReplay && ["eligible", "ineligible"].includes(state.session.proposal?.state)
+      ? { replaySession: structuredClone(state.session) } : {}),
   };
 }
 
@@ -8314,7 +8391,7 @@ async function previewDraft(options = null) {
         || !state.session.draft.every((operation, index) => sameCopilotDraftOperation(operation, expectedCopilotOperations[index])))) {
       throw new Error("The draft no longer contains only these exact staged suggestions. No preview was sent; review the current draft in Repairs.");
     }
-    expected = previewExpectedContext();
+    expected = previewExpectedContext({ allowReplay: true });
     const payload = await api(`/api/sessions/${state.session.session_id}/preview`, {
       method: "POST", body: { expected_revision: state.session.revision },
     });
@@ -8341,7 +8418,7 @@ async function previewDraft(options = null) {
     state.acknowledgedPreviewPlanId = null;
     // The current draft's controls can refresh independently of the evaluated
     // child. The impact read already guards its own result against replacement.
-    void loadDraftImpactPreview();
+    if (normalized.session.revision !== expected.revision) void loadDraftImpactPreview();
     $("#map-edit-dialog").close();
     toast(normalized.proposal.state === "eligible"
       ? "Preview evaluated. You can review the itinerary while the map loads."

@@ -2569,6 +2569,9 @@ async function normalizeTripPlanningExecution(value, proposal, draft) {
     if (!cell || props.distance_m !== cell.distance_m || props.duration_s !== cell.duration_s
         || props.geometry_source !== cell.geometry_source
         || !sameJson(feature.geometry.coordinates, cell.geometry.map(([lat, lon]) => [lon, lat]))) return null;
+    if (cell.geometry_source === "runtime_ors_geojson" && (cell.provider !== "openrouteservice"
+        || cell.road_validated !== true || cell.fallback_used !== false
+        || !["ors_route_validated", "ors_waypoint_detour_validated"].includes(cell.routing_status))) return null;
   }
   if (bundle.parameters.required_place_ids.some(id => !bundle.plan.sequence.includes(id))
       || bundle.parameters.excluded_place_ids.some(id => bundle.plan.sequence.includes(id))) return null;
@@ -2706,7 +2709,7 @@ function routeChainMatchesEvidence(value, routeValidation, planning = false, eva
         || typeof properties.evidence_scope !== "string" || !properties.evidence_scope
         || properties.validation_status !== "road_validated"
         || properties.road_validated !== true || properties.fallback_used !== false
-        || !["cached_osrm_route_geometry", ...(planning ? ["runtime_osrm_geojson"] : []),
+        || !["cached_osrm_route_geometry", ...(planning ? ["runtime_osrm_geojson", "runtime_ors_geojson"] : []),
           ...(evaluatedDay && routeValidation.matrix_id.startsWith("route_matrix_edit_")
             ? ["runtime_osrm_geojson", "runtime_ors_geojson"] : [])].includes(properties.geometry_source)
         || typeof properties.cross_day !== "boolean"
@@ -3800,6 +3803,7 @@ const API_ERROR_COPY = {
   preview_client_disconnected: "The preview connection closed before its result could be applied. Your accepted itinerary is unchanged.",
   official_source_unavailable: "The official road or park bulletin could not be retrieved. The preview is paused, and your saved itinerary is still active. Try again later.",
   trip_planning_avoidance_route_unavailable: "A verified road connection avoiding the requested corridor is unavailable. Review the route and try again. Your draft is still saved.",
+  trip_planning_road_connection_unavailable: "The routing service could not verify a driving connection. Your draft is still saved.",
   request_validation_failed: "The browser and local service use different API versions. Stop the service, restart it, then refresh this page.",
   draft_candidate_target_mismatch: "That candidate cannot replace the selected stop. Choose a compatible candidate.",
   draft_duplicate_operation: "That change is already in the draft.",

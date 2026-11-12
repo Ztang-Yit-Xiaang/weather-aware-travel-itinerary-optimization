@@ -599,6 +599,7 @@ export function createCopilotController({
     }
     if (intent.type === "replan_trip") {
       const p = intent.parameters;
+      if (p?.start_date) return `Check the fixed seven-day route from ${p.start_date}. Preview compares arrival and visit times with official access hours.`;
       if (Number.isInteger(p?.total_days)) {
         const updates = p.profile_updates || [];
         const pace = updates.includes("pace") ? p.pace : "keep accepted pace (balanced for the first plan)";

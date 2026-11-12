@@ -2484,6 +2484,14 @@ async function normalizeTripPlanningExecution(value, proposal, draft) {
     ["highway_1", "https://roads.dot.ca.gov/roadscell.php?roadnumber=1"],
     ["hearst_castle", "https://hearstcastle.org/plan/faqs/"],
   ]);
+  if (bundle.parameters.start_date !== undefined) {
+    sources.delete("big_sur_park");
+    sources.delete("hearst_castle");
+    sources.set("golden_gate_parking", "https://www.goldengate.org/bridge/visiting-the-bridge/directions-parking/");
+    sources.set("grant_grove_roads", "https://www.nps.gov/seki/planyourvisit/road-conditions.htm");
+    sources.set("point_lobos_hours", "https://www.parks.ca.gov/?page_id=571");
+    if (bundle.official_sources.find(row => row.source_id === "grant_grove_roads")?.park_access !== "open") return null;
+  }
   if (bundle.plan.sequence.includes("redwood_national_park")) {
     sources.set("redwood_lodging", "https://www.nps.gov/redw/planyourvisit/lodging.htm");
     sources.set("redwood_walk", "https://www.nps.gov/thingstodo/lbjgrove.htm");
@@ -2575,6 +2583,26 @@ async function normalizeTripPlanningExecution(value, proposal, draft) {
   }
   if (bundle.parameters.required_place_ids.some(id => !bundle.plan.sequence.includes(id))
       || bundle.parameters.excluded_place_ids.some(id => bundle.plan.sequence.includes(id))) return null;
+  if (bundle.parameters.start_date !== undefined) {
+    const schedule = value.official_visit_schedule;
+    const access = bundle.official_visit_access;
+    if (!access || schedule?.schema_version !== "evaluated-time-window-schedule-accounting-v1"
+        || schedule.plan_id !== proposal.child_plan_id || schedule.plan_content_hash !== proposal.child_plan_content_hash
+        || schedule.route_matrix_id !== bundle.route_matrix.matrix_id
+        || !exactStringArray(Object.keys(access).sort(), [...bundle.plan.sequence].sort())
+        || !Array.isArray(schedule.stop_traces)
+        || !exactStringArray(schedule.stop_traces.map(row => row.stop_id), bundle.plan.sequence)
+        || schedule.stop_traces.some(row => row.day !== bundle.plan.day_assignments[row.stop_id]
+          || row.opening_window_source !== access[row.stop_id].source_url
+          || row.opening_start_minute !== access[row.stop_id].opens
+          || row.opening_end_minute !== access[row.stop_id].closes
+          || ![row.road_arrival_minute, row.service_start_minute, row.departure_minute].every(Number.isFinite)
+          || !Array.isArray(row.failure_codes))
+        || !sameJson(schedule.metrics, Object.fromEntries(Object.entries(value.evaluation_certificate.metrics)
+          .filter(([key]) => Object.hasOwn(schedule.metrics || {}, key))))) return null;
+    const {content_hash, ...accounting} = schedule;
+    if (await computedStableContentHash(accounting) !== content_hash) return null;
+  }
   return value;
 }
 
@@ -6072,6 +6100,36 @@ function tripPlanningEvidenceHtml(proposal) {
   return `<section><h4>Trip planning result</h4><p>${solver.status === "OPTIMAL" ? "Optimal within this finite candidate model" : "Feasible plan; optimality not proven"} · ${escapeHtml(solver.objective)}.</p><p>${escapeHtml(solver.scope)}. Gap: ${escapeHtml(solver.optimality_gap == null ? "Unavailable" : solver.optimality_gap)}.</p><h4>Official travel sources</h4><ul>${sources}</ul><ul>${notices}</ul></section>`;
 }
 
+function officialVisitScheduleHtml(proposal) {
+  const value = proposal?.runtime_execution;
+  const schedule = value?.official_visit_schedule;
+  const bundle = value?.planning_bundle;
+  if (!schedule || schedule.plan_id !== proposal.child_plan_id || !bundle?.official_visit_access) return "";
+  const names = new Map(bundle.plan.selected_stops.map(stop => [stop.poi_id, stop.attraction_name || stop.name]));
+  const statusLabels = {
+    bridge_visit_parking_connection_required: "Visitor access missing",
+    cedar_grove_winter_road_closure: "SR 180 winter closure",
+    cedar_grove_reopening_unverified: "Reopening unconfirmed",
+    griffith_observatory_closed_monday: "Closed Monday",
+  };
+  const rows = schedule.stop_traces.map(trace => {
+    const access = bundle.official_visit_access[trace.stop_id];
+    const status = trace.failure_codes.length
+      ? trace.failure_codes.map(code => statusLabels[code] || humanLabel(code)).join(". ")
+      : access.opens === null ? "Outdoor visit, hours not posted" : "Within modeled hours";
+    const time = value => escapeHtml(scheduleClockLabel(Math.round(value)));
+    return `<tr><td>Day ${trace.day}<br>${escapeHtml(access.date)}</td><th scope="row">${escapeHtml(names.get(trace.stop_id) || humanLabel(trace.stop_id))}</th>
+      <td>${time(trace.road_arrival_minute)}</td><td>${time(trace.service_start_minute)}–${time(trace.departure_minute)}</td>
+      <td>${escapeHtml(status)}</td></tr>`;
+  }).join("");
+  const sources = Object.entries(bundle.official_visit_access).map(([id, access]) => `<li><strong>${escapeHtml(names.get(id) || humanLabel(id))}</strong> · ${escapeHtml(access.scope)} ${access.blocking_code ? escapeHtml(access.blocking_message) : ""} ${safeExternalLink(access.source_url, "Official source")} ${access.access_source_url ? safeExternalLink(access.access_source_url, "Access details") : ""}</li>`).join("");
+  return `<article id="official-visit-schedule" class="evidence-card"><h3>Arrival and opening-hours check</h3>
+    <p>Departure date ${escapeHtml(bundle.parameters.start_date)} · Daily start 09:00 · California local time</p>
+    <p>${proposal.state === "ineligible" ? "This Point Lobos draft is blocked. Times for blocked stops are estimates only." : "This schedule fits the modeled access windows."} Hours reviewed on ${escapeHtml(Object.values(bundle.official_visit_access)[0].verified_on)}. Transfer allowances are estimates.</p>
+    <table class="comparison-table"><thead><tr><th>Day</th><th>Visit</th><th>Road arrival</th><th>Visit time</th><th>Access check</th></tr></thead><tbody>${rows}</tbody></table>
+    <details><summary>Official hours and access sources</summary><ul>${sources}</ul></details></article>`;
+}
+
 function normalizeAcceptanceAction(value, expectedDecisionType) {
   const pointerKeys = [
     "schema_version", "trip_id", "run_id", "original_plan_id", "original_plan_content_hash",
@@ -6327,6 +6385,15 @@ function renderCompareContextPanel() {
 }
 
 function renderEvidenceContextPanel() {
+  const dated = !state.workspaceSyncPending && state.session.proposal?.runtime_execution?.official_visit_schedule;
+  if (dated) {
+    const eligible = state.session.proposal.state === "eligible";
+    const coverage = state.session.proposal.route_validation;
+    $("#repair-panel").innerHTML = `<span class="eyebrow">Visit schedule</span><h2 id="repair-heading">Access verification</h2>
+      <span class="status-pill ${eligible ? "success" : "warning"}">${eligible ? "Eligible" : "Ineligible"}</span>
+      <article class="repair-card"><p>${escapeHtml(coverage.road_validated_leg_count)}/${escapeHtml(coverage.required_leg_count)} routed legs. ${eligible ? "Modeled visit access checked." : "See blocked visits in the schedule."}</p></article>`;
+    return;
+  }
   const context = evidencePresentationContext();
   const resolution = resolveCompareSelection(
     context?.workspace || state.workspace, context?.session || state.session,
@@ -6542,6 +6609,14 @@ async function downloadEvidenceBundle(runId, planId, button) {
 }
 
 function renderEvidence() {
+  const datedSchedule = state.workspaceSyncPending ? "" : officialVisitScheduleHtml(state.session.proposal);
+  if (datedSchedule) {
+    $("#workspace-content").innerHTML = `<div class="route-view">
+      <header class="route-heading"><div><span class="eyebrow">Evaluated preview</span><h2>Visit schedule</h2></div><button class="secondary" id="evidence-back">Back to trip</button></header>
+      ${datedSchedule}</div>`;
+    $("#evidence-back").addEventListener("click", () => navigate("/app/itinerary"));
+    return;
+  }
   const context = evidencePresentationContext();
   const resolution = resolveCompareSelection(context?.workspace || state.workspace, context?.session || state.session);
   const proposalMatches = context?.scope === "preview";

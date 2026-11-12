@@ -238,12 +238,14 @@ export function createDeploymentClient({
       const submit = document.createElement("button");
       submit.type = "submit";
       submit.className = "primary";
+      submit.setAttribute("data-icon", {signin: "sign-in", signup: "email", recovery: "email", reset: "password"}[mode]);
       submit.textContent = {signin: "Sign in", signup: "Send confirmation email",
         recovery: "Send reset link", reset: "Update password"}[mode];
       form.append(error, submit);
       const navigate = (label, next) => {
         const button = document.createElement("button");
         button.type = "button";
+        button.setAttribute("data-icon", {signin: "back", signup: "sign-up", recovery: "password"}[next]);
         button.textContent = label;
         button.addEventListener("click", () => {
           if (submit.disabled) return;

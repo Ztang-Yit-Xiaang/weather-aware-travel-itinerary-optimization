@@ -230,6 +230,7 @@ const LIFECYCLE_COPY = {
   blocked: "Message blocked",
   preview_running: "Preview running",
   preview_rendering: "Rendering preview",
+  preview_map_unavailable: "Map unavailable",
   preview_rendered: "Preview ready",
   preview_ineligible: "Preview not eligible",
   clarification_required: "Clarification required",
@@ -392,7 +393,6 @@ export function createCopilotController({
       submit.disabled = previewActionActive || !available() || Boolean(pendingConversationReset) || (!active && Boolean((getState().undoPending || getState().mutationRecovery?.blocked || getState().workspaceConflict || getState().workspaceSyncPending)));
       submit.dataset.mode = active ? "stop" : "send";
       submit.setAttribute("aria-label", active ? "Stop waiting for Copilot" : "Send message");
-      submit.textContent = active ? "■" : "→";
     }
     const input = $("#copilot-input");
     if (input) input.setAttribute("aria-busy", String(active || previewActionActive || Boolean(pendingConversationReset) || Boolean((getState().undoPending || getState().mutationRecovery?.blocked || getState().workspaceConflict || getState().workspaceSyncPending))));
@@ -458,8 +458,8 @@ export function createCopilotController({
       actions.className = "copilot-recovery-actions";
       actions.setAttribute("aria-label", "Conversation capacity actions");
       actions.append(
-        button("Conversation settings", () => openSettings($("#transcript-settings-button"))),
-        button("Edit message", () => editMessage(turn.user_message)),
+        button("settings", "Conversation settings", () => openSettings($("#transcript-settings-button"))),
+        button("edit", "Edit message", () => editMessage(turn.user_message)),
       );
       copy.append(actions);
     }
@@ -517,9 +517,10 @@ export function createCopilotController({
     lastRenderedRevision = getState().session?.revision;
   }
 
-  function button(label, action, disabled = false) {
+  function button(icon, label, action, disabled = false) {
     const control = document.createElement("button");
     control.type = "button";
+    control.setAttribute("data-icon", icon);
     control.textContent = label;
     control.disabled = disabled || Boolean(getState().mutationRecovery?.blocked);
     control.addEventListener("click", action);
@@ -534,10 +535,10 @@ export function createCopilotController({
     actions.className = "copilot-recovery-actions";
     actions.setAttribute("aria-label", "Message recovery actions");
     actions.append(
-      button("Retry", guarded(() => startMessage(turn.user_message, {
+      button("retry", "Retry", guarded(() => startMessage(turn.user_message, {
         clientMessageId: turn.client_message_id,
       }))),
-      button("Edit message", guarded(() => editMessage(turn.user_message))),
+      button("edit", "Edit message", guarded(() => editMessage(turn.user_message))),
     );
     return actions;
   }
@@ -669,7 +670,7 @@ export function createCopilotController({
     const highlights = interpretation.highlights || {};
     const hasHighlights = ["day_ids", "stop_ids", "segment_ids", "candidate_ids"]
       .some((field) => Array.isArray(highlights[field]) && highlights[field].length > 0);
-    if (hasHighlights) actions.append(button("Show on map", guarded(() => showOnMap(highlights)), previewActionActive || !current()));
+    if (hasHighlights) actions.append(button("map", "Show on map", guarded(() => showOnMap(highlights)), previewActionActive || !current()));
 
     const editIntents = (interpretation.intents || [])
       .map((intent, index) => ({
@@ -682,12 +683,13 @@ export function createCopilotController({
       const intents = interpretation.intents;
       const eligibility = copilotCombinedEligibility(intents, getState().workspace, getState().session);
       const canUse = current() || eligibility.alreadyStaged;
-      const preview = button("Preview combined repair", () => {
+      const preview = button("preview", "Preview combined repair", () => {
         if (!originIsCurrent(origin) || (!current() && !copilotCombinedEligibility(intents, getState().workspace, getState().session).alreadyStaged)) return toast(staleReason, true);
         return previewIntentFromCopilot(intents);
       }, previewActionActive || !canUse || !eligibility.allowed);
       preview.classList.add("copilot-primary-action");
-      const add = button(eligibility.alreadyStaged ? "All changes added to draft" : "Add all to draft",
+      const add = button(eligibility.alreadyStaged ? "done" : "add",
+        eligibility.alreadyStaged ? "All changes added to draft" : "Add all to draft",
         guarded(() => addIntentToDraft(intents)), previewActionActive || !current() || !eligibility.allowed || eligibility.alreadyStaged);
       actions.append(preview, add);
       const note = document.createElement("p");
@@ -712,7 +714,7 @@ export function createCopilotController({
       // draft; it does not replay a stale suggestion or authorize another Add.
       if (actionability.allowed && (current() || (previewEligibility.allowed && previewEligibility.alreadyStaged))) {
         const preview = button(
-          "Preview this repair",
+          "preview", "Preview this repair",
           (event) => {
             if (!originIsCurrent(origin)) return toast(staleReason, true);
             const latest = copilotOneClickEligibility(intent, getState().workspace, getState().session);
@@ -726,7 +728,7 @@ export function createCopilotController({
         row.append(preview);
         const alreadyAdded = intentAlreadyDrafted(intent);
         const add = button(
-          alreadyAdded ? "Added to draft" : "Add to draft",
+          alreadyAdded ? "done" : "add", alreadyAdded ? "Added to draft" : "Add to draft",
           guarded(() => addIntentToDraft(intent)),
           previewActionActive || alreadyAdded || !current(),
         );
@@ -744,7 +746,7 @@ export function createCopilotController({
           row.append(note);
         }
       } else {
-        const unavailable = button("Cannot add to draft", () => {}, true);
+        const unavailable = button("blocked", "Cannot add to draft", () => {}, true);
         unavailable.setAttribute("aria-label", `Cannot add to draft: ${actionContext}`);
         row.append(unavailable);
         const note = document.createElement("p");
@@ -756,8 +758,8 @@ export function createCopilotController({
     });
 
     actions.append(
-      button("Compare", () => navigate("/app/compare"), previewActionActive),
-      button("Review evidence", () => navigate("/app/evidence"), previewActionActive),
+      button("compare", "Compare", () => navigate("/app/compare"), previewActionActive),
+      button("evidence", "Review evidence", () => navigate("/app/evidence"), previewActionActive),
     );
     const unrelatedTrip = editIntents.some(({intent}) => intent.type === "replan_trip" && !intentAlreadyDrafted(intent));
     const previewCard = unrelatedTrip ? null : buildPreviewResult();
@@ -820,7 +822,7 @@ export function createCopilotController({
       description.textContent = "The accepted itinerary remains active while the repair is generated and checked.";
     } else if (preview.status === "PREVIEW_DATA_READY") {
       title.textContent = "Evaluation complete";
-      description.textContent = "The eligible child itinerary is ready. Waiting for the map to acknowledge the same plan.";
+      description.textContent = "You can review the evaluated itinerary and scores while the map loads.";
     } else if (preview.status === "PREVIEW_RENDERED" && preview.planId === preview.mapPlanId) {
       title.textContent = "Preview ready";
       description.textContent = "The itinerary and map are displaying the same independently evaluated child plan. Nothing has been applied.";
@@ -830,6 +832,14 @@ export function createCopilotController({
     } else if (["PREVIEW_BLOCKED", "PREVIEW_NOT_EVALUATED"].includes(preview.status)) {
       title.textContent = preview.status === "PREVIEW_BLOCKED" ? "Preview blocked — not evaluated" : "No evaluated preview";
       description.textContent = preview.message || "No child was evaluated. The accepted itinerary remains active.";
+    } else if (preview.planId && ["MAP_IDENTITY_FAILED", "MAP_RENDER_FAILED"].includes(preview.status)) {
+      title.textContent = "Evaluation complete · Map unavailable";
+      description.textContent = preview.message;
+      card.append(title, description, button("map", "Review itinerary", () => {
+        navigate("/app/itinerary");
+        close();
+      }));
+      return card;
     } else {
       title.textContent = "Preview could not be verified";
       description.textContent = preview.message || "The accepted itinerary remains authoritative. Review the visible error before retrying.";
@@ -873,13 +883,15 @@ export function createCopilotController({
     } else if (preview.status === "PREVIEW_RUNNING") {
       setLifecycle("preview_running", "Generating and independently evaluating the child itinerary");
     } else if (preview.status === "PREVIEW_DATA_READY") {
-      setLifecycle("preview_rendering", "Waiting for matching itinerary and map acknowledgement");
+      setLifecycle("preview_rendering", "The evaluated itinerary is available while the map loads");
     } else if (preview.status === "PREVIEW_RENDERED" && preview.planId === preview.mapPlanId) {
       setLifecycle("preview_rendered", "The itinerary and map show the same evaluated child");
     } else if (preview.status === "PREVIEW_INELIGIBLE") {
       setLifecycle("preview_ineligible", preview.message || "The accepted itinerary remains active");
     } else if (["PREVIEW_BLOCKED", "PREVIEW_NOT_EVALUATED"].includes(preview.status)) {
       setLifecycle("failed", preview.message || "No child was evaluated; the accepted itinerary remains active");
+    } else if (preview.planId && ["MAP_IDENTITY_FAILED", "MAP_RENDER_FAILED"].includes(preview.status)) {
+      setLifecycle("preview_map_unavailable", preview.message);
     } else if (["PREVIEW_FAILED", "MAP_IDENTITY_FAILED", "MAP_RENDER_FAILED"].includes(preview.status)) {
       setLifecycle("failed", preview.message || "The preview could not be verified; the accepted itinerary remains authoritative");
     }

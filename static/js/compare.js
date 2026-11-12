@@ -323,7 +323,7 @@ export function renderCompareWorkspace({
       ${mapPane("option", "Selected repair route", resolution.state === "selected" ? resolution.plan : null, resolution.code)}
     </div>
     <div class="alternative-grid">
-      <article class="alternative-card"><span class="status-pill">Current trip</span><h3>Current accepted trip</h3><p>The current accepted itinerary, shown as the reference route.</p><button type="button" disabled>Baseline map shown</button></article>
+      <article class="alternative-card"><span class="status-pill">Current trip</span><h3>Current accepted trip</h3><p>The current accepted itinerary, shown as the reference route.</p><button type="button" disabled data-icon="map">Baseline map shown</button></article>
       ${(workspace?.alternatives || []).map((option) => optionCard(option, selectedId)).join("")}
     </div>
     <div class="action-stack compare-actions">

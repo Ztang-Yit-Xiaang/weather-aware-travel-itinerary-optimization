@@ -31,6 +31,109 @@ button:focus-visible, textarea:focus-visible, select:focus-visible, [tabindex]:f
 }
 button:disabled { cursor: not-allowed; opacity: 0.55; }
 
+/* Tabler Icons 3.34.1 outline subset. See ../vendor/licenses/tabler-icons.txt. */
+@font-face {
+  font-family: "Itinerary Button Icons";
+  src: url("../vendor/fonts/tabler-buttons-3.34.1.woff") format("woff");
+  font-display: block;
+}
+
+button::before,
+.day-card .day-number::before,
+.accessible-stop-list button > span::before,
+:is(.poi-candidate-list, .interest-place-list, .accessible-route-list) button > strong::before,
+.accessible-draft-waypoint button[data-draft-waypoint] > strong::before {
+  content: var(--button-icon, none);
+  display: inline-block;
+  width: 1em;
+  margin-inline-end: .35em;
+  font: 16px/1 "Itinerary Button Icons";
+  vertical-align: -.17em;
+}
+
+/* Use empty alternative text for every decorative glyph. */
+[data-route="/app/itinerary"], .day-card, #draft-move,
+[data-typed-operation="set_stop_day"] > button { --button-icon: "\ea53" / ""; }
+[data-route="/app/map"], [data-icon="map"], [data-compare-mobile-view], #explore-interest-place,
+[data-yosemite-day] { --button-icon: "\eae9" / ""; }
+[data-route="/app/repairs"] { --button-icon: "\ebca" / ""; }
+[data-route="/app/compare"], [data-icon="compare"], #compare-repair { --button-icon: "\f6d5" / ""; }
+[data-route="/app/evidence"], [data-icon="evidence"], #review-evidence, #context-evidence,
+#compare-evidence { --button-icon: "\ed5d" / ""; }
+#map-select-button, #context-select-mode { --button-icon: "\f265" / ""; }
+#map-edit-button, #context-edit-mode, #inspect-edit-stop, [data-icon="edit"] { --button-icon: "\eb04" / ""; }
+#map-interest-button, #explore-interest-regions { --button-icon: "\ea79" / ""; }
+#layers-button { --button-icon: "\eaca" / ""; }
+#open-copilot { --button-icon: "\eaed" / ""; }
+#help-button { --button-icon: "\f91d" / ""; }
+#hosted-sign-out { --button-icon: "\eba8" / ""; }
+[data-icon="sign-in"] { --button-icon: "\eba7" / ""; }
+#transcript-settings-button, [data-icon="settings"], [data-icon="route-preference"] { --button-icon: "\eb20" / ""; }
+.icon-button, #close-poi-candidates, #cancel-exploratory, [data-cancel-pending-mutation],
+#acceptance-dialog button[value="cancel"] { --button-icon: "\eb55" / ""; }
+[data-icon="keep"], #draft-keep, #keep-original, #acceptance-dialog[data-decision="keep"] #acceptance-confirm { --button-icon: "\eb22" / ""; }
+[data-icon="risk"], #draft-feedback, #inspect-route-edit,
+[data-typed-operation="report_route_issue"] > button { --button-icon: "\ea06" / ""; }
+#copilot-submit[data-mode="send"] { --button-icon: "\eb1e" / ""; }
+#copilot-submit[data-mode="stop"] { --button-icon: "\ed4a" / ""; }
+#delete-current-conversation, #delete-all-conversations,
+#remove-custom-waypoint { --button-icon: "\eb41" / ""; }
+#draft-lock, [data-typed-operation="set_stop_commitment"] > button { --button-icon: "\eae2" / ""; }
+#draft-flexible { --button-icon: "\f000" / ""; }
+#draft-replace, #use-candidate-replacement, [data-typed-operation="set_stop_order"] > button { --button-icon: "\f1f4" / ""; }
+#draft-add, [data-icon="add"] { --button-icon: "\eb0b" / ""; }
+#draft-undo, #inline-undo, #context-undo { --button-icon: "\eb77" / ""; }
+#draft-preview, #inline-preview, #context-preview, #context-choose, #compare-choose, [data-compare-option],
+[data-icon="preview"] { --button-icon: "\ea9a" / ""; }
+#accept-repair, #acceptance-confirm, #info-dialog button.primary,
+[data-icon="done"] { --button-icon: "\ea5e" / ""; }
+#reload-current-build, #retry-runtime, #retry-map-runtime, [data-refresh-current-workspace],
+[data-repair-pending-mutation], [data-retry-pending-mutation], [data-retry-draft-impact],
+.poi-candidate-filter button[type="submit"], #retry-interest-regions, #refresh-interest-regions,
+#refresh-interest-place-data, [data-icon="retry"] { --button-icon: "\eb13" / ""; }
+[data-check-pending-mutation], #prepare-replacement-candidates, #find-route-candidates,
+#check-road-access, #browse-interest-places { --button-icon: "\eb1c" / ""; }
+[data-poi-candidate], [data-interest-place], [data-geo-stop], [data-draft-waypoint],
+.draft-waypoint-marker.is-custom-stop { --button-icon: "\eae8" / ""; }
+[data-geo-route-leg], .draft-waypoint-marker.is-route-waypoint { --button-icon: "\eb17" / ""; }
+#show-whole-interest-region { --button-icon: "\ebd3" / ""; }
+#close-interest-regions { --button-icon: "\ecf0" / ""; }
+#expand-destination-details[aria-expanded="false"] { --button-icon: "\ea28" / ""; }
+#expand-destination-details[aria-expanded="true"] { --button-icon: "\ea29" / ""; }
+[data-destination-tab="overview"] { --button-icon: "\eac5" / ""; }
+[data-destination-tab="visit"] { --button-icon: "\ef40" / ""; }
+[data-destination-tab="photos"] { --button-icon: "\eb0a" / ""; }
+[data-destination-tab="reviews"] { --button-icon: "\eaed" / ""; }
+[data-destination-tab="sources"] { --button-icon: "\eade" / ""; }
+[data-typed-operation="set_stop_role"] > button { --button-icon: "\eaa6" / ""; }
+[data-typed-operation="set_stop_duration"] > button,
+[data-typed-operation="set_stop_time_window"] > button { --button-icon: "\ea70" / ""; }
+[data-typed-operation="set_attribute_constraint"] > button { --button-icon: "\ec38" / ""; }
+[data-icon="add-waypoint"] { --button-icon: "\f956" / ""; }
+#context-back-compare, #evidence-back, #repairs-back, #compare-back, [data-icon="back"] { --button-icon: "\ea19" / ""; }
+#evidence-download { --button-icon: "\ea96" / ""; }
+[data-icon="blocked"] { --button-icon: "\ea2e" / ""; }
+[data-icon="sign-up"] { --button-icon: "\eb4b" / ""; }
+[data-icon="password"] { --button-icon: "\eac7" / ""; }
+[data-icon="email"] { --button-icon: "\eae5" / ""; }
+#relocate-custom-waypoint, [data-relocate-waypoint], [data-icon="relocate"] { --button-icon: "\f22f" / ""; }
+#open-yosemite-guide { --button-icon: "\ea39" / ""; }
+
+/* Put icons inside the lead column of multicolumn buttons to keep their existing grid tracks. */
+.day-card::before, .accessible-stop-list button::before,
+:is(.poi-candidate-list, .interest-place-list, .accessible-route-list) button::before,
+.accessible-draft-waypoint button[data-draft-waypoint]::before { content: none; }
+.day-card .day-number::before, .accessible-stop-list button > span::before {
+  display: block;
+  margin: 0 0 3px;
+}
+.nav-item::before, .mobile-nav button::before, .icon-button::before,
+#close-poi-candidates::before, .send-button::before, .draft-waypoint-marker::before {
+  margin: 0;
+  font-size: 20px;
+}
+.icon-button, #close-poi-candidates, .send-button { display: inline-grid; place-items: center; }
+
 .sr-only {
   position: absolute;
   width: 1px;
@@ -101,7 +204,6 @@ button:disabled { cursor: not-allowed; opacity: 0.55; }
 .desktop-shell { height: calc(100vh - 74px); min-height: 0; display: grid; grid-template-columns: 80px 300px minmax(500px, 1fr) 360px; }
 .navigation-rail { display: flex; flex-direction: column; gap: 5px; padding: 14px 8px; background: white; border-right: 1px solid var(--line); }
 .nav-item { min-height: 58px; border: 0; border-radius: 12px; background: transparent; display: grid; place-items: center; gap: 1px; padding: 5px; color: var(--muted); cursor: pointer; font-size: 12px; }
-.nav-item span:first-child { font-size: 20px; }
 .nav-item:hover, .nav-item.is-active { color: var(--teal-dark); background: var(--teal-soft); }
 .nav-spacer { flex: 1; }
 
@@ -140,6 +242,8 @@ button:disabled { cursor: not-allowed; opacity: 0.55; }
 .map-render-status { flex: 0 0 auto; padding: 12px 15px; border: 1px solid var(--line); border-radius: 11px; background: rgba(255,255,255,.95); box-shadow: var(--shadow); color: var(--muted); font-size: 13px; text-align: center; }
 .map-render-status.is-warning { border-color: #e7c492; color: #70451f; }
 .map-render-status.is-error { border-color: #dfaaa6; color: var(--danger); }
+.preview-map-recovery:not([hidden]) { display: flex; flex-wrap: wrap; gap: 8px; }
+.preview-map-recovery button { min-height: 44px; background: var(--paper); }
 .geo-stop-marker { position: relative; isolation: isolate; overflow: visible; display: grid; place-items: center; min-width: 30px; height: 30px; padding: 0 7px; border: 3px solid white; border-radius: 999px; background: var(--ink); color: white; box-shadow: 0 2px 9px rgba(18,37,53,.35); cursor: pointer; font: 800 10px/1 Inter, ui-sans-serif, system-ui, sans-serif; }
 .geo-stop-leader { position: absolute; z-index: 0; left: 50%; top: calc(50% - 1px); height: 2px; border-radius: 999px; background: rgba(18,37,53,.55); transform-origin: 0 50%; pointer-events: none; }
 .geo-stop-label { position: relative; z-index: 1; }
@@ -515,7 +619,6 @@ dialog::backdrop { background: rgba(12, 28, 38, .48); backdrop-filter: blur(3px)
   .metric-strip { grid-template-columns: repeat(2, 1fr); }
   .mobile-nav { position: fixed; z-index: 35; inset: auto 0 0; display: grid; grid-template-columns: repeat(5, 1fr); height: calc(68px + env(safe-area-inset-bottom)); padding-bottom: env(safe-area-inset-bottom); background: rgba(255,255,255,.97); border-top: 1px solid var(--line); }
   .mobile-nav button { min-width: 0; min-height: 44px; border: 0; background: transparent; display: grid; place-items: center; align-content: center; gap: 2px; font-size: 12px; color: var(--muted); }
-  .mobile-nav span { font-size: 18px; }
   .copilot-dock { inset: 64px 0 calc(68px + env(safe-area-inset-bottom)); width: 100% !important; min-width: 0; max-width: none; }
   .dock-resizer { display: none; }
   .alternative-grid, .evidence-grid { grid-template-columns: 1fr; }

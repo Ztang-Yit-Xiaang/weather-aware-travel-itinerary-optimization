@@ -683,7 +683,6 @@ function addDraftWaypointMarkers({
     element.className = `draft-waypoint-marker ${waypoint.kind === "route_waypoint" ? "is-route-waypoint" : "is-custom-stop"}`;
     if (waypoint.waypoint_id === selectedWaypointId) element.classList.add("is-selected");
     element.setAttribute("aria-label", `${waypoint.name}. ${waypoint.kind === "route_waypoint" ? "Route-only waypoint" : "Custom draft stop"}.`);
-    element.textContent = waypoint.kind === "route_waypoint" ? "VIA" : "+";
     let wasDragged = false;
     element.addEventListener("click", (event) => {
       event.preventDefault();

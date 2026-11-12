@@ -3798,6 +3798,8 @@ const API_ERROR_COPY = {
   preview_capacity_reached: "The local repair engine is busy. Your draft is unchanged. Wait for a running preview to finish, then try again.",
   preview_execution_timeout: "The repair did not finish in time. No result was applied; your accepted itinerary and staged draft are unchanged.",
   preview_client_disconnected: "The preview connection closed before its result could be applied. Your accepted itinerary is unchanged.",
+  official_source_unavailable: "The official road or park bulletin could not be retrieved. The preview is paused, and your saved itinerary is still active. Try again later.",
+  trip_planning_avoidance_route_unavailable: "A verified road connection avoiding the requested corridor is unavailable. Review the route and try again. Your draft is still saved.",
   request_validation_failed: "The browser and local service use different API versions. Stop the service, restart it, then refresh this page.",
   draft_candidate_target_mismatch: "That candidate cannot replace the selected stop. Choose a compatible candidate.",
   draft_duplicate_operation: "That change is already in the draft.",
@@ -4354,8 +4356,10 @@ function activeProposalPlan() {
 function copilotPreviewState() {
   const plan = activeProposalPlan();
   const mapFailureMessage = {
-    MAP_RENDER_FAILED: "The map could not be rendered or verified. Acceptance remains disabled. Retry the map before accepting this preview.",
-    MAP_IDENTITY_FAILED: "The map does not match the expected itinerary identity. Acceptance remains disabled. Retry the map before accepting this preview.",
+    MAP_RENDER_FAILED: "The map could not be verified. Review the evaluated text route and scores. Acceptance stays disabled until a map retry succeeds.",
+    MAP_IDENTITY_FAILED: plan
+      ? "The map identity could not be verified for this preview. Review the evaluated text route and scores. Acceptance stays disabled until a map retry succeeds."
+      : "The map identity could not be verified. Retry the map to see the saved itinerary.",
   }[state.previewRuntime.status];
   return {
     status: state.previewRuntime.status,
@@ -4891,7 +4895,7 @@ function candidateExplorerHtml() {
   }).join("");
   return `<aside class="poi-candidate-drawer" aria-labelledby="poi-candidate-heading">
     <header><div><span class="eyebrow">Route-aware discovery</span><h2 id="poi-candidate-heading">Candidates for this exact route slot</h2></div>
-      <button type="button" id="close-poi-candidates" aria-label="Close candidate discovery">×</button></header>
+      <button type="button" id="close-poi-candidates" aria-label="Close candidate discovery"></button></header>
     <p class="candidate-context">${context
       ? `Day ${escapeHtml(context.day)} · ${escapeHtml(context.predecessor_id)} → ${escapeHtml(context.successor_id)} · ${escapeHtml(context.kind)}`
       : "Waiting for exact route context."}</p>
@@ -4922,13 +4926,14 @@ function currentInterestResponse() {
     && value.search_context?.area_mode === state.interestRegions.searchArea
     && value.search_context?.radius_km === state.interestRegions.radiusKm
     && value.search_context?.stop_id === state.interestRegions.focusStopId
-    && value.context.route_leg_id === state.session.selected_segment_id ? value : null;
+    && value.context.route_leg_id === interestRouteForDay(displayed)?.route_leg_id ? value : null;
 }
 
 function selectInterestPlace(placeId) {
   state.interestRegions.selectedId = placeId;
+  const mapReady = $("#geographic-map")?.dataset.mapReady === "true";
   renderMap();
-  $("#geographic-map")?.scrollIntoView({block: "center"});
+  $(mapReady ? "#geographic-map" : ".interest-place-detail")?.scrollIntoView({block: "center"});
 }
 
 function interestPlaceListHtml(response) {
@@ -5004,7 +5009,7 @@ function interestExplorerHtml() {
   const region = response?.surface?.regions_geojson?.features.find(feature => feature.properties.mass_level === view.massLevel);
   const previewExploration = response?.plan_scope === "evaluated_preview";
   const percent = value => `${Math.round(value * 100)}%`;
-  return `<section class="interest-region-panel" aria-labelledby="interest-region-heading">
+  return `<section class="interest-region-panel" aria-labelledby="interest-region-heading"${response ? ` data-plan-id="${escapeHtml(response.exploration_plan_id)}" data-plan-content-hash="${escapeHtml(response.exploration_plan_content_hash)}" data-route-leg-id="${escapeHtml(response.context.route_leg_id)}" data-day="${escapeHtml(response.context.day)}"` : ""}>
     <header><div><span class="eyebrow">Explore places</span><h2 id="interest-region-heading">Your interest region</h2></div><button type="button" id="close-interest-regions">Hide interest layer</button></header>
     ${response ? `<p>Searching within ${response.search_context.radius_km} km of <strong>${escapeHtml(response.search_context.name)}</strong>. Distances are straight-line distances from the displayed search center. Your itinerary stops are unchanged.</p>` : ""}
     <p>Same-hue shading shows model interest density. The darkest markers are confirmed must-go constraints. Interest does not establish itinerary feasibility.</p>
@@ -5332,7 +5337,7 @@ function mapInspectorHtml(geography, displayedPlan) {
       <div class="map-context-actions"><button type="button" id="find-route-candidates" ${interaction.mode === "edit" && acceptedRouteTarget ? "" : "disabled title=\"Select an accepted-plan route leg in Edit mode\""}>Find route-aware candidates</button>
         <button type="button" id="explore-interest-regions" ${selected?.plan_id === displayedPlan?.plan_id ? "" : "disabled"}>Explore interest region</button>
         <button type="button" id="inspect-route-edit" ${issueCapability?.enabled === true && acceptedRouteTarget ? "" : `disabled title=\"${escapeHtml(acceptedRouteTarget ? issueCapability?.blocking_code || "Route issue reporting is unavailable" : "Only an accepted-plan route leg can be edited")}\"`}>Add supported route feedback</button>
-        <button type="button" disabled title="${escapeHtml(preferenceCapability?.blocking_code || "Route preference editing is unavailable")}">Change route preference</button></div>
+        <button type="button" disabled data-icon="route-preference" title="${escapeHtml(preferenceCapability?.blocking_code || "Route preference editing is unavailable")}">Change route preference</button></div>
     </section>`;
   }
   if (interaction.selectionKind === "exploratory" && interaction.exploratoryPin) {
@@ -5372,7 +5377,7 @@ function mapInspectorHtml(geography, displayedPlan) {
         <input id="waypoint-name" name="waypoint-name" type="text" minlength="1" maxlength="120" required>
         ${customForm}`}
       ${preview.confirmation_required ? `<label class="snap-warning-ack"><input id="snap-warning-ack" type="checkbox" required> I reviewed the snap distance of ${escapeHtml(Math.round(Number(preview.snap_distance_m)))} m and want to continue.</label>` : ""}
-      <button type="submit" class="primary">${isRelocation ? "Confirm relocation" : pin.intent === "route_waypoint" ? "Add route waypoint" : "Add custom stop"}</button>
+      <button type="submit" class="primary" data-icon="${isRelocation ? "relocate" : "add-waypoint"}">${isRelocation ? "Confirm relocation" : pin.intent === "route_waypoint" ? "Add route waypoint" : "Add custom stop"}</button>
     </form>` : `<p class="truth-note">${preview && preview.validation_state !== "route_checked"
       ? "This preview is not executable. Select an exact route leg and check road access again."
       : pin.intent === "explore_only" ? "Exploration never appends an itinerary operation."
@@ -5464,7 +5469,7 @@ function mapPreviewSummaryHtml(proposal, displayed, parent) {
   return `<section class="map-preview-summary" aria-label="Preview changes" data-plan-id="${escapeHtml(displayed.plan_id)}" data-plan-content-hash="${escapeHtml(displayed.content_hash)}">
     <strong>Evaluated preview · not accepted</strong>
     ${days.length > 3 ? `<details><summary>${days.length} changed days</summary>${list}</details>` : list}
-    <p>Review the changes below. Accept the repair to save them to your itinerary.</p>
+    <p>Review the changes below. Saving requires a verified map and your confirmation.</p>
   </section>`;
 }
 
@@ -5554,6 +5559,10 @@ function renderMap() {
     <div id="map-render-status" class="map-render-status" role="status">
       ${geographyReady ? "Loading verified local geography…" : "Geographic evidence is unavailable. Use the text route description."}
     </div>
+    ${proposalEligible && selectedAlternative ? `<div id="preview-map-recovery" class="preview-map-recovery" hidden>
+      <button type="button" id="retry-preview-map">Retry map</button>
+      ${state.route === "/app/itinerary" ? '<button type="button" id="explore-preview-interest">Explore interest region</button>' : ""}
+    </div>` : ""}
     <details class="textual-map-alternative" ${textRouteOpen ? "open" : ""}>
       <summary>Text route description</summary>
       ${textRoutePanelHtml(displayed, original)}
@@ -5581,7 +5590,7 @@ function renderMap() {
     ${interestMapSummaryHtml(interest)}
     <div class="draft-bar">
       <strong>${draftCount} draft ${draftCount === 1 ? "change" : "changes"}</strong>
-      <span>${state.previewRuntime.status === "PREVIEW_RUNNING" ? "Preview running. The accepted parent remains rendered until an eligible child and matching map acknowledgement are ready." : routeCheckedOnly ? "Route-checked draft; evaluated repair is not enabled for arbitrary waypoints yet." : proposalEligible ? `Evaluated ${escapeHtml(state.session.proposal.evaluation_status || state.session.proposal.eligibility || "proposal")} certificate is current for this draft.` : draftCount && impactCurrent ? impactBlockerLabel ? escapeHtml(impactBlockerLabel) : `${impactSummary.evaluated_executable_count} evaluated-preview capable · ${impactSummary.draft_only_count} draft only · not certified.` : draftCount ? "Checking server-owned draft impact; evaluation is disabled until it resolves." : state.mapInteraction.mode === "edit" ? "Map clicks remain exploratory until road checking and explicit confirmation." : "Select a stop or road-validated route leg."}</span>
+      <span>${state.previewRuntime.status === "PREVIEW_RUNNING" ? "Generating and evaluating the repair. Your saved itinerary is unchanged." : routeCheckedOnly ? "Route-checked draft; evaluated repair is not enabled for arbitrary waypoints yet." : proposalEligible ? `Evaluated ${escapeHtml(state.session.proposal.evaluation_status || state.session.proposal.eligibility || "proposal")} certificate is current for this draft.` : draftCount && impactCurrent ? impactBlockerLabel ? escapeHtml(impactBlockerLabel) : `${impactSummary.evaluated_executable_count} evaluated-preview capable · ${impactSummary.draft_only_count} draft only · not certified.` : draftCount ? "Checking server-owned draft impact; evaluation is disabled until it resolves." : state.mapInteraction.mode === "edit" ? "Map clicks remain exploratory until road checking and explicit confirmation." : "Select a stop or road-validated route leg."}</span>
       <button type="button" id="inline-undo" ${draftCount && !state.undoPending ? "" : "disabled"}>Undo latest draft</button>
       <button type="button" id="inline-preview" class="primary" ${draftCount && evaluatedPreviewReady && state.previewRuntime.status !== "PREVIEW_RUNNING" ? "" : `disabled title="${state.previewRuntime.status === "PREVIEW_RUNNING" ? "Preview request in progress" : draftCount ? escapeHtml(impactBlockerLabel || "This draft includes non-executable or not-yet-classified operations") : "Add a draft before preview"}"`}>${state.previewRuntime.status === "PREVIEW_RUNNING" ? "Preview running…" : "Preview repair"}</button>
     </div>
@@ -5716,13 +5725,39 @@ function renderMap() {
   $("#use-candidate-replacement")?.addEventListener("click", useSelectedCandidateReplacement);
   $("#inline-undo").addEventListener("click", undoDraft);
   $("#inline-preview").addEventListener("click", previewDraft);
+  $("#retry-preview-map")?.addEventListener("click", (event) => {
+    if (state.mapRecoveryPending) return;
+    const runtimeRetry = $("#retry-map-runtime");
+    if (runtimeRetry) {
+      event.currentTarget.disabled = true;
+      runtimeRetry.click();
+    } else renderMap();
+  });
+  $("#explore-preview-interest")?.addEventListener("click", () => {
+    state.interestRegions.enabled = true;
+    navigate("/app/map");
+  });
 
   if (proposalEligible && !selectedAlternative) {
     updateGeographicMapStatus({ state: "failed", code: "evaluated_preview_geography_unavailable" });
     return;
   }
+  const container = $("#geographic-map");
+  let mapAcknowledgementTimer = null;
+  const reportStatus = (status) => {
+    if (!container.isConnected) return;
+    if (status.state !== "loading") {
+      clearTimeout(mapAcknowledgementTimer);
+      mapAcknowledgementTimer = null;
+    } else if (proposalEligible && mapAcknowledgementTimer === null) {
+      mapAcknowledgementTimer = setTimeout(() => {
+        reportStatus({ state: "failed", code: "map_acknowledgement_timeout" });
+      }, 8000);
+    }
+    updateGeographicMapStatus(status, displayed);
+  };
   renderGeographicMap({
-    container: $("#geographic-map"),
+    container,
     geography,
     mapConfig: state.mapConfig,
     selectedStopId: state.session.selected_stop_id,
@@ -5752,7 +5787,7 @@ function renderMap() {
     onSelectCustomWaypoint: (waypoint) => selectCustomWaypoint(waypoint.waypoint_id),
     onCustomWaypointDrag: beginCustomWaypointDragPreview,
     onEmptyMapClick: createExploratoryPin,
-    onStatus: (status) => updateGeographicMapStatus(status, displayed),
+    onStatus: reportStatus,
   });
 }
 
@@ -5787,6 +5822,16 @@ function updateGeographicMapStatus(status, expectedPlan = activeRenderPlan()) {
   element.dataset.mapStatusCode = status.code || "unknown";
   element.classList.remove("is-warning", "is-error");
   const stage = element.closest(".map-stage");
+  const proposalPlan = activeProposalPlan();
+  const previewRunning = state.previewRuntime.status === "PREVIEW_RUNNING";
+  const recovery = stage?.querySelector?.("#preview-map-recovery");
+  if (recovery) recovery.hidden = true;
+  const showTextReview = () => {
+    if (!proposalPlan || previewRunning) return;
+    const textRoute = stage?.querySelector?.(".textual-map-alternative");
+    if (textRoute) textRoute.open = true;
+    if (recovery) recovery.hidden = false;
+  };
   if (stage) {
     if (renderedPlan) {
       stage.dataset.activePlanId = renderedPlan.plan_id;
@@ -5813,7 +5858,7 @@ function updateGeographicMapStatus(status, expectedPlan = activeRenderPlan()) {
     );
     if (!identityExact) {
       state.acknowledgedPreviewPlanId = null;
-      state.previewRuntime.status = "MAP_IDENTITY_FAILED";
+      if (!previewRunning) state.previewRuntime.status = "MAP_IDENTITY_FAILED";
       if (stage) {
         stage.dataset.previewState = state.previewRuntime.status;
         delete stage.dataset.renderedMapPlanId;
@@ -5822,7 +5867,10 @@ function updateGeographicMapStatus(status, expectedPlan = activeRenderPlan()) {
       }
       element.hidden = false;
       element.classList.add("is-error");
-      element.textContent = "The map rendered, but its plan identity could not be verified. The accepted itinerary remains authoritative.";
+      element.textContent = proposalPlan && !previewRunning
+        ? "The map could not verify this preview. Review the evaluated text route and scores. Accept requires a verified map."
+        : "The map rendered, but its plan identity could not be verified. The accepted itinerary remains authoritative.";
+      showTextReview();
       notifyPreviewChanged();
       updateAcceptanceControl();
       return;
@@ -5831,7 +5879,7 @@ function updateGeographicMapStatus(status, expectedPlan = activeRenderPlan()) {
       stage.dataset.renderedMapPlanId = status.activePlanId;
       stage.dataset.renderedGeometryHash = status.activeGeometryHash;
       stage.dataset.renderedMarkerIds = JSON.stringify(acknowledgedMarkerIds);
-      if (activeProposalPlan()) state.previewRuntime.status = "PREVIEW_RENDERED";
+      if (proposalPlan && !previewRunning) state.previewRuntime.status = "PREVIEW_RENDERED";
       else if (!["PREVIEW_RUNNING", "PREVIEW_FAILED", "PREVIEW_INELIGIBLE", "PREVIEW_BLOCKED", "PREVIEW_NOT_EVALUATED"].includes(
         state.previewRuntime.status,
       )) state.previewRuntime.status = "PARENT_RENDERED";
@@ -5839,7 +5887,7 @@ function updateGeographicMapStatus(status, expectedPlan = activeRenderPlan()) {
       stage.dataset.previewRequestEpoch = String(state.previewRuntime.epoch);
       stage.dataset.previewRequestId = state.previewRuntime.requestId || "";
     }
-    if (activeProposalPlan() && state.acknowledgedPreviewPlanId !== renderedPlan.plan_id) {
+    if (proposalPlan && !previewRunning && state.acknowledgedPreviewPlanId !== renderedPlan.plan_id) {
       state.acknowledgedPreviewPlanId = renderedPlan.plan_id;
       toast("Preview ready. The itinerary and map now show the same evaluated child plan.");
     }
@@ -5859,7 +5907,7 @@ function updateGeographicMapStatus(status, expectedPlan = activeRenderPlan()) {
     return;
   }
   state.acknowledgedPreviewPlanId = null;
-  if (activeProposalPlan() && state.previewRuntime.status !== "PREVIEW_RUNNING") {
+  if (proposalPlan && !previewRunning) {
     state.previewRuntime.status = status.state === "loading" ? "PREVIEW_DATA_READY" : "MAP_RENDER_FAILED";
   }
   if (stage) {
@@ -5870,9 +5918,16 @@ function updateGeographicMapStatus(status, expectedPlan = activeRenderPlan()) {
   }
   element.hidden = false;
   element.classList.add(status.state === "loading" ? "is-warning" : "is-error");
-  element.textContent = status.state === "loading"
-    ? "Loading the current itinerary map…"
-    : "The geographic map could not be verified. The text route description remains available.";
+  if (status.state === "loading") {
+    element.textContent = proposalPlan && !previewRunning
+      ? "Evaluation complete. Review the text route and scores while the map loads."
+      : "Loading the current itinerary map…";
+  } else {
+    element.textContent = proposalPlan && !previewRunning
+      ? "Map unavailable. Review the evaluated text route and scores. Accept requires a verified map."
+      : "The geographic map could not be verified. The text route description remains available.";
+    showTextReview();
+  }
   notifyPreviewChanged();
   updateAcceptanceControl();
 }
@@ -6098,6 +6153,7 @@ async function submitAcceptance(decisionType) {
     ? "Accept this independently evaluated repair as the durable trip plan?"
     : "Keep the immutable original plan as the durable trip plan?";
   $("#acceptance-confirm").textContent = acceptRepair ? "Accept repair" : "Keep original";
+  dialog.dataset.decision = acceptRepair ? "accept" : "keep";
   dialog.returnValue = "cancel";
   dialog.dataset.submitting = "true";
   try {
@@ -6801,7 +6857,7 @@ function routeTypedEditorHtml(routeProperties, routePlan) {
     </form>
     <section class="disabled-capability" aria-label="Unavailable route preference editing">
       <h4>Route preference</h4><p>${escapeHtml(humanLabel(preferenceCapability.blocking_code))}. No simulated scenic, toll, highway, or mode change is applied.</p>
-      <button type="button" disabled>Change route preference</button>
+      <button type="button" disabled data-icon="route-preference">Change route preference</button>
     </section>
     ${typedImpactSummaryHtml()}
   </div>`;
@@ -7232,29 +7288,15 @@ async function loadInterestRegions({refreshPlaces = false} = {}) {
   const stops = displayed.stops?.features?.filter(feature => feature.properties.day === state.session.selected_day) || [];
   const focusedStopId = stops.find(feature => feature.properties.stop_id === state.session.selected_stop_id)?.properties.stop_id
     || stops.find(feature => feature.properties.stop_id === state.interestRegions.focusStopId)?.properties.stop_id;
-  let route = state.mapInteraction.selectedRouteLeg;
-  const legs = displayed.validated_legs?.features || [];
+  const route = interestRouteForDay(displayed);
   if (!route) {
-    const savedLeg = legs.find(feature => feature.properties?.route_leg_id === state.session.selected_segment_id
-      && feature.properties?.day === state.session.selected_day);
-    if (savedLeg) {
-      route = {...savedLeg.properties, plan_id: displayed.plan_id};
-      state.mapInteraction.selectedRouteLeg = route;
-    }
-  }
-  if (route?.plan_id !== displayed.plan_id || route.day !== state.session.selected_day
-      || !legs.some(feature => feature.properties?.route_leg_id === route.route_leg_id)) {
-    const leg = legs.find(feature => feature.properties?.day === state.session.selected_day);
-    if (!leg) {
-      toast("No road-validated route is available for this day. Choose another day to explore interest.", true);
-      return false;
-    }
-    const selected = await selectRouteLeg({...leg.properties, plan_id: displayed.plan_id});
-    if (!selected || activeRenderPlan()?.content_hash !== displayed.content_hash) return false;
-    route = state.mapInteraction.selectedRouteLeg;
-  }
-  if (!route?.route_leg_id) {
+    toast("No road-validated route is available for this day. Choose another day to explore interest.", true);
     return false;
+  }
+  // Restore an explicit saved leg for the inspector. An automatic exploration
+  // leg stays local to the lookup so the traveler's stop selection survives.
+  if (route.route_leg_id === state.session.selected_segment_id && !state.mapInteraction.selectedRouteLeg) {
+    state.mapInteraction.selectedRouteLeg = { ...route, plan_id: displayed.plan_id };
   }
   const view = state.interestRegions;
   if (!view.enabled) return false;
@@ -7289,7 +7331,7 @@ async function loadInterestRegions({refreshPlaces = false} = {}) {
         || state.session.session_id !== expected.sessionId || state.session.selected_day !== expected.day
         || activeRenderPlan()?.plan_id !== expected.explorationPlanId
         || activeRenderPlan()?.content_hash !== expected.explorationPlanHash
-        || state.session.selected_segment_id !== expected.routeLegId) return false;
+        || interestRouteForDay(displayed)?.route_leg_id !== expected.routeLegId) return false;
     view.response = normalizeInterestResponse(raw, expected);
     view.status = "ready";
     view.selectedId = null;
@@ -7306,6 +7348,15 @@ async function loadInterestRegions({refreshPlaces = false} = {}) {
     clearTimeout(timeout);
     if (view.controller === controller) view.controller = null;
   }
+}
+
+function interestRouteForDay(plan) {
+  const { selected_day, selected_segment_id, selected_stop_id } = state.session;
+  const legs = (plan?.validated_legs?.features || []).map(feature => feature.properties)
+    .filter(leg => leg?.day === selected_day && leg.route_leg_id);
+  return legs.find(leg => leg.route_leg_id === selected_segment_id)
+    || legs.find(leg => selected_stop_id && [leg.origin_id, leg.destination_id].includes(selected_stop_id))
+    || legs[0];
 }
 
 function prepareReplacementDiscovery() {
@@ -7506,7 +7557,7 @@ function selectMapStop(selection) {
 function selectRouteLeg(selection) {
   if (!selection?.route_leg_id) return Promise.resolve(false);
   const textRoute = $(".textual-map-alternative");
-  if (textRoute) textRoute.open = false;
+  if (textRoute && !["MAP_RENDER_FAILED", "MAP_IDENTITY_FAILED"].includes(state.previewRuntime?.status)) textRoute.open = false;
   resetPoiDiscovery({ keepReplacementTarget: true });
   state.mapInteraction.selectionKind = "route_leg";
   state.mapInteraction.selectedStopPlanId = null;
@@ -8070,6 +8121,7 @@ async function previewDraft(options = null) {
     status: "PREVIEW_RUNNING",
     requestId: null,
   };
+  state.acknowledgedPreviewPlanId = null;
   renderAll();
   copilot.previewStateChanged();
   let expected = null;
@@ -8094,6 +8146,7 @@ async function previewDraft(options = null) {
     }
     state.session = normalized.session;
     if (normalized.proposal.state === "eligible") {
+      resetInterestRegions();
       state.mapInteraction.selectedStopPlanId = normalized.proposal.child_plan_id;
       state.mapInteraction.selectedRouteLeg = null;
       state.mapInteraction.selectionKind = state.session.selected_stop_id ? "stop" : null;
@@ -8102,15 +8155,12 @@ async function previewDraft(options = null) {
     state.previewRuntime.requestId = normalized.proposal.compiled_request?.source_request_id || null;
     state.tripPreviewPlanId = null;
     state.acknowledgedPreviewPlanId = null;
-    const installedContext = previewExpectedContext();
-    const impactPending = loadDraftImpactPreview({ render: false });
-    const impactRequest = state.typedImpact.request;
-    await impactPending;
-    if (!previewRequestIsCurrent(previewEpoch, installedContext)
-        || !draftImpactRequestIsCurrent(impactRequest)) return false;
+    // The current draft's controls can refresh independently of the evaluated
+    // child. The impact read already guards its own result against replacement.
+    void loadDraftImpactPreview();
     $("#map-edit-dialog").close();
     toast(normalized.proposal.state === "eligible"
-      ? "Preview evaluated. Rendering the exact child itinerary and map…"
+      ? "Preview evaluated. You can review the itinerary while the map loads."
       : normalized.proposal.message, normalized.proposal.state !== "eligible");
     renderAll();
     copilot.previewStateChanged();

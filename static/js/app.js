@@ -727,6 +727,7 @@ function syncPreviewRuntimeFromSession({ invalidate = true } = {}) {
   state.previewRuntime.status = previewStateForSession();
   state.previewRuntime.requestId = state.session?.proposal?.compiled_request?.source_request_id || null;
   state.previewRuntime.message = null;
+  state.previewRuntime.diagnostic = null;
 }
 
 function previewRequestIsCurrent(epoch, expected) {
@@ -3841,12 +3842,21 @@ const API_ERROR_COPY = {
   trip_planning_official_access_unresolved: "The official source did not confirm access for this route. Check the park's current access notice before previewing again.",
   trip_planning_avoidance_route_unavailable: "A verified road connection avoiding the requested corridor is unavailable. Review the route and try again. Your draft is still saved.",
   trip_planning_road_connection_unavailable: "The routing service could not verify a driving connection. Your draft is still saved.",
+  trip_planning_constraints_infeasible: "No route satisfies the trip constraints together. Review the trip length, required stops and daily driving limit before trying again.",
+  trip_planning_driving_limit_exceeded: "The validated driving route exceeds your daily driving limit. Increase the limit or change the stops.",
+  trip_planning_solver_timeout: "The optimizer ran out of time before finding a feasible itinerary. Try a simpler draft or preview again.",
+  routing_timeout: "The road service took too long to verify the routes. Try again.",
+  routing_rate_limited: "The road service is receiving too many requests. Wait a little, then run Preview again.",
+  routing_minute_budget_exceeded: "The road service has reached its short-term request limit. Wait a minute, then run Preview again.",
+  routing_daily_budget_exceeded: "The road service has reached its daily request limit. Try Preview again after the quota resets.",
+  routing_forbidden_or_quota_exceeded: "The road service rejected access or reached its quota. Try again after its access or quota is restored.",
+  preview_network_error: "The connection closed before the browser received the preview result. Reconnect and retry Preview.",
+  preview_response_unreadable: "The browser could not read the preview response. Retry Preview.",
   request_validation_failed: "The browser and local service use different API versions. Stop the service, restart it, then refresh this page.",
   draft_candidate_target_mismatch: "That candidate cannot replace the selected stop. Choose a compatible candidate.",
   draft_duplicate_operation: "That change is already in the draft.",
   stale_session_revision: "The workspace changed in another action. Refresh the page and try again.",
   invalid_draft_target: "Select an editable stop from the accepted plan, not a repair-preview marker.",
-  routing_timeout: "The local road-access check timed out. The exploratory point was not saved.",
   routing_unavailable: "The local routing service is unavailable. The exploratory point remains non-executable.",
   routing_http_error: "The local routing service rejected the road-access check. No draft was created.",
   routing_response_invalid: "The local routing service returned invalid evidence. No draft was created.",
@@ -3909,7 +3919,7 @@ function renderBuildRecovery(code) {
   $("#reload-current-build").focus();
 }
 
-async function api(path, { method = "GET", body, headers: extraHeaders = {}, signal, pendingMutation = false } = {}) {
+async function api(path, { method = "GET", body, headers: extraHeaders = {}, signal, pendingMutation = false, onResponse } = {}) {
   if (state.mutationRecovery?.blocked && method !== "GET" && !path.endsWith("/draft/impact-preview") && !pendingMutation) {
     throw Object.assign(new Error("Resolve the saved action before continuing. Your message has not been sent."), {code:"mutation_outcome_uncertain"});
   }
@@ -3922,6 +3932,7 @@ async function api(path, { method = "GET", body, headers: extraHeaders = {}, sig
   if (body !== undefined) headers["Content-Type"] = "application/json";
   if (state.token) headers["X-Session-Token"] = state.token;
   const response = await fetch(path, { method, headers, body: body === undefined ? undefined : JSON.stringify(body), signal });
+  onResponse?.(response);
   const contentType = response.headers.get("content-type") || "";
   const payload = contentType.includes("application/json") ? await response.json() : null;
   if (!response.ok) {
@@ -6766,6 +6777,7 @@ function ineligiblePreviewEvidence() {
 
 function ineligiblePreviewResultHtml(proposal, { parent, certificate }) {
   const findings = certificate.failures.map(({ code, message, evidence_refs }) => {
+    const codeLabel = `<code>${escapeHtml(code)}</code>`;
     if (code === "stop_time_window_latest_departure_exceeded") {
       const trace = proposal.schedule_impact?.child?.stop_traces?.find(row =>
         evidence_refs.includes(row.stop_id) && row.failure_codes.includes(code));
@@ -6773,10 +6785,14 @@ function ineligiblePreviewResultHtml(proposal, { parent, certificate }) {
       if (deadline) {
         return `<li><strong>${escapeHtml(stopNameForId(trace.stop_id, parent))} misses the requested departure deadline.</strong>
           <p>Required latest departure ${escapeHtml(deadline)}. Modeled road arrival ${escapeHtml(scheduleClockLabel(trace.road_arrival_minute))}.
-          After a ${escapeHtml(formatMetric(trace.visit_minutes))}-minute visit, modeled departure is ${escapeHtml(scheduleClockLabel(trace.departure_minute))}, ${escapeHtml(formatMetric(trace.latest_departure_overrun_minutes))} minutes late.</p></li>`;
+          After a ${escapeHtml(formatMetric(trace.visit_minutes))}-minute visit, modeled departure is ${escapeHtml(scheduleClockLabel(trace.departure_minute))}, ${escapeHtml(formatMetric(trace.latest_departure_overrun_minutes))} minutes late.</p>${codeLabel}</li>`;
       }
     }
-    return `<li>${escapeHtml(message || humanLabel(code))}</li>`;
+    if (code === "weather_infeasible" && evidence_refs?.some(id => stopNameForId(id, parent) !== id)) {
+      const names = evidence_refs.map(id => stopNameForId(id, parent)).filter((name, i) => name !== evidence_refs[i]);
+      return `<li><strong>${escapeHtml(names.join(", "))}</strong> fails the weather limit in this itinerary. Replace or move the affected visit, then preview again. ${codeLabel}</li>`;
+    }
+    return `<li>${escapeHtml(message || humanLabel(code))} ${codeLabel}</li>`;
   }).join("");
   return `<article class="evidence-card"><h3>Why the preview is ineligible</h3>
     <span class="status-pill warning">${escapeHtml(certificate.evaluation_status)}</span>
@@ -6790,9 +6806,22 @@ function renderEvidence() {
     const title = running ? "Evaluating your repair" : "Preview could not be completed";
     const detail = running ? "The checks will appear here when the evaluation finishes."
       : state.previewRuntime.message || "Open Trip to review your draft and try Preview again.";
+    const diagnostic = running ? null : state.previewRuntime.diagnostic;
+    const stages = {
+      authentication: "Sign-in", request_validation: "Checking the request", browser_build: "Checking the site version",
+      workspace_storage: "Saving the workspace", workspace_check: "Checking the draft", queue: "Waiting for the repair engine",
+      compute: "Running the repair", official_sources: "Checking official sources", routing: "Checking roads",
+      optimizer: "Finding a feasible itinerary", geography: "Verifying the route", evaluation: "Checking itinerary limits",
+      publish: "Saving the preview", browser_response: "Checking the preview response", network: "Receiving the preview",
+    };
+    const details = diagnostic ? `<dl class="repair-impact">
+      <dt>Step</dt><dd>${escapeHtml(stages[diagnostic.stage] || "Preview")}</dd>
+      <dt>Error code</dt><dd><code>${escapeHtml(diagnostic.code)}</code></dd>
+      ${diagnostic.id ? `<dt>Preview reference</dt><dd><code>${escapeHtml(diagnostic.id)}</code></dd>` : ""}
+      </dl>` : "";
     $("#workspace-content").innerHTML = `<div class="route-view">
       <header class="route-heading"><div><span class="eyebrow">Draft evidence</span><h2>${title}</h2></div><button class="secondary" id="evidence-back">Back to trip</button></header>
-      <article class="evidence-card" role="status"><p>${escapeHtml(detail)}</p></article></div>`;
+      <article class="evidence-card" role="status"><p>${escapeHtml(detail)}</p>${details}</article></div>`;
     $("#evidence-back").addEventListener("click", () => navigate("/app/itinerary"));
     return;
   }
@@ -8408,6 +8437,7 @@ async function previewDraft(options = null) {
   renderAll();
   copilot.previewStateChanged();
   let expected = null;
+  let responseDiagnostic = null;
   try {
     if (scopedToCopilot && (state.session.draft.length !== expectedCopilotOperations.length
         || !state.session.draft.every((operation, index) => sameCopilotDraftOperation(operation, expectedCopilotOperations[index])))) {
@@ -8416,13 +8446,27 @@ async function previewDraft(options = null) {
     expected = previewExpectedContext({ allowReplay: true });
     const payload = await api(`/api/sessions/${state.session.session_id}/preview`, {
       method: "POST", body: { expected_revision: state.session.revision },
+      onResponse: response => {
+        const id = response.headers.get("X-Preview-Id");
+        const stage = response.headers.get("X-Preview-Stage");
+        const code = response.headers.get("X-Preview-Code");
+        responseDiagnostic = {
+          id: /^[a-f0-9]{32}$/.test(id || "") ? id : null,
+          stage: /^[a-z_]{1,32}$/.test(stage || "") ? stage : null,
+          code: /^[a-z][a-z0-9_]{0,79}$/.test(code || "") ? code : null,
+        };
+      },
     });
     if (!previewRequestIsCurrent(previewEpoch, expected)) {
       toast("An older preview response was ignored because the workspace changed.");
       return false;
     }
     const normalized = await normalizeEvaluatedPreviewResponse(payload, expected);
-    if (!normalized) throw new Error(apiErrorMessage("invalid_evaluated_preview"));
+    if (!normalized) {
+      throw Object.assign(new Error(apiErrorMessage("invalid_evaluated_preview")), {
+        code: "invalid_evaluated_preview", stage: "browser_response",
+      });
+    }
     if (!previewRequestIsCurrent(previewEpoch, expected)) {
       toast("An older preview response was ignored because the workspace changed.");
       return false;
@@ -8453,10 +8497,21 @@ async function previewDraft(options = null) {
     if (error.status === 409 && error.code === "stale_session_revision" && await refreshStaleWorkspace(error)) return false;
     state.previewRuntime.status = "PREVIEW_FAILED";
     state.previewRuntime.requestId = null;
-    state.previewRuntime.message = error.message;
+    const code = error.stage === "browser_response" ? error.code : responseDiagnostic?.code
+      || (/^[a-z][a-z0-9_]{0,79}$/.test(error.code || "") ? error.code
+      : error instanceof SyntaxError ? "preview_response_unreadable"
+      : error instanceof TypeError && !responseDiagnostic ? "preview_network_error" : "preview_request_failed");
+    state.previewRuntime.message = API_ERROR_COPY[code] || (code === "preview_request_failed"
+      ? "Preview could not finish. Review your draft and try again." : error.message);
+    state.previewRuntime.diagnostic = {
+      code,
+      id: responseDiagnostic?.id,
+      stage: error.stage || responseDiagnostic?.stage
+        || (code === "preview_network_error" ? "network" : "browser_response"),
+    };
     renderAll();
     copilot.previewStateChanged();
-    toast(error.message, true);
+    toast(state.previewRuntime.message, true);
     return false;
   }
 }

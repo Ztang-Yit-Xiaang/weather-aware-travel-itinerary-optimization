@@ -3852,6 +3852,7 @@ const API_ERROR_COPY = {
   routing_forbidden_or_quota_exceeded: "The road service rejected access or reached its quota. Try again after its access or quota is restored.",
   preview_network_error: "The connection closed before the browser received the preview result. Reconnect and retry Preview.",
   preview_response_unreadable: "The browser could not read the preview response. Retry Preview.",
+  preview_draft_scope_changed: "The draft no longer contains only these exact staged suggestions. No preview was sent; review the current draft in Repairs.",
   request_validation_failed: "The browser and local service use different API versions. Stop the service, restart it, then refresh this page.",
   draft_candidate_target_mismatch: "That candidate cannot replace the selected stop. Choose a compatible candidate.",
   draft_duplicate_operation: "That change is already in the draft.",
@@ -6776,6 +6777,11 @@ function ineligiblePreviewEvidence() {
 }
 
 function ineligiblePreviewResultHtml(proposal, { parent, certificate }) {
+  const diagnostic = state.previewRuntime?.diagnostic;
+  const reference = diagnostic?.stage === "evaluation"
+    && diagnostic.certificateId === proposal.certificate_id
+    && diagnostic.revision === proposal.session_revision
+    && /^[a-f0-9]{32}$/.test(diagnostic.id || "") ? diagnostic.id : null;
   const findings = certificate.failures.map(({ code, message, evidence_refs }) => {
     const codeLabel = `<code>${escapeHtml(code)}</code>`;
     if (code === "stop_time_window_latest_departure_exceeded") {
@@ -6797,6 +6803,7 @@ function ineligiblePreviewResultHtml(proposal, { parent, certificate }) {
   return `<article class="evidence-card"><h3>Why the preview is ineligible</h3>
     <span class="status-pill warning">${escapeHtml(certificate.evaluation_status)}</span>
     ${findings ? `<ul>${findings}</ul>` : `<p>${escapeHtml(humanLabel(proposal.reason || "Unavailable"))}</p>`}
+    ${reference ? `<dl class="repair-impact"><dt>Preview reference</dt><dd><code>${escapeHtml(reference)}</code></dd></dl>` : ""}
     <p>The accepted itinerary remains active.</p></article>`;
 }
 
@@ -6834,6 +6841,7 @@ function renderEvidence() {
     const repairDetails = datedRepairDetailsHtml(proposal, acceptedPlan(state.workspace.geography), true);
     $("#workspace-content").innerHTML = `<div class="route-view">
       <header class="route-heading"><div><span class="eyebrow">Evaluated preview</span><h2>Repair details and visit times</h2></div><button class="secondary" id="evidence-back">Back to trip</button></header>
+      ${exactPreview ? ineligiblePreviewResultHtml(proposal, exactPreview) : ""}
       ${repairDetails}${datedSchedule}
       ${evaluatedEditEvidenceHtml(proposal)}</div>`;
     $("#evidence-back").addEventListener("click", () => navigate("/app/itinerary"));
@@ -8441,7 +8449,9 @@ async function previewDraft(options = null) {
   try {
     if (scopedToCopilot && (state.session.draft.length !== expectedCopilotOperations.length
         || !state.session.draft.every((operation, index) => sameCopilotDraftOperation(operation, expectedCopilotOperations[index])))) {
-      throw new Error("The draft no longer contains only these exact staged suggestions. No preview was sent; review the current draft in Repairs.");
+      throw Object.assign(new Error(API_ERROR_COPY.preview_draft_scope_changed), {
+        code: "preview_draft_scope_changed", stage: "workspace_check",
+      });
     }
     expected = previewExpectedContext({ allowReplay: true });
     const payload = await api(`/api/sessions/${state.session.session_id}/preview`, {
@@ -8480,6 +8490,14 @@ async function previewDraft(options = null) {
     }
     state.previewRuntime.status = previewStateForSession(normalized.session);
     state.previewRuntime.requestId = normalized.proposal.compiled_request?.source_request_id || null;
+    if (state.previewRuntime.status === "PREVIEW_INELIGIBLE"
+        && responseDiagnostic?.stage === "evaluation" && responseDiagnostic.id) {
+      state.previewRuntime.diagnostic = {
+        ...responseDiagnostic,
+        certificateId: normalized.proposal.certificate_id,
+        revision: normalized.session.revision,
+      };
+    }
     state.tripPreviewPlanId = null;
     state.acknowledgedPreviewPlanId = null;
     // The current draft's controls can refresh independently of the evaluated

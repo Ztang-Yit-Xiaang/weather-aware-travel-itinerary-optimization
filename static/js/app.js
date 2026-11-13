@@ -4254,11 +4254,21 @@ function bindEvents() {
   $("#map-select-button").addEventListener("click", () => setMapInteractionMode("select"));
   $("#map-edit-button").addEventListener("click", () => setMapInteractionMode("edit"));
   $("#map-interest-button").addEventListener("click", () => {
+    if (state.route === "/app/itinerary") {
+      navigate("/app/map");
+      if (state.interestRegions.enabled) {
+        $(".interest-region-panel")?.scrollIntoView({ block: "start" });
+        return;
+      }
+    }
     if (state.interestRegions.enabled) {
       resetInterestRegions({hide: true});
       renderMap();
     } else {
       void fetchInterestRegions();
+      if (window.matchMedia("(max-width: 820px)").matches) {
+        $(".interest-region-panel")?.scrollIntoView({ block: "start" });
+      }
     }
   });
   $("#close-map-edit").addEventListener("click", () => $("#map-edit-dialog").close());
@@ -4351,7 +4361,7 @@ function renderAll() {
   renderMetrics();
   copilot.update();
   updateActiveNav();
-  $("#map-interest-button").hidden = state.route !== "/app/map";
+  $("#map-interest-button").hidden = !["/app/map", "/app/itinerary"].includes(state.route);
   const editButton = $("#map-edit-button");
   const selectButton = $("#map-select-button");
   editButton.classList.toggle("is-active", state.mapInteraction.mode === "edit");
@@ -5412,7 +5422,9 @@ function mapInspectorHtml(geography, displayedPlan) {
       ? "Checking local road access…"
       : interaction.snapState === "failed"
         ? "The local road-access check failed. The raw pin remains non-executable and can be corrected or cancelled."
-      : preview
+        : preview?.validation_state === "snap_only"
+          ? `Road access found. ${snappedLabel ? `Nearest road point: ${escapeHtml(snappedLabel)}.` : ""} Choose “Consider a possible stop” to check an itinerary insertion.`
+        : preview
         ? `Road-check result: ${escapeHtml(preview.validation_state || preview.status || "returned")}. ${snappedLabel ? `Snapped to ${escapeHtml(snappedLabel)}.` : "No authoritative snapped coordinate was returned."}${preview.validation_state === "route_checked" ? " Affected route legs were checked by the local router." : " This point is not executable without affected route evidence."}`
         : "No road-access check has run. This point cannot become an executable draft.";
     const customForm = pin.intent === "possible_stop" ? `<label for="waypoint-role">Itinerary role</label>
@@ -5435,9 +5447,10 @@ function mapInspectorHtml(geography, displayedPlan) {
         ${customForm}`}
       ${preview.confirmation_required ? `<label class="snap-warning-ack"><input id="snap-warning-ack" type="checkbox" required> I reviewed the snap distance of ${escapeHtml(Math.round(Number(preview.snap_distance_m)))} m and want to continue.</label>` : ""}
       <button type="submit" class="primary" data-icon="${isRelocation ? "relocate" : "add-waypoint"}">${isRelocation ? "Confirm relocation" : pin.intent === "route_waypoint" ? "Add route waypoint" : "Add custom stop"}</button>
-    </form>` : `<p class="truth-note">${preview && preview.validation_state !== "route_checked"
-      ? "This preview is not executable. Select an exact route leg and check road access again."
-      : pin.intent === "explore_only" ? "Exploration never appends an itinerary operation."
+    </form>` : `<p class="truth-note">${pin.intent === "explore_only"
+      ? "Exploring a point leaves the itinerary unchanged."
+      : preview && preview.validation_state !== "route_checked"
+      ? "Select a validated route leg and check road access again."
       : "A route-checked server preview is required before confirmation."}</p>`;
     return `<section class="map-context-card exploratory" aria-labelledby="map-context-title">
       <span class="status-pill ${confirmable ? "route-checked" : "warning"}">${confirmable ? "Route-checked preview" : "Exploratory only"}</span>
@@ -5765,7 +5778,10 @@ function renderMap() {
   });
   $("#inspect-route-edit")?.addEventListener("click", openMapEdit);
   $("#exploratory-meaning")?.addEventListener("change", (event) => {
-    state.mapInteraction.exploratoryPin.intent = event.currentTarget.value;
+    state.mapInteraction.exploratoryPin = {
+      ...state.mapInteraction.exploratoryPin,
+      intent: event.currentTarget.value,
+    };
     state.mapInteraction.snapPreview = null;
     state.mapInteraction.snapState = "idle";
     renderMap();
@@ -6803,7 +6819,7 @@ function ineligiblePreviewResultHtml(proposal, { parent, certificate }) {
   return `<article class="evidence-card"><h3>Why the preview is ineligible</h3>
     <span class="status-pill warning">${escapeHtml(certificate.evaluation_status)}</span>
     ${findings ? `<ul>${findings}</ul>` : `<p>${escapeHtml(humanLabel(proposal.reason || "Unavailable"))}</p>`}
-    ${reference ? `<dl class="repair-impact"><dt>Preview reference</dt><dd><code>${escapeHtml(reference)}</code></dd></dl>` : ""}
+    ${reference ? `<dl class="repair-impact"><dt>Preview reference</dt><dd><code class="preview-reference">${escapeHtml(reference)}</code></dd></dl>` : ""}
     <p>The accepted itinerary remains active.</p></article>`;
 }
 
@@ -6824,7 +6840,7 @@ function renderEvidence() {
     const details = diagnostic ? `<dl class="repair-impact">
       <dt>Step</dt><dd>${escapeHtml(stages[diagnostic.stage] || "Preview")}</dd>
       <dt>Error code</dt><dd><code>${escapeHtml(diagnostic.code)}</code></dd>
-      ${diagnostic.id ? `<dt>Preview reference</dt><dd><code>${escapeHtml(diagnostic.id)}</code></dd>` : ""}
+      ${diagnostic.id ? `<dt>Preview reference</dt><dd><code class="preview-reference">${escapeHtml(diagnostic.id)}</code></dd>` : ""}
       </dl>` : "";
     $("#workspace-content").innerHTML = `<div class="route-view">
       <header class="route-heading"><div><span class="eyebrow">Draft evidence</span><h2>${title}</h2></div><button class="secondary" id="evidence-back">Back to trip</button></header>
@@ -7588,7 +7604,7 @@ async function fetchInterestRegions(options = {}) {
       const changed = state.session.session_id !== originSession || state.session.revision !== originRevision;
       state.interestRegions.status = changed ? "idle" : "failed";
       state.interestRegions.error = changed ? null : "Choose an available day or retry the interest region.";
-      renderMap();
+      if (state.route === "/app/map") renderMap();
     }
     return loaded;
   }
@@ -7653,14 +7669,14 @@ async function loadInterestRegions({refreshPlaces = false} = {}) {
     view.response = normalizeInterestResponse(raw, expected);
     view.status = "ready";
     view.selectedId = null;
-    renderMap();
+    if (state.route === "/app/map") renderMap();
     return true;
   } catch (error) {
     if (generation !== view.generation || !view.enabled) return false;
     view.status = "failed";
     view.error = controller.signal.aborted ? "Interest request cancelled or timed out. The accepted itinerary is unchanged." : error.message;
     view.response = null;
-    renderMap();
+    if (state.route === "/app/map") renderMap();
     return false;
   } finally {
     clearTimeout(timeout);
@@ -7975,7 +7991,13 @@ function createExploratoryPin(raw) {
   state.mapInteraction.snapPreview = null;
   state.mapInteraction.snapState = "idle";
   renderMap();
-  requestAnimationFrame(() => $("#exploratory-meaning")?.focus());
+  requestAnimationFrame(() => {
+    const meaning = $("#exploratory-meaning");
+    meaning?.focus({ preventScroll: true });
+    if (window.matchMedia("(max-width: 820px)").matches) {
+      meaning?.closest(".exploratory")?.scrollIntoView({ block: "start" });
+    }
+  });
 }
 
 function cancelExploratoryPin(render = true) {
@@ -8006,41 +8028,57 @@ function snapOperationIntent(intent, pin = state.mapInteraction.exploratoryPin) 
 
 async function requestExploratorySnapPreview() {
   const pin = state.mapInteraction.exploratoryPin;
-  if (!pin || state.mapInteraction.mode !== "edit") return;
+  if (!pin || state.mapInteraction.mode !== "edit" || state.mapInteraction.snapState === "checking") return;
+  const intent = snapOperationIntent(pin.intent);
+  const { session_id: sessionId, revision } = state.session;
+  const stillSelected = () => state.mapInteraction.exploratoryPin === pin && state.session.session_id === sessionId;
+  const isCurrent = () => stillSelected() && state.session.revision === revision;
+  const renderIfOnMap = () => {
+    if (["/app/map", "/app/itinerary"].includes(state.route)) renderMap();
+  };
   state.mapInteraction.snapState = "checking";
   renderMap();
   try {
-    const preview = await api(`/api/sessions/${state.session.session_id}/map/snap-preview`, {
+    const preview = await api(`/api/sessions/${sessionId}/map/snap-preview`, {
       method: "POST",
       body: {
-        expected_revision: state.session.revision,
+        expected_revision: revision,
         longitude: pin.longitude,
         latitude: pin.latitude,
-        operation_intent: snapOperationIntent(pin.intent),
+        operation_intent: intent,
         selected_day: pin.targetWaypointId ? pin.day : state.session.selected_day,
-        selected_route_segment_id: pin.targetWaypointId
+        selected_route_segment_id: intent === "explore_only" ? null : pin.targetWaypointId
           ? pin.insertion?.route_leg_id || null
           : state.session.selected_segment_id,
         travel_mode: "driving",
         ...(pin.targetWaypointId ? { target_waypoint_id: pin.targetWaypointId } : {}),
       },
     });
+    if (!isCurrent()) return;
     if (preview?.schema_version !== "map-snap-preview-v1" || preview.persisted !== false) {
       throw new Error("The road-access service returned an incompatible preview.");
     }
     state.mapInteraction.snapPreview = preview;
     state.mapInteraction.snapState = "checked";
-    renderMap();
+    renderIfOnMap();
     if (["rejected", "unavailable"].includes(preview.validation_state)) {
       toast("The point did not produce an executable road-access preview.", true);
     } else {
-      toast("Road access checked. This remains a non-persisted preview; no draft was appended.");
+      toast(preview.validation_state === "snap_only"
+        ? "Road access found. See the map point for next steps."
+        : "Road access checked. Review the map point to continue.");
     }
   } catch (error) {
+    if (!isCurrent()) return;
     state.mapInteraction.snapPreview = null;
     state.mapInteraction.snapState = "failed";
-    renderMap();
+    renderIfOnMap();
     toast(error.message, true);
+  } finally {
+    if (stillSelected() && state.mapInteraction.snapState === "checking") {
+      state.mapInteraction.snapState = "idle";
+      renderIfOnMap();
+    }
   }
 }
 

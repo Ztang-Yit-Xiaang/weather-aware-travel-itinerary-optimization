@@ -758,10 +758,7 @@ export function createCopilotController({
       actions.append(row);
     });
 
-    const evidence = button("evidence", "Review evidence", () => {
-      if (window.matchMedia?.("(max-width: 820px)")?.matches) close();
-      navigate("/app/evidence");
-    });
+    const evidence = button("evidence", "Review evidence", openEvidence);
     evidence.dataset.copilotAction = "evidence";
     // Evidence is read-only, including while a draft save or evaluation is pending.
     evidence.disabled = false;
@@ -1290,14 +1287,30 @@ export function createCopilotController({
     const dock = $("#copilot-dock");
     dock.hidden = false;
     updateDockSemantics();
-    $("#copilot-input").focus();
+    if (window.matchMedia("(max-width: 820px)").matches) $("#close-copilot").focus({ preventScroll: true });
+    else $("#copilot-input").focus();
   }
 
   function close() {
     const dock = $("#copilot-dock");
     dock.hidden = true;
     updateDockSemantics();
-    dockOpener?.focus();
+    dockOpener?.focus({ preventScroll: true });
+  }
+
+  function openEvidence() {
+    if (window.matchMedia?.("(max-width: 820px)")?.matches) close();
+    navigate("/app/evidence");
+  }
+
+  function updateDockViewport() {
+    const dock = $("#copilot-dock");
+    const viewport = window.visualViewport;
+    if (!viewport || dock.hidden || !window.matchMedia("(max-width: 820px)").matches) return;
+    const bottom = Math.max(0, window.innerHeight - viewport.height - viewport.offsetTop);
+    dock.style.setProperty("--copilot-viewport-top", `${Math.max(0, viewport.offsetTop)}px`);
+    dock.style.setProperty("--copilot-viewport-bottom", `${bottom}px`);
+    dock.classList.toggle("has-keyboard", window.innerHeight - viewport.height > 120);
   }
 
   function updateDockSemantics() {
@@ -1313,12 +1326,13 @@ export function createCopilotController({
         sibling.inert = true;
       }
       if (!dock.contains(document.activeElement) && !document.querySelector("dialog[open]")) {
-        $("#copilot-input").focus();
+        $("#close-copilot").focus({ preventScroll: true });
       }
     } else {
       for (const [sibling, inert] of dockBackgroundInert) sibling.inert = inert;
       dockBackgroundInert.clear();
     }
+    updateDockViewport();
   }
 
   function handleDockKeydown(event) {
@@ -1401,8 +1415,11 @@ export function createCopilotController({
   function bind() {
     $("#open-copilot").addEventListener("click", (event) => open(event.currentTarget));
     $("#close-copilot").addEventListener("click", close);
+    $("#copilot-open-evidence").addEventListener("click", openEvidence);
     window.addEventListener("keydown", handleDockKeydown, true);
     window.addEventListener("resize", updateDockSemantics);
+    window.visualViewport?.addEventListener("resize", updateDockViewport);
+    window.visualViewport?.addEventListener("scroll", updateDockViewport);
     $("#copilot-form").addEventListener("submit", submit);
     $("#copilot-input").addEventListener("input", resizeInput);
     $("#copilot-input").addEventListener("keydown", (event) => {

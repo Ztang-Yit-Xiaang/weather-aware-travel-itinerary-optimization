@@ -2866,10 +2866,11 @@ function draftStopOrderByDay(draft) {
   for (const [day, ids] of days) days.set(day, ids.filter(id => !targets.has(id)));
   for (const operation of moves) days.get(operation.parameters.day).push(operation.target);
   for (const operation of draft) {
-    if (operation.type === "replace_nearby") {
+    if (operation.type === "replace_nearby" || operation.type === "remove_stop") {
       const order = [...days.values()].find(ids => ids.includes(operation.target));
       if (!order) return null;
-      order.splice(order.indexOf(operation.target), 1, operation.parameters.candidate_id);
+      const replacement = operation.type === "replace_nearby" ? [operation.parameters.candidate_id] : [];
+      order.splice(order.indexOf(operation.target), 1, ...replacement);
     } else if (operation.type === "add_candidate") {
       const order = days.get(operation.parameters.day);
       if (!order || [...days.values()].some(ids => ids.includes(operation.target))) return null;
@@ -2952,10 +2953,11 @@ function normalizePreviewGeography(value, proposal, routeValidation, draft) {
   if (!parent || parent.plan_id !== proposal.parent_plan_id
       || parent.content_hash !== proposal.parent_plan_content_hash) return null;
   const moved = draft.some(operation => ["set_stop_day", "move_day"].includes(operation.type));
+  const removing = draft.some(operation => operation.type === "remove_stop");
   const endpoints = draftEndpointRoles(draft);
   if (!endpoints) return null;
   const structural = proposal.execution_mode !== "trip_replan_independent_evaluation"
-    && (moved || endpointRoleEdit(draft) || endpoints.size > 0);
+    && (moved || removing || endpointRoleEdit(draft) || endpoints.size > 0);
   const assessment = state.workspace?.plan_assessments?.[state.session?.accepted_plan_id];
   const acceptedRoute = assessment?.plan_id === proposal.parent_plan_id
     && assessment.plan_content_hash === proposal.parent_plan_content_hash
@@ -3140,6 +3142,11 @@ function normalizeRuntimeExecution(value, proposal) {
   if (!constraints || !Array.isArray(constraints.must_include)
       || !Array.isArray(constraints.must_delete)) return null;
   for (const operation of proposal.compiled_request.operations) {
+    if (operation.type === "remove_stop" && (constraints.remove_only !== true
+        || !exactStringArray(constraints.must_delete, [operation.target])
+        || (value.child_plan !== null && (value.child_plan.sequence?.includes(operation.target)
+          || !exactStringArray(value.plan_diff?.deleted_stops?.map(row => row.stop_id), [operation.target])
+          || value.plan_diff?.added_stops?.length !== 0 || value.plan_diff?.lodging_changes?.length !== 0)))) return null;
     if (operation.type === "replace_nearby"
         && (!constraints.must_delete.includes(operation.target)
           || !constraints.must_include.includes(operation.parameters.candidate_id))) return null;
@@ -3858,6 +3865,8 @@ const API_ERROR_COPY = {
   draft_duplicate_operation: "That change is already in the draft.",
   stale_session_revision: "The workspace changed in another action. Refresh the page and try again.",
   invalid_draft_target: "Select an editable stop from the accepted plan, not a repair-preview marker.",
+  stop_removal_protected: "This stop is a protected commitment, lodging, a trip endpoint, or the only remaining stop.",
+  stop_removal_requires_separate_draft: "Preview or undo the current draft before skipping a stop.",
   routing_unavailable: "The local routing service is unavailable. The exploratory point remains non-executable.",
   routing_http_error: "The local routing service rejected the road-access check. No draft was created.",
   routing_response_invalid: "The local routing service returned invalid evidence. No draft was created.",
@@ -5192,6 +5201,7 @@ function operationDisplayName(type) {
     replan_trip: "Trip replan",
     route_feedback: "Route feedback",
     replace_nearby: "Replacement",
+    remove_stop: "Skipped stop",
     add_candidate: "Added candidate",
     add_custom_waypoint: "Custom stop",
     add_route_waypoint: "Route waypoint",

@@ -21,6 +21,7 @@ const EDIT_INTENT_TYPES = new Set([
   "route_feedback",
   "replace_nearby",
   "add_candidate",
+  "remove_stop",
 ]);
 
 const PARENT_TARGET_INTENT_TYPES = new Set([
@@ -29,6 +30,7 @@ const PARENT_TARGET_INTENT_TYPES = new Set([
   "lock_stop",
   "mark_flexible",
   "move_day",
+  "remove_stop",
 ]);
 
 export function copilotDraftability(intent, workspace) {
@@ -98,6 +100,9 @@ export function copilotTurnIsCurrent(turn, session) {
 export function copilotOperationForIntent(intent, selectedStopId = null, selectedDay = null) {
   if (intent?.type === "replan_trip") return { type: "replan_trip", target: "trip", parameters: intent.parameters };
   const target = intent?.target_stop_id || selectedStopId;
+  if (intent?.type === "remove_stop") {
+    return intent.target_stop_id ? {type: intent.type, target: intent.target_stop_id, parameters: {}} : null;
+  }
   if (TYPED_EDIT_INTENT_TYPES.has(intent?.type)) {
     const parameters = typedEditParameters(intent);
     return target && parameters ? { type: intent.type, target, parameters } : null;
@@ -562,6 +567,9 @@ export function createCopilotController({
   }
 
   function intentDescription(intent) {
+    if (intent.type === "remove_stop") {
+      return `Skip ${stopName(intent.target_stop_id)} and check the road between the remaining stops.`;
+    }
     if (intent.type === "replace_nearby") {
       return `Replace ${stopName(intent.target_stop_id)} with ${candidateName(intent.candidate_id)}.`;
     }

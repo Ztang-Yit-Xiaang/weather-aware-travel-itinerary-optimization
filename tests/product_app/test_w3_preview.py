@@ -70,7 +70,11 @@ def test_exact_registered_replacement_compiles_to_its_own_evaluated_child(
     assert compiled.diff["child_plan_id"] == expected_plan_id
 
 
-def test_inconsistent_historical_replacement_is_rejected_before_preview() -> None:
+def test_regenerated_recommended_replacement_is_consistent_and_previews() -> None:
+    # The regenerated demo v2 package (cert_22c4b9fb2dcbbe54) records Bixby's
+    # stop order consistently with its day order, so the registered replacement
+    # matches the pipeline. A damaged frozen artifact is still rejected; see
+    # the damaged-certificate test below.
     package, compiler = package_and_compiler()
     frozen = package.evidence_bundles[RECOMMENDED_ID].child_plan
     stop = next(
@@ -79,13 +83,12 @@ def test_inconsistent_historical_replacement_is_rejected_before_preview() -> Non
         if (row.get("poi_id") or row.get("stop_id")) == "bixby_creek_bridge_viewpoint"
     )
     day = next(row for row in frozen["ordered_days"] if row["day"] == stop["day"])
-    assert stop["stop_order"] == 2
-    assert day["stop_ids"].index("bixby_creek_bridge_viewpoint") + 1 == 1
-    with pytest.raises(WorkspaceError, match="^draft_pipeline_artifact_mismatch$"):
-        compiler.compile(
-            [operation("replace_nearby", "golden_gate_bridge", {"candidate_id": "bixby_creek_bridge_viewpoint"})],
-            accepted_plan_id=PARENT_ID,
-        )
+    assert stop["stop_order"] == day["stop_ids"].index("bixby_creek_bridge_viewpoint") + 1
+    compiled = compiler.compile(
+        [operation("replace_nearby", "golden_gate_bridge", {"candidate_id": "bixby_creek_bridge_viewpoint"})],
+        accepted_plan_id=PARENT_ID,
+    )
+    assert compiled.state == "eligible"
 
 
 def test_capabilities_are_explicit_and_keep_parent_and_candidate_inventories_separate() -> None:
@@ -169,8 +172,8 @@ def test_semantically_identical_drafts_are_idempotent_across_session_metadata() 
         ([operation("route_feedback", "selected_route", {"preference": "reduce_driving"})], "eligible", None),
         (
             [operation("replace_nearby", "golden_gate_bridge", {"candidate_id": "bixby_creek_bridge_viewpoint"})],
-            "rejected",
-            "draft_pipeline_artifact_mismatch",
+            "eligible",
+            None,
         ),
         ([operation("add_candidate", "bixby_creek_bridge_viewpoint", {"day": 7})], "eligible", None),
     ],

@@ -807,11 +807,17 @@ class PlanEvaluator:
     ) -> dict[str, Any] | None:
         # A trip day without stops is still driven from its start to its end
         # anchor, so its leg and drive time are checked like any other day.
-        day_sequences = dict(sorted({
-            **{day: () for day in _empty_trip_days(plan, day_sequences, self.config)},
-            **day_sequences,
-        }.items()))
-        route_sequences = tuple(_route_sequence(day, sequence, self.config) for day, sequence in sorted(day_sequences.items()))
+        day_sequences = dict(
+            sorted(
+                {
+                    **{day: () for day in _empty_trip_days(plan, day_sequences, self.config)},
+                    **day_sequences,
+                }.items()
+            )
+        )
+        route_sequences = tuple(
+            _route_sequence(day, sequence, self.config) for day, sequence in sorted(day_sequences.items())
+        )
         if route_matrix is None:
             failures.append(
                 _failure(

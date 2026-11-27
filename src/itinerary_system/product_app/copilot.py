@@ -124,7 +124,8 @@ _RATIONALE_SENTENCE = re.compile(
 # A reason sentence that states a condition is not just a reason: keep it so the
 # condition guard below still sees it.
 _RATIONALE_CONDITION = re.compile(
-    r"\b(?:if|unless|when|whenever|provided|as long as|in case|assuming|once|only)\b", re.IGNORECASE,
+    r"\b(?:if|unless|when|whenever|provided|as long as|in case|assuming|once|only)\b",
+    re.IGNORECASE,
 )
 _NEGATED_REMOVAL_THEN_EDIT = re.compile(
     r"\s*(?:i\s+)?(?:do\s+not|don['’]?t|dont)\s+(?:want\s+to\s+)?(?:remove|delete|drop|skip|exclude)\s+"
@@ -198,18 +199,29 @@ def _bounded_chinese_edit_request(context: CopilotContextV1, message: str) -> Co
     clauses = [part.strip() for part in re.split(r"[，,；;。.!?]+|並且|并且|而且|以及|並|并|且", text) if part.strip()]
     # A clause with no place, no edit word and no condition only explains the
     # request ("我們更喜歡海邊的自然保護區"); drop it when another clause edits.
-    explained = [clause for clause in clauses if not (
-        "COPILOTZHPLACE" not in clause
-        and not re.search(r"換|换|替|停留|改|刪|删|移|加|安排|調整|调整|保留|取消|去掉|不要|別|别|如果|若|假如|要是|除非|只要|一旦|的話|的话", clause)
-    )]
+    explained = [
+        clause
+        for clause in clauses
+        if not (
+            "COPILOTZHPLACE" not in clause
+            and not re.search(
+                r"換|换|替|停留|改|刪|删|移|加|安排|調整|调整|保留|取消|去掉|不要|別|别|如果|若|假如|要是|除非|只要|一旦|的話|的话",
+                clause,
+            )
+        )
+    ]
     if explained and len(explained) < len(clauses):
         clauses = explained
     normalized = []
     for clause in clauses:
         clause = " ".join(clause.split())
         # "第5天的 X 換成 Y" / "Day 5 的 X": the day label qualifies the stop.
-        clause = re.sub(r"^((?:請|请)?\s*(?:把|將|将)?)\s*(?:第\s*\d+\s*天|day\s*\d+)\s*(?:的)?\s*(?=COPILOTZHPLACE)",
-                        r"\1", clause, flags=re.I)
+        clause = re.sub(
+            r"^((?:請|请)?\s*(?:把|將|将)?)\s*(?:第\s*\d+\s*天|day\s*\d+)\s*(?:的)?\s*(?=COPILOTZHPLACE)",
+            r"\1",
+            clause,
+            flags=re.I,
+        )
         replacement = re.fullmatch(
             r"(?:請|请)?\s*(?:把|將|将)?\s*(COPILOTZHPLACE\d+)\s*"
             r"(?:換成|换成|替換(?:為|成)|替换(?:为|成))\s*(COPILOTZHPLACE\d+)",
@@ -318,7 +330,9 @@ def request_semantic_guard(
         token = f"COPILOTPLACE{index}"
         place_names[token.lower()] = str(place["name"])
         for name in sorted((str(place["name"]), *place["aliases"]), key=len, reverse=True):
-            instruction_text = re.sub(r"(?<!\w)" + re.escape(name) + r"(?!\w)", token, instruction_text, flags=re.IGNORECASE)
+            instruction_text = re.sub(
+                r"(?<!\w)" + re.escape(name) + r"(?!\w)", token, instruction_text, flags=re.IGNORECASE
+            )
     # "I don't want to remove X, just make it shorter": the negated removal only
     # names the stop that the real edit is about. Keep the positive clause and
     # point its pronoun at that stop, so the negation does not refuse the edit.
@@ -361,10 +375,16 @@ def request_semantic_guard(
     # "visit time", "our COPILOTPLACE0 visit": a noun naming the stop's slot,
     # not a second "visit" action.
     instruction_text = re.sub(
-        r"\bvisit(?=\s+(?:time|times|duration|length|window|slot|hours?)\b)", "stopslot", instruction_text, flags=re.I,
+        r"\bvisit(?=\s+(?:time|times|duration|length|window|slot|hours?)\b)",
+        "stopslot",
+        instruction_text,
+        flags=re.I,
     )
     instruction_text = re.sub(
-        r"\b(our|the|my|your|this|that|copilotplace\d+)\s+visit\b", r"\1 stopslot", instruction_text, flags=re.I,
+        r"\b(our|the|my|your|this|that|copilotplace\d+)\s+visit\b",
+        r"\1 stopslot",
+        instruction_text,
+        flags=re.I,
     )
     # A complete descriptive sentence ("Bixby is too risky in this weather.",
     # "Day 5 has too much driving.") explains the request; it contains no edit
@@ -372,9 +392,14 @@ def request_semantic_guard(
     # the edit, so a bare complaint still reaches the normal handling.
     sentences = re.split(r"(?<=[.!?])\s+", instruction_text.strip())
     if len(sentences) > 1:
-        kept = [sentence for sentence in sentences if not _RATIONALE_SENTENCE.fullmatch(sentence)
-                or _EDIT_ACTION.search(sentence) or _NEGATED_EDIT.search(sentence)
-                or _RATIONALE_CONDITION.search(sentence)]
+        kept = [
+            sentence
+            for sentence in sentences
+            if not _RATIONALE_SENTENCE.fullmatch(sentence)
+            or _EDIT_ACTION.search(sentence)
+            or _NEGATED_EDIT.search(sentence)
+            or _RATIONALE_CONDITION.search(sentence)
+        ]
         if kept and len(kept) < len(sentences) and any(_EDIT_ACTION.search(sentence) for sentence in kept):
             instruction_text = " ".join(kept)
     actions = [match.group().lower() for match in _EDIT_ACTION.finditer(instruction_text)]
@@ -527,10 +552,13 @@ def request_semantic_guard(
                     )
                     if resolved is not None:
                         return resolved
-        question = ("Relative ordering needs two different accepted stops on the same accepted day. "
-                    "Please confirm those stops and their accepted day; no part was staged or changed.")
-    elif ((len(set(re.findall(r"copilotplace\d+", instruction_text, re.IGNORECASE))) or len(places))
-          > (2 if is_stop_replacement_request(text) or _INSTEAD_OF.search(text) else 1) and actions):
+        question = (
+            "Relative ordering needs two different accepted stops on the same accepted day. "
+            "Please confirm those stops and their accepted day; no part was staged or changed."
+        )
+    elif (len(set(re.findall(r"copilotplace\d+", instruction_text, re.IGNORECASE))) or len(places)) > (
+        2 if is_stop_replacement_request(text) or _INSTEAD_OF.search(text) else 1
+    ) and actions:
         # Count places in the instruction itself: a place named only in a
         # dropped reason sentence ("sunset over Los Angeles") is not a target.
         question = "Your request names multiple places. Which single stop and edit should I handle first?"
@@ -580,14 +608,25 @@ def _compound_proposal(context: CopilotContextV2, clauses: tuple[str, ...]) -> C
         for intent in part.intents:
             # A move names its destination day, not the stop's accepted day.
             if days and intent.target_stop_id is not None and intent.type != "move_day":
-                accepted_day = next((row["day"] for row in context.capabilities["stop_positions"]
-                                     if row["stop_id"] == intent.target_stop_id), None)
+                accepted_day = next(
+                    (
+                        row["day"]
+                        for row in context.capabilities["stop_positions"]
+                        if row["stop_id"] == intent.target_stop_id
+                    ),
+                    None,
+                )
                 if days != {accepted_day}:
-                    question = (f"Change {index} names a different day, but this stop is accepted on Day {accepted_day}. "
-                                "Should I keep its accepted day, or move the stop to the day you named? "
-                                "No part of the combined request was staged or changed.")
-                    return CopilotInterpretationV1(state="clarification_required", assistant_message=question,
-                        intents=(CopilotIntentV1(type="request_clarification", clarification_question=question),))
+                    question = (
+                        f"Change {index} names a different day, but this stop is accepted on Day {accepted_day}. "
+                        "Should I keep its accepted day, or move the stop to the day you named? "
+                        "No part of the combined request was staged or changed."
+                    )
+                    return CopilotInterpretationV1(
+                        state="clarification_required",
+                        assistant_message=question,
+                        intents=(CopilotIntentV1(type="request_clarification", clarification_question=question),),
+                    )
         parts.append(part)
     intents = tuple(
         CopilotIntentV2(**{**intent.as_dict(), "parameters": getattr(intent, "parameters", None)})
@@ -1216,12 +1255,10 @@ def _only_labels_a_day(place: dict[str, object], message: str) -> bool:
         if _normalized_place_text(term)
         for match in re.finditer(r"(?<!\w)" + re.escape(_normalized_place_text(term)) + r"(?!\w)", padded)
     ]
-    return bool(found) and all(re.match(r"\s+(?:day|days|leg)\b", padded[match.end():]) for match in found)
+    return bool(found) and all(re.match(r"\s+(?:day|days|leg)\b", padded[match.end() :]) for match in found)
 
 
-def known_place_clarification(
-    context: CopilotContextV1, message: str
-) -> tuple[str, str] | None:
+def known_place_clarification(context: CopilotContextV1, message: str) -> tuple[str, str] | None:
     """Return safe local copy for one recognized place without claiming feasibility."""
 
     # "the Big Sur day" uses a place name as a day label, not as a place request.

@@ -67,12 +67,15 @@ def local_adapter(request):
     assert calls == []
 
 
-@pytest.mark.parametrize("message", (
-    LONG_REPLACEMENT.replace("Day 5", "Day 4"),
-    "Add Hearst Castle on Day 5 to this ten-day trip.",
-    "請把 Hearst Castle 安排在第5天，旅行總共10天。",
-    "Replace Bixby Creek Bridge with Pfeiffer Big Sur State Park and plan a ten-day trip.",
-))
+@pytest.mark.parametrize(
+    "message",
+    (
+        LONG_REPLACEMENT.replace("Day 5", "Day 4"),
+        "Add Hearst Castle on Day 5 to this ten-day trip.",
+        "請把 Hearst Castle 安排在第5天，旅行總共10天。",
+        "Replace Bixby Creek Bridge with Pfeiffer Big Sur State Park and plan a ten-day trip.",
+    ),
+)
 def test_local_day_or_edit_cannot_disappear_inside_a_replan(context, local_adapter, message):
     before = deepcopy(context.as_dict())
     result = asyncio.run(local_adapter.interpret(context=context, history=(), message=message))

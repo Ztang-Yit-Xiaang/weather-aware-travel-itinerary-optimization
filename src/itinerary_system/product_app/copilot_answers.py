@@ -162,8 +162,14 @@ def _load_rates(repository_root: Path | None) -> dict[str, float]:
         budget = (yaml.safe_load(path.read_text(encoding="utf-8")) or {}).get("budget") or {}
     except Exception:  # A missing or unreadable config keeps the documented defaults.
         return rates
-    for key in ("user_budget", "food_cost_per_day", "attraction_cost_per_day", "local_transport_buffer_per_day",
-                "lodging_cost_per_night", "fuel_cost_per_mile"):
+    for key in (
+        "user_budget",
+        "food_cost_per_day",
+        "attraction_cost_per_day",
+        "local_transport_buffer_per_day",
+        "lodging_cost_per_night",
+        "fuel_cost_per_mile",
+    ):
         value = budget.get(key)
         if isinstance(value, (int, float)) and not isinstance(value, bool) and value >= 0:
             rates[key] = float(value)
@@ -209,33 +215,46 @@ def build_trip_facts(
         total_distance_m += distance_m
         visit = sum(float(row.get("visit_duration_minutes") or 0) for row in day_stops)
         lodging = (timeline.get(day) or {}).get("lodging")
-        days.append({
-            "day": day,
-            "stops": [{
-                "stop_id": row.get("stop_id"),
-                "name": row.get("name"),
-                "city": row.get("city"),
-                "order": row.get("stop_order"),
-                "visit_minutes": row.get("visit_duration_minutes"),
-                "itinerary_role": row.get("itinerary_role"),
-                "weather_risk": (row.get("inspector_metadata") or {}).get("weather_risk"),
-                "weather_feasible": (row.get("inspector_metadata") or {}).get("weather_feasible"),
-                "sub_destinations": [
-                    {"name": place.get("attraction_name"), "visit_minutes": place.get("visit_duration_minutes"),
-                     "intro": ((place.get("guide") or {}).get("intro") or "")[:240]}
-                    for place in row.get("destination_places") or [] if isinstance(place, dict)
-                ][:6],
-            } for row in day_stops],
-            "drive_minutes": round(drive_s / 60.0),
-            "drive_miles": round(distance_m / 1609.344),
-            "drive_legs": [{
-                "from": _humanize(row.get("origin_id") or ""), "to": _humanize(row.get("destination_id") or ""),
-                "minutes": round(float(row.get("duration_s") or 0) / 60.0),
-                "miles": round(float(row.get("distance_m") or 0) / 1609.344),
-            } for row in day_legs],
-            "visit_minutes": round(visit),
-            "lodging": _humanize(lodging) if lodging else None,
-        })
+        days.append(
+            {
+                "day": day,
+                "stops": [
+                    {
+                        "stop_id": row.get("stop_id"),
+                        "name": row.get("name"),
+                        "city": row.get("city"),
+                        "order": row.get("stop_order"),
+                        "visit_minutes": row.get("visit_duration_minutes"),
+                        "itinerary_role": row.get("itinerary_role"),
+                        "weather_risk": (row.get("inspector_metadata") or {}).get("weather_risk"),
+                        "weather_feasible": (row.get("inspector_metadata") or {}).get("weather_feasible"),
+                        "sub_destinations": [
+                            {
+                                "name": place.get("attraction_name"),
+                                "visit_minutes": place.get("visit_duration_minutes"),
+                                "intro": ((place.get("guide") or {}).get("intro") or "")[:240],
+                            }
+                            for place in row.get("destination_places") or []
+                            if isinstance(place, dict)
+                        ][:6],
+                    }
+                    for row in day_stops
+                ],
+                "drive_minutes": round(drive_s / 60.0),
+                "drive_miles": round(distance_m / 1609.344),
+                "drive_legs": [
+                    {
+                        "from": _humanize(row.get("origin_id") or ""),
+                        "to": _humanize(row.get("destination_id") or ""),
+                        "minutes": round(float(row.get("duration_s") or 0) / 60.0),
+                        "miles": round(float(row.get("distance_m") or 0) / 1609.344),
+                    }
+                    for row in day_legs
+                ],
+                "visit_minutes": round(visit),
+                "lodging": _humanize(lodging) if lodging else None,
+            }
+        )
     rates = _load_rates(repository_root)
     trip_days = len(context.allowed_days)
     nights = max(0, trip_days - 1)
@@ -250,11 +269,15 @@ def build_trip_facts(
     budget["total"] = sum(budget.values())
     names = {str(row["place_id"]): str(row["name"]) for row in context.known_places}
     capabilities = getattr(context, "capabilities", None) or {}
-    candidates = [{
-        "candidate_id": row.get("candidate_id"),
-        "name": names.get(str(row.get("candidate_id")), _humanize(row.get("candidate_id") or "")),
-        "can_replace": names.get(str(row.get("replaces_stop_id")), row.get("replaces_stop_id")),
-    } for row in capabilities.get("candidate_replacements") or [] if isinstance(row, dict)]
+    candidates = [
+        {
+            "candidate_id": row.get("candidate_id"),
+            "name": names.get(str(row.get("candidate_id")), _humanize(row.get("candidate_id") or "")),
+            "can_replace": names.get(str(row.get("replaces_stop_id")), row.get("replaces_stop_id")),
+        }
+        for row in capabilities.get("candidate_replacements") or []
+        if isinstance(row, dict)
+    ]
     facts: dict[str, Any] = {
         "trip": {
             "label": (view.get("trip") or {}).get("label") or (view.get("run") or {}).get("label"),
@@ -284,8 +307,14 @@ def build_trip_facts(
     }
     if proposal:
         facts["current_preview"] = {
-            key: proposal.get(key) for key in ("status", "comparison_eligibility", "route_total_minutes",
-                                               "weighted_edit_cost", "preservation_ratio")
+            key: proposal.get(key)
+            for key in (
+                "status",
+                "comparison_eligibility",
+                "route_total_minutes",
+                "weighted_edit_cost",
+                "preservation_ratio",
+            )
             if proposal.get(key) is not None
         }
     return facts
@@ -297,7 +326,9 @@ def _highlights(context: CopilotContextV1, stop_ids: list[str], day_ids: list[in
     return CopilotHighlightsV1(day_ids=days, stop_ids=stops)
 
 
-def answered(context: CopilotContextV1, text: str, *, stop_ids: list[str] = (), day_ids: list[int] = ()) -> CopilotInterpretationV1:
+def answered(
+    context: CopilotContextV1, text: str, *, stop_ids: list[str] = (), day_ids: list[int] = ()
+) -> CopilotInterpretationV1:
     from .copilot import _FALSE_EXECUTION_CLAIMS
 
     body = text.strip()[:MAX_ANSWER_CHARACTERS] or "I could not find that in the current trip."
@@ -329,8 +360,9 @@ def local_answer(context: CopilotContextV1, facts: dict[str, Any], message: str)
     days = facts["days"]
     budget = facts["budget_estimate_usd"]
     # "spend" alone is usually time ("how long do we spend at Bixby"); money needs a money word.
-    if (re.search(r"\b(?:budget|cost|costs|price|expensive|money|afford|dollars?|usd)\b|\$", text)
-            or re.search(r"\bhow\s+much\b(?:(?!\b(?:time|hours?|minutes?|driving|at)\b).)*\bspend\b", text)):
+    if re.search(r"\b(?:budget|cost|costs|price|expensive|money|afford|dollars?|usd)\b|\$", text) or re.search(
+        r"\bhow\s+much\b(?:(?!\b(?:time|hours?|minutes?|driving|at)\b).)*\bspend\b", text
+    ):
         lines = [
             f"Estimated total: about ${budget['total']:,} for {facts['trip']['days']} days "
             f"(your budget setting is ${budget['user_budget']:,}).",
@@ -339,43 +371,89 @@ def local_answer(context: CopilotContextV1, facts: dict[str, Any], message: str)
             f"These are planning estimates: {budget['assumptions']}.",
         ]
         return answered(context, "\n".join(lines))
-    if re.search(r"\b(?:most|longest|least|shortest|total|how\s+much|how\s+long)\b.*\b(?:driv|drive|road|car)", text) \
-            or re.search(r"\bdriv\w*\b.*\b(?:most|longest|least|shortest|total)\b", text):
+    if re.search(
+        r"\b(?:most|longest|least|shortest|total|how\s+much|how\s+long)\b.*\b(?:driv|drive|road|car)", text
+    ) or re.search(r"\bdriv\w*\b.*\b(?:most|longest|least|shortest|total)\b", text):
         ranked = sorted(days, key=lambda row: row["drive_minutes"], reverse=True)
         if re.search(r"\b(?:least|shortest)\b", text):
             row = ranked[-1]
-            return answered(context, f"Day {row['day']} has the least driving: {_fmt_minutes(row['drive_minutes'])} "
-                                     f"({row['drive_miles']} mi).", day_ids=[row["day"]])
+            return answered(
+                context,
+                f"Day {row['day']} has the least driving: {_fmt_minutes(row['drive_minutes'])} "
+                f"({row['drive_miles']} mi).",
+                day_ids=[row["day"]],
+            )
         if re.search(r"\btotal\b", text):
-            return answered(context, f"Total recorded driving is {_fmt_minutes(facts['trip']['total_drive_minutes'])} "
-                                     f"over {facts['trip']['total_drive_miles']} mi across {facts['trip']['days']} days.")
+            return answered(
+                context,
+                f"Total recorded driving is {_fmt_minutes(facts['trip']['total_drive_minutes'])} "
+                f"over {facts['trip']['total_drive_miles']} mi across {facts['trip']['days']} days.",
+            )
         top = ranked[0]
         rest = ", ".join(f"Day {row['day']} {_fmt_minutes(row['drive_minutes'])}" for row in ranked[1:4])
-        return answered(context, f"Day {top['day']} has the most driving: {_fmt_minutes(top['drive_minutes'])} "
-                                 f"({top['drive_miles']} mi). Next: {rest}.", day_ids=[top["day"]])
+        return answered(
+            context,
+            f"Day {top['day']} has the most driving: {_fmt_minutes(top['drive_minutes'])} "
+            f"({top['drive_miles']} mi). Next: {rest}.",
+            day_ids=[top["day"]],
+        )
     match = _DAY.search(text)
     day = int(match.group(1)) if match else None
     if day is None and re.search(r"\b(?:selected|this|current)\s+day\b", text):
         day = context.selected_day
     if day in context.allowed_days:
         row = next(item for item in days if item["day"] == day)
-        names = ", ".join(f"{stop['name']} ({_fmt_minutes(stop['visit_minutes'] or 0)})" for stop in row["stops"]) or "no stops"
+        names = (
+            ", ".join(f"{stop['name']} ({_fmt_minutes(stop['visit_minutes'] or 0)})" for stop in row["stops"])
+            or "no stops"
+        )
         lodging = f" Overnight: {row['lodging']}." if row["lodging"] else ""
-        return answered(context, f"Day {row['day']}: {names}. Driving {_fmt_minutes(row['drive_minutes'])} "
-                                 f"({row['drive_miles']} mi).{lodging}", day_ids=[row["day"]],
-                        stop_ids=[stop["stop_id"] for stop in row["stops"]])
+        return answered(
+            context,
+            f"Day {row['day']}: {names}. Driving {_fmt_minutes(row['drive_minutes'])} "
+            f"({row['drive_miles']} mi).{lodging}",
+            day_ids=[row["day"]],
+            stop_ids=[stop["stop_id"] for stop in row["stops"]],
+        )
     words = set(re.findall(r"[a-z0-9']+", text))
     # A shared generic first word ("point", "santa") must not pick a stop.
-    generic = {"the", "a", "an", "point", "state", "park", "national", "bridge", "university", "main", "museum",
-               "hotel", "inn", "beach", "creek", "viewpoint", "of", "san", "santa", "los", "big", "old", "new"}
+    generic = {
+        "the",
+        "a",
+        "an",
+        "point",
+        "state",
+        "park",
+        "national",
+        "bridge",
+        "university",
+        "main",
+        "museum",
+        "hotel",
+        "inn",
+        "beach",
+        "creek",
+        "viewpoint",
+        "of",
+        "san",
+        "santa",
+        "los",
+        "big",
+        "old",
+        "new",
+    }
     for row in days:
         for stop in row["stops"]:
             name = str(stop["name"] or "").lower()
             first = (re.findall(r"[a-z0-9']+", name) or [""])[0]
             if name and (name in text or (first not in generic and first in words)):
-                return answered(context, f"{stop['name']} ({stop['city']}) is on Day {row['day']}, stop {stop['order']}, "
-                                         f"with {_fmt_minutes(stop['visit_minutes'] or 0)} planned there.",
-                                stop_ids=[stop["stop_id"]], day_ids=[row["day"]])
+                return answered(
+                    context,
+                    f"{stop['name']} ({stop['city']}) is on Day {row['day']}, stop {stop['order']}, "
+                    f"with {_fmt_minutes(stop['visit_minutes'] or 0)} planned there.",
+                    stop_ids=[stop["stop_id"]],
+                    day_ids=[row["day"]],
+                )
     return None
 
 
@@ -446,7 +524,9 @@ async def answer_plan_question(
     if parsed.kind == "off_topic":
         return CopilotInterpretationV1(
             state="unsupported",
-            assistant_message=(parsed.answer.strip()[:600] or "I can help with this trip's stops, driving, timing and budget."),
+            assistant_message=(
+                parsed.answer.strip()[:600] or "I can help with this trip's stops, driving, timing and budget."
+            ),
             intents=(CopilotIntentV1(type="unsupported_request"),),
         )
     return answered(context, parsed.answer, stop_ids=parsed.stop_ids, day_ids=parsed.day_ids)

@@ -333,10 +333,14 @@ def test_fake_provider_receives_v2_memory_and_exact_capability_context(runtime):
 
 
 def test_fake_provider_cannot_override_disabled_capability(runtime):
-    client = FakeClient({
-        "schema_version": "copilot-interpretation-v1", "state": "proposal_ready", "assistant_message": "Do this edit.",
-        "intents": [{"type": "mark_flexible", "target_stop_id": "golden_gate_bridge"}],
-    })
+    client = FakeClient(
+        {
+            "schema_version": "copilot-interpretation-v1",
+            "state": "proposal_ready",
+            "assistant_message": "Do this edit.",
+            "intents": [{"type": "mark_flexible", "target_stop_id": "golden_gate_bridge"}],
+        }
+    )
     runtime.service.copilot = OpenAICopilotAdapter(model="fake-model", api_key="unused", client=client)
     response = runtime.send("Help me decide.")
     assert len(client.calls) == 1

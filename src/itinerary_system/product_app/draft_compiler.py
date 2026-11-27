@@ -277,14 +277,18 @@ class FrozenDraftCompiler:
             # Lock and cross-day moves run through deterministic repair together
             # with keep, replacement and addition edits, not with direct edits.
             repair_operations = sorted(
-                name for name in ("keep_stop", "lock_stop", "move_day", "replace_nearby", "add_candidate")
+                name
+                for name in ("keep_stop", "lock_stop", "move_day", "replace_nearby", "add_candidate")
                 if capabilities["operations"].get(name, {}).get("preview_executable") is True
             )
             if {"lock_stop", "move_day"} & set(repair_operations):
-                capabilities["executable_combinations"].append({
-                    "operations": repair_operations, "cardinality": 32,
-                    "description": "Lock, cross-day move, keep, replacement and addition edits run together through deterministic repair and independent evaluation.",
-                })
+                capabilities["executable_combinations"].append(
+                    {
+                        "operations": repair_operations,
+                        "cardinality": 32,
+                        "description": "Lock, cross-day move, keep, replacement and addition edits run together through deterministic repair and independent evaluation.",
+                    }
+                )
         if self._coherent_product and self.planning_state_root is not None:
             capabilities["operations"]["replan_trip"] = {
                 "enabled": True,
@@ -788,7 +792,8 @@ class FrozenDraftCompiler:
         # off rather than imply an effect. set_stop_day stays a draft-only
         # typed edit until it shares the move path.
         return self._coherent_product and operation_type in {
-            "mark_flexible", "route_feedback",
+            "mark_flexible",
+            "route_feedback",
             DraftOperationTypeV2.SET_STOP_DAY.value,
         }
 
@@ -1514,8 +1519,7 @@ class FrozenDraftCompiler:
             expected = {day: stops for day, stops in expected.items() if stops or day in arrivals}
             actual = {row["day"]: list(row["stop_ids"]) for row in child["ordered_days"]}
             stops_without_arrivals = {
-                day: [stop for stop in stops if stop not in arrivals.get(day, set())]
-                for day, stops in actual.items()
+                day: [stop for stop in stops if stop not in arrivals.get(day, set())] for day, stops in actual.items()
             }
             if stops_without_arrivals != expected or any(
                 not stops <= set(actual.get(day, [])) for day, stops in arrivals.items()
@@ -1671,14 +1675,25 @@ def _unevaluated_outcome(
             else "repair_not_evaluated"
         )
         action = "Adjust the draft or search constraints; no child reached independent evaluation."
-        too_long = sorted({int(value.rsplit(":", 1)[1]) for value in failures if re.fullmatch(r"day_time_exceeded:\d+", value)})
-        limits = [int(value.rsplit(":", 1)[1]) for value in failures if re.fullmatch(r"daily_time_limit_minutes:\d+", value)]
+        too_long = sorted(
+            {int(value.rsplit(":", 1)[1]) for value in failures if re.fullmatch(r"day_time_exceeded:\d+", value)}
+        )
+        limits = [
+            int(value.rsplit(":", 1)[1]) for value in failures if re.fullmatch(r"daily_time_limit_minutes:\d+", value)
+        ]
         if too_long:
-            return state, reason, ({
-                "code": reason, "days_over_time_limit": too_long,
-                **({"daily_limit_minutes": limits[0]} if limits else {}),
-                "corrective_action": "Choose another day for the moved stop; every order of this day exceeds the daily time limit.",
-            },)
+            return (
+                state,
+                reason,
+                (
+                    {
+                        "code": reason,
+                        "days_over_time_limit": too_long,
+                        **({"daily_limit_minutes": limits[0]} if limits else {}),
+                        "corrective_action": "Choose another day for the moved stop; every order of this day exceeds the daily time limit.",
+                    },
+                ),
+            )
     return state, reason, ({"code": reason, "corrective_action": action},)
 
 

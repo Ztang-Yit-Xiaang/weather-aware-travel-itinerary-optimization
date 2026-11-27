@@ -524,8 +524,16 @@ def _draft_point_removal_guidance(context: CopilotContextV1, message: str) -> Co
 
 
 _ORDINAL_DAYS = {
-    "first": 1, "second": 2, "third": 3, "fourth": 4, "fifth": 5, "sixth": 6, "seventh": 7,
-    "eighth": 8, "ninth": 9, "tenth": 10,
+    "first": 1,
+    "second": 2,
+    "third": 3,
+    "fourth": 4,
+    "fifth": 5,
+    "sixth": 6,
+    "seventh": 7,
+    "eighth": 8,
+    "ninth": 9,
+    "tenth": 10,
 }
 
 
@@ -539,9 +547,7 @@ def _named_days(message: str) -> set[int]:
     return days
 
 
-def _accepted_stop_inclusion(
-    context: CopilotContextV1, message: str
-) -> CopilotInterpretationV1 | None:
+def _accepted_stop_inclusion(context: CopilotContextV1, message: str) -> CopilotInterpretationV1 | None:
     if (
         is_stop_removal_request(message)
         or is_stop_replacement_request(message)
@@ -645,7 +651,12 @@ def _safe_specific_question(question: str | None) -> bool:
         and question.count("?") == 1
         and not any(character in question for character in "\r\n<>`")
         and re.match(r"^(?:Which|What|Where|When|How|Would|Do|Should|Can)\b", question, re.IGNORECASE) is not None
-        and re.search(r"\b(?:day|stop|place|route|move|replace|add|candidate|duration|minutes?|hours?|trade-off)\b", question, re.IGNORECASE) is not None
+        and re.search(
+            r"\b(?:day|stop|place|route|move|replace|add|candidate|duration|minutes?|hours?|trade-off)\b",
+            question,
+            re.IGNORECASE,
+        )
+        is not None
         and re.search(
             r"https?://|\b(?:ignore|instruction|password|token|secret|api.key|booked|paid|"
             r"secured|purchased|charged|reserved|cancelled|canceled|accepted|applied|activated)\b",

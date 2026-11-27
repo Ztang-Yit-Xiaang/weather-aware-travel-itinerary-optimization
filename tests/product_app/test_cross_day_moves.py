@@ -19,21 +19,31 @@ from itinerary_system.product_app.service import ProductService
 
 ROOT = Path(__file__).resolve().parents[2]
 REGISTRY = ROOT / "configs" / "product_app_registry.json"
-REPLACE_BIXBY = {"type": "replace_nearby", "target": "bixby_creek_bridge_viewpoint",
-                 "parameters": {"candidate_id": "point_lobos_state_natural_reserve"}}
+REPLACE_BIXBY = {
+    "type": "replace_nearby",
+    "target": "bixby_creek_bridge_viewpoint",
+    "parameters": {"candidate_id": "point_lobos_state_natural_reserve"},
+}
 
 
 def _preview(client: TestClient, operations: list[dict]) -> tuple[dict, dict, dict]:
     created = client.post("/api/sessions", json={}).json()
     session_id = created["session"]["session_id"]
     headers = {"X-Session-Token": created["mutation_token"]}
-    staged = client.post(f"/api/sessions/{session_id}/draft/operations", headers=headers, json={
-        "expected_revision": created["session"]["revision"],
-        "operations": [{**row, "source": "typed_stop_editor", "evidence_refs": []} for row in operations],
-    })
+    staged = client.post(
+        f"/api/sessions/{session_id}/draft/operations",
+        headers=headers,
+        json={
+            "expected_revision": created["session"]["revision"],
+            "operations": [{**row, "source": "typed_stop_editor", "evidence_refs": []} for row in operations],
+        },
+    )
     assert staged.status_code == 200, staged.text
-    preview = client.post(f"/api/sessions/{session_id}/preview", headers=headers,
-                          json={"expected_revision": staged.json()["session"]["revision"]})
+    preview = client.post(
+        f"/api/sessions/{session_id}/preview",
+        headers=headers,
+        json={"expected_revision": staged.json()["session"]["revision"]},
+    )
     assert preview.status_code == 200, preview.text
     return preview.json()["proposal"], preview.json()["session"], headers
 
@@ -42,9 +52,12 @@ def _preview(client: TestClient, operations: list[dict]) -> tuple[dict, dict, di
 def client(tmp_path):
     # One app per test: two loaded product apps at once can exhaust memory on
     # a small machine, and the restart test below opens its own apps.
-    app = create_product_app(repository_root=ROOT, registry_path=REGISTRY,
-                             state_root=tmp_path / "state",
-                             additional_allowed_authorities=("testserver",))
+    app = create_product_app(
+        repository_root=ROOT,
+        registry_path=REGISTRY,
+        state_root=tmp_path / "state",
+        additional_allowed_authorities=("testserver",),
+    )
     with TestClient(app) as test_client:
         yield test_client
 
@@ -60,10 +73,13 @@ def test_lock_and_move_are_enabled_but_flexible_is_not(client):
 
 
 def test_move_to_another_day_is_evaluated_and_empties_the_source_day(client):
-    proposal, _, _ = _preview(client, [
-        REPLACE_BIXBY,
-        {"type": "move_day", "target": "griffith_observatory", "parameters": {"day": 6}},
-    ])
+    proposal, _, _ = _preview(
+        client,
+        [
+            REPLACE_BIXBY,
+            {"type": "move_day", "target": "griffith_observatory", "parameters": {"day": 6}},
+        ],
+    )
     assert proposal["state"] == "eligible", proposal.get("message")
     days = {}
     for feature in proposal["geography_plan"]["stops"]["features"]:
@@ -78,18 +94,24 @@ def test_move_to_another_day_is_evaluated_and_empties_the_source_day(client):
 
 
 def test_move_that_leaves_a_middle_day_empty_is_evaluated(client):
-    proposal, _, _ = _preview(client, [
-        REPLACE_BIXBY,
-        {"type": "move_day", "target": "stearns_wharf", "parameters": {"day": 7}},
-    ])
+    proposal, _, _ = _preview(
+        client,
+        [
+            REPLACE_BIXBY,
+            {"type": "move_day", "target": "stearns_wharf", "parameters": {"day": 7}},
+        ],
+    )
     assert proposal["state"] == "eligible", proposal.get("message")
 
 
 def test_unreasonable_move_is_rejected_with_the_day_over_the_time_limit(client):
-    proposal, _, _ = _preview(client, [
-        REPLACE_BIXBY,
-        {"type": "move_day", "target": "kings_canyon_national_park", "parameters": {"day": 3}},
-    ])
+    proposal, _, _ = _preview(
+        client,
+        [
+            REPLACE_BIXBY,
+            {"type": "move_day", "target": "kings_canyon_national_park", "parameters": {"day": 3}},
+        ],
+    )
     assert proposal["state"] == "not_evaluated"
     assert proposal["reason"] == "no_feasible_local_candidate"
     assert "Day 3" in proposal["message"] and "12 hours" in proposal["message"]
@@ -99,19 +121,31 @@ def test_accepted_move_survives_restart(tmp_path):
     state = tmp_path / "state"
 
     def app():
-        return create_product_app(repository_root=ROOT, registry_path=REGISTRY, state_root=state,
-                                  additional_allowed_authorities=("testserver",))
+        return create_product_app(
+            repository_root=ROOT,
+            registry_path=REGISTRY,
+            state_root=state,
+            additional_allowed_authorities=("testserver",),
+        )
 
     with TestClient(app()) as first:
-        proposal, session, headers = _preview(first, [
-            REPLACE_BIXBY,
-            {"type": "move_day", "target": "griffith_observatory", "parameters": {"day": 6}},
-        ])
+        proposal, session, headers = _preview(
+            first,
+            [
+                REPLACE_BIXBY,
+                {"type": "move_day", "target": "griffith_observatory", "parameters": {"day": 6}},
+            ],
+        )
         assert proposal["state"] == "eligible"
-        accepted = first.post(f"/api/sessions/{session['session_id']}/accept", headers=headers, json={
-            "expected_revision": session["revision"], "confirmation": "accept_evaluated_repair",
-            "idempotency_key": "cross_day_move_accept",
-        })
+        accepted = first.post(
+            f"/api/sessions/{session['session_id']}/accept",
+            headers=headers,
+            json={
+                "expected_revision": session["revision"],
+                "confirmation": "accept_evaluated_repair",
+                "idempotency_key": "cross_day_move_accept",
+            },
+        )
         assert accepted.status_code == 200, accepted.text
     with TestClient(app()) as second:
         restored = second.get(f"/api/sessions/{session['session_id']}", headers=headers)
@@ -125,23 +159,31 @@ def test_chat_add_is_route_ready_with_the_move_leg_delta(tmp_path):
     assert view["draft_capabilities"]["operations"]["add_candidate"]["preview_executable"] is True
     import asyncio
 
-    response = asyncio.run(service.interpret_copilot_message(
-        session_id=session.session_id, mutation_token=token, expected_revision=0,
-        client_message_id="client_message_00000000000000000000000000000008",
-        message="Add Pfeiffer Big Sur State Park to day 5.",
-    ))
+    response = asyncio.run(
+        service.interpret_copilot_message(
+            session_id=session.session_id,
+            mutation_token=token,
+            expected_revision=0,
+            client_message_id="client_message_00000000000000000000000000000008",
+            message="Add Pfeiffer Big Sur State Park to day 5.",
+        )
+    )
     interpretation = response["turn"]["interpretation"]
     assert interpretation["state"] == "proposal_ready", interpretation["state"]
     assert [(i["type"], i["candidate_id"], i["destination_day"]) for i in interpretation["intents"]] == [
-        ("add_candidate", "pfeiffer_big_sur_state_park", 5)]
+        ("add_candidate", "pfeiffer_big_sur_state_park", 5)
+    ]
 
 
-@pytest.mark.parametrize(("message", "keeps"), [
-    ("I want to visit Kings Canyon National Park on day 5.", False),  # benchmark m28n
-    ("I want to visit Kings Canyon National Park on the fifth day.", False),
-    ("I want to visit Kings Canyon National Park on day 4.", True),  # its accepted day
-    ("I want to visit Kings Canyon National Park.", True),
-])
+@pytest.mark.parametrize(
+    ("message", "keeps"),
+    [
+        ("I want to visit Kings Canyon National Park on day 5.", False),  # benchmark m28n
+        ("I want to visit Kings Canyon National Park on the fifth day.", False),
+        ("I want to visit Kings Canyon National Park on day 4.", True),  # its accepted day
+        ("I want to visit Kings Canyon National Park.", True),
+    ],
+)
 def test_visit_request_naming_another_day_is_not_turned_into_keep(tmp_path, message, keeps):
     from itinerary_system.product_app.openai_copilot import _accepted_stop_inclusion
 

@@ -290,8 +290,16 @@ def test_real_api_accept_pfeiffer_add_point_lobos_accept_restart(tmp_path):
         assert proposal["geography_plan"]["coverage"]["complete"] is True
         registered = json.loads((ROOT / "configs/product_route_delta.json").read_text(encoding="utf-8"))
         assert proposal["route_validation"]["source_content_sha256"] == registered["descriptor_sha256"]
-        accepted = post(api, url + "/accept", {"expected_revision": 5, "confirmation": "accept_evaluated_repair",
-            "idempotency_key": "r03_accept_point_lobos"}, headers)
+        accepted = post(
+            api,
+            url + "/accept",
+            {
+                "expected_revision": 5,
+                "confirmation": "accept_evaluated_repair",
+                "idempotency_key": "r03_accept_point_lobos",
+            },
+            headers,
+        )
         assert accepted["session"]["accepted_plan_id"] == c
 
     with client() as api:

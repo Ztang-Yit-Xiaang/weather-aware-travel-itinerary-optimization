@@ -353,7 +353,9 @@ def _candidate_sequences(
         if _coerce_int(stop.get("day")) in (None, day)
     )
     for base_sequence in base_sequences:
-        editable_parent_stops = tuple(stop_id for stop_id in base_sequence if stop_id in set(model.neighborhood.editable_stop_ids))
+        editable_parent_stops = tuple(
+            stop_id for stop_id in base_sequence if stop_id in set(model.neighborhood.editable_stop_ids)
+        )
         for candidate_id in candidate_ids:
             for replaced_stop in editable_parent_stops:
                 if replaced_stop in set(model.metadata.get("locked_stop_ids", ())):

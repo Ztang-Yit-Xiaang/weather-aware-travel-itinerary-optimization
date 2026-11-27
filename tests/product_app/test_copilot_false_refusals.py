@@ -10,8 +10,8 @@ from pathlib import Path
 import pytest
 
 from itinerary_system.product_app.copilot import (
-    CopilotInterpretationV1,
     CopilotIntentV1,
+    CopilotInterpretationV1,
     DeterministicCopilotAdapter,
     is_stop_removal_request,
     known_place_clarification,
@@ -57,7 +57,8 @@ def test_negated_removal_alone_still_proposes_keep_stop(context):
 
 def test_real_removal_next_to_another_edit_is_still_refused(context):
     guarded = request_semantic_guard(
-        context, "Remove Stanford University Main Quad and make Kings Canyon shorter",
+        context,
+        "Remove Stanford University Main Quad and make Kings Canyon shorter",
     )
     assert guarded is not None and guarded.state == "unsupported"
     assert "Removing" in guarded.assistant_message
@@ -89,7 +90,9 @@ def test_unvalidated_swap_explains_the_route_gap(context):
     assert "Monterey" in question and "Bixby Creek Bridge Viewpoint" in question
     assert "not validated" in question
     refused = CopilotInterpretationV1(
-        state="unsupported", assistant_message="x", intents=(CopilotIntentV1(type="unsupported_request"),),
+        state="unsupported",
+        assistant_message="x",
+        intents=(CopilotIntentV1(type="unsupported_request"),),
     )
     result = _canonicalize_provider_copy(refused, context=context, message=message)
     assert result.state == "clarification_required" and "Monterey" in result.assistant_message
@@ -98,7 +101,8 @@ def test_unvalidated_swap_explains_the_route_gap(context):
 def test_provider_question_about_minutes_is_kept(context):
     question = "How many minutes should Kings Canyon National Park be set to?"
     asked = CopilotInterpretationV1(
-        state="clarification_required", assistant_message="x",
+        state="clarification_required",
+        assistant_message="x",
         intents=(CopilotIntentV1(type="request_clarification", clarification_question=question),),
     )
     message = "I don't want to remove Kings Canyon, just make it shorter."

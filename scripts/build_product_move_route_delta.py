@@ -46,10 +46,16 @@ from itinerary_system.routing.matrix import load_route_matrix_from_cache, valida
 from itinerary_system.routing.road_cache_builder import osrm_route_url  # noqa: E402
 
 PLACES = (
-    "golden_gate_bridge", "stanford_university_main_quad", "yosemite_national_park",
-    "sequoia_national_park", "kings_canyon_national_park", "bixby_creek_bridge_viewpoint",
-    "stearns_wharf", "griffith_observatory",
-    "point_lobos_state_natural_reserve", "pfeiffer_big_sur_state_park",
+    "golden_gate_bridge",
+    "stanford_university_main_quad",
+    "yosemite_national_park",
+    "sequoia_national_park",
+    "kings_canyon_national_park",
+    "bixby_creek_bridge_viewpoint",
+    "stearns_wharf",
+    "griffith_observatory",
+    "point_lobos_state_natural_reserve",
+    "pfeiffer_big_sur_state_park",
 )
 MANIFEST = ROOT / "runs/california-coast-coherent-demo-v1/manifest.json"
 
@@ -104,16 +110,29 @@ def build_delta(output: Path, container_id: str, provenance_path: Path) -> dict:
     rows = []
     for index, (origin, destination) in enumerate(pairs, start=1):
         for order, entity in enumerate((origin, destination), start=1):
-            rows.append({"method": "product_move_route_delta", "day": index, "stop_order": order,
-                         "attraction_name": entity, "latitude": points[entity][0], "longitude": points[entity][1]})
+            rows.append(
+                {
+                    "method": "product_move_route_delta",
+                    "day": index,
+                    "stop_order": order,
+                    "attraction_name": entity,
+                    "latitude": points[entity][0],
+                    "longitude": points[entity][1],
+                }
+            )
     frame = pd.DataFrame(rows)
     output.mkdir(parents=True, exist_ok=False)
     write_json(output / "runtime_witness.json", witness)
-    write_json(output / "exact_inputs.json", {
-        "route_rows": rows, "route_point_source": "road-snapped endpoints of the base matrix legs",
-        "route_points": {entity: list(point) for entity, point in sorted(points.items())},
-        "directed_pairs": [list(pair) for pair in pairs], "base_matrix_sha256": base_hash,
-    })
+    write_json(
+        output / "exact_inputs.json",
+        {
+            "route_rows": rows,
+            "route_point_source": "road-snapped endpoints of the base matrix legs",
+            "route_points": {entity: list(point) for entity, point in sorted(points.items())},
+            "directed_pairs": [list(pair) for pair in pairs],
+            "base_matrix_sha256": base_hash,
+        },
+    )
     (output / "source-provenance.json").write_bytes(provenance_bytes)
     calls: list[dict] = []
     responses: list[dict] = []
@@ -127,9 +146,13 @@ def build_delta(output: Path, container_id: str, provenance_path: Path) -> dict:
         with requests.Session() as session:
             session.trust_env = False
             response = session.get(url, timeout=timeout, allow_redirects=False)
-        receipt.update({"status_code": response.status_code,
-                        "response_sha256": hashlib.sha256(response.content).hexdigest(),
-                        "completed_at": datetime.now(UTC).isoformat()})
+        receipt.update(
+            {
+                "status_code": response.status_code,
+                "response_sha256": hashlib.sha256(response.content).hexdigest(),
+                "completed_at": datetime.now(UTC).isoformat(),
+            }
+        )
         if response.status_code != 200:
             raise ValueError("delta_provider_http_failure")
         payload = response.json()
@@ -139,21 +162,38 @@ def build_delta(output: Path, container_id: str, provenance_path: Path) -> dict:
         return payload
 
     try:
-        built = build_road_route_cache_from_artifacts(output_dir=output, route_stops_df=frame,
-            cache_dir=output / "raw_cache", fetch_missing=True, osrm_base_url=ENDPOINT,
-            max_snap_distance_m=100.0, osrm_fetcher=fetch, write=True)
+        built = build_road_route_cache_from_artifacts(
+            output_dir=output,
+            route_stops_df=frame,
+            cache_dir=output / "raw_cache",
+            fetch_missing=True,
+            osrm_base_url=ENDPOINT,
+            max_snap_distance_m=100.0,
+            osrm_fetcher=fetch,
+            write=True,
+        )
     finally:
         write_json(output / "provider_calls.json", calls)
         write_json(output / "raw_response.json", responses)
     if len(calls) != len(pairs) or len(built.request_df) != len(pairs) or not built.complete:
         raise ValueError("delta_route_or_snap_incomplete")
-    bundle = freeze_route_evidence_bundle(output, provider_provenance_path=output / "source-provenance.json",
-        expected_request_count=len(pairs), max_cache_age_days=1.0)
+    bundle = freeze_route_evidence_bundle(
+        output,
+        provider_provenance_path=output / "source-provenance.json",
+        expected_request_count=len(pairs),
+        max_cache_age_days=1.0,
+    )
     if not bundle.publication_ready:
         raise ValueError(f"delta_freeze_failed:{bundle.errors}")
-    matrix, report = build_validated_route_matrix_from_cache(output / ROAD_ROUTE_CACHE_FILENAME,
-        base["context_snapshot_id"], output / "routing", required_sequences=pairs, require_publication_ready=True,
-        source_bundle_id=bundle.bundle_id, expected_source_sha256=bundle.artifact_hashes["validated_cache"])
+    matrix, report = build_validated_route_matrix_from_cache(
+        output / ROAD_ROUTE_CACHE_FILENAME,
+        base["context_snapshot_id"],
+        output / "routing",
+        required_sequences=pairs,
+        require_publication_ready=True,
+        source_bundle_id=bundle.bundle_id,
+        expected_source_sha256=bundle.artifact_hashes["validated_cache"],
+    )
     if set(matrix.cells) != set(pairs) or sha256(BASE_PATH) != base_hash or not report.publication_ready:
         raise ValueError("delta_base_changed_or_matrix_invalid")
     return finalize_delta(output)
@@ -174,26 +214,46 @@ def finalize_delta(output: Path) -> dict:
         raise ValueError("delta_capture_identity_mismatch")
     if any(call["status_code"] != 200 for call in calls):
         raise ValueError("delta_provider_http_failure")
-    bundle = freeze_route_evidence_bundle(output, provider_provenance_path=output / "source-provenance.json",
-        expected_request_count=len(pairs), max_cache_age_days=1.0,
-        as_of=datetime.fromisoformat(saved["generated_at"]), write=False)
-    if not bundle.publication_ready or bundle.bundle_id != saved["bundle_id"] or bundle.artifact_hashes != saved["artifact_hashes"]:
+    bundle = freeze_route_evidence_bundle(
+        output,
+        provider_provenance_path=output / "source-provenance.json",
+        expected_request_count=len(pairs),
+        max_cache_age_days=1.0,
+        as_of=datetime.fromisoformat(saved["generated_at"]),
+        write=False,
+    )
+    if (
+        not bundle.publication_ready
+        or bundle.bundle_id != saved["bundle_id"]
+        or bundle.artifact_hashes != saved["artifact_hashes"]
+    ):
         raise ValueError("delta_frozen_evidence_mismatch")
-    matrix = load_route_matrix_from_cache(output / ROAD_ROUTE_CACHE_FILENAME, base["context_snapshot_id"],
-        source_bundle_id=bundle.bundle_id, expected_source_sha256=bundle.artifact_hashes["validated_cache"])
+    matrix = load_route_matrix_from_cache(
+        output / ROAD_ROUTE_CACHE_FILENAME,
+        base["context_snapshot_id"],
+        source_bundle_id=bundle.bundle_id,
+        expected_source_sha256=bundle.artifact_hashes["validated_cache"],
+    )
     report = validate_route_matrix(matrix, required_sequences=pairs, require_publication_ready=True)
-    descriptor = {"schema_version": "product-route-delta-v1", "activated_in_product": False,
-        "base_matrix_path": BASE_PATH.relative_to(ROOT).as_posix(), "base_matrix_sha256": base_hash,
-        "base_matrix_id": base["matrix_id"], "context_snapshot_id": base["context_snapshot_id"],
-        "delta_bundle_id": bundle.bundle_id, "delta_matrix_id": matrix.matrix_id,
+    descriptor = {
+        "schema_version": "product-route-delta-v1",
+        "activated_in_product": False,
+        "base_matrix_path": BASE_PATH.relative_to(ROOT).as_posix(),
+        "base_matrix_sha256": base_hash,
+        "base_matrix_id": base["matrix_id"],
+        "context_snapshot_id": base["context_snapshot_id"],
+        "delta_bundle_id": bundle.bundle_id,
+        "delta_matrix_id": matrix.matrix_id,
         "delta_manifest_sha256": sha256(output / "route_evidence_bundle_manifest.json"),
         "delta_matrix_sha256": sha256(output / "routing/production_validated_route_matrix.csv"),
         "provider_calls_sha256": sha256(output / "provider_calls.json"),
-        "directed_pairs": [list(pair) for pair in pairs], "provider_attempt_count": len(calls),
+        "directed_pairs": [list(pair) for pair in pairs],
+        "provider_attempt_count": len(calls),
         "raw_response_sha256": sha256(output / "raw_response.json"),
         "runtime_witness_sha256": sha256(output / "runtime_witness.json"),
         "exact_inputs_sha256": sha256(output / "exact_inputs.json"),
-        "publication_ready": bundle.publication_ready and report.publication_ready}
+        "publication_ready": bundle.publication_ready and report.publication_ready,
+    }
     write_json(output / "descriptor.json", descriptor)
     return descriptor
 
@@ -203,14 +263,24 @@ def main() -> int:
     parser.add_argument("--output-dir", type=Path, required=True)
     parser.add_argument("--container-id")
     parser.add_argument("--provider-provenance", type=Path)
-    parser.add_argument("--finalize-existing", action="store_true", help="Package captured evidence without provider calls")
+    parser.add_argument(
+        "--finalize-existing", action="store_true", help="Package captured evidence without provider calls"
+    )
     parser.add_argument("--dry-run", action="store_true", help="List the directed pairs and route points only")
     args = parser.parse_args()
     if args.dry_run:
         base = json.loads(BASE_PATH.read_text(encoding="utf-8"))
         points, pairs = road_points(base), directed_pairs(base)
-        print(json.dumps({"pair_count": len(pairs), "entities": sorted({e for p in pairs for e in p}),
-                          "without_point": sorted({e for p in pairs for e in p} - points.keys())}, indent=2))
+        print(
+            json.dumps(
+                {
+                    "pair_count": len(pairs),
+                    "entities": sorted({e for p in pairs for e in p}),
+                    "without_point": sorted({e for p in pairs for e in p} - points.keys()),
+                },
+                indent=2,
+            )
+        )
         return 0
     if args.finalize_existing:
         result = finalize_delta(args.output_dir)

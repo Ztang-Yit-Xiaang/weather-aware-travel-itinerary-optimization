@@ -452,19 +452,68 @@ def _verify_current_context_extensions(context: dict[str, Any]) -> None:
         code,
     )
     caps = context.get("capabilities")
-    _require(type(caps) is dict and set(caps) == {"schema_version", "operations", "registered_repair_current", "candidate_replacements", "candidate_day_readiness", "stop_positions", "executable_combinations"}
-             and caps["schema_version"] == "copilot-capabilities-v2" and caps["registered_repair_current"] is True
-             and type(caps["operations"]) is dict and set(caps["operations"]) == {
-                 "keep_stop", "lock_stop", "mark_flexible", "move_day", "replace_nearby", "add_candidate", "route_feedback",
-                 "set_stop_duration", "set_stop_order", "set_stop_time_window", "set_stop_role", "replan_trip"}, code)
+    _require(
+        type(caps) is dict
+        and set(caps)
+        == {
+            "schema_version",
+            "operations",
+            "registered_repair_current",
+            "candidate_replacements",
+            "candidate_day_readiness",
+            "stop_positions",
+            "executable_combinations",
+        }
+        and caps["schema_version"] == "copilot-capabilities-v2"
+        and caps["registered_repair_current"] is True
+        and type(caps["operations"]) is dict
+        and set(caps["operations"])
+        == {
+            "keep_stop",
+            "lock_stop",
+            "mark_flexible",
+            "move_day",
+            "replace_nearby",
+            "add_candidate",
+            "route_feedback",
+            "set_stop_duration",
+            "set_stop_order",
+            "set_stop_time_window",
+            "set_stop_role",
+            "replan_trip",
+        },
+        code,
+    )
     # The move-leg road delta (2026-11-26) makes candidate additions route-ready
     # and adds the deterministic-repair row for lock and cross-day moves.
-    _require(caps["executable_combinations"] == [{"operations":["add_candidate", "keep_stop", "replace_nearby", "set_stop_duration",
-        "set_stop_order", "set_stop_role", "set_stop_time_window"], "cardinality":32},
-        {"operations": ["add_candidate", "keep_stop", "lock_stop", "move_day", "replace_nearby"], "cardinality": 32},
-        {"operations": ["replan_trip"], "cardinality": 1}], code)
-    _require(type(caps["executable_combinations"][-1]["cardinality"]) is int
-             and caps["operations"]["replan_trip"] == {"enabled": True, "preview_executable": True, "blocking_code": None}, code)
+    _require(
+        caps["executable_combinations"]
+        == [
+            {
+                "operations": [
+                    "add_candidate",
+                    "keep_stop",
+                    "replace_nearby",
+                    "set_stop_duration",
+                    "set_stop_order",
+                    "set_stop_role",
+                    "set_stop_time_window",
+                ],
+                "cardinality": 32,
+            },
+            {
+                "operations": ["add_candidate", "keep_stop", "lock_stop", "move_day", "replace_nearby"],
+                "cardinality": 32,
+            },
+            {"operations": ["replan_trip"], "cardinality": 1},
+        ],
+        code,
+    )
+    _require(
+        type(caps["executable_combinations"][-1]["cardinality"]) is int
+        and caps["operations"]["replan_trip"] == {"enabled": True, "preview_executable": True, "blocking_code": None},
+        code,
+    )
     for row in caps["operations"].values():
         _require(
             type(row) is dict

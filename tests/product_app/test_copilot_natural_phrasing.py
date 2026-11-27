@@ -55,7 +55,8 @@ def test_courtesy_prefix_is_not_counted_as_a_second_edit(context, message):
 
 def test_courtesy_prefix_still_reports_a_genuine_second_edit(context):
     guarded = request_semantic_guard(
-        context, "I'd like to spend 2 hours at Bixby Creek Bridge Viewpoint and move it to day 6",
+        context,
+        "I'd like to spend 2 hours at Bixby Creek Bridge Viewpoint and move it to day 6",
     )
     assert guarded is not None and guarded.state != "proposal_ready"
 
@@ -80,8 +81,11 @@ def test_daily_drive_limit_before_the_word_driving_is_parsed(context, message, m
 def test_replacement_clarification_names_the_registered_choices(context):
     target = "bixby_creek_bridge_viewpoint"
     names = {str(row["place_id"]): str(row["name"]) for row in context.known_places}
-    choices = [names[row["candidate_id"]] for row in context.capabilities["candidate_replacements"]
-               if row["replaces_stop_id"] == target and row["candidate_id"] in names]
+    choices = [
+        names[row["candidate_id"]]
+        for row in context.capabilities["candidate_replacements"]
+        if row["replaces_stop_id"] == target and row["candidate_id"] in names
+    ]
     assert choices, "fixture must register at least one replacement for Bixby"
     result = interpret_context_request(context, "Replace Bixby Creek Bridge Viewpoint with a nearby alternative")
     assert result is not None and result.state == "clarification_required"
@@ -116,6 +120,7 @@ def test_moving_a_visit_time_is_not_a_day_move(context):
 
 def test_a_reason_with_a_condition_is_still_a_condition(context):
     guarded = request_semantic_guard(
-        context, "It might rain if the storm arrives. Replace Bixby Creek Bridge Viewpoint with Pfeiffer Big Sur State Park.",
+        context,
+        "It might rain if the storm arrives. Replace Bixby Creek Bridge Viewpoint with Pfeiffer Big Sur State Park.",
     )
     assert guarded is not None and guarded.state == "clarification_required"

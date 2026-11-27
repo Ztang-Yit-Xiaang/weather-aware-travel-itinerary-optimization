@@ -12,7 +12,8 @@ def _candidate(day, sequence, route_ids):
 
 def test_merged_move_keeps_each_changed_day_route_id():
     parent = SimpleNamespace(
-        sequence=("a", "b"), route_ids_by_day={1: "parent1", 2: "parent2"},
+        sequence=("a", "b"),
+        route_ids_by_day={1: "parent1", 2: "parent2"},
         lodging_assignments={"1": "hotel", "2": "hotel"},
     )
     model = SimpleNamespace(metadata={"parent_plan": parent, "parent_day_by_stop": {"a": 1, "b": 2}})

@@ -164,7 +164,8 @@ def _request_spec(context: CopilotContextV2, message: str) -> dict[str, Any] | N
     # "Move our visit time to 9:30 AM" changes when a stop is visited, not its day.
     if "move_day" in kinds and re.search(
         r"\b(?:visit|arrival|departure)\s+time\b|\b\d{1,2}(?::\d{2})?\s*(?:a\.?m\.?|p\.?m\.?)(?!\w)|\b\d{1,2}:\d{2}\b",
-        message, re.IGNORECASE,
+        message,
+        re.IGNORECASE,
     ):
         kinds.remove("move_day")
     stop = matched_known_place(context, message, route_status="accepted_stop")
@@ -232,8 +233,10 @@ def _blocked(context: CopilotContextV2, spec: dict[str, Any]) -> str | None:
             None,
         )
         if accepted_day is not None and spec["destination_day"] != accepted_day:
-            return (f"This stop is accepted on Day {accepted_day}. This edit keeps its day; "
-                    "to change the day, ask to move the stop.")
+            return (
+                f"This stop is accepted on Day {accepted_day}. This edit keeps its day; "
+                "to change the day, ask to move the stop."
+            )
     choices = context.capabilities["candidate_replacements"]
     if kind == "replace_nearby" and spec["target_stop_id"] is not None:
         choices = [row for row in choices if row["replaces_stop_id"] == spec["target_stop_id"]]
@@ -266,8 +269,11 @@ def _question(context: CopilotContextV2, spec: dict[str, Any]) -> str:
         # Name the registered choices so a reply such as "the first one" or a
         # place name can resolve; without them the question is unanswerable.
         names = {str(row["place_id"]): str(row["name"]) for row in context.known_places}
-        choices = [names[row["candidate_id"]] for row in context.capabilities["candidate_replacements"]
-                   if row["replaces_stop_id"] == spec["target_stop_id"] and row["candidate_id"] in names]
+        choices = [
+            names[row["candidate_id"]]
+            for row in context.capabilities["candidate_replacements"]
+            if row["replaces_stop_id"] == spec["target_stop_id"] and row["candidate_id"] in names
+        ]
         if choices:
             return f"Which registered candidate should replace {name}: {', '.join(choices[:5])}?"
         return f"Which registered candidate should replace {name}?"

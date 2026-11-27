@@ -66,21 +66,33 @@ if TYPE_CHECKING:
 
 def _over_time_limit_message(findings: Any) -> str | None:
     """Explain a move the solver rejected because a day becomes too long."""
-    days = sorted({
-        int(day)
-        for finding in findings or ()
-        if isinstance(finding, dict)
-        for day in finding.get("days_over_time_limit") or ()
-    })
+    days = sorted(
+        {
+            int(day)
+            for finding in findings or ()
+            if isinstance(finding, dict)
+            for day in finding.get("days_over_time_limit") or ()
+        }
+    )
     if not days:
         return None
     label = ", ".join(f"Day {day}" for day in days)
-    minutes = next((
-        int(finding["daily_limit_minutes"]) for finding in findings or ()
-        if isinstance(finding, dict) and isinstance(finding.get("daily_limit_minutes"), int)
-    ), None)
-    limit = "the daily time limit" if minutes is None else (
-        f"the daily limit of {minutes // 60} hours" if minutes % 60 == 0 else f"the daily limit of {minutes} minutes"
+    minutes = next(
+        (
+            int(finding["daily_limit_minutes"])
+            for finding in findings or ()
+            if isinstance(finding, dict) and isinstance(finding.get("daily_limit_minutes"), int)
+        ),
+        None,
+    )
+    limit = (
+        "the daily time limit"
+        if minutes is None
+        else (
+            f"the daily limit of {minutes // 60} hours"
+            if minutes % 60 == 0
+            else f"the daily limit of {minutes} minutes"
+        )
     )
     return (
         f"Not possible: with this change, {label} would take longer than {limit} "
@@ -109,9 +121,11 @@ def _ineligible_message(certificate: dict[str, Any], parent_plan: dict[str, Any]
     base = "The evaluated child did not pass the required checks. The accepted itinerary remains active."
     if not reasons:
         return base
-    hint = (" Replace that stop as well (for example, ask to replace it with a registered alternative), then preview again."
-            if any(f.get("code") == "weather_infeasible" for f in certificate.get("failures") or () if isinstance(f, dict))
-            else "")
+    hint = (
+        " Replace that stop as well (for example, ask to replace it with a registered alternative), then preview again."
+        if any(f.get("code") == "weather_infeasible" for f in certificate.get("failures") or () if isinstance(f, dict))
+        else ""
+    )
     return f"Not eligible: {'; '.join(reasons)}.{hint} The accepted itinerary remains active."
 
 
@@ -1161,12 +1175,22 @@ class ProductService:
                     # falls through (None) to typed interpretation below.
                     proposal = session.proposal or {}
                     facts = build_trip_facts(
-                        view, context, repository_root=self.registry.repository_root,
-                        proposal={"status": proposal.get("state"), "comparison_eligibility": proposal.get("eligibility")}
-                        if proposal else None,
+                        view,
+                        context,
+                        repository_root=self.registry.repository_root,
+                        proposal={
+                            "status": proposal.get("state"),
+                            "comparison_eligibility": proposal.get("eligibility"),
+                        }
+                        if proposal
+                        else None,
                     )
                     interpretation = await answer_plan_question(
-                        self.copilot, context=context, history=history, message=message, facts=facts,
+                        self.copilot,
+                        context=context,
+                        history=history,
+                        message=message,
+                        facts=facts,
                     )
                 if interpretation is None:
                     interpretation = await self.copilot.interpret(
@@ -2179,24 +2203,37 @@ class ProductService:
             raise WorkspaceError("selected_day_invalid", 422)
         record = self.registry.get(session.run_id)
         response = discover_interest_regions(
-            repository_root=self.registry.repository_root, session_id=session.session_id,
-            session_revision=session.revision, trip_id=record.trip_id,
-            accepted_plan_id=parent_plan["plan_id"], day=day, route_leg_id=route_leg_id,
-            geography={"plans": [geography]}, route_matrix_record={"schema_version": "route-matrix-v1", **matrix},
-            parent_plan=parent_plan, registered_bundles=tuple(self._evidence_bundles[session.run_id].values()),
-            replacement_target_id=replacement_target_id, role=role,
-            maximum_detour_minutes=maximum_detour_minutes, nature_preference=nature_preference,
-            focus_stop_id=focus_stop_id, radius_km=radius_km, search_area=search_area,
-            place_cache=self.nearby_places, refresh_places=refresh_places,
+            repository_root=self.registry.repository_root,
+            session_id=session.session_id,
+            session_revision=session.revision,
+            trip_id=record.trip_id,
+            accepted_plan_id=parent_plan["plan_id"],
+            day=day,
+            route_leg_id=route_leg_id,
+            geography={"plans": [geography]},
+            route_matrix_record={"schema_version": "route-matrix-v1", **matrix},
+            parent_plan=parent_plan,
+            registered_bundles=tuple(self._evidence_bundles[session.run_id].values()),
+            replacement_target_id=replacement_target_id,
+            role=role,
+            maximum_detour_minutes=maximum_detour_minutes,
+            nature_preference=nature_preference,
+            focus_stop_id=focus_stop_id,
+            radius_km=radius_km,
+            search_area=search_area,
+            place_cache=self.nearby_places,
+            refresh_places=refresh_places,
         )
         self.workspace.expect_revision(session, expected_revision)
-        response.update({
-            "exploration_plan_id": parent_plan["plan_id"],
-            "exploration_plan_content_hash": parent_plan["content_hash"],
-            "plan_scope": scope,
-            "accepted_plan_id": session.accepted_plan_id,
-            "accepted_plan_content_hash": accepted_pointer["accepted_plan_content_hash"],
-        })
+        response.update(
+            {
+                "exploration_plan_id": parent_plan["plan_id"],
+                "exploration_plan_content_hash": parent_plan["content_hash"],
+                "plan_scope": scope,
+                "accepted_plan_id": session.accepted_plan_id,
+                "accepted_plan_content_hash": accepted_pointer["accepted_plan_content_hash"],
+            }
+        )
         return response
 
     def resolve_validated_route_context(

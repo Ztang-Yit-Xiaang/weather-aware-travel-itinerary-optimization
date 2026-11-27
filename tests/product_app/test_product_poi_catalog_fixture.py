@@ -17,12 +17,8 @@ from scripts.build_product_poi_catalog import (
 )
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[2]
-FIXTURE_ROOT = (
-    REPOSITORY_ROOT / "configs/product_poi_catalogs/california_coast_demo"
-)
-EXPECTED_CATALOG_SHA256 = (
-    "1456b6f4783dc8a1e7b0b61a9d3ebc03c7ae2447363336273808ee8e49a50ec3"
-)
+FIXTURE_ROOT = REPOSITORY_ROOT / "configs/product_poi_catalogs/california_coast_demo"
+EXPECTED_CATALOG_SHA256 = "1456b6f4783dc8a1e7b0b61a9d3ebc03c7ae2447363336273808ee8e49a50ec3"
 
 SOURCE_HASHES = {
     "runs/california-coast-product-demo-v2/manifest.json": (
@@ -33,8 +29,7 @@ SOURCE_HASHES = {
         "w2_weather_recommended_v2/requests/w2_weather_recommended_v2.json"
     ): "26c760edc833913879c012e97f2f4ddccf49115cec43a98b692a02bb7f3f9ce6",
     (
-        "runs/california-coast-product-demo-v2/alternatives/"
-        "w2_weather_recommended_v2/plans/plan_f5ee52459659dcb5.json"
+        "runs/california-coast-product-demo-v2/alternatives/w2_weather_recommended_v2/plans/plan_f5ee52459659dcb5.json"
     ): "46ec1ec1686c72afacaf4099350b3726b376923b96f272b720f6022b971ba476",
     (
         "runs/california-coast-product-demo-v2/alternatives/"

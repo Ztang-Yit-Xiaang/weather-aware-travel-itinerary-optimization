@@ -28,6 +28,8 @@
 !results/route_deltas/
 !results/route_deltas/product_pfeiffer_point_lobos_20260908_v1/
 !results/route_deltas/product_pfeiffer_point_lobos_20260908_v1/**
+!results/route_deltas/product_move_legs_20261126_v1/
+!results/route_deltas/product_move_legs_20261126_v1/**
 
 # Apply these exclusions even inside an allowed source/reference directory.
 **/.env

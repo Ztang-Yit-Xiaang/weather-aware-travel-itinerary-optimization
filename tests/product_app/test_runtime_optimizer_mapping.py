@@ -336,8 +336,10 @@ def test_product_preview_runs_optimizer_and_evaluator_for_actual_request(
     assert request["confirmed_constraints"]["must_delete"] == [TARGET]
     assert request["confirmed_constraints"]["affected_days"] == [5]
     assert receipt["evaluation_executed"] is True
-    matrix, _, _ = compiler._runtime_inputs()
-    assert (TARGET, candidate) not in matrix.cells
+    # The move-leg road delta (2026-11-26) adds a direct cell between these two
+    # stops for cross-day moves; the replacement itself never routes from the
+    # replaced stop.
+    assert TARGET not in child["sequence"]
     assert certificate["plan_id"] == child["plan_id"] == proposal["geography_plan"]["plan_id"]
     assert certificate["plan_content_hash"] == child["content_hash"]
     assert (
@@ -424,12 +426,20 @@ def test_missing_required_route_fails_actual_optimizer_without_fallback(package)
     )
 
 
+def test_lock_and_cross_day_move_run_through_deterministic_repair(package):
+    # Since the move-leg road delta (2026-11-26), lock and cross-day moves are
+    # mapped to the repair core; flexible marks and route preferences are not.
+    compiler = FrozenDraftCompiler(package.primary_bundle.parent_plan, package.evidence_bundles, repository_root=ROOT)
+    capabilities = compiler.capabilities()
+    for kind in ("lock_stop", "move_day"):
+        assert capabilities["operations"][kind]["preview_executable"] is True
+    assert any({"lock_stop", "move_day"} <= set(row["operations"]) for row in capabilities["executable_combinations"])
+
+
 @pytest.mark.parametrize(
     "kind,parameters",
     [
         ("mark_flexible", {}),
-        ("lock_stop", {}),
-        ("move_day", {"day": 6}),
         ("route_feedback", {"preference": "reduce_driving"}),
     ],
 )

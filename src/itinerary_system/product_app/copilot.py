@@ -197,15 +197,19 @@ def _bounded_chinese_edit_request(context: CopilotContextV1, message: str) -> Co
     for alias, token in sorted(aliases, key=lambda pair: len(pair[0]), reverse=True):
         text = re.sub(r"(?<![A-Za-z0-9_])" + re.escape(alias) + r"(?![A-Za-z0-9_])", token, text, flags=re.I)
     clauses = [part.strip() for part in re.split(r"[，,；;。.!?]+|並且|并且|而且|以及|並|并|且", text) if part.strip()]
-    # A clause with no place, no edit word and no condition only explains the
-    # request ("我們更喜歡海邊的自然保護區"); drop it when another clause edits.
+    # A clause with no place, no edit word and no condition that states a
+    # preference or reason only explains the request ("我們更喜歡海邊的自然保護區");
+    # drop it when another clause edits. A clause that asks for something else
+    # ("幫我預訂今晚的酒店", "把午餐變成免費") is a request, not an explanation.
     explained = [
         clause
         for clause in clauses
         if not (
             "COPILOTZHPLACE" not in clause
+            and re.search(r"喜歡|喜欢|偏好|偏愛|偏爱|因為|因为|覺得|觉得|比較|比较|希望|擔心|担心|怕", clause)
             and not re.search(
-                r"換|换|替|停留|改|刪|删|移|加|安排|調整|调整|保留|取消|去掉|不要|別|别|如果|若|假如|要是|除非|只要|一旦|的話|的话",
+                r"換|换|替|停留|改|刪|删|移|加|安排|調整|调整|保留|取消|去掉|不要|別|别|如果|若|假如|要是|除非|只要|一旦|的話|的话"
+                r"|把|幫|帮|請|请|預訂|预订|訂|订|變成|变成|買|买|付",
                 clause,
             )
         )

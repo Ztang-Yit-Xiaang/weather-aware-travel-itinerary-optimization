@@ -278,7 +278,8 @@ def test_w3_restores_session_without_putting_the_mutation_token_in_a_url() -> No
     source = APP_JS.read_text(encoding="utf-8")
 
     assert 'const SESSION_STORAGE_KEY = "itinerary-repair-copilot.session.v1"' in source
-    assert "sessionStorage.setItem" in source
+    assert "workspaceStorage.setItem" in source
+    assert "persistent: localStorage, tab: sessionStorage" in source
     assert "mutation_token: payload.mutation_token" in source
     assert "X-Session-Token" in source
     assert "?mutation_token=" not in source

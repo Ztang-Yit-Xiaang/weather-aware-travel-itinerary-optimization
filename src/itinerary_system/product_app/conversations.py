@@ -57,6 +57,7 @@ _INTENT_TYPES = {
     "request_clarification",
     "unsupported_request",
     "external_action_not_supported",
+    "answer_question",
 }
 _PREFERENCES = {
     "reduce_contextual_risk",
@@ -70,6 +71,7 @@ _INTERPRETATION_STATES = {
     "unsupported",
     "refused",
     "failed",
+    "answered",
 }
 
 

@@ -1275,9 +1275,14 @@ export function createGeographicMapController({
       const currentInterest = interestRegions?.exploration_plan_id === activePlanId
         && interestRegions.exploration_plan_content_hash === activePlan?.content_hash
         && interestRegions.context?.day === selectedDay ? interestRegions : null;
+      const search = currentInterest?.search_context;
+      const latitudeSpan = search ? search.radius_km / 111.195 : 0;
+      const longitudeSpan = search ? latitudeSpan / Math.cos(search.coordinate.latitude * Math.PI / 180) : 0;
       const interestPositions = currentInterest ? [
+        ...(search ? [[search.coordinate.longitude - longitudeSpan, search.coordinate.latitude - latitudeSpan],
+          [search.coordinate.longitude + longitudeSpan, search.coordinate.latitude + latitudeSpan]] : []),
         ...currentInterest.poi_predictions.map(point => [point.display_coordinate.longitude, point.display_coordinate.latitude]),
-        ...currentInterest.required_points.filter(point => point.coordinate).map(point => point.coordinate),
+        ...currentInterest.required_points.filter(point => point.coordinate && !search).map(point => point.coordinate),
         ...currentInterest.surface.regions_geojson.features.flatMap(feature => feature.geometry.coordinates.flat(2)),
       ] : [];
       const interestBounds = interestPositions.length ? [

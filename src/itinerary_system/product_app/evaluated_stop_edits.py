@@ -1305,7 +1305,10 @@ def _route_legs(
     ordered_by_day = _ordered_stop_ids(plan)
     result: list[dict[str, Any]] = []
     previous_destination: str | None = None
-    for day, stop_ids in sorted(ordered_by_day.items()):
+    # A trip day left without stops (its only stop moved away) is still
+    # driven, from its start anchor to its end anchor.
+    empty_days = {day for day in set(start_anchors) & set(end_anchors) if day not in ordered_by_day}
+    for day, stop_ids in sorted({**ordered_by_day, **{day: [] for day in empty_days}}.items()):
         sequence: list[str] = []
         start = start_anchors.get(day)
         end = end_anchors.get(day)

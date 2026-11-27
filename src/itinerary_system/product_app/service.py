@@ -29,6 +29,7 @@ from .copilot import (
     DeterministicCopilotAdapter,
     validate_copilot_interpretation,
 )
+from .copilot_answers import answer_plan_question, build_trip_facts, looks_like_plan_question
 from .copilot_memory import bound_records, context_binding, derive_memory, empty_memory, project_capabilities
 from .copilot_prompt import PROMPT_VERSION, prompt_sha256
 from .draft_compiler import CANONICAL_OPERATIONS, FrozenDraftCompiler
@@ -52,6 +53,7 @@ from .models import (
     DraftOperationV1,
     ProductSession,
 )
+from .nearby_places import NearbyPlaceCache
 from .poi_catalog import POICatalogError, ProductPOICatalogV1
 from .product_demo import load_product_demo_package
 from .registry import ProductRunRegistry
@@ -60,6 +62,57 @@ from .workspace import WorkspaceError, WorkspaceStore
 
 if TYPE_CHECKING:
     from .config import ProductRuntimeConfig
+
+
+def _over_time_limit_message(findings: Any) -> str | None:
+    """Explain a move the solver rejected because a day becomes too long."""
+    days = sorted({
+        int(day)
+        for finding in findings or ()
+        if isinstance(finding, dict)
+        for day in finding.get("days_over_time_limit") or ()
+    })
+    if not days:
+        return None
+    label = ", ".join(f"Day {day}" for day in days)
+    minutes = next((
+        int(finding["daily_limit_minutes"]) for finding in findings or ()
+        if isinstance(finding, dict) and isinstance(finding.get("daily_limit_minutes"), int)
+    ), None)
+    limit = "the daily time limit" if minutes is None else (
+        f"the daily limit of {minutes // 60} hours" if minutes % 60 == 0 else f"the daily limit of {minutes} minutes"
+    )
+    return (
+        f"Not possible: with this change, {label} would take longer than {limit} "
+        "(driving plus visits) in every stop order. Choose another day for the stop. "
+        "The accepted itinerary remains active."
+    )
+
+
+def _ineligible_message(certificate: dict[str, Any], parent_plan: dict[str, Any]) -> str:
+    """Say which check failed, so the user knows what to change next."""
+
+    names = {
+        str(stop.get("stop_id")): str(stop.get("attraction_name") or stop.get("name") or stop.get("stop_id"))
+        for stop in parent_plan.get("selected_stops") or ()
+        if isinstance(stop, dict) and stop.get("stop_id")
+    }
+    reasons = []
+    for failure in (certificate.get("failures") or ())[:3]:
+        if not isinstance(failure, dict):
+            continue
+        refs = [names.get(str(ref), str(ref).replace("_", " ")) for ref in failure.get("evidence_refs") or ()]
+        if failure.get("code") == "weather_infeasible" and refs:
+            reasons.append(f"{', '.join(refs)} is still marked unsafe for the forecast weather")
+        else:
+            reasons.append(str(failure.get("message") or failure.get("code") or "a required check failed").rstrip("."))
+    base = "The evaluated child did not pass the required checks. The accepted itinerary remains active."
+    if not reasons:
+        return base
+    hint = (" Replace that stop as well (for example, ask to replace it with a registered alternative), then preview again."
+            if any(f.get("code") == "weather_infeasible" for f in certificate.get("failures") or () if isinstance(f, dict))
+            else "")
+    return f"Not eligible: {'; '.join(reasons)}.{hint} The accepted itinerary remains active."
 
 
 class CopilotServiceError(ValueError):
@@ -100,6 +153,7 @@ class ProductService:
     ) -> None:
         self.registry = registry
         self._planning_state_root = Path(state_root) / "trip_plans"
+        self.nearby_places = NearbyPlaceCache(Path(state_root) / "nearby_places")
         self._planning_routing_url = runtime_config.routing_base_url if runtime_config else None
         self.acceptance = AcceptanceStore(state_root)
         self.workspace = WorkspaceStore(
@@ -1047,11 +1101,26 @@ class ProductService:
                 )
 
             try:
-                interpretation = await self.copilot.interpret(
-                    context=context,
-                    history=history,
-                    message=message,
-                )
+                interpretation = None
+                if looks_like_plan_question(message):
+                    # Questions are answered from the same view the page renders and
+                    # never reach the draft pipeline; an edit phrased as a question
+                    # falls through (None) to typed interpretation below.
+                    proposal = session.proposal or {}
+                    facts = build_trip_facts(
+                        view, context, repository_root=self.registry.repository_root,
+                        proposal={"status": proposal.get("state"), "comparison_eligibility": proposal.get("eligibility")}
+                        if proposal else None,
+                    )
+                    interpretation = await answer_plan_question(
+                        self.copilot, context=context, history=history, message=message, facts=facts,
+                    )
+                if interpretation is None:
+                    interpretation = await self.copilot.interpret(
+                        context=context,
+                        history=history,
+                        message=message,
+                    )
                 interpretation = validate_copilot_interpretation(
                     context=context,
                     interpretation=interpretation,
@@ -1970,6 +2039,7 @@ class ProductService:
         self, session: ProductSession, *, expected_revision: int, day: int,
         route_leg_id: str, replacement_target_id: str | None, role: str | None,
         maximum_detour_minutes: float, nature_preference: float, plan_id: str | None = None,
+        focus_stop_id: str | None = None, radius_km: float = 5.0, search_area: str = "visitor_area", refresh_places: bool = False,
     ) -> dict[str, Any]:
         self.workspace.expect_revision(session, expected_revision)
         accepted_pointer = self.acceptance.load_pointer(session.trip_id)
@@ -1986,7 +2056,10 @@ class ProductService:
             parent_plan=parent_plan, registered_bundles=tuple(self._evidence_bundles[session.run_id].values()),
             replacement_target_id=replacement_target_id, role=role,
             maximum_detour_minutes=maximum_detour_minutes, nature_preference=nature_preference,
+            focus_stop_id=focus_stop_id, radius_km=radius_km, search_area=search_area,
+            place_cache=self.nearby_places, refresh_places=refresh_places,
         )
+        self.workspace.expect_revision(session, expected_revision)
         response.update({
             "exploration_plan_id": parent_plan["plan_id"],
             "exploration_plan_content_hash": parent_plan["content_hash"],
@@ -2412,13 +2485,14 @@ class ProductService:
             "message": (
                 "The typed draft produced an immutable in-memory child that passed independent evaluation."
                 if eligible
-                else "The evaluated child did not pass the required checks. The accepted itinerary remains active."
+                else _ineligible_message(certificate, compiler.parent_plan)
                 if compiled.state == "ineligible"
                 else "Preview blocked: required road evidence is unavailable. No child was evaluated; the accepted itinerary remains active."
                 if compiled.state == "blocked"
                 else "The repair did not complete. No child was evaluated; the accepted itinerary remains active."
                 if compiled.state == "failed"
-                else "No admissible child was produced for independent evaluation. The accepted itinerary remains active."
+                else _over_time_limit_message(compiled.blocking_findings)
+                or "No admissible child was produced for independent evaluation. The accepted itinerary remains active."
             ),
             "parent_plan_id": compiler.parent_plan_id,
             "parent_plan_content_hash": compiler.parent_plan.get("content_hash"),

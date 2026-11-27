@@ -59,6 +59,7 @@ def product_build_id(repository_root: Path) -> str:
         repository_root / "configs" / "product_app_registry.json", route_registration,
         repository_root / "src" / "itinerary_system" / "interest_model.py",
         repository_root / "src" / "itinerary_system" / "interest_surface.py"]
+    candidates.extend((repository_root / "configs" / "interest_regions").glob("*.json"))
     try:
         registration = json.loads(route_registration.read_text(encoding="utf-8"))
         descriptor = registration.get("descriptor_path") if isinstance(registration, dict) else None

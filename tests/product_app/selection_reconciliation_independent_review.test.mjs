@@ -21,11 +21,16 @@ function harness(read) {
   const post = deferred();
   const state = { session: session("C", 0), workspace: { draft_capabilities: {} }, registry: { marker: "original" } };
   const requests = [], rendered = [], messages = [];
-  const update = new Function("state", "api", "syncPreviewRuntimeFromSession", "loadDraftImpactPreview", "renderAll", "toast",
-    `${handler}; return updateSelection;`)(state, async (path, options) => {
-      requests.push({ path, options });
-      return options?.method === "POST" ? post.promise : read();
-    }, () => {}, async () => {}, () => rendered.push(structuredClone(state)), message => messages.push(message));
+  const api = async (path, options) => {
+    requests.push({ path, options });
+    return options?.method === "POST" ? post.promise : read();
+  };
+  // Selection writes go through the durable mutation journal in production.
+  const mutationRecovery = { submit: (_action, body) => api("/selection", { method: "POST", body }) };
+  const update = new Function("state", "api", "mutationRecovery", "refreshStaleWorkspace", "syncPreviewRuntimeFromSession",
+    "loadDraftImpactPreview", "renderAll", "toast",
+    `${handler}; return updateSelection;`)(state, api, mutationRecovery, async () => false, () => {}, async () => {},
+      () => rendered.push(structuredClone(state)), message => messages.push(message));
   const begin = () => {
     const result = update({ selected_day: 6 });
     state.session = session("D");

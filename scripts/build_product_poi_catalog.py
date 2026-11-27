@@ -29,7 +29,7 @@ MANIFEST_FILENAME = "manifest.json"
 CATALOG_ID = "california_coast_demo_candidates_v1"
 
 PINNED_PACKAGE_SHA256 = (
-    "925eea6e5722a782d48f657efa931e18536e502a7803a839a983747ed79b5e40"
+    "57750ada13bbfb79a91eb9f5b4af8a022eb58e94b1565578720fda02c08cc9ba"
 )
 PINNED_MATRIX_FILE_SHA256 = (
     "6f3b5b8eda1a9f73e28b6404ef15126086dbd7861c683790af6f6e87b41b4677"
@@ -55,13 +55,13 @@ PLACE_SPECS = (
         ),
         "certificate_file": (
             "alternatives/w2_weather_recommended_v2/evaluations/"
-            "cert_686ef65d376b2867.json"
+            "cert_22c4b9fb2dcbbe54.json"
         ),
         "plan_id": "plan_f5ee52459659dcb5",
-        "certificate_id": "cert_686ef65d376b2867",
+        "certificate_id": "cert_22c4b9fb2dcbbe54",
         "request_source_id": "bixby_candidate_request_w2",
         "plan_source_id": "registered_child_plan_f5ee52459659dcb5",
-        "certificate_source_id": "registered_certificate_686ef65d376b2867",
+        "certificate_source_id": "registered_certificate_22c4b9fb2dcbbe54",
     },
     {
         "place_id": "santa_barbara_museum_of_natural_history_sea_center",

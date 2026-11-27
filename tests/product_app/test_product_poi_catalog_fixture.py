@@ -21,12 +21,12 @@ FIXTURE_ROOT = (
     REPOSITORY_ROOT / "configs/product_poi_catalogs/california_coast_demo"
 )
 EXPECTED_CATALOG_SHA256 = (
-    "780aef9184b4f1186d3bfdd9174d2a458864c7a26f5600d553495f4e697967b6"
+    "1456b6f4783dc8a1e7b0b61a9d3ebc03c7ae2447363336273808ee8e49a50ec3"
 )
 
 SOURCE_HASHES = {
     "runs/california-coast-product-demo-v2/manifest.json": (
-        "925eea6e5722a782d48f657efa931e18536e502a7803a839a983747ed79b5e40"
+        "57750ada13bbfb79a91eb9f5b4af8a022eb58e94b1565578720fda02c08cc9ba"
     ),
     (
         "runs/california-coast-product-demo-v2/alternatives/"
@@ -35,11 +35,11 @@ SOURCE_HASHES = {
     (
         "runs/california-coast-product-demo-v2/alternatives/"
         "w2_weather_recommended_v2/plans/plan_f5ee52459659dcb5.json"
-    ): "1e4528a293280db9c601e237dbce51021ae663e328e9cbe842c80b2a0ff3ebba",
+    ): "46ec1ec1686c72afacaf4099350b3726b376923b96f272b720f6022b971ba476",
     (
         "runs/california-coast-product-demo-v2/alternatives/"
-        "w2_weather_recommended_v2/evaluations/cert_686ef65d376b2867.json"
-    ): "7357273268fe65a13f10d3d72a5dd04ee4732aabe08a3560da4d61d76a6add5c",
+        "w2_weather_recommended_v2/evaluations/cert_22c4b9fb2dcbbe54.json"
+    ): "f37bb345790dbe868880246cca45c9ef151b98128e6a4f546892d59c4fcc8520",
     (
         "runs/california-coast-product-demo-v2/alternatives/"
         "w2_weather_low_driving_v2/requests/w2_weather_low_driving_v2.json"
@@ -51,7 +51,7 @@ SOURCE_HASHES = {
     (
         "runs/california-coast-product-demo-v2/alternatives/"
         "w2_weather_low_driving_v2/evaluations/cert_5a6deef4c159d346.json"
-    ): "4bb3d2c2888fd667bcedf2711acd740aa3d2f4f43d662c3f6217d09a91e785df",
+    ): "3e86c3a4be736caa47862123e8ec9a7f6e44c912bff32810e5fea349dff6727f",
     "runs/e3ux-weather-repair-demo-v6/routing/route_matrix_68ab535465b06808.json": (
         "6f3b5b8eda1a9f73e28b6404ef15126086dbd7861c683790af6f6e87b41b4677"
     ),
@@ -165,7 +165,7 @@ def test_sources_keep_artifact_roles_and_do_not_invent_external_metadata() -> No
     assert set(sources) == {
         "bixby_candidate_request_w2",
         "registered_certificate_5a6deef4c159d346",
-        "registered_certificate_686ef65d376b2867",
+        "registered_certificate_22c4b9fb2dcbbe54",
         "registered_child_plan_8aa919c8323dbac0",
         "registered_child_plan_f5ee52459659dcb5",
         "route_matrix_68ab535465b06808",

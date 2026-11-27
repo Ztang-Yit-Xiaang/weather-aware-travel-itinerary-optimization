@@ -343,7 +343,7 @@ test("Keep original uses the same explicit confirmation boundary", async () => {
 });
 
 test("boot restores the selected child stop inspector before the first render", async () => {
-  const state = { route: "/app/itinerary", mapInteraction: { selectionKind: null, selectedStopPlanId: null } };
+  const state = { route: "/app/itinerary", mapInteraction: { selectionKind: null, selectedStopPlanId: null }, interestRegions: {} };
   const selected = { id: "pfeiffer", plan_id: "child", day: 5 };
   let firstRender = null;
   let startupError = null;
@@ -352,6 +352,7 @@ test("boot restores the selected child stop inspector before the first render", 
     api: async (path) => path === "/api/health"
       ? { schema_version: "product-health-v2", product_id: "itinerary-repair-copilot", core_ready: true }
       : { schema_version: "product-map-configuration-v2" },
+    restoreInterestPreferences: () => ({}), workspaceStorage: {}, interestPreferencesKey: () => "interest",
     restorePendingMutationInput() {},
     mutationRecovery: { restore: async () => null, pending: null },
     restoreOrCreateSession: async () => ({ workspace: {}, registry: {}, session: { selected_stop_id: "pfeiffer", selected_day: 5 } }),

@@ -72,7 +72,7 @@ function harness({ configs = [readyConfig()], mapHealth = "ready" } = {}) {
     route: "/app/itinerary", mapConfig: null, health: null, session: null,
     mapInteraction: { selectionKind: null, selectedStopPlanId: null },
     previewRuntime: { status: "PARENT_RENDERED", epoch: 0, requestId: null },
-    acknowledgedPreviewPlanId: null,
+    acknowledgedPreviewPlanId: null, interestRegions: {},
   };
   let restores = 0;
   let startupError = null;
@@ -96,6 +96,7 @@ function harness({ configs = [readyConfig()], mapHealth = "ready" } = {}) {
     requestAnimationFrame: (callback) => callback(),
     restoreOrCreateSession: async () => { restores += 1; return structuredClone(acceptedPayload); },
     syncPreviewRuntimeFromSession() {}, loadDraftImpactPreview: async () => {}, bindEvents() {},
+    restoreInterestPreferences: () => ({}), workspaceStorage: {}, interestPreferencesKey: () => "interest",
     restorePendingMutationInput() {},
     mutationRecovery: {restore: async () => {}, pending: null},
     findSelectedStop: () => state.session ? { id: state.session.selected_stop_id, plan_id: acceptedPlan.plan_id } : null,

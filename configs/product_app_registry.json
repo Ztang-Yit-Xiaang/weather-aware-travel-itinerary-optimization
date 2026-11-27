@@ -21,7 +21,7 @@
       "trip_id": "california_coast_demo",
       "label": "California Coast interactive demo · v2",
       "relative_path": "runs/california-coast-product-demo-v2",
-      "manifest_sha256": "925eea6e5722a782d48f657efa931e18536e502a7803a839a983747ed79b5e40",
+      "manifest_sha256": "57750ada13bbfb79a91eb9f5b4af8a022eb58e94b1565578720fda02c08cc9ba",
       "capabilities": [
         "read_only_artifacts",
         "fixture_copilot",

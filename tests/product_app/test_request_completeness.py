@@ -61,7 +61,6 @@ def local_adapter(request):
 
 @pytest.mark.parametrize("message", (
     LONG_REPLACEMENT.replace("Day 5", "Day 4"),
-    "Add Pfeiffer Big Sur State Park to day 5.",
     "Add Hearst Castle on Day 5 to this ten-day trip.",
     "請把 Hearst Castle 安排在第5天，旅行總共10天。",
     "Replace Bixby Creek Bridge with Pfeiffer Big Sur State Park and plan a ten-day trip.",

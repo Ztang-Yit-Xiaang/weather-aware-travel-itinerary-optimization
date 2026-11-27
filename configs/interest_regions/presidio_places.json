@@ -1,0 +1,130 @@
+{
+  "schema_version": "interest-local-places-v1",
+  "retrieved_at": "2026-10-29T16:46:19.511419+00:00",
+  "attribution": "Presidio Trust",
+  "data_role": "official_place_metadata_not_user_feedback",
+  "coordinate_source": "GeoCoordinates in official attraction page JSON-LD",
+  "places": [
+    {
+      "place_id": "presidio_fort_point_national_historic_site",
+      "name": "Fort Point National Historic Site",
+      "display_coordinate": {
+        "latitude": 37.810612,
+        "longitude": -122.47709
+      },
+      "place_categories": [
+        "nature",
+        "outdoor",
+        "culture"
+      ],
+      "source_refs": [
+        "https://presidio.gov/explore/attractions/fort-point-national-historic-site/"
+      ],
+      "coordinate_role": "official_display_location_not_route_access",
+      "source_html_sha256": "3a390971b397ac6f25afad572c4cf40ea4cd686a388eec8c28f029a3033da643"
+    },
+    {
+      "place_id": "presidio_crissy_field_overlook",
+      "name": "Crissy Field Overlook",
+      "display_coordinate": {
+        "latitude": 37.805044,
+        "longitude": -122.469809
+      },
+      "place_categories": [
+        "nature",
+        "outdoor"
+      ],
+      "source_refs": [
+        "https://presidio.gov/explore/attractions/crissy-field-overlook/"
+      ],
+      "coordinate_role": "official_display_location_not_route_access",
+      "source_html_sha256": "686ff634f27d1692929497f91b26cdc82e6b2dd7e93c14755feb8f55dfa40e44"
+    },
+    {
+      "place_id": "presidio_presidio_tunnel_tops",
+      "name": "Presidio Tunnel Tops",
+      "display_coordinate": {
+        "latitude": 37.801924,
+        "longitude": -122.456853
+      },
+      "place_categories": [
+        "nature",
+        "outdoor"
+      ],
+      "source_refs": [
+        "https://presidio.gov/explore/attractions/presidio-tunnel-tops/"
+      ],
+      "coordinate_role": "official_display_location_not_route_access",
+      "source_html_sha256": "54d07c3ddf3dbc747b4a45bf787feefc783a87cd32bac3d542c967ae84e3effa"
+    },
+    {
+      "place_id": "presidio_golden_gate_overlook",
+      "name": "Golden Gate Overlook",
+      "display_coordinate": {
+        "latitude": 37.803966,
+        "longitude": -122.476678
+      },
+      "place_categories": [
+        "nature",
+        "outdoor"
+      ],
+      "source_refs": [
+        "https://presidio.gov/explore/attractions/golden-gate-overlook/"
+      ],
+      "coordinate_role": "official_display_location_not_route_access",
+      "source_html_sha256": "ddfdb20595e1afe7b49be8718a70c4275a6ed2b5c4d4ff20619a135c28561c65"
+    },
+    {
+      "place_id": "presidio_pacific_overlook",
+      "name": "Pacific Overlook",
+      "display_coordinate": {
+        "latitude": 37.801014,
+        "longitude": -122.477903
+      },
+      "place_categories": [
+        "nature",
+        "outdoor"
+      ],
+      "source_refs": [
+        "https://presidio.gov/explore/attractions/pacific-overlook/"
+      ],
+      "coordinate_role": "official_display_location_not_route_access",
+      "source_html_sha256": "77c98adbfbfa2e91c4bd0fe2fe77e15a48fb43a005c754bd9d3ba7f25fad3bc2"
+    },
+    {
+      "place_id": "presidio_battery_east_vista",
+      "name": "Battery East Vista",
+      "display_coordinate": {
+        "latitude": 37.80704,
+        "longitude": -122.472131
+      },
+      "place_categories": [
+        "nature",
+        "outdoor"
+      ],
+      "source_refs": [
+        "https://presidio.gov/explore/attractions/battery-east-vista/"
+      ],
+      "coordinate_role": "official_display_location_not_route_access",
+      "source_html_sha256": "f542dac0875573398b29d1aadbb6f9ba0cc5a7bbeb7c8cc7bebbe5c862314277"
+    },
+    {
+      "place_id": "presidio_golden_gate_bridge_welcome_center",
+      "name": "Golden Gate Bridge Welcome Center",
+      "display_coordinate": {
+        "latitude": 37.80779,
+        "longitude": -122.47484
+      },
+      "place_categories": [
+        "nature",
+        "outdoor",
+        "culture"
+      ],
+      "source_refs": [
+        "https://presidio.gov/explore/attractions/golden-gate-bridge-welcome-center/"
+      ],
+      "coordinate_role": "official_display_location_not_route_access",
+      "source_html_sha256": "917e70e34d26f15e06c25bbc8d2ea3c4dbafc95649618a518eb8016b96434356"
+    }
+  ]
+}

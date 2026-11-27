@@ -73,7 +73,7 @@ test("camera padding scales to the actual pane instead of consuming half a narro
   const options = new Function("container", `return (${match[1]});`);
   assert.deepEqual(options({ clientWidth:204, clientHeight:334 }), {padding:25.5,maxZoom:13,duration:0});
   assert.deepEqual(options({ clientWidth:720, clientHeight:650 }), {padding:54,maxZoom:13,duration:0});
-  assert.ok(source.includes("fitBoundsOptions,\n"));
+  assert.ok(source.includes("{ bounds: fittedBounds, fitBoundsOptions }"));
   assert.ok(source.includes("nextMap.fitBounds(fittedBounds, fitBoundsOptions)"));
   assert.ok(source.includes("nextMap.resize();\n        refitBounds();"), "Resize must refit canonical selection bounds, not just repaint tiles");
   assert.match(source, /observeMapSize\(nextMap, renderGeneration, validateReady, \(\) => \{\s*nextMap\.fitBounds\(fittedBounds, \{\s*\.\.\.fitBoundsOptions,\s*padding: Math\.min\(54, Math\.min\(container\.clientWidth, container\.clientHeight\) \/ 8\)/,

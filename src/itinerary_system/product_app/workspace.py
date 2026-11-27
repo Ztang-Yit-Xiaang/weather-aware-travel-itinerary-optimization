@@ -64,8 +64,8 @@ class WorkspaceStore:
     MAX_DRAFT_OPERATIONS = 32
     MAX_PERMISSION_DECISIONS = 32
     MAX_MUTATION_RECEIPTS = 256
-    SESSION_TTL = timedelta(hours=24)
-    SESSION_RETENTION = timedelta(days=30)
+    SESSION_TTL = timedelta(days=90)
+    SESSION_RETENTION = timedelta(days=365)
     _CONVERSATION_ID = re.compile(r"conversation_[0-9a-f]{32}\Z")
 
     def __init__(

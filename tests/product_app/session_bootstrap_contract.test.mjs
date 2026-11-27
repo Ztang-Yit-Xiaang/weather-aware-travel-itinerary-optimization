@@ -21,7 +21,7 @@ function harness({code = "unknown_session", status = 404, pending = false} = {})
   const context = {
     state: {session: {session_id: "old"}, token: null, mutationRecovery: {blocked: false}},
     SESSION_STORAGE_KEY: "session", PENDING_MUTATION_KEY: "pending", PENDING_INPUT_KEY: "input",
-    sessionStorage: {getItem: key => values.get(key) ?? null, setItem: (key, value) => values.set(key, value), removeItem: key => values.delete(key)},
+    workspaceStorage: {getItem: key => values.get(key) ?? null, setItem: (key, value) => values.set(key, value), removeItem: key => values.delete(key)},
     $: () => input, toast() {},
     isBuildMismatch: value => value.startsWith("product_"),
     api: async (url, options = {}) => {

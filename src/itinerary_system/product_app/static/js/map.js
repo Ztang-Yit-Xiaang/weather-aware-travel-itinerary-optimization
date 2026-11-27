@@ -603,7 +603,8 @@ export async function renderGeographicMap({
   const interestVisible = interestRegions?.exploration_plan_id === planId
     && interestRegions?.exploration_plan_content_hash === plan?.content_hash
     && interestRegions?.context?.day === selectedDay;
-  const viewKey = JSON.stringify([planId, plan?.content_hash, selectedDay, interestVisible, selectedInterestId]);
+  const viewKey = JSON.stringify([planId, plan?.content_hash, selectedDay, interestVisible, selectedInterestId,
+    interestRegions?.search_context?.stop_id, interestRegions?.search_context?.radius_km, interestRegions?.search_context?.area_mode]);
   const initialCamera = viewKey === activeViewKey ? activeController?.camera() || retainedCamera : null;
   disposeGeographicMap();
   if (!planId) {

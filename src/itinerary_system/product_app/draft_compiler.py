@@ -250,6 +250,17 @@ class FrozenDraftCompiler:
                     "status": "no_applicable_replacement_candidates",
                 }
                 capabilities["executable_combinations"][0]["operations"].remove("replace_nearby")
+            # Lock and cross-day moves run through deterministic repair together
+            # with keep, replacement and addition edits, not with direct edits.
+            repair_operations = sorted(
+                name for name in ("keep_stop", "lock_stop", "move_day", "replace_nearby", "add_candidate")
+                if capabilities["operations"].get(name, {}).get("preview_executable") is True
+            )
+            if {"lock_stop", "move_day"} & set(repair_operations):
+                capabilities["executable_combinations"].append({
+                    "operations": repair_operations, "cardinality": 32,
+                    "description": "Lock, cross-day move, keep, replacement and addition edits run together through deterministic repair and independent evaluation.",
+                })
         if self._coherent_product and self.planning_state_root is not None:
             capabilities["operations"]["replan_trip"] = {
                 "enabled": True, "preview_executable": True,
@@ -272,8 +283,11 @@ class FrozenDraftCompiler:
             raise WorkspaceError("draft_candidate_already_in_plan", 409)
         if not _valid_day(day):
             raise WorkspaceError("draft_destination_day_invalid", 409)
+        # _valid_day bounds any trip length; the day must also exist in this plan.
+        stops = next((row["stop_ids"] for row in self.parent_plan["ordered_days"] if row["day"] == day), None)
+        if stops is None:
+            raise WorkspaceError("draft_destination_day_invalid", 409)
         matrix, config, _ = self._runtime_inputs()
-        stops = next(row["stop_ids"] for row in self.parent_plan["ordered_days"] if row["day"] == day)
         sequence = [config.start_anchor_by_day[day], *stops, candidate_id, config.end_anchor_by_day[day]]
         required_legs: list[dict[str, Any]] = []
         findings: list[dict[str, Any]] = []
@@ -659,8 +673,13 @@ class FrozenDraftCompiler:
         )
 
     def _unsupported_product_operation(self, operation_type: str) -> bool:
+        # lock_stop and move_day run through the evaluated repair (moves use
+        # the cross-day search and the frozen move-leg road delta). The repair
+        # core does not read flexible marks or route preferences, so those stay
+        # off rather than imply an effect. set_stop_day stays a draft-only
+        # typed edit until it shares the move path.
         return self._coherent_product and operation_type in {
-            "lock_stop", "mark_flexible", "move_day", "route_feedback",
+            "mark_flexible", "route_feedback",
             DraftOperationTypeV2.SET_STOP_DAY.value,
         }
 
@@ -915,6 +934,10 @@ class FrozenDraftCompiler:
             elif kind in {"move_day", DraftOperationTypeV2.SET_STOP_DAY.value}:
                 day_moves[target] = int(row["parameters"]["day"])
                 affected_days.add(int(row["parameters"]["day"]))
+                # The stop leaves its accepted day, so that day must be open to
+                # re-planning too; a frozen origin day keeps the stop in place.
+                if target in self._parent_day_by_stop:
+                    affected_days.add(self._parent_day_by_stop[target])
             elif kind == "route_feedback":
                 preferences.append(str(row["parameters"]["preference"]))
             elif kind == "replace_nearby":
@@ -1374,8 +1397,24 @@ class FrozenDraftCompiler:
                     stops = expected[row["parameters"]["day"]]
                     stops.remove(row["target"])
                     stops.insert(row["parameters"]["sequence_index"], row["target"])
+            # A moved stop leaves its accepted day; the solver chooses where it
+            # goes in the destination day, so only the other stops keep order.
+            arrivals: dict[int, set[str]] = {}
+            for row in operations:
+                if row["type"] in {"move_day", DraftOperationTypeV2.SET_STOP_DAY.value}:
+                    for stops in expected.values():
+                        if row["target"] in stops:
+                            stops.remove(row["target"])
+                    arrivals.setdefault(int(row["parameters"]["day"]), set()).add(row["target"])
+            expected = {day: stops for day, stops in expected.items() if stops or day in arrivals}
             actual = {row["day"]: list(row["stop_ids"]) for row in child["ordered_days"]}
-            if actual != expected:
+            stops_without_arrivals = {
+                day: [stop for stop in stops if stop not in arrivals.get(day, set())]
+                for day, stops in actual.items()
+            }
+            if stops_without_arrivals != expected or any(
+                not stops <= set(actual.get(day, [])) for day, stops in arrivals.items()
+            ):
                 failures.append("unrequested_itinerary_change")
             if child.get("lodging_assignments") != self.parent_plan.get("lodging_assignments"):
                 failures.append("unrequested_lodging_change")
@@ -1511,6 +1550,14 @@ def _unevaluated_outcome(
         state = "not_evaluated"
         reason = "no_feasible_local_candidate" if any(value.startswith("no_feasible_local_candidate:") for value in failures) else "repair_not_evaluated"
         action = "Adjust the draft or search constraints; no child reached independent evaluation."
+        too_long = sorted({int(value.rsplit(":", 1)[1]) for value in failures if re.fullmatch(r"day_time_exceeded:\d+", value)})
+        limits = [int(value.rsplit(":", 1)[1]) for value in failures if re.fullmatch(r"daily_time_limit_minutes:\d+", value)]
+        if too_long:
+            return state, reason, ({
+                "code": reason, "days_over_time_limit": too_long,
+                **({"daily_limit_minutes": limits[0]} if limits else {}),
+                "corrective_action": "Choose another day for the moved stop; every order of this day exceeds the daily time limit.",
+            },)
     return state, reason, ({"code": reason, "corrective_action": action},)
 
 

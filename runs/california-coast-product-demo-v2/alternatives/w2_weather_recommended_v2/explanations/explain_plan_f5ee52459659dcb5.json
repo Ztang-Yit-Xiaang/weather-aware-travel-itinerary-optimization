@@ -9,9 +9,7 @@
     }
   ],
   "decision_record_ids": [
-    "day_route:7:08f78a187eb2a3ac",
-    "day_route:7:ce3aeed211b6da5f",
-    "day_route:7:ab3554d57b1e426f"
+    "day_route:7:ce3aeed211b6da5f"
   ],
   "evidence_id": "explain_plan_f5ee52459659dcb5",
   "evidence_type": "deterministic_candidate_trace",

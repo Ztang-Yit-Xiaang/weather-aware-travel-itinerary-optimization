@@ -196,9 +196,10 @@ def trip_request_interpretation(context: Any, message: str) -> CopilotInterpreta
             if re.search(rf"(?:多|增加|新增|延長|延长)\s*({number})\s*天|(?:add|extend).{{0,20}}\b({number})\s+(?:(?:more|extra|additional)\s+)?days?|\b({number})\s+(?:more|extra|additional)\s+days?", message, re.I):
                 total_days += max(context.allowed_days)
     drive_number = rf"\d{{1,3}}(?:\.\d{{1,2}})?|{number}"
-    drive_match = re.search(rf"(?:每天|每日).{{0,5}}(?:開車|开车|駕駛|驾驶).{{0,12}}?(?<![\d.])({drive_number})(?![\d.])\s*(小時|小时|分鐘|分钟)|(?:drive|driving).{{0,25}}?(?<![\d.])({drive_number})(?![\d.])\s*(hours?|minutes?).{{0,15}}(?:per day|daily|a day)|\bdaily\s+driving\s+(?:under|limit\s+of)\s*(?<![\d.])({drive_number})(?![\d.])\s*(hours?|minutes?)\b", message, re.I)
+    drive_match = re.search(rf"(?:每天|每日).{{0,5}}(?:開車|开车|駕駛|驾驶).{{0,12}}?(?<![\d.])({drive_number})(?![\d.])\s*(小時|小时|分鐘|分钟)|(?:drive|driving).{{0,25}}?(?<![\d.])({drive_number})(?![\d.])\s*(hours?|minutes?).{{0,15}}(?:per day|daily|a day)|\bdaily\s+driving\s+(?:under|limit\s+of)\s*(?<![\d.])({drive_number})(?![\d.])\s*(hours?|minutes?)\b|(?<![\d.])({drive_number})(?![\d.])\s*(hours?|minutes?)\s+(?:of\s+)?(?:drive|driving)(?:\s+time)?\s+(?:per\s+day|daily|a\s+day|each\s+day)\b", message, re.I)
     comparative_driving = bool(re.search(
         r"\b(?:less|reduce|reduced|minimal|shorter)\s+(?:total\s+)?driving\b|\bdrive\s+less\b|"
+        r"\bnot\s+drive\s+(?:so|as|that)\s+much\b|"
         r"少(?:一點|一点)?(?:開車|开车|駕駛|驾驶)|減少.{0,6}(?:開車|开车|駕駛|驾驶)", message, re.I))
     pace = "relaxed" if re.search(r"輕鬆|轻松|慢遊|慢游|relaxed|slow pace", message, re.I) else "active" if re.search(r"緊湊|紧凑|充實|充实|active pace|packed", message, re.I) else "balanced"
     pace_specified = bool(re.search(r"輕鬆|轻松|慢遊|慢游|relaxed|slow pace|緊湊|紧凑|充實|充实|active pace|packed|平衡|balanced", message, re.I))
@@ -206,6 +207,22 @@ def trip_request_interpretation(context: Any, message: str) -> CopilotInterpreta
     profile_request = bool(re.search(r"偏好|喜歡|喜欢|偏愛|偏爱|prefer|interest|I like", message, re.I))
     individualized = not extension and (bool(day_matches) or bool(drive_match) or pace_specified or bool(interests) and profile_request)
     if not (coastal or start or hearst or islands or redwood or extension or individualized or required_mentions or comparative_driving or (official and big_sur)):
+        return None
+    # "We prefer nature reserves. Replace A with B." is a stop replacement with a
+    # reason, not a whole-trip interest profile. Only an interest/preference
+    # mention would make it trip-level here; leave it to the stop-edit parsers.
+    if (re.search(r"\b(?:replace|swap|substitute)\b|換成|换成|替換|替换", message, re.I)
+            and not (coastal or start or hearst or islands or redwood or extension or day_matches
+                     or drive_match or pace_specified or comparative_driving or official)):
+        return None
+    accepted_stop_ids = {str(place["place_id"]) for place in context.known_places
+                         if place.get("route_status") == "accepted_stop"}
+    if (required_mentions and required_mentions <= accepted_stop_ids
+            and not (coastal or start or hearst or islands or redwood or extension or individualized
+                     or comparative_driving or official)):
+        # Visiting stops that are already in the accepted plan ("on Day 4, visit
+        # A before B", "I want to visit A") is a local edit, not a whole-trip
+        # replan; leave it to the typed stop-edit interpreters.
         return None
     chinese = bool(re.search(r"[\u3400-\u9fff]", message))
 
@@ -340,7 +357,7 @@ def trip_request_interpretation(context: Any, message: str) -> CopilotInterpreta
     parameter_model = YosemiteExtensionParameters if extension else IndividualizedTripParameters if individualized else TripPlanParameters
     drive_limit = 720
     if drive_match:
-        amount, unit = next((drive_match[i], drive_match[i + 1]) for i in (1, 3, 5) if drive_match[i])
+        amount, unit = next((drive_match[i], drive_match[i + 1]) for i in (1, 3, 5, 7) if drive_match[i])
         value = Decimal(amount) if re.fullmatch(r"\d+(?:\.\d+)?", amount) else Decimal(_number(amount))
         minutes = value * (60 if re.fullmatch(r"小時|小时|hours?", unit, re.I) else 1)
         if minutes != minutes.to_integral_value() or not 60 <= minutes <= 720:

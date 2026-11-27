@@ -148,7 +148,7 @@ def test_semantically_identical_drafts_are_idempotent_across_session_metadata() 
         ([operation("keep_stop", "griffith_observatory")], "not_evaluated", "no_feasible_local_candidate"),
         ([operation("lock_stop", "griffith_observatory")], "not_evaluated", "no_feasible_local_candidate"),
         ([operation("mark_flexible", "golden_gate_bridge")], "eligible", None),
-        ([operation("move_day", "griffith_observatory", {"day": 4})], "not_evaluated", "no_feasible_local_candidate"),
+        ([operation("move_day", "griffith_observatory", {"day": 4})], "eligible", None),
         ([operation("route_feedback", "selected_route", {"preference": "reduce_driving"})], "eligible", None),
         ([operation("replace_nearby", "golden_gate_bridge", {"candidate_id": "bixby_creek_bridge_viewpoint"})], "eligible", None),
         ([operation("add_candidate", "bixby_creek_bridge_viewpoint", {"day": 7})], "eligible", None),

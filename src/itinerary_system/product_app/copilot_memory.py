@@ -106,6 +106,12 @@ def _request_spec(context: CopilotContextV2, message: str) -> dict[str, Any] | N
         "mark_flexible": r"\bflexible\b", "keep_stop": r"\b(?:keep|retain)\b",
     }
     kinds = [name for name, pattern in actions.items() if re.search(pattern, message, re.IGNORECASE)]
+    # "Move our visit time to 9:30 AM" changes when a stop is visited, not its day.
+    if "move_day" in kinds and re.search(
+        r"\b(?:visit|arrival|departure)\s+time\b|\b\d{1,2}(?::\d{2})?\s*(?:a\.?m\.?|p\.?m\.?)(?!\w)|\b\d{1,2}:\d{2}\b",
+        message, re.IGNORECASE,
+    ):
+        kinds.remove("move_day")
     stop = matched_known_place(context, message, route_status="accepted_stop")
     candidate = matched_known_place(context, message, route_status="registered_route_candidate")
     day_match = re.search(r"\bday\s+(\d+)\b", message, re.IGNORECASE) or re.fullmatch(
@@ -155,7 +161,8 @@ def _blocked(context: CopilotContextV2, spec: dict[str, Any]) -> str | None:
         accepted_day = next((row["day"] for row in context.capabilities.get("stop_positions", ())
                              if row["stop_id"] == spec["target_stop_id"]), None)
         if accepted_day is not None and spec["destination_day"] != accepted_day:
-            return f"This stop is accepted on Day {accepted_day}. Moving stops between days is not enabled."
+            return (f"This stop is accepted on Day {accepted_day}. This edit keeps its day; "
+                    "to change the day, ask to move the stop.")
     choices = context.capabilities["candidate_replacements"]
     if kind == "replace_nearby" and spec["target_stop_id"] is not None:
         choices = [row for row in choices if row["replaces_stop_id"] == spec["target_stop_id"]]
@@ -180,7 +187,16 @@ def _question(context: CopilotContextV2, spec: dict[str, Any]) -> str:
         return "Which accepted stop should I use for this edit?"
     name = next((str(row["name"]) for row in context.known_places if row["place_id"] == spec["target_stop_id"]), "that stop")
     if slot == "candidate_id":
-        return f"Which registered candidate should replace {name}?" if spec["intent_type"] == "replace_nearby" else "Which registered candidate should I add?"
+        if spec["intent_type"] != "replace_nearby":
+            return "Which registered candidate should I add?"
+        # Name the registered choices so a reply such as "the first one" or a
+        # place name can resolve; without them the question is unanswerable.
+        names = {str(row["place_id"]): str(row["name"]) for row in context.known_places}
+        choices = [names[row["candidate_id"]] for row in context.capabilities["candidate_replacements"]
+                   if row["replaces_stop_id"] == spec["target_stop_id"] and row["candidate_id"] in names]
+        if choices:
+            return f"Which registered candidate should replace {name}: {', '.join(choices[:5])}?"
+        return f"Which registered candidate should replace {name}?"
     return f"Which destination day should I use for {name}?"
 
 

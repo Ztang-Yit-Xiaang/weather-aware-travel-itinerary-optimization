@@ -754,6 +754,12 @@ class PlanEvaluator:
         *,
         stop_traces: list[dict[str, Any]] | None = None,
     ) -> dict[str, Any] | None:
+        # A trip day without stops is still driven from its start to its end
+        # anchor, so its leg and drive time are checked like any other day.
+        day_sequences = dict(sorted({
+            **{day: () for day in _empty_trip_days(plan, day_sequences, self.config)},
+            **day_sequences,
+        }.items()))
         route_sequences = tuple(_route_sequence(day, sequence, self.config) for day, sequence in sorted(day_sequences.items()))
         if route_matrix is None:
             failures.append(_failure("route_matrix_missing", "No RouteMatrix was provided for independent route validation.", "hard"))
@@ -1089,6 +1095,17 @@ def _day_sequences(plan: PlanArtifactV2) -> dict[int, tuple[str, ...]]:
         if day is not None:
             grouped.setdefault(day, []).append(key)
     return {day: tuple(stop_ids) for day, stop_ids in sorted(grouped.items())}
+
+
+def _empty_trip_days(
+    plan: PlanArtifactV2,
+    day_sequences: dict[int, tuple[str, ...]],
+    config: PlanEvaluatorConfig,
+) -> list[int]:
+    """Trip days (lodged or anchored on both ends) that hold no stop."""
+    lodged = {_coerce_int(day) for day in (plan.lodging_assignments or {})}
+    anchored = set(config.start_anchor_by_day) & set(config.end_anchor_by_day)
+    return sorted(day for day in lodged & anchored if day is not None and day not in day_sequences)
 
 
 def _route_sequence(day: int, sequence: tuple[str, ...], config: PlanEvaluatorConfig) -> tuple[str, ...]:

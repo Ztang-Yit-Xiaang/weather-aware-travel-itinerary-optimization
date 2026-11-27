@@ -187,7 +187,8 @@ def test_real_api_accept_pfeiffer_add_point_lobos_accept_restart(tmp_path):
         assert restored.status_code == 200, restored.text
         caps = restored.json()["workspace"]["draft_capabilities"]
         rows = caps["operations"]["add_candidate"]["candidate_day_readiness"]
-        assert [(row["candidate_id"], row["day"]) for row in rows if row["preview_executable"]] == [(delta.PAIR[1], 5)]
+        # The registered move-leg delta also routes Point Lobos into the other days.
+        assert (delta.PAIR[1], 5) in [(row["candidate_id"], row["day"]) for row in rows if row["preview_executable"]]
         assert caps["operations"]["add_candidate"]["preview_executable"] is True
         staged = post(api, url + "/draft/operations", {"expected_revision": 3, "type": "add_candidate",
             "target": delta.PAIR[1], "parameters": {"day": 5}}, headers)
@@ -201,7 +202,8 @@ def test_real_api_accept_pfeiffer_add_point_lobos_accept_restart(tmp_path):
         assert set(delta.PAIR).issubset(marker_ids)
         assert proposal["geography_plan"]["plan_id"] == c
         assert proposal["geography_plan"]["coverage"]["complete"] is True
-        assert proposal["route_validation"]["source_content_sha256"] == DESCRIPTOR_HASH
+        registered = json.loads((ROOT / "configs/product_route_delta.json").read_text(encoding="utf-8"))
+        assert proposal["route_validation"]["source_content_sha256"] == registered["descriptor_sha256"]
         accepted = post(api, url + "/accept", {"expected_revision": 5, "confirmation": "accept_evaluated_repair",
             "idempotency_key": "r03_accept_point_lobos"}, headers)
         assert accepted["session"]["accepted_plan_id"] == c

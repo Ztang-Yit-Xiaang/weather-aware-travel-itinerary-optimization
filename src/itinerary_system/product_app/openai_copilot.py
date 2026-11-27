@@ -527,6 +527,22 @@ def _draft_point_removal_guidance(
     )
 
 
+_ORDINAL_DAYS = {
+    "first": 1, "second": 2, "third": 3, "fourth": 4, "fifth": 5, "sixth": 6, "seventh": 7,
+    "eighth": 8, "ninth": 9, "tenth": 10,
+}
+
+
+def _named_days(message: str) -> set[int]:
+    """Trip days a message names as "day N" or "the Nth day"."""
+    days = {int(value) for value in re.findall(r"\bday\s*(\d{1,2})\b", message, re.IGNORECASE)}
+    days |= {
+        _ORDINAL_DAYS[word.lower()]
+        for word in re.findall(r"\b(" + "|".join(_ORDINAL_DAYS) + r")\s+day\b", message, re.IGNORECASE)
+    }
+    return days
+
+
 def _accepted_stop_inclusion(
     context: CopilotContextV1, message: str
 ) -> CopilotInterpretationV1 | None:
@@ -542,6 +558,14 @@ def _accepted_stop_inclusion(
     stop_id = str(place["place_id"])
     if stop_id not in context.allowed_stop_ids:
         return None
+    # "I want to visit X on day 5" asks for a day. Keep-stop would drop it, so
+    # leave a request that names another day to the normal interpretation.
+    named_days = _named_days(message)
+    if named_days:
+        positions = (getattr(context, "capabilities", None) or {}).get("stop_positions", ())
+        accepted_day = next((row["day"] for row in positions if row.get("stop_id") == stop_id), None)
+        if accepted_day is None or named_days != {accepted_day}:
+            return None
     return CopilotInterpretationV1(
         state="proposal_ready",
         assistant_message=(
@@ -626,7 +650,7 @@ def _safe_specific_question(question: str | None) -> bool:
         and question.count("?") == 1
         and not any(character in question for character in "\r\n<>`")
         and re.match(r"^(?:Which|What|Where|When|How|Would|Do|Should|Can)\b", question, re.IGNORECASE) is not None
-        and re.search(r"\b(?:day|stop|place|route|move|replace|add|candidate|duration|trade-off)\b", question, re.IGNORECASE) is not None
+        and re.search(r"\b(?:day|stop|place|route|move|replace|add|candidate|duration|minutes?|hours?|trade-off)\b", question, re.IGNORECASE) is not None
         and re.search(
             r"https?://|\b(?:ignore|instruction|password|token|secret|api.key|booked|paid|"
             r"secured|purchased|charged|reserved|cancelled|canceled|accepted|applied|activated)\b",

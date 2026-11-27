@@ -1,0 +1,39 @@
+{
+  "artifact_hashes": {
+    "cache_audit": "baf7f6438375531d618767b4c00e8f678f0b7324d8cda502699eefd38116d7c9",
+    "provider_provenance": "fcb6328ad210261e2ff260cd337eeb44cf4b27e5a296b626abb7f7b33f13db65",
+    "requests": "efecdaede914108e269f31f97222b9494cecf5f459478c5ae3cf34d5cc237620",
+    "validated_cache": "cf65054e3c24157524876e0235846969cf74844885fe1903684a0ad38cc958de"
+  },
+  "bundle_id": "route_bundle_3481f26443ff3923",
+  "cache_alignment_valid": true,
+  "cache_row_count": 235,
+  "earliest_retrieved_at": "2026-11-26T19:02:28.365777+00:00",
+  "errors": [],
+  "expected_request_count": 235,
+  "fallback_free": true,
+  "freshness_valid": true,
+  "generated_at": "2026-11-26T19:04:24.473407+00:00",
+  "latest_retrieved_at": "2026-11-26T19:04:07.731938+00:00",
+  "max_allowed_cache_age_days": 1.0,
+  "maximum_cache_age_days": 0.0013438383101851852,
+  "output_dir": "results/route_deltas/product_move_legs_20261126_v1",
+  "provider_counts": {
+    "cached_osrm": 235
+  },
+  "provider_provenance_valid": true,
+  "publication_ready": true,
+  "request_audit_alignment_valid": true,
+  "request_count": 235,
+  "request_set_hash": "b75c03d26e0802c5",
+  "road_validation_complete": true,
+  "schema_version": "route-evidence-bundle-v1",
+  "snap_validated_count": 235,
+  "snap_validation_complete": true,
+  "status_counts": {
+    "fetched_osrm_validated": 235
+  },
+  "unique_request_count": 235,
+  "validated_route_count": 235,
+  "warnings": []
+}

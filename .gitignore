@@ -89,3 +89,7 @@ results/repairs/
 /results/route_deltas/*
 # Immutable reference inputs required by the registered demo and tests.
 !/results/route_deltas/product_pfeiffer_point_lobos_20260908_v1/
+# Registered move-leg delta (2026-11-26). Its raw per-request OSRM cache is
+# not read by the loader and stays local; the large files go through Git LFS.
+!/results/route_deltas/product_move_legs_20261126_v1/
+/results/route_deltas/product_move_legs_20261126_v1/raw_cache/

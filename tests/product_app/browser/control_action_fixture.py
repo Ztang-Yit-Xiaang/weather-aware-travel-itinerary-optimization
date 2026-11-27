@@ -1,4 +1,5 @@
 """Passive exact-control input receipts shared by real draft browser journeys."""
+
 from __future__ import annotations
 
 OBSERVE_CONTROL_ACTIONS = """(() => {
@@ -17,18 +18,28 @@ OBSERVE_CONTROL_ACTIONS = """(() => {
 })();"""
 
 
-def before_action(page,control):
-    return {'event_start':page.evaluate('window.__draftControlInputs.length'),
-        'control':control.evaluate("""e=>{const form=e.closest('.typed-operation-form');return {
+def before_action(page, control):
+    return {
+        "event_start": page.evaluate("window.__draftControlInputs.length"),
+        "control": control.evaluate("""e=>{const form=e.closest('.typed-operation-form');return {
           id:e.id||null,visible:!!e.getClientRects().length,disabled:e.matches(':disabled'),
           operation:form?.dataset.typedOperation||null,form_id:window.__draftControlFormId(form),path:location.pathname,
-          fields:form?Object.fromEntries([...form.elements].filter(x=>x.name).map(x=>[x.name,x.type==='checkbox'?x.checked:x.value])):null};}""")}
+          fields:form?Object.fromEntries([...form.elements].filter(x=>x.name).map(x=>[x.name,x.type==='checkbox'?x.checked:x.value])):null};}"""),
+    }
 
 
-def after_action(page,before,*,context,phase,request,response):
-    events=page.evaluate('window.__draftControlInputs')
-    return {**before,'context':context,'phase':phase,'request':request,'response':response,
-        'event_end':len(events),'raw_events':events,'assertions_passed':True}
+def after_action(page, before, *, context, phase, request, response):
+    events = page.evaluate("window.__draftControlInputs")
+    return {
+        **before,
+        "context": context,
+        "phase": phase,
+        "request": request,
+        "response": response,
+        "event_end": len(events),
+        "raw_events": events,
+        "assertions_passed": True,
+    }
 
 
 def select_native_option(control, value):

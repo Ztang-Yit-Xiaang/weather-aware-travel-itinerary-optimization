@@ -1,7 +1,7 @@
-"""State-loss regressions with isolated stores, no registered runs or provider calls."""
+"""State-loss regressions with isolated stores and synthetic evidence, no provider calls."""
+
 from __future__ import annotations
 
-import gzip
 import json
 import threading
 from concurrent.futures import ThreadPoolExecutor
@@ -18,10 +18,12 @@ from itinerary_system.product_app import workspace as workspace_module
 from itinerary_system.product_app.api import create_product_app
 from itinerary_system.product_app.conversations import ConversationError, ConversationRepository
 from itinerary_system.product_app.copilot import DeterministicCopilotAdapter
-from itinerary_system.product_app.draft_compiler import _operation_record
+from itinerary_system.product_app.draft_compiler import _operation_record, _route_matrix
 from itinerary_system.product_app.models import CopilotTurnV1
+from itinerary_system.product_app.official_travel import OFFICIAL_URLS
 from itinerary_system.product_app.service import ProductService, _draft_content_hash
-from itinerary_system.product_app.trip_replanner import _hash, validate_planning_bundle
+from itinerary_system.product_app.trip_planning import TripPlanParameters
+from itinerary_system.product_app.trip_replanner import _hash, _matrix_record, validate_planning_bundle
 from itinerary_system.product_app.workspace import WorkspaceError, WorkspaceStore
 from itinerary_system.research_artifacts import stable_content_hash
 
@@ -29,8 +31,12 @@ from itinerary_system.research_artifacts import stable_content_hash
 def saved_work(root: Path):
     store = WorkspaceStore(root)
     owner, token = store.create_session("run", "parent", 1, "trip")
-    store.add_operation(owner, {"expected_revision": 0, "type": "keep_stop", "target": "stop",
-        "parameters": {}}, valid_stop_ids={"stop"}, day_count=1)
+    store.add_operation(
+        owner,
+        {"expected_revision": 0, "type": "keep_stop", "target": "stop", "parameters": {}},
+        valid_stop_ids={"stop"},
+        day_count=1,
+    )
     store.set_proposal(owner, {"state": "synthetic-not-certified", "child_plan_id": "preview"}, owner.revision)
     return store, owner, token
 
@@ -84,9 +90,13 @@ def test_retained_expired_work_does_not_consume_active_capacity(tmp_path, monkey
         restarted.create_session("run", "parent", 1)
 
 
-@pytest.mark.parametrize("age,retained", [
-    (WorkspaceStore.SESSION_RETENTION, True), (WorkspaceStore.SESSION_RETENTION + timedelta(seconds=1), False),
-])
+@pytest.mark.parametrize(
+    "age,retained",
+    [
+        (WorkspaceStore.SESSION_RETENTION, True),
+        (WorkspaceStore.SESSION_RETENTION + timedelta(seconds=1), False),
+    ],
+)
 def test_snapshot_retention_is_separate_from_authentication_lifetime(tmp_path, monkeypatch, age, retained):
     store, owner, _ = saved_work(tmp_path)
     now = datetime.now(UTC)
@@ -165,12 +175,26 @@ def test_conversation_delete_and_rollback_exclude_concurrent_read(tmp_path, monk
     service.conversations = ConversationRepository(tmp_path)
     original = service.read_conversation(owner)
     timestamp = datetime.now(UTC).isoformat()
-    service.conversations.append_turn(original.conversation_id, owner.session_id, CopilotTurnV1(
-        turn_id="copilot_turn_" + uuid4().hex, client_message_id="client_message_" + uuid4().hex,
-        context_revision=owner.revision, provider="deterministic", model=None,
-        prompt_version="test-v1", prompt_sha256="a" * 64, state="completed", user_message="Retain history",
-        assistant_message="Saved", interpretation=None, error_code=None,
-        created_at=timestamp, completed_at=timestamp))
+    service.conversations.append_turn(
+        original.conversation_id,
+        owner.session_id,
+        CopilotTurnV1(
+            turn_id="copilot_turn_" + uuid4().hex,
+            client_message_id="client_message_" + uuid4().hex,
+            context_revision=owner.revision,
+            provider="deterministic",
+            model=None,
+            prompt_version="test-v1",
+            prompt_sha256="a" * 64,
+            state="completed",
+            user_message="Retain history",
+            assistant_message="Saved",
+            interpretation=None,
+            error_code=None,
+            created_at=timestamp,
+            completed_at=timestamp,
+        ),
+    )
     transcript = service.conversations.root / (original.conversation_id + ".json")
     original_bytes = transcript.read_bytes()
     detached, release, reader_started, reader_done = (threading.Event() for _ in range(4))
@@ -227,14 +251,14 @@ def test_conversation_delete_and_rollback_exclude_concurrent_read(tmp_path, monk
 def expired_planning_api(tmp_path, monkeypatch):
     """Replay retained route evidence in new state; intercept every refresh fetch."""
     root = Path(__file__).resolve().parents[2]
-    fixture = root / "results/repairs/coordinated_acceptance_20261022/real_preview_execution.json.gz"
-    with gzip.open(fixture, "rt", encoding="utf-8") as stream:
-        bundle = json.load(stream)["planning_bundle"]
+    parameters = TripPlanParameters().model_dump()
     official = Mock(side_effect=WorkspaceError("official_source_unavailable", 409))
     monkeypatch.setattr("itinerary_system.product_app.trip_replanner.read_official_sources", official)
     app = create_product_app(
-        repository_root=root, state_root=tmp_path / "state",
-        additional_allowed_authorities=("testserver",), copilot=DeterministicCopilotAdapter(),
+        repository_root=root,
+        state_root=tmp_path / "state",
+        additional_allowed_authorities=("testserver",),
+        copilot=DeterministicCopilotAdapter(),
     )
     with TestClient(app) as api:
         response = api.post("/api/sessions", json={})
@@ -242,14 +266,61 @@ def expired_planning_api(tmp_path, monkeypatch):
         created = response.json()
         service = app.state.product_service
         owner = service.workspace.get(created["session"]["session_id"])
-        service.workspace.add_operation(owner, {
-            "expected_revision": owner.revision, "type": "replan_trip", "target": "trip",
-            "parameters": bundle["parameters"],
-        }, valid_stop_ids=set(), day_count=7)
+        service.workspace.add_operation(
+            owner,
+            {
+                "expected_revision": owner.revision,
+                "type": "replan_trip",
+                "target": "trip",
+                "parameters": parameters,
+            },
+            valid_stop_ids=set(),
+            day_count=7,
+        )
         compiler = service.compiler_for_session(owner)
-        identity = stable_content_hash({
-            "parent": compiler.parent_plan["content_hash"], "operation": _operation_record(owner.draft[0]),
-        })
+        source = compiler._base_bundle
+        plan = deepcopy(source.child_plan)
+        days = [
+            {**day, "stop_ids": next(row["stop_ids"] for row in plan["ordered_days"] if row["day"] == day["day"])}
+            for day in source.run_manifest["scenario"]["days"]
+        ]
+        retrieved_at = (datetime.now(UTC) - timedelta(hours=1)).isoformat()
+        bundle = {
+            "schema_version": "trip-planning-bundle-v1",
+            "parent_plan_id": compiler.parent_plan["plan_id"],
+            "parent_content_hash": compiler.parent_plan["content_hash"],
+            "parameters": parameters,
+            "plan": plan,
+            "planner_run": next(row for row in source.planner_runs if row["run_id"] == plan["source_run_id"]),
+            "route_matrix": _matrix_record(_route_matrix(source.route_matrix)),
+            "days": days,
+            "start_anchor_id": days[0]["start_anchor_id"],
+            "end_anchor_id": days[-1]["end_anchor_id"],
+            "required_stop_ids": [],
+            "excluded_stop_ids": [],
+            "official_sources": [
+                {
+                    "source_id": key,
+                    "url": OFFICIAL_URLS[key],
+                    "status": "retrieved",
+                    "retrieved_at": retrieved_at,
+                    "big_sur_highway_closure": False,
+                    "park_access": "open",
+                }
+                for key in ("big_sur_park", "highway_1", "hearst_castle")
+            ],
+            "enforced_avoid_big_sur": False,
+            "user_avoid_regions": [],
+            "solver": {"status": "synthetic_registered_plan_replay"},
+            "place_sources": source.run_manifest["scenario"]["place_sources"],
+            "notices": ["Synthetic registered fixture; no live official or routing requests."],
+        }
+        identity = stable_content_hash(
+            {
+                "parent": compiler.parent_plan["content_hash"],
+                "operation": _operation_record(owner.draft[0]),
+            }
+        )
         bundle["request_id"] = "trip_request_" + identity
         bundle["created_at"] = (datetime.now(UTC) - timedelta(hours=1)).isoformat()
         bundle["content_hash"] = _hash({k: v for k, v in bundle.items() if k != "content_hash"})
@@ -260,12 +331,18 @@ def expired_planning_api(tmp_path, monkeypatch):
         cache = compiler.planning_state_root / (identity + ".json")
         cache.parent.mkdir(parents=True, exist_ok=True)
         cache.write_text(json.dumps(bundle), encoding="utf-8")
-        service.workspace.set_proposal(owner, {
-            "schema_version": "draft-preview-v1", "execution_mode": "deterministic_repair_pipeline",
-            "expected_revision": owner.revision, "session_revision": owner.revision + 1,
-            "draft_content_hash": _draft_content_hash(owner.draft),
-            "runtime_execution": {"schema_version": "runtime-repair-execution-v1", "planning_bundle": bundle},
-        }, owner.revision)
+        service.workspace.set_proposal(
+            owner,
+            {
+                "schema_version": "draft-preview-v1",
+                "execution_mode": "deterministic_repair_pipeline",
+                "expected_revision": owner.revision,
+                "session_revision": owner.revision + 1,
+                "draft_content_hash": _draft_content_hash(owner.draft),
+                "runtime_execution": {"schema_version": "runtime-repair-execution-v1", "planning_bundle": bundle},
+            },
+            owner.revision,
+        )
         yield api, service, owner, {"X-Session-Token": created["mutation_token"]}, cache, official
 
 
@@ -275,8 +352,9 @@ def test_explicit_trip_preview_endpoint_requests_fresh_expired_evidence(expired_
     if not cached_proposal:
         service.workspace.set_proposal(owner, {}, owner.revision)
     before, proposal, revision = cache.read_bytes(), deepcopy(owner.proposal), owner.revision
-    response = api.post(f"/api/sessions/{owner.session_id}/preview", headers=headers,
-                        json={"expected_revision": revision})
+    response = api.post(
+        f"/api/sessions/{owner.session_id}/preview", headers=headers, json={"expected_revision": revision}
+    )
     assert response.status_code == 409, response.text
     assert response.json() == {"detail": "official_source_unavailable"}
     official.assert_called_once()
@@ -288,10 +366,15 @@ def test_accept_endpoint_still_rejects_expired_trip_preview_without_refresh(expi
     api, service, owner, headers, cache, official = expired_planning_api
     before, proposal, revision = cache.read_bytes(), deepcopy(owner.proposal), owner.revision
     pointer = service.acceptance.load_pointer(owner.trip_id)
-    response = api.post(f"/api/sessions/{owner.session_id}/accept", headers=headers, json={
-        "expected_revision": revision, "confirmation": "accept_evaluated_repair",
-        "idempotency_key": "accept_" + uuid4().hex,
-    })
+    response = api.post(
+        f"/api/sessions/{owner.session_id}/accept",
+        headers=headers,
+        json={
+            "expected_revision": revision,
+            "confirmation": "accept_evaluated_repair",
+            "idempotency_key": "accept_" + uuid4().hex,
+        },
+    )
     assert response.status_code == 409, response.text
     assert response.json() == {"detail": "trip_planning_evidence_expired"}
     official.assert_not_called()

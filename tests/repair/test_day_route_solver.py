@@ -24,7 +24,9 @@ def owned_constraint(constraint_id: str, *, target_id: str, strength: Constraint
         relation="protect",
         value=True,
         confirmed=True,
-        relaxation_policy=RelaxationPolicy.NEVER if strength == ConstraintStrength.LOCKED else RelaxationPolicy.AUTO_WITH_PENALTY,
+        relaxation_policy=RelaxationPolicy.NEVER
+        if strength == ConstraintStrength.LOCKED
+        else RelaxationPolicy.AUTO_WITH_PENALTY,
     ).to_record()
 
 
@@ -113,7 +115,9 @@ def route_matrix(*, fallback: bool = False) -> RouteMatrix:
         ("hotel_y_start", "poi_a"): cell("hotel_y_start", "poi_a", 5),
         ("poi_a", "poi_e"): cell("poi_a", "poi_e", 8),
     }
-    return RouteMatrix(matrix_id="matrix_day_route", context_snapshot_id="context_static_demo_2026_06", entity_ids=(), cells=cells)
+    return RouteMatrix(
+        matrix_id="matrix_day_route", context_snapshot_id="context_static_demo_2026_06", entity_ids=(), cells=cells
+    )
 
 
 def repair_model(candidates: tuple[dict, ...] | None = None):
@@ -157,9 +161,7 @@ class DayRouteSolverTests(unittest.TestCase):
         )
 
         self.assertTrue(result.candidates[0].feasible)
-        self.assertFalse(
-            any("fix_assign_lodging" in violation for violation in result.candidates[0].violations)
-        )
+        self.assertFalse(any("fix_assign_lodging" in violation for violation in result.candidates[0].violations))
 
     def test_label_keyed_parent_day_assignments_use_canonical_stop_ids(self):
         parent = replace(
@@ -203,7 +205,9 @@ class DayRouteSolverTests(unittest.TestCase):
         )
 
         candidate = result.feasible_candidates[0]
-        self.assertEqual(candidate.route_pairs, (("hotel_y_start", "poi_b"), ("poi_b", "poi_e"), ("poi_e", "hotel_y_end")))
+        self.assertEqual(
+            candidate.route_pairs, (("hotel_y_start", "poi_b"), ("poi_b", "poi_e"), ("poi_e", "hotel_y_end"))
+        )
         self.assertEqual(candidate.travel_minutes, 30.0)
         self.assertEqual(candidate.visit_minutes, 65.0)
         self.assertEqual(candidate.total_minutes, 95.0)

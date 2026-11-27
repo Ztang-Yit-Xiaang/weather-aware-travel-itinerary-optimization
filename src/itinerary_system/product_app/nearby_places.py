@@ -1,4 +1,5 @@
 """Bounded online place discovery with durable, source-labelled offline fallback."""
+
 from __future__ import annotations
 
 import hashlib
@@ -45,18 +46,24 @@ def _query(search):
         raise ValueError("nearby_search_invalid")
     meters = math.ceil(radius * 1000)
     around = f"(around:{meters},{latitude:.6f},{longitude:.6f})"
-    return (f'[out:json][timeout:6][maxsize:16777216];('
-            f'nwr{around}["tourism"~"^(attraction|museum|viewpoint|gallery|artwork|zoo|aquarium|theme_park|picnic_site)$"]["name"];'
-            f'nwr{around}["leisure"~"^(park|garden|nature_reserve)$"]["name"];'
-            f'nwr{around}["natural"~"^(beach|peak|waterfall)$"]["name"];'
-            f'nwr{around}["historic"~"^(monument|memorial|ruins)$"]["name"];'
-            f');out center tags {MAX_PLACES + 1};')
+    return (
+        f"[out:json][timeout:6][maxsize:16777216];("
+        f'nwr{around}["tourism"~"^(attraction|museum|viewpoint|gallery|artwork|zoo|aquarium|theme_park|picnic_site)$"]["name"];'
+        f'nwr{around}["leisure"~"^(park|garden|nature_reserve)$"]["name"];'
+        f'nwr{around}["natural"~"^(beach|peak|waterfall)$"]["name"];'
+        f'nwr{around}["historic"~"^(monument|memorial|ruins)$"]["name"];'
+        f");out center tags {MAX_PLACES + 1};"
+    )
 
 
 def _fetch(query):
-    request = urllib.request.Request(ENDPOINT + "?" + urllib.parse.urlencode({"data": query}),
-        headers={"User-Agent": "ItineraryRepairCopilot/0.2 (cached local research prototype)",
-                 "Accept": "application/json"})
+    request = urllib.request.Request(
+        ENDPOINT + "?" + urllib.parse.urlencode({"data": query}),
+        headers={
+            "User-Agent": "ItineraryRepairCopilot/0.2 (cached local research prototype)",
+            "Accept": "application/json",
+        },
+    )
     with urllib.request.urlopen(request, timeout=8) as response:
         payload = response.read(MAX_BYTES + 1)
     if len(payload) > MAX_BYTES:
@@ -91,8 +98,10 @@ def _places(payload):
         if tags.get("access") in {"private", "no"} or tags.get("tourism") == "artwork" and tags.get("indoor") == "yes":
             continue
         kind = tags.get("tourism")
-        categories = ["culture"] if kind in {"museum", "gallery", "artwork"} or tags.get("historic") else ["nature", "outdoor"]
-        source = f'https://www.openstreetmap.org/{item["type"]}/{identity}'
+        categories = (
+            ["culture"] if kind in {"museum", "gallery", "artwork"} or tags.get("historic") else ["nature", "outdoor"]
+        )
+        source = f"https://www.openstreetmap.org/{item['type']}/{identity}"
         sources = [source]
         website = tags.get("website")
         if isinstance(website, str) and len(website) < 2048:
@@ -104,29 +113,37 @@ def _places(payload):
         details = [description[:1000]] if isinstance(description, str) else []
         if isinstance(hours, str):
             details.append(f"Mapped opening hours: {hours[:300]} (not independently verified).")
-        place_id = f'osm_{item["type"]}_{identity}'
-        places[place_id] = {"place_id": place_id, "name": name.strip(),
+        place_id = f"osm_{item['type']}_{identity}"
+        places[place_id] = {
+            "place_id": place_id,
+            "name": name.strip(),
             "display_coordinate": {"longitude": longitude, "latitude": latitude},
-            "place_categories": categories, "source_refs": sources,
+            "place_categories": categories,
+            "source_refs": sources,
             "source_attribution": "OpenStreetMap contributors",
-            "description": " ".join(details) or "Community-mapped place. Current opening conditions and route access have not been verified."}
+            "description": " ".join(details)
+            or "Community-mapped place. Current opening conditions and route access have not been verified.",
+        }
     return list(places.values())
 
 
 class NearbyPlaceCache:
-    def __init__(self, root: Path):
+    def __init__(self, root: Path, *, online_enabled: bool = True):
         self.root = Path(root)
+        self.online_enabled = online_enabled
 
     def search(self, search: dict, *, refresh: bool = False) -> tuple[list[dict], dict]:
         query = _query(search)
         path = self.root / (hashlib.sha256(query.encode()).hexdigest() + ".json")
         cached = self._cached(path, query)
+        if not self.online_enabled:
+            return self._fallback(cached, "nearby_online_disabled_for_hosting")
         now = time.time()
         if cached and not refresh and now - cached["fetched_at"] <= FRESH_SECONDS:
             return self._result(cached, "fresh_cache")
         try:
             # A competing request can immediately use saved data instead of waiting on the network.
-            with StateFileLock(self.root / "provider.lock", timeout_seconds=.05):
+            with StateFileLock(self.root / "provider.lock", timeout_seconds=0.05):
                 cached = self._cached(path, query)
                 now = time.time()
                 if cached and not refresh and now - cached["fetched_at"] <= FRESH_SECONDS:
@@ -144,7 +161,11 @@ class NearbyPlaceCache:
                     payload = _fetch(query)
                     _places(payload)  # Reject incomplete/invalid results before replacing the last good cache.
                 except (OSError, ValueError, TypeError, http.client.HTTPException) as error:
-                    code = str(error) if isinstance(error, ValueError) and str(error).startswith("nearby_") else "nearby_api_unavailable"
+                    code = (
+                        str(error)
+                        if isinstance(error, ValueError) and str(error).startswith("nearby_")
+                        else "nearby_api_unavailable"
+                    )
                     backoff = FAILURE_BACKOFF_SECONDS
                     if code == "nearby_response_limit_exceeded":
                         backoff = MIN_INTERVAL_SECONDS
@@ -152,15 +173,21 @@ class NearbyPlaceCache:
                         code = "nearby_api_rate_limited"
                         retry = (error.headers or {}).get("Retry-After", "")
                         try:
-                            backoff = float(retry) if retry.isdecimal() else parsedate_to_datetime(retry).timestamp() - now
+                            backoff = (
+                                float(retry) if retry.isdecimal() else parsedate_to_datetime(retry).timestamp() - now
+                            )
                         except (ValueError, TypeError, AttributeError, OverflowError):
                             pass
                         backoff = min(3600, max(FAILURE_BACKOFF_SECONDS, backoff))
                     retry_at = time.time() + backoff
                     LocalStateLayout._atomic_json_write(gate_path, {"next_attempt_at": retry_at, "error_code": code})
                     return self._fallback(cached, code, retry_at)
-                record = {"schema_version": "nearby-online-cache-v1", "query": query,
-                          "fetched_at": time.time(), "payload": payload}
+                record = {
+                    "schema_version": "nearby-online-cache-v1",
+                    "query": query,
+                    "fetched_at": time.time(),
+                    "payload": payload,
+                }
                 try:
                     LocalStateLayout._atomic_json_write(path, record)
                 except OSError:
@@ -174,10 +201,18 @@ class NearbyPlaceCache:
     def _cached(self, path, query):
         record = _read(path)
         try:
-            if not isinstance(record, dict) or record.get("schema_version") != "nearby-online-cache-v1" or record.get("query") != query:
+            if (
+                not isinstance(record, dict)
+                or record.get("schema_version") != "nearby-online-cache-v1"
+                or record.get("query") != query
+            ):
                 return None
             timestamp = record["fetched_at"]
-            if type(timestamp) not in {int, float} or not math.isfinite(timestamp) or not 0 < timestamp <= time.time() + 60:
+            if (
+                type(timestamp) not in {int, float}
+                or not math.isfinite(timestamp)
+                or not 0 < timestamp <= time.time() + 60
+            ):
                 return None
             _places(record["payload"])
             return record
@@ -191,8 +226,13 @@ class NearbyPlaceCache:
     @staticmethod
     def _result(record, status, *, error=None, retry_at=None, persisted=True):
         return (_places(record["payload"]) if record else []), {
-            "status": status, "provider": "OpenStreetMap / Overpass", "fetched_at": _iso(record["fetched_at"]) if record else None,
+            "status": status,
+            "provider": "OpenStreetMap / Overpass",
+            "fetched_at": _iso(record["fetched_at"]) if record else None,
             "expires_at": _iso(record["fetched_at"] + FRESH_SECONDS) if record else None,
-            "cache_persisted": bool(record and persisted), "error_code": error, "retry_after": _iso(retry_at),
-            "attribution": "OpenStreetMap contributors", "license_url": "https://www.openstreetmap.org/copyright",
+            "cache_persisted": bool(record and persisted),
+            "error_code": error,
+            "retry_after": _iso(retry_at),
+            "attribution": "OpenStreetMap contributors",
+            "license_url": "https://www.openstreetmap.org/copyright",
         }

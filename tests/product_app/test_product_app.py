@@ -67,7 +67,7 @@ def test_registry_does_not_require_the_frozen_legacy_dashboard(tmp_path: Path) -
                         "capabilities": ["read_only_artifacts"],
                         "default": True,
                     }
-                ]
+                ],
             }
         ),
         encoding="utf-8",
@@ -175,20 +175,12 @@ def test_authenticated_session_restore_survives_application_restart(tmp_path: Pa
     assert payload["session"]["selected_stop_id"] == "golden_gate_bridge"
     assert payload["workspace"]["draft_capabilities"]["schema_version"] == "draft-capabilities-v1"
     assert token not in "".join(
-        path.read_text(encoding="utf-8", errors="ignore")
-        for path in state_root.rglob("*")
-        if path.is_file()
+        path.read_text(encoding="utf-8", errors="ignore") for path in state_root.rglob("*") if path.is_file()
     )
 
 
 def test_session_token_revision_replacement_preview_and_acceptance_persists(tmp_path: Path) -> None:
-    parent_path = (
-        ROOT
-        / "runs"
-        / "california-coast-coherent-demo-v1"
-        / "plans"
-        / "plan_359968d255ff9288.json"
-    )
+    parent_path = ROOT / "runs" / "california-coast-coherent-demo-v1" / "plans" / "plan_359968d255ff9288.json"
     parent_hash_before = sha256(parent_path.read_bytes()).hexdigest()
 
     with client(tmp_path) as test_client:
@@ -297,7 +289,11 @@ def test_unsupported_legacy_move_day_cannot_preview_or_be_accepted(tmp_path: Pat
         rejected = test_client.post(
             f"/api/sessions/{session_id}/accept",
             headers=headers,
-            json={"expected_revision": drafted["revision"], "confirmation": "accept_evaluated_repair", "idempotency_key": "product-unsupported-0001"},
+            json={
+                "expected_revision": drafted["revision"],
+                "confirmation": "accept_evaluated_repair",
+                "idempotency_key": "product-unsupported-0001",
+            },
         )
         assert rejected.status_code == 409
         restored = test_client.get(f"/api/sessions/{session_id}", headers=headers).json()["session"]

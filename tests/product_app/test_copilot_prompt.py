@@ -162,8 +162,15 @@ def test_all_72_sanitized_cases_build_through_fake_transport() -> None:
     for case in cases:
         category_counts[case["category"]] = category_counts.get(case["category"], 0) + 1
         context_values = dict(corpus["context_fixtures"][case["context_fixture"]])
-        for name in ("draft_operations", "allowed_stop_ids", "allowed_candidate_ids", "allowed_days",
-                     "allowed_segment_ids", "allowed_alternative_ids", "known_places"):
+        for name in (
+            "draft_operations",
+            "allowed_stop_ids",
+            "allowed_candidate_ids",
+            "allowed_days",
+            "allowed_segment_ids",
+            "allowed_alternative_ids",
+            "known_places",
+        ):
             if name in context_values:
                 context_values[name] = tuple(context_values[name])
         context = CopilotContextV1(**context_values)

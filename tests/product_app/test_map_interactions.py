@@ -77,6 +77,45 @@ def _snap(distance: float, *, allowed: bool = True, confirmation: bool = False) 
     )
 
 
+@pytest.mark.parametrize("mixed", [False, True])
+def test_ors_snap_requires_consistent_road_provider(mixed):
+    snap = replace(_snap(5), provider="openrouteservice")
+
+    class ORSRouter(FakeRouter):
+        def route(self, request):
+            leg = super().route(request)
+            if mixed:
+                return leg
+            return replace(
+                leg,
+                provider="openrouteservice",
+                routing_status="ors_route_validated",
+                geometry_source="runtime_ors_geojson",
+                distance_source="runtime_ors_route",
+                duration_source="runtime_ors_route",
+            )
+
+    router = ORSRouter(snap)
+
+    def call():
+        return MapInteractionService(router).preview(
+            entity_id=snap.entity_id,
+            raw_coordinate=snap.raw_point,
+            operation_intent="add_custom_waypoint",
+            predecessor=("previous", (37.0, -122.0)),
+            successor=None,
+        )
+
+    if mixed:
+        with pytest.raises(MapInteractionError, match="route_provider_mismatch"):
+            call()
+    else:
+        result = call()
+        assert result.draft_append_allowed
+        assert result.selected_access_point.source == "openrouteservice"
+        assert result.affected_route_legs[0].provider == "openrouteservice"
+
+
 def test_snap_preview_routes_predecessor_and_successor_without_mutating_a_draft() -> None:
     router = FakeRouter(_snap(25.0))
     preview = MapInteractionService(router).preview(

@@ -1,0 +1,149 @@
+{
+  "schema_version": "task-owned-cleanup-v1",
+  "temporary_paths": [
+    {
+      "path": "tmp/confirmed-recheck",
+      "bytes": 33857085,
+      "files": 239,
+      "status": "removed"
+    },
+    {
+      "path": "tmp/deploy_latest_20261029",
+      "bytes": 162435306,
+      "files": 1272,
+      "status": "removed"
+    },
+    {
+      "path": "tmp/frontend-final",
+      "bytes": 179578670,
+      "files": 109,
+      "status": "removed"
+    },
+    {
+      "path": "tmp/hosted-boundary-ff3729f82d1d42c3a82cb13cb9bdb040",
+      "bytes": 221410,
+      "files": 229,
+      "status": "removed"
+    },
+    {
+      "path": "tmp/hosted-bugcheck-e388dfd921914db6bd0f043d7fa34167",
+      "bytes": 15800,
+      "files": 17,
+      "status": "removed"
+    },
+    {
+      "path": "tmp/hosted-final-check",
+      "bytes": 34139423,
+      "files": 535,
+      "status": "removed"
+    },
+    {
+      "path": "tmp/hosted-interest-worker-2ff75c3795d642c78fdc8c580f276981",
+      "bytes": 26475,
+      "files": 30,
+      "status": "removed"
+    },
+    {
+      "path": "tmp/hosted-release-validation-7368071a797844c1b626bbe542d31208",
+      "bytes": 320185,
+      "files": 369,
+      "status": "removed"
+    },
+    {
+      "path": "tmp/p",
+      "bytes": 120709742,
+      "files": 2004,
+      "status": "removed"
+    },
+    {
+      "path": "tmp/pages-test",
+      "bytes": 1966386,
+      "files": 21,
+      "status": "removed"
+    },
+    {
+      "path": "tmp/pg",
+      "bytes": 3155,
+      "files": 70,
+      "status": "removed"
+    },
+    {
+      "path": "tmp/pg-final",
+      "bytes": 3155,
+      "files": 70,
+      "status": "removed"
+    },
+    {
+      "path": "tmp/postgres-state-79c52be830fa4d74bbc593a22dc8d8d1",
+      "bytes": 2743,
+      "files": 58,
+      "status": "removed"
+    },
+    {
+      "path": "tmp/postgres-state-ed89df7cc3994c558f0929cf7880ad6e",
+      "bytes": 79,
+      "files": 4,
+      "status": "removed"
+    },
+    {
+      "path": "tmp/postgres-state-final-45f878fd233c46458f09f06698a8b348",
+      "bytes": 48366,
+      "files": 154,
+      "status": "removed"
+    },
+    {
+      "path": "tmp/postgres-state-hosted-0145bf1029934ba294a0b01cd3a7b919",
+      "bytes": 3097,
+      "files": 65,
+      "status": "removed"
+    },
+    {
+      "path": "tmp/postgres-state-probe-0dac4cbce6c04e0687a561bc75b68cd0",
+      "bytes": 2753,
+      "files": 60,
+      "status": "removed"
+    },
+    {
+      "path": "tmp/postgres-state-regression-8ee4e29f12e5490e8539df2ae28f92d2",
+      "bytes": 48330,
+      "files": 150,
+      "status": "removed"
+    },
+    {
+      "path": "tmp/postgres-state-verified-669c5225321d40eab734ef459395ec46",
+      "bytes": 48684,
+      "files": 157,
+      "status": "removed"
+    },
+    {
+      "path": "tmp/provider-test",
+      "bytes": 34012,
+      "files": 213,
+      "status": "removed"
+    },
+    {
+      "path": "tmp/release-final",
+      "bytes": 207874095,
+      "files": 1461,
+      "status": "removed"
+    },
+    {
+      "path": "tmp/release-regression",
+      "bytes": 207827843,
+      "files": 1459,
+      "status": "removed"
+    },
+    {
+      "path": "tmp/hosted-final-245bb83531d945ceae5be4907ed3c7ea",
+      "bytes": 239977,
+      "files": 250,
+      "status": "removed"
+    }
+  ],
+  "file_bytes": 949406771.0,
+  "docker_cache_reclaimed": "1.408 GB",
+  "task_images_removed": true,
+  "task_database_removed": true,
+  "browser_and_servers_closed": true,
+  "unrelated_saved_state_modified": false
+}

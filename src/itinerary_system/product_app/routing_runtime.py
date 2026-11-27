@@ -30,6 +30,24 @@ DEFAULT_MAX_RESPONSE_BYTES = 1_000_000
 DEFAULT_MAX_TABLE_POINTS = 25
 
 _IDENTIFIER_PATTERN = re.compile(r"[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}")
+RUNTIME_ROUTING_PROVIDERS = frozenset({"runtime_osrm", "openrouteservice"})
+
+
+def valid_runtime_route_provenance(value: Any, *, allow_detours: bool = False) -> bool:
+    """Require a complete provider-specific evidence tuple, never mixed labels."""
+    get = value.get if isinstance(value, Mapping) else lambda key: getattr(value, key, None)
+    provider = get("provider")
+    if not isinstance(provider, str):
+        return False
+    prefix = {"runtime_osrm": "osrm", "openrouteservice": "ors"}.get(provider)
+    if prefix is None or get("routing_profile") != "driving":
+        return False
+    pairs = {(f"{prefix}_route_validated", f"runtime_{prefix}_geojson")}
+    if allow_detours:
+        pairs.add((f"{prefix}_waypoint_detour_validated", f"runtime_{prefix}_geojson_via_highway_101"))
+    return (get("routing_status"), get("geometry_source")) in pairs and (
+        get("distance_source") == get("duration_source") == f"runtime_{prefix}_route"
+    )
 
 
 class RuntimeRoutingError(RuntimeError):
@@ -235,9 +253,7 @@ class RuntimeRoutingService:
         geometry = _geometry(route.get("geometry"))
         waypoints = _records(payload, "waypoints", exact_length=2)
         origin_snap = _nonnegative_finite(waypoints[0].get("distance"), "routing_response_invalid")
-        destination_snap = _nonnegative_finite(
-            waypoints[1].get("distance"), "routing_response_invalid"
-        )
+        destination_snap = _nonnegative_finite(waypoints[1].get("distance"), "routing_response_invalid")
         if max(origin_snap, destination_snap) > self.thresholds.warning_max_m:
             raise RuntimeRoutingError("route_endpoint_snap_too_far")
         query_hash = _query_hash(
@@ -471,9 +487,7 @@ def _require_ok(payload: Mapping[str, Any]) -> None:
         raise RuntimeRoutingError("routing_provider_rejected_request")
 
 
-def _records(
-    payload: Mapping[str, Any], key: str, *, exact_length: int | None = None
-) -> tuple[Mapping[str, Any], ...]:
+def _records(payload: Mapping[str, Any], key: str, *, exact_length: int | None = None) -> tuple[Mapping[str, Any], ...]:
     value = payload.get(key)
     if not isinstance(value, list) or (exact_length is not None and len(value) != exact_length):
         raise RuntimeRoutingError("routing_response_invalid")

@@ -79,6 +79,7 @@ def test_map_exporter_wrapper_matches_extracted_evaluation_component(tmp_path):
 
     assert _evaluation_metrics(tmp_path) == build_evaluation_metrics(comparison, route_stops)
 
+
 def test_evaluation_page_inverts_lower_is_better_bars_and_escapes_data(tmp_path):
     root = tmp_path / "dashboard"
     assets = root / "assets"

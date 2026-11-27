@@ -5,6 +5,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
 import { recordedJson } from "./recorded-runtime-fixture.mjs";
+import { restoreInterestPreferences } from "../../src/itinerary_system/product_app/static/js/workspace-storage.js";
 
 const appSource = readFileSync(new URL("../../src/itinerary_system/product_app/static/js/app.js", import.meta.url), "utf8");
 const capture = (run, name) => recordedJson(`results/e2e/${run}/accepted_reload/${name}`);
@@ -70,6 +71,7 @@ function harness({ configs = [readyConfig()], mapHealth = "ready" } = {}) {
   };
   const state = {
     route: "/app/itinerary", mapConfig: null, health: null, session: null,
+    interestRegions: {},
     mapInteraction: { selectionKind: null, selectedStopPlanId: null },
     previewRuntime: { status: "PARENT_RENDERED", epoch: 0, requestId: null },
     acknowledgedPreviewPlanId: null, interestRegions: {},
@@ -98,6 +100,8 @@ function harness({ configs = [readyConfig()], mapHealth = "ready" } = {}) {
     syncPreviewRuntimeFromSession() {}, loadDraftImpactPreview: async () => {}, bindEvents() {},
     restoreInterestPreferences: () => ({}), workspaceStorage: {}, interestPreferencesKey: () => "interest",
     restorePendingMutationInput() {},
+    restoreInterestPreferences, workspaceStorage: { getItem: () => null },
+    interestPreferencesKey: () => `itinerary-repair-copilot.interest.v1:${state.session.trip_id}`,
     mutationRecovery: {restore: async () => {}, pending: null},
     findSelectedStop: () => state.session ? { id: state.session.selected_stop_id, plan_id: acceptedPlan.plan_id } : null,
     activeRenderPlan: () => state.session ? acceptedPlan : null,

@@ -18,9 +18,7 @@ from typing import Any
 REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
 OUTPUT_RELATIVE = Path("configs/product_poi_catalogs/california_coast_approved_seven_day")
 PACKAGE_RELATIVE = Path("runs/california-coast-coherent-demo-v1/manifest.json")
-MATRIX_RELATIVE = Path(
-    "runs/california-coast-coherent-demo-v1/routing/route_matrix_b33928f302ba9055.json"
-)
+MATRIX_RELATIVE = Path("runs/california-coast-coherent-demo-v1/routing/route_matrix_b33928f302ba9055.json")
 
 CATALOG_SCHEMA = "product-poi-catalog-v1"
 MANIFEST_SCHEMA = "product-poi-catalog-manifest-v1"
@@ -28,16 +26,10 @@ CATALOG_FILENAME = "catalog.json"
 MANIFEST_FILENAME = "manifest.json"
 CATALOG_ID = "california_coast_approved_seven_day_candidates_v1"
 
-PINNED_PACKAGE_SHA256 = (
-    "82d405c5e57cdc45b25552106127e4be33977306f669f98fa98d6c709850d480"
-)
-PINNED_MATRIX_FILE_SHA256 = (
-    "fcb37e3aedbcd5c91d09f3851a6d751a74eff4d91874769abc96722395c1b041"
-)
+PINNED_PACKAGE_SHA256 = "82d405c5e57cdc45b25552106127e4be33977306f669f98fa98d6c709850d480"
+PINNED_MATRIX_FILE_SHA256 = "fcb37e3aedbcd5c91d09f3851a6d751a74eff4d91874769abc96722395c1b041"
 PINNED_MATRIX_ID = "route_matrix_b33928f302ba9055"
-PINNED_MATRIX_CONTENT_SHA256 = (
-    "e5b6cdc2ed2fff301c5416e29f4e6f0d9a3df4f7b3661311ce24e28cef108d99"
-)
+PINNED_MATRIX_CONTENT_SHA256 = "e5b6cdc2ed2fff301c5416e29f4e6f0d9a3df4f7b3661311ce24e28cef108d99"
 
 AFFECTED_DAY = 5
 AFFECTED_ORIGIN = "comfort_inn_sequoia_kings_canyon"
@@ -87,9 +79,7 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
-def build_catalog_documents(
-    *, repository_root: Path = REPOSITORY_ROOT
-) -> tuple[bytes, bytes]:
+def build_catalog_documents(*, repository_root: Path = REPOSITORY_ROOT) -> tuple[bytes, bytes]:
     """Return canonical catalog and manifest bytes from pinned sources."""
 
     repository_root = repository_root.resolve(strict=True)
@@ -125,9 +115,7 @@ def build_catalog_documents(
     for spec in PLACE_SPECS:
         request = _read_pinned_package_artifact(package_root, artifacts, spec["request_file"])
         plan = _read_pinned_package_artifact(package_root, artifacts, spec["plan_file"])
-        certificate = _read_pinned_package_artifact(
-            package_root, artifacts, spec["certificate_file"]
-        )
+        certificate = _read_pinned_package_artifact(package_root, artifacts, spec["certificate_file"])
         alternative = alternatives.get(spec["plan_id"])
         if not isinstance(alternative, dict):
             raise CatalogBuildError("registered_alternative_missing")
@@ -140,9 +128,7 @@ def build_catalog_documents(
             matrix=matrix,
         )
         places.append(place)
-        evaluated_at_values.append(
-            _required_text(certificate.get("evaluated_at"), "certificate_time_invalid")
-        )
+        evaluated_at_values.append(_required_text(certificate.get("evaluated_at"), "certificate_time_invalid"))
         sources.extend(
             (
                 _artifact_source(spec["request_source_id"]),
@@ -167,9 +153,7 @@ def build_catalog_documents(
     return catalog_bytes, _stable_json_bytes(manifest)
 
 
-def write_catalog(
-    output_dir: Path | None = None, *, repository_root: Path = REPOSITORY_ROOT
-) -> Path:
+def write_catalog(output_dir: Path | None = None, *, repository_root: Path = REPOSITORY_ROOT) -> Path:
     """Atomically write the fixture within the configured catalog boundary."""
 
     repository_root = repository_root.resolve(strict=True)
@@ -220,9 +204,9 @@ def _build_place(
         raise CatalogBuildError("registered_child_place_missing")
     if plan.get("plan_id") != spec["plan_id"] or plan.get("parent_plan_id") is None:
         raise CatalogBuildError("registered_child_identity_invalid")
-    if candidate.get("latitude") != selected[0].get("latitude") or candidate.get(
+    if candidate.get("latitude") != selected[0].get("latitude") or candidate.get("longitude") != selected[0].get(
         "longitude"
-    ) != selected[0].get("longitude"):
+    ):
         raise CatalogBuildError("candidate_plan_coordinate_mismatch")
 
     if (
@@ -263,9 +247,7 @@ def _build_place(
 
     display_coordinate = {
         "latitude": _required_number(candidate.get("latitude"), "candidate_latitude_invalid"),
-        "longitude": _required_number(
-            candidate.get("longitude"), "candidate_longitude_invalid"
-        ),
+        "longitude": _required_number(candidate.get("longitude"), "candidate_longitude_invalid"),
     }
     if display_coordinate == access_coordinate:
         raise CatalogBuildError("display_access_coordinate_not_separated")
@@ -366,9 +348,7 @@ def _artifact_source(source_id: str) -> dict[str, Any]:
     }
 
 
-def _read_pinned_package_artifact(
-    package_root: Path, artifacts: dict[str, Any], relative_name: str
-) -> dict[str, Any]:
+def _read_pinned_package_artifact(package_root: Path, artifacts: dict[str, Any], relative_name: str) -> dict[str, Any]:
     expected = artifacts.get(relative_name)
     if not isinstance(expected, str) or len(expected) != 64:
         raise CatalogBuildError("package_artifact_hash_missing")
@@ -458,9 +438,7 @@ def _required_integer(value: Any, code: str) -> int:
 
 
 def _stable_json_bytes(value: dict[str, Any]) -> bytes:
-    return (json.dumps(value, indent=2, sort_keys=True, ensure_ascii=False) + "\n").encode(
-        "utf-8"
-    )
+    return (json.dumps(value, indent=2, sort_keys=True, ensure_ascii=False) + "\n").encode("utf-8")
 
 
 def main() -> int:

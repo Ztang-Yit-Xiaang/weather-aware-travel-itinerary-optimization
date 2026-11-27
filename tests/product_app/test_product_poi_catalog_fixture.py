@@ -45,8 +45,7 @@ SOURCE_HASHES = {
         "w2_weather_low_driving_v2/requests/w2_weather_low_driving_v2.json"
     ): "675c406eb81c4ec548390932d18976c585e979cac9aa0c78da71e4235c53cf7b",
     (
-        "runs/california-coast-product-demo-v2/alternatives/"
-        "w2_weather_low_driving_v2/plans/plan_8aa919c8323dbac0.json"
+        "runs/california-coast-product-demo-v2/alternatives/w2_weather_low_driving_v2/plans/plan_8aa919c8323dbac0.json"
     ): "bfa85e93d0d187f6a26d8ae8a27a1689cae852c8bc9ca186985cea53b715732f",
     (
         "runs/california-coast-product-demo-v2/alternatives/"
@@ -69,9 +68,7 @@ def _raw_catalog() -> dict[str, object]:
 
 
 def test_committed_catalog_and_manifest_regenerate_byte_for_byte() -> None:
-    catalog_bytes, manifest_bytes = build_catalog_documents(
-        repository_root=REPOSITORY_ROOT
-    )
+    catalog_bytes, manifest_bytes = build_catalog_documents(repository_root=REPOSITORY_ROOT)
 
     assert catalog_bytes == (FIXTURE_ROOT / CATALOG_FILENAME).read_bytes()
     assert manifest_bytes == (FIXTURE_ROOT / MANIFEST_FILENAME).read_bytes()
@@ -206,22 +203,16 @@ def test_sources_keep_artifact_roles_and_do_not_invent_external_metadata() -> No
         "waiting_minutes",
     }
     assert all(unsupported.isdisjoint(place) for place in raw_places)
-    assert "recommended" not in (FIXTURE_ROOT / CATALOG_FILENAME).read_text(
-        encoding="utf-8"
-    ).casefold()
+    assert "recommended" not in (FIXTURE_ROOT / CATALOG_FILENAME).read_text(encoding="utf-8").casefold()
 
 
 def test_builder_reads_but_does_not_mutate_any_pinned_source_artifact() -> None:
-    before = {
-        relative: _sha256(REPOSITORY_ROOT / relative) for relative in SOURCE_HASHES
-    }
+    before = {relative: _sha256(REPOSITORY_ROOT / relative) for relative in SOURCE_HASHES}
     assert before == SOURCE_HASHES
 
     build_catalog_documents(repository_root=REPOSITORY_ROOT)
 
-    after = {
-        relative: _sha256(REPOSITORY_ROOT / relative) for relative in SOURCE_HASHES
-    }
+    after = {relative: _sha256(REPOSITORY_ROOT / relative) for relative in SOURCE_HASHES}
     assert after == before
 
 
@@ -230,4 +221,3 @@ def test_builder_refuses_output_outside_the_product_catalog_boundary(
 ) -> None:
     with pytest.raises(CatalogBuildError, match="output_outside_catalog_root"):
         write_catalog(tmp_path / "catalog", repository_root=REPOSITORY_ROOT)
-

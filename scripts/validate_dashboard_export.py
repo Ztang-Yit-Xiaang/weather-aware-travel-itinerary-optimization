@@ -545,7 +545,9 @@ def validate(figure_dir: Path, output_dir: Path) -> tuple[list[str], list[str]]:
             }
             unexpected = found.difference(canonical)
             if unexpected:
-                errors.append(f"Evaluation metrics contain noncanonical methods {sorted(unexpected)}: {evaluation_path}")
+                errors.append(
+                    f"Evaluation metrics contain noncanonical methods {sorted(unexpected)}: {evaluation_path}"
+                )
             available = evaluation_data.get("available") is True
             if available and not methods:
                 errors.append(f"Evaluation metrics claim availability without method evidence: {evaluation_path}")

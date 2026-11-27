@@ -78,9 +78,7 @@ class PlanDiffBuilder:
             raise ValueError("default_visit_minutes must be a finite number from 15 to 480")
         self.allow_snapshot_transition = allow_snapshot_transition
         self.ownership_policy = ownership_policy or OwnershipPolicy()
-        self.default_visit_minutes = (
-            float(default_visit_minutes) if default_visit_minutes is not None else None
-        )
+        self.default_visit_minutes = float(default_visit_minutes) if default_visit_minutes is not None else None
 
     def diff(self, parent: PlanArtifactV2, child: PlanArtifactV2) -> PlanDiff:
         return compute_plan_diff(
@@ -99,7 +97,9 @@ class PlanDiffBuilder:
 
 
 def build_attribute_diff_context(
-    parent: PlanArtifactV2, *, default_visit_minutes: float,
+    parent: PlanArtifactV2,
+    *,
+    default_visit_minutes: float,
 ) -> dict[str, Any]:
     """Project the accepted artifact through the same normalization as its diff.
 
@@ -144,8 +144,14 @@ def compute_plan_diff(
     if default_visit_minutes is not None:
         default_visit_minutes = float(default_visit_minutes)
     if allow_snapshot_transition:
-        if child.parent_plan_id != parent.plan_id or not all((parent.catalog_snapshot_id, child.catalog_snapshot_id,
-                parent.context_snapshot_id, child.context_snapshot_id)):
+        if child.parent_plan_id != parent.plan_id or not all(
+            (
+                parent.catalog_snapshot_id,
+                child.catalog_snapshot_id,
+                parent.context_snapshot_id,
+                child.context_snapshot_id,
+            )
+        ):
             raise ValueError("snapshot transition requires explicit parent-child lineage")
     else:
         _validate_compatible(parent, child)
@@ -176,9 +182,7 @@ def compute_plan_diff(
 
     for stop_id in sorted(set(child_stops) - set(parent_stops)):
         stop = child_stops[stop_id]
-        owner_strength = attribute_ownership.strength_for(
-            stop_id, ("existence",), policy
-        )
+        owner_strength = attribute_ownership.strength_for(stop_id, ("existence",), policy)
         cost = _change_cost("added_stop", owner_strength, policy)
         added_stops.append(
             StopChange(stop_id=stop.stop_id, day=stop.day, order=stop.order, owner_strength=owner_strength, cost=cost)
@@ -187,9 +191,7 @@ def compute_plan_diff(
 
     for stop_id in sorted(set(parent_stops) - set(child_stops)):
         stop = parent_stops[stop_id]
-        owner_strength = attribute_ownership.strength_for(
-            stop_id, ("existence",), policy
-        )
+        owner_strength = attribute_ownership.strength_for(stop_id, ("existence",), policy)
         cost = _change_cost("deleted_stop", owner_strength, policy)
         deleted_stops.append(
             StopChange(stop_id=stop.stop_id, day=stop.day, order=stop.order, owner_strength=owner_strength, cost=cost)
@@ -201,9 +203,7 @@ def compute_plan_diff(
         child_stop = child_stops[stop_id]
 
         if parent_stop.day != child_stop.day:
-            owner_strength = attribute_ownership.strength_for(
-                stop_id, ("day",), policy
-            )
+            owner_strength = attribute_ownership.strength_for(stop_id, ("day",), policy)
             cost = _change_cost("day_move", owner_strength, policy)
             day_moves.append(
                 DayMove(
@@ -218,17 +218,17 @@ def compute_plan_diff(
             _add_day(affected_days, child_stop.day)
 
         if parent_stop.start_time != child_stop.start_time or parent_stop.end_time != child_stop.end_time:
-            changed_time_attributes = tuple(sorted(
-                attribute
-                for attribute, changed in (
-                    ("start_time", parent_stop.start_time != child_stop.start_time),
-                    ("end_time", parent_stop.end_time != child_stop.end_time),
+            changed_time_attributes = tuple(
+                sorted(
+                    attribute
+                    for attribute, changed in (
+                        ("start_time", parent_stop.start_time != child_stop.start_time),
+                        ("end_time", parent_stop.end_time != child_stop.end_time),
+                    )
+                    if changed
                 )
-                if changed
-            ))
-            owner_strength = attribute_ownership.strength_for(
-                stop_id, changed_time_attributes, policy
             )
+            owner_strength = attribute_ownership.strength_for(stop_id, changed_time_attributes, policy)
             delta = _time_delta_minutes(parent_stop.start_time, child_stop.start_time)
             cost = _change_cost("time_shift", owner_strength, policy) * max(1.0, abs(delta) / 60.0)
             time_shifts.append(
@@ -251,9 +251,7 @@ def compute_plan_diff(
             or parent_stop.duration_minutes != child_stop.duration_minutes
             or parent_stop.duration_source != child_stop.duration_source
         ):
-            owner_strength = attribute_ownership.strength_for(
-                stop_id, ("duration",), policy
-            )
+            owner_strength = attribute_ownership.strength_for(stop_id, ("duration",), policy)
             accounting_from, accounting_from_source = _accounting_duration(
                 parent_stop,
                 default_visit_minutes,
@@ -292,9 +290,7 @@ def compute_plan_diff(
             _add_day(affected_days, child_stop.day)
 
         if parent_stop.time_window_constraint != child_stop.time_window_constraint:
-            owner_strength = attribute_ownership.strength_for(
-                stop_id, ("time_window",), policy
-            )
+            owner_strength = attribute_ownership.strength_for(stop_id, ("time_window",), policy)
             cost = _change_cost("time_window_change", owner_strength, policy)
             time_window_changes.append(
                 TimeWindowChange(
@@ -331,8 +327,7 @@ def compute_plan_diff(
 
         if (
             parent_stop.itinerary_role != child_stop.itinerary_role
-            or parent_stop.itinerary_role_source
-            != child_stop.itinerary_role_source
+            or parent_stop.itinerary_role_source != child_stop.itinerary_role_source
         ):
             role_owner_strength = (
                 attribute_ownership.strength_for(stop_id, ("role",), policy)
@@ -343,11 +338,7 @@ def compute_plan_diff(
             role_changes.append(
                 RoleChange(
                     stop_id=stop_id,
-                    day=(
-                        child_stop.day
-                        if child_stop.day is not None
-                        else parent_stop.day
-                    ),
+                    day=(child_stop.day if child_stop.day is not None else parent_stop.day),
                     from_role=parent_stop.itinerary_role,
                     to_role=child_stop.itinerary_role,
                     from_source=parent_stop.itinerary_role_source,
@@ -360,9 +351,7 @@ def compute_plan_diff(
             _add_day(affected_days, child_stop.day)
 
         if parent_stop.order != child_stop.order:
-            owner_strength = attribute_ownership.strength_for(
-                stop_id, ("order",), policy
-            )
+            owner_strength = attribute_ownership.strength_for(stop_id, ("order",), policy)
             cost = _change_cost("order_change", owner_strength, policy)
             reorder_changes.append(
                 OrderChange(
@@ -486,14 +475,16 @@ def compute_plan_diff(
             )
         )
     for change in time_shifts:
-        attributes = tuple(sorted(
-            attribute
-            for attribute, changed in (
-                ("start_time", change.from_start != change.to_start),
-                ("end_time", change.from_end != change.to_end),
+        attributes = tuple(
+            sorted(
+                attribute
+                for attribute, changed in (
+                    ("start_time", change.from_start != change.to_start),
+                    ("end_time", change.from_end != change.to_end),
+                )
+                if changed
             )
-            if changed
-        ))
+        )
         attribute_cost_changes.append(
             ownership_change_evidence(
                 change_kind="time_shift",
@@ -503,29 +494,17 @@ def compute_plan_diff(
                 policy=policy,
                 delta_scale=max(1.0, abs(change.delta_minutes) / 60.0),
                 before_value={
-                    attribute: (
-                        change.from_start
-                        if attribute == "start_time"
-                        else change.from_end
-                    )
+                    attribute: (change.from_start if attribute == "start_time" else change.from_end)
                     for attribute in attributes
                 },
                 after_value={
-                    attribute: (
-                        change.to_start
-                        if attribute == "start_time"
-                        else change.to_end
-                    )
+                    attribute: (change.to_start if attribute == "start_time" else change.to_end)
                     for attribute in attributes
                 },
             )
         )
     for change in duration_changes:
-        scale = (
-            1.0
-            if change.delta_minutes is None
-            else max(1.0, abs(change.delta_minutes) / 60.0)
-        )
+        scale = 1.0 if change.delta_minutes is None else max(1.0, abs(change.delta_minutes) / 60.0)
         attribute_cost_changes.append(
             ownership_change_evidence(
                 change_kind="duration_change",
@@ -576,9 +555,7 @@ def compute_plan_diff(
         )
     for change in lodging_changes:
         if attribute_ownership.activated and change.owner_strength:
-            raise ValueError(
-                "relation-specific attribute diff cannot bind legacy lodging ownership"
-            )
+            raise ValueError("relation-specific attribute diff cannot bind legacy lodging ownership")
         attribute_cost_changes.append(
             ownership_change_evidence(
                 change_kind="lodging_change",
@@ -593,9 +570,7 @@ def compute_plan_diff(
         )
     for change in road_changes:
         if attribute_ownership.activated and change.owner_strength:
-            raise ValueError(
-                "relation-specific attribute diff cannot bind legacy road ownership"
-            )
+            raise ValueError("relation-specific attribute diff cannot bind legacy road ownership")
         attribute_cost_changes.append(
             ownership_change_evidence(
                 change_kind="road_change",
@@ -621,9 +596,7 @@ def compute_plan_diff(
                 after_value={"role": change.to_role},
             )
         )
-    combined_attributes = sum(
-        bool(changes) for changes in (duration_changes, time_window_changes, role_changes)
-    ) > 1
+    combined_attributes = sum(bool(changes) for changes in (duration_changes, time_window_changes, role_changes)) > 1
     mixed_ownership = attribute_ownership.activated and (combined_attributes or bool(role_changes))
     attribute_cost_changes.sort(
         key=lambda row: (
@@ -652,24 +625,12 @@ def compute_plan_diff(
             **{("deleted_stop", row.stop_id): row.cost for row in deleted_stops},
             **{("day_move", row.stop_id): row.cost for row in day_moves},
             **{("time_shift", row.stop_id): row.cost for row in time_shifts},
-            **{
-                ("duration_change", row.stop_id): row.cost
-                for row in duration_changes
-            },
-            **{
-                ("time_window_change", row.stop_id): row.cost
-                for row in time_window_changes
-            },
+            **{("duration_change", row.stop_id): row.cost for row in duration_changes},
+            **{("time_window_change", row.stop_id): row.cost for row in time_window_changes},
             **{("order_change", row.stop_id): row.cost for row in reorder_changes},
             **{("role_change", row.stop_id): row.cost for row in role_changes},
-            **{
-                ("lodging_change", f"lodging:{row.day}"): row.cost
-                for row in lodging_changes
-            },
-            **{
-                ("road_change", f"route:{row.day}"): row.cost
-                for row in road_changes
-            },
+            **{("lodging_change", f"lodging:{row.day}"): row.cost for row in lodging_changes},
+            **{("road_change", f"route:{row.day}"): row.cost for row in road_changes},
         }
         if derived_costs != actual_costs:
             raise ValueError("attribute ownership cost evidence does not match diff")
@@ -689,17 +650,11 @@ def compute_plan_diff(
     if duration_changes:
         diff_payload["duration_changes"] = [change.to_record() for change in duration_changes]
     if time_window_changes:
-        diff_payload["time_window_changes"] = [
-            change.to_record() for change in time_window_changes
-        ]
+        diff_payload["time_window_changes"] = [change.to_record() for change in time_window_changes]
     if role_changes:
-        diff_payload["role_changes"] = [
-            change.to_record() for change in role_changes
-        ]
+        diff_payload["role_changes"] = [change.to_record() for change in role_changes]
     if attribute_ownership_evidence is not None:
-        diff_payload["attribute_ownership_evidence"] = (
-            attribute_ownership_evidence
-        )
+        diff_payload["attribute_ownership_evidence"] = attribute_ownership_evidence
     return PlanDiff(
         diff_id=f"diff_{stable_content_hash(diff_payload)}",
         parent_plan_id=parent.plan_id,
@@ -744,7 +699,9 @@ def _validate_compatible(parent: PlanArtifactV2, child: PlanArtifactV2) -> None:
 
 def _plan_stop_index(plan: PlanArtifactV2) -> dict[str, _PlanStop]:
     day_assignments = {str(stop_id): day for stop_id, day in plan.day_assignments.items()}
-    raw_days = {_stop_id(stop, index): _coerce_int(stop.get("day")) for index, stop in enumerate(plan.selected_stops, 1)}
+    raw_days = {
+        _stop_id(stop, index): _coerce_int(stop.get("day")) for index, stop in enumerate(plan.selected_stops, 1)
+    }
     sequence_order: dict[str, int] = {}
     day_counts: dict[int | None, int] = {}
     for stop_id in plan.sequence:
@@ -774,7 +731,9 @@ def _plan_stop_index(plan: PlanArtifactV2) -> dict[str, _PlanStop]:
             stop_id=stop_id,
             day=day,
             order=order,
-            start_time=_clean_text(_first_nonempty(stop, "start_time", "arrival_time", "window_start", "scheduled_start")),
+            start_time=_clean_text(
+                _first_nonempty(stop, "start_time", "arrival_time", "window_start", "scheduled_start")
+            ),
             end_time=_clean_text(_first_nonempty(stop, "end_time", "departure_time", "window_end", "scheduled_end")),
             lodging_id=_clean_text(
                 _first_nonempty(stop, "lodging_id", "hotel_id", "overnight_lodging_id", "overnight_city")
@@ -783,9 +742,7 @@ def _plan_stop_index(plan: PlanArtifactV2) -> dict[str, _PlanStop]:
             duration_constraint=duration_constraint,
             duration_minutes=duration_minutes,
             duration_source=duration_source,
-            time_window_constraint=_time_window_constraint(
-                stop.get("time_window_constraint")
-            ),
+            time_window_constraint=_time_window_constraint(stop.get("time_window_constraint")),
             itinerary_role=itinerary_role,
             itinerary_role_source=itinerary_role_source,
         )
@@ -834,11 +791,7 @@ def _time_window_constraint(value: Any) -> dict[str, Any] | None:
         or (earliest is None and latest is None)
         or not _valid_clock(earliest)
         or not _valid_clock(latest)
-        or (
-            earliest is not None
-            and latest is not None
-            and _clock_minutes(earliest) > _clock_minutes(latest)
-        )
+        or (earliest is not None and latest is not None and _clock_minutes(earliest) > _clock_minutes(latest))
     ):
         raise ValueError("time_window_constraint must be canonical or null")
     return {field: value[field] for field in fields}
@@ -846,8 +799,7 @@ def _time_window_constraint(value: Any) -> dict[str, Any] | None:
 
 def _valid_clock(value: Any) -> bool:
     return value is None or (
-        isinstance(value, str)
-        and re.fullmatch(r"(?:[01][0-9]|2[0-3]):[0-5][0-9]", value) is not None
+        isinstance(value, str) and re.fullmatch(r"(?:[01][0-9]|2[0-3]):[0-5][0-9]", value) is not None
     )
 
 
@@ -870,9 +822,7 @@ def _duration_state(
         values.append((key, float(value)))
     if len({minutes for _, minutes in values}) > 1:
         raise ValueError("duration scalar aliases disagree")
-    if constraint is not None and (
-        not values or values[0][1] != float(constraint["preferred_minutes"])
-    ):
+    if constraint is not None and (not values or values[0][1] != float(constraint["preferred_minutes"])):
         raise ValueError("duration_constraint and scalar duration disagree")
     if not values:
         return constraint, None, "unavailable"
@@ -905,9 +855,7 @@ def _ownership_duration_value(
     if minutes is None:
         return None
     if not float(minutes).is_integer():
-        raise ValueError(
-            "relation-specific duration ownership requires integer minutes"
-        )
+        raise ValueError("relation-specific duration ownership requires integer minutes")
     exact_minutes = int(minutes)
     return {
         "mode": "exact",
@@ -942,9 +890,7 @@ def _legacy_constraint_strength_by_target(plan: PlanArtifactV2) -> dict[str, str
 
     strengths: dict[str, str] = {}
     try:
-        constraints = active_owned_constraints(
-            tuple(dict(record) for record in plan.owned_constraints)
-        )
+        constraints = active_owned_constraints(tuple(dict(record) for record in plan.owned_constraints))
     except Exception:
         constraints = ()
     for constraint in constraints:
@@ -959,10 +905,7 @@ def _changed_attribute_keys(
     parent_stops: dict[str, _PlanStop],
     child_stops: dict[str, _PlanStop],
 ) -> frozenset[tuple[str, str]]:
-    keys: set[tuple[str, str]] = {
-        (stop_id, "existence")
-        for stop_id in set(parent_stops) ^ set(child_stops)
-    }
+    keys: set[tuple[str, str]] = {(stop_id, "existence") for stop_id in set(parent_stops) ^ set(child_stops)}
     for stop_id in sorted(set(parent_stops) & set(child_stops)):
         parent = parent_stops[stop_id]
         child = child_stops[stop_id]
@@ -990,18 +933,13 @@ def _changed_attribute_keys(
 def _role_constraint_strength_by_target(plan: PlanArtifactV2) -> dict[str, str]:
     strengths: dict[str, str] = {}
     try:
-        constraints = active_owned_constraints(
-            tuple(dict(record) for record in plan.owned_constraints)
-        )
+        constraints = active_owned_constraints(tuple(dict(record) for record in plan.owned_constraints))
     except Exception:
         constraints = ()
     for constraint in constraints:
         if not _is_role_scoped_constraint(constraint):
             continue
-        if (
-            not isinstance(constraint.value, str)
-            or constraint.value not in _STOP_ROLES
-        ):
+        if not isinstance(constraint.value, str) or constraint.value not in _STOP_ROLES:
             raise ValueError("role-scoped constraint value is invalid")
         target = constraint.target_id
         current = strengths.get(target)
@@ -1027,18 +965,14 @@ def _itinerary_role_state(stop: dict[str, Any]) -> tuple[str | None, str]:
     value = stop.get("itinerary_role")
     if value is None:
         if stop.get("itinerary_role_source") not in {None, "unavailable"}:
-            raise ValueError(
-                "missing itinerary_role cannot claim an explicit role source"
-            )
+            raise ValueError("missing itinerary_role cannot claim an explicit role source")
         return None, "unavailable"
     if (
         not isinstance(value, str)
         or value not in _STOP_ROLES
         or stop.get("itinerary_role_source") != "user_declared_itinerary_role"
     ):
-        raise ValueError(
-            "explicit itinerary_role requires the closed vocabulary and user source"
-        )
+        raise ValueError("explicit itinerary_role requires the closed vocabulary and user source")
     return value, "user_declared_itinerary_role"
 
 

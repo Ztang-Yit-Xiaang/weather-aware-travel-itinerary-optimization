@@ -144,6 +144,8 @@ def test_claim_rejects_disallowed_evidence_type_for_numeric_claim():
         evidence_refs=("constraint:soft_preference",),
     )
 
-    findings = validate_explanation_claims((claim,), (record("constraint:soft_preference", "constraint", "constraint_1")))
+    findings = validate_explanation_claims(
+        (claim,), (record("constraint:soft_preference", "constraint", "constraint_1"))
+    )
 
     assert [finding.code for finding in findings] == ["invalid_evidence_type"]

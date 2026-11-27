@@ -16,22 +16,22 @@ def test_confirm_is_capability_gated_and_uses_exact_server_preview_identity() ->
     source = APP.read_text(encoding="utf-8")
 
     assert 'schema_version !== "map-edit-capabilities-v1"' in source
-    assert 'capability?.enabled === true' in source
+    assert "capability?.enabled === true" in source
     assert 'capability.feedback_tier === "route_checked"' in source
     assert "capability.preview_executable === false" in source
     assert "capability.evaluated_repair === false" in source
     assert 'preview.validation_state === "route_checked"' in source
-    assert 'preview.draft_append_allowed === true' in source
-    assert 'preview.selected_access_point?.road_validated === true' in source
-    assert '/map/snap-previews/${encodeURIComponent(preview.snap_preview_id)}/confirm' in source
+    assert "preview.draft_append_allowed === true" in source
+    assert "preview.selected_access_point?.road_validated === true" in source
+    assert "/map/snap-previews/${encodeURIComponent(preview.snap_preview_id)}/confirm" in source
     assert "warning_acknowledged: warningAcknowledged" in source
 
 
 def test_confirm_body_never_reposts_browser_snapped_or_route_evidence() -> None:
     source = APP.read_text(encoding="utf-8")
-    confirm = source[source.index("async function confirmMapWaypoint"):]
+    confirm = source[source.index("async function confirmMapWaypoint") :]
     confirm = confirm[: confirm.index("function refreshMapEditDialog")]
-    request = confirm[confirm.index("const body = {"): confirm.index("try {")]
+    request = confirm[confirm.index("const body = {") : confirm.index("try {")]
 
     assert "expected_revision: state.session.revision" in request
     assert "warning_acknowledged: warningAcknowledged" in request
@@ -46,7 +46,7 @@ def test_confirm_body_never_reposts_browser_snapped_or_route_evidence() -> None:
 
 def test_duration_modes_encode_all_four_fields_truthfully() -> None:
     source = APP.read_text(encoding="utf-8")
-    duration = source[source.index("function durationFromConfirmationForm"):]
+    duration = source[source.index("function durationFromConfirmationForm") :]
     duration = duration[: duration.index("async function confirmMapWaypoint")]
 
     for mode in ("exact", "preferred", "minimum", "maximum", "range"):
@@ -58,7 +58,7 @@ def test_duration_modes_encode_all_four_fields_truthfully() -> None:
     ):
         assert field in duration
     assert "minimum <= maximum" in duration
-    assert 'value >= 15 && value <= 480' in duration
+    assert "value >= 15 && value <= 480" in duration
     assert 'const minimum = ["minimum", "range"].includes(mode);' in source
     assert 'const maximum = ["maximum", "range"].includes(mode);' in source
 
@@ -106,7 +106,7 @@ def test_controller_renders_only_validated_draft_routes_and_edit_only_custom_dra
     controller = CONTROLLER.read_text(encoding="utf-8")
     adapter = MAP.read_text(encoding="utf-8")
 
-    assert 'leg.road_validated !== true' in controller
+    assert "leg.road_validated !== true" in controller
     assert 'leg.validation_status !== "road_validated"' in controller
     assert 'throw new Error("draft_route_leg_invalid")' in controller
     assert 'id: "v2-draft-route"' in controller
@@ -124,7 +124,7 @@ def test_catalog_stops_remain_non_draggable_and_custom_waypoints_have_dom_equiva
     source = APP.read_text(encoding="utf-8")
     controller = CONTROLLER.read_text(encoding="utf-8")
 
-    stop_layers = controller[controller.index('map.addSource("v2-stops"'):]
+    stop_layers = controller[controller.index('map.addSource("v2-stops"') :]
     stop_layers = stop_layers[: stop_layers.index('map.addSource("v2-route-anchors"')]
     assert "Marker" not in stop_layers
     assert "draggable" not in stop_layers
@@ -137,7 +137,7 @@ def test_catalog_stops_remain_non_draggable_and_custom_waypoints_have_dom_equiva
 def test_waypoint_controls_and_markers_meet_touch_target_contract() -> None:
     css = CSS.read_text(encoding="utf-8")
 
-    assert '.draft-waypoint-marker { width: 44px; min-width: 44px; height: 44px; min-height: 44px;' in css
+    assert ".draft-waypoint-marker { width: 44px; min-width: 44px; height: 44px; min-height: 44px;" in css
     assert ".accessible-draft-waypoint button { min-height: 44px;" in css
     assert '.map-context-card input[type="text"]' in css
     assert '.map-context-card input[type="number"]' in css

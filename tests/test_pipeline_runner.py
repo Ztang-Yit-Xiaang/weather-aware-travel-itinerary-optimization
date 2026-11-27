@@ -263,7 +263,9 @@ def progressive_route_matrix() -> RouteMatrix:
         ("poi_e", "hotel_y_end"): progressive_cell("poi_e", "hotel_y_end", 12),
         ("poi_c", "poi_e"): progressive_cell("poi_c", "poi_e", 9),
     }
-    return RouteMatrix(matrix_id="matrix_progressive_pipe", context_snapshot_id="context_pipe", entity_ids=(), cells=cells)
+    return RouteMatrix(
+        matrix_id="matrix_progressive_pipe", context_snapshot_id="context_pipe", entity_ids=(), cells=cells
+    )
 
 
 def explanation() -> WhyEvidence:
@@ -410,7 +412,6 @@ def test_production_generation_executor_wraps_optimizer_outputs_as_pipeline_arti
     assert metrics["production_route_stop_row_count"] == 2
 
 
-
 def test_production_executor_with_relative_output_root_does_not_duplicate_run_path(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
 
@@ -441,6 +442,7 @@ def test_production_executor_with_relative_output_root_does_not_duplicate_run_pa
     metrics = json.loads((physical_run_dir / "metrics" / "metrics.json").read_text(encoding="utf-8"))
     assert metrics["phase0_legacy_artifact_dir"] == "production_legacy"
     assert metrics["production_legacy_artifact_dir"] == "production_legacy"
+
 
 def test_repair_pipeline_exports_parent_child_diff_and_explanation(tmp_path):
     def executor(context):
@@ -689,8 +691,7 @@ def test_progressive_repair_executor_exports_child_certificate_diff_and_explanat
     assert manifest["strict_failure_count"] == 0
 
     planner_runs = [
-        json.loads(line)
-        for line in (run.output_dir / "planner_runs.jsonl").read_text(encoding="utf-8").splitlines()
+        json.loads(line) for line in (run.output_dir / "planner_runs.jsonl").read_text(encoding="utf-8").splitlines()
     ]
     canonical_method = "progressive_sequential_lexicographic_repair"
     assert any(

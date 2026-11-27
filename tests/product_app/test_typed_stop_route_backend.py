@@ -139,9 +139,7 @@ def test_typed_edit_capabilities_are_closed_and_truthful(tmp_path: Path) -> None
         "combinable_operation_types": ["add_candidate", "keep_stop", "replace_nearby", "set_stop_duration", "set_stop_order", "set_stop_role", "set_stop_time_window"],
     }
     assert capabilities["operations"]["change_route_preference"]["enabled"] is False
-    assert capabilities["operations"]["change_route_preference"]["blocking_code"] == (
-        "route_preference_not_supported"
-    )
+    assert capabilities["operations"]["change_route_preference"]["blocking_code"] == ("route_preference_not_supported")
     assert capabilities["operations"]["set_stop_commitment"]["protected_strengths"] == [
         "must_keep",
         "booked",
@@ -348,9 +346,7 @@ def test_route_issue_requires_exact_accepted_route_leg_and_remains_user_report(t
     with _client(tmp_path / "state") as client:
         session, headers, workspace = _session(client)
         accepted = next(
-            plan
-            for plan in workspace["geography"]["plans"]
-            if plan["plan_id"] == session["accepted_plan_id"]
+            plan for plan in workspace["geography"]["plans"] if plan["plan_id"] == session["accepted_plan_id"]
         )
         route_leg_id = accepted["validated_legs"]["features"][0]["properties"]["route_leg_id"]
         response = _append(

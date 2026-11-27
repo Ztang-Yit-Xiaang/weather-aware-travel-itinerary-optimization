@@ -41,9 +41,7 @@ def test_demo_package_has_two_distinct_eligible_children_and_three_map_plans() -
     assert len({row["plan_id"] for row in package.alternatives}) == 2
     assert len({row["plan_content_hash"] for row in package.alternatives}) == 2
     assert all(row["ranking_eligible"] and row["route_validated"] for row in package.alternatives)
-    assert package.alternatives[1]["route_total_minutes"] < package.alternatives[0][
-        "route_total_minutes"
-    ]
+    assert package.alternatives[1]["route_total_minutes"] < package.alternatives[0]["route_total_minutes"]
 
     geography = build_geographic_workspace(
         package.primary_bundle,
@@ -58,8 +56,7 @@ def test_demo_package_has_two_distinct_eligible_children_and_three_map_plans() -
     ]
     assert len({plan["plan_id"] for plan in geography["plans"]}) == 3
     assert all(
-        route["properties"]["road_validated"] is True
-        and route["properties"]["fallback_used"] is False
+        route["properties"]["road_validated"] is True and route["properties"]["fallback_used"] is False
         for plan in geography["plans"]
         for route in plan["routes"]["features"]
     )
@@ -72,9 +69,7 @@ def test_demo_package_has_two_distinct_eligible_children_and_three_map_plans() -
     assert scopes_by_role["registered_repair"] == {"certified_daily_route_leg"}
     assert scopes_by_role["alternative"] == {"certified_daily_route_leg"}
     assert all(
-        evidence["methods"]["requested"]
-        and evidence["methods"]["executed"]
-        and evidence["source_hashes"]
+        evidence["methods"]["requested"] and evidence["methods"]["executed"] and evidence["source_hashes"]
         for evidence in package.evidence.values()
     )
 
@@ -145,9 +140,7 @@ def test_evidence_download_is_bound_to_the_requested_alternative(tmp_path: Path)
     )
     plan_id = "plan_8aa919c8323dbac0"
     with TestClient(app) as client:
-        response = client.get(
-            f"/api/runs/california_coast_product_demo_v2/evidence-bundle?plan_id={plan_id}"
-        )
+        response = client.get(f"/api/runs/california_coast_product_demo_v2/evidence-bundle?plan_id={plan_id}")
         missing = client.get("/api/runs/california_coast_product_demo_v2/evidence-bundle")
 
     assert response.status_code == 200

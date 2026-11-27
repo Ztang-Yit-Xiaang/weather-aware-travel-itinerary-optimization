@@ -1,4 +1,5 @@
 """Focused tamper checks for the unregistered deterministic chat-family gate."""
+
 from __future__ import annotations
 
 import json
@@ -15,19 +16,53 @@ import verify_e2e1_vertical_slice as core  # noqa: E402
 
 def _turn_fixture():
     request = {"message": "Keep Pfeiffer Big Sur State Park.", "client_message_id": "message", "expected_revision": 7}
-    context = {"accepted_plan_id": "child", "accepted_plan_content_hash": "hash", "allowed_stop_ids": ["pfeiffer"],
-        "session_revision": 7, "conversation_memory": {"plan_id": "child", "plan_content_hash": "hash"},
-        "selected_day": 5, "selected_stop_id": "pfeiffer", "selected_candidate_id": None,
-        "selected_segment_id": None, "selected_alternative_id": None}
+    context = {
+        "accepted_plan_id": "child",
+        "accepted_plan_content_hash": "hash",
+        "allowed_stop_ids": ["pfeiffer"],
+        "session_revision": 7,
+        "conversation_memory": {"plan_id": "child", "plan_content_hash": "hash"},
+        "selected_day": 5,
+        "selected_stop_id": "pfeiffer",
+        "selected_candidate_id": None,
+        "selected_segment_id": None,
+        "selected_alternative_id": None,
+    }
     turn = {"provider": "deterministic", "user_message": request["message"], "context_revision": 7}
     output = {"turn": turn, "session": {"accepted_plan_id": "child", "draft": []}}
-    binding = {"plan_id": "child", "plan_content_hash": "hash", **{name: context[name] for name in (
-        "selected_day", "selected_stop_id", "selected_candidate_id", "selected_segment_id", "selected_alternative_id")}}
+    binding = {
+        "plan_id": "child",
+        "plan_content_hash": "hash",
+        **{
+            name: context[name]
+            for name in (
+                "selected_day",
+                "selected_stop_id",
+                "selected_candidate_id",
+                "selected_segment_id",
+                "selected_alternative_id",
+            )
+        },
+    }
     digest = verifier.context_digest(context, [])
     events = [{"payload": output}]
-    row = {"input": request, "events": events, "output": output, "context": context, "bound_history": [], "context_sha256": digest,
-        "dispatch_record": {"context_binding": binding, "context_sha256": digest, "client_message_id": "message",
-            "attempt_budget": 1, "attempt_count": 1, "outcome": "completed", "turn": turn}}
+    row = {
+        "input": request,
+        "events": events,
+        "output": output,
+        "context": context,
+        "bound_history": [],
+        "context_sha256": digest,
+        "dispatch_record": {
+            "context_binding": binding,
+            "context_sha256": digest,
+            "client_message_id": "message",
+            "attempt_budget": 1,
+            "attempt_count": 1,
+            "outcome": "completed",
+            "turn": turn,
+        },
+    }
     identities = {("child", "hash"): {"rendered_marker_ids": ["pfeiffer"]}}
     return row, request, events, identities
 
@@ -38,8 +73,21 @@ def test_exact_context_and_durable_dispatch_bound_to_website_turn(monkeypatch):
     verifier.chat_turn(row, {}, identities)
 
 
-@pytest.mark.parametrize("fault", ["stale_stop", "wrong_plan", "wrong_memory_plan", "wrong_history", "wrong_binding",
-    "wrong_message_id", "second_attempt", "unknown_as_completed", "changed_turn", "send_staged_draft"])
+@pytest.mark.parametrize(
+    "fault",
+    [
+        "stale_stop",
+        "wrong_plan",
+        "wrong_memory_plan",
+        "wrong_history",
+        "wrong_binding",
+        "wrong_message_id",
+        "second_attempt",
+        "unknown_as_completed",
+        "changed_turn",
+        "send_staged_draft",
+    ],
+)
 def test_conversation_counterexamples_reject_context_or_dispatch_disconnection(monkeypatch, fault):
     row, request, events, identities = _turn_fixture()
     monkeypatch.setattr(verifier, "_stream", lambda http: (request, events))
@@ -68,14 +116,24 @@ def test_conversation_counterexamples_reject_context_or_dispatch_disconnection(m
         verifier.chat_turn(row, {}, identities)
 
 
-@pytest.mark.parametrize("intent,expected", [
-    ({"type": "keep_stop", "target_stop_id": "golden_gate"}, ("keep_stop", "golden_gate", {})),
-    ({"type": "replace_nearby", "target_stop_id": "bixby", "candidate_id": "pfeiffer"},
-        ("replace_nearby", "bixby", {"candidate_id": "pfeiffer"})),
-    ({"type": "add_candidate", "candidate_id": "lobos", "destination_day": 5}, ("add_candidate", "lobos", {"day": 5})),
-    ({"type": "set_stop_role", "target_stop_id": "wharf", "parameters": {"role": "meal"}},
-        ("set_stop_role", "wharf", {"role": "meal"})),
-])
+@pytest.mark.parametrize(
+    "intent,expected",
+    [
+        ({"type": "keep_stop", "target_stop_id": "golden_gate"}, ("keep_stop", "golden_gate", {})),
+        (
+            {"type": "replace_nearby", "target_stop_id": "bixby", "candidate_id": "pfeiffer"},
+            ("replace_nearby", "bixby", {"candidate_id": "pfeiffer"}),
+        ),
+        (
+            {"type": "add_candidate", "candidate_id": "lobos", "destination_day": 5},
+            ("add_candidate", "lobos", {"day": 5}),
+        ),
+        (
+            {"type": "set_stop_role", "target_stop_id": "wharf", "parameters": {"role": "meal"}},
+            ("set_stop_role", "wharf", {"role": "meal"}),
+        ),
+    ],
+)
 def test_chat_intent_maps_to_same_operation_without_semantic_substitution(intent, expected):
     assert verifier.interpretation_operation(intent) == expected
 
@@ -86,16 +144,46 @@ def test_missing_chat_closure_evidence_is_not_a_pass_or_raw_key_error(tmp_path):
 
 
 @pytest.mark.parametrize("label", verifier.NUMERIC_CLARIFICATIONS)
-@pytest.mark.parametrize("fault", [None, "prompt", "proposal", "empty_question", "draft", "preview",
-    "accepted_plan", "before_hash", "after_geometry", "after_markers"])
+@pytest.mark.parametrize(
+    "fault",
+    [
+        None,
+        "prompt",
+        "proposal",
+        "empty_question",
+        "draft",
+        "preview",
+        "accepted_plan",
+        "before_hash",
+        "after_geometry",
+        "after_markers",
+    ],
+)
 def test_numeric_chat_negative_requires_clarification_and_unchanged_canonical_parent(label, fault):
-    parent = {"active_plan_id": "accepted", "active_plan_content_hash": "parent_hash",
-        "rendered_map_plan_id": "accepted", "rendered_geometry_hash": "geometry", "rendered_marker_ids": ["wharf"]}
-    row = {"case": label, "input": verifier.NUMERIC_CLARIFICATIONS[label], "map_before": deepcopy(parent),
-        "map": deepcopy(parent), "output": {
-            "turn": {"interpretation": {"state": "clarification_required", "intents": [
-                {"type": "request_clarification", "clarification_question": "Which single exact duration?"}]}},
-            "session": {"draft": [], "proposal": None, "accepted_plan_id": "accepted"}}}
+    parent = {
+        "active_plan_id": "accepted",
+        "active_plan_content_hash": "parent_hash",
+        "rendered_map_plan_id": "accepted",
+        "rendered_geometry_hash": "geometry",
+        "rendered_marker_ids": ["wharf"],
+    }
+    row = {
+        "case": label,
+        "input": verifier.NUMERIC_CLARIFICATIONS[label],
+        "map_before": deepcopy(parent),
+        "map": deepcopy(parent),
+        "output": {
+            "turn": {
+                "interpretation": {
+                    "state": "clarification_required",
+                    "intents": [
+                        {"type": "request_clarification", "clarification_question": "Which single exact duration?"}
+                    ],
+                }
+            },
+            "session": {"draft": [], "proposal": None, "accepted_plan_id": "accepted"},
+        },
+    }
     if fault == "prompt":
         row["input"] = "Spend 90 minutes at Stearns Wharf."
     elif fault == "proposal":
@@ -123,11 +211,34 @@ def test_numeric_chat_negative_requires_clarification_and_unchanged_canonical_pa
 
 def _lifecycle():
     operation = {"operation_id": "kept", "type": "keep_stop"}
-    session = {"session_id": "session", "accepted_plan_id": "parent", "draft": [operation], "proposal": {"child": "candidate"}}
-    row = {"case": "keep_only_original", "operations": [operation], "scope": "evaluated_preview_only", "assertions_passed": True}
-    records = [{"phase": row["case"], "method": "GET", "url": "/api/sessions/session", "response_body_utf8": json.dumps({"session": session})},
-        {"phase": row["case"], "method": "POST", "url": "/draft/undo", "response_body_utf8": json.dumps({"undone": operation,
-            "session": {**session, "draft": [], "proposal": None}})}]
+    session = {
+        "session_id": "session",
+        "accepted_plan_id": "parent",
+        "draft": [operation],
+        "proposal": {"child": "candidate"},
+    }
+    row = {
+        "case": "keep_only_original",
+        "operations": [operation],
+        "scope": "evaluated_preview_only",
+        "assertions_passed": True,
+    }
+    records = [
+        {
+            "phase": row["case"],
+            "method": "GET",
+            "url": "/api/sessions/session",
+            "response_body_utf8": json.dumps({"session": session}),
+        },
+        {
+            "phase": row["case"],
+            "method": "POST",
+            "url": "/draft/undo",
+            "response_body_utf8": json.dumps(
+                {"undone": operation, "session": {**session, "draft": [], "proposal": None}}
+            ),
+        },
+    ]
     return row, {"session": session, "proposal": session["proposal"]}, records
 
 
@@ -135,7 +246,17 @@ def test_reload_and_undo_bind_actual_http():
     verifier.journey_lifecycle_http(*_lifecycle())
 
 
-@pytest.mark.parametrize("fault", ["missing_reload", "missing_undo", "wrong_reloaded_plan", "wrong_undo", "unexpected_accept", "false_acceptance_scope"])
+@pytest.mark.parametrize(
+    "fault",
+    [
+        "missing_reload",
+        "missing_undo",
+        "wrong_reloaded_plan",
+        "wrong_undo",
+        "unexpected_accept",
+        "false_acceptance_scope",
+    ],
+)
 def test_lifecycle_cannot_be_claimed_without_exact_reload_and_undo(fault):
     row, payload, records = _lifecycle()
     if fault == "missing_reload":

@@ -342,8 +342,7 @@ def _alternative_record(
 
 def _route_total_minutes(plan: Any, matrix: RouteMatrix, config: DayRouteSolverConfig) -> float:
     stops_by_day = {
-        int(day["day"]): tuple(str(stop_id) for stop_id in day.get("stop_ids", ()))
-        for day in plan.ordered_days
+        int(day["day"]): tuple(str(stop_id) for stop_id in day.get("stop_ids", ())) for day in plan.ordered_days
     }
     total = 0.0
     for day in sorted(stops_by_day):
@@ -366,8 +365,7 @@ def _route_legs(
     evidence_scope: str = "certified_daily_route_leg",
 ) -> list[dict[str, Any]]:
     stops_by_day = {
-        int(day["day"]): tuple(str(stop_id) for stop_id in day.get("stop_ids", ()))
-        for day in plan.ordered_days
+        int(day["day"]): tuple(str(stop_id) for stop_id in day.get("stop_ids", ())) for day in plan.ordered_days
     }
     result: list[dict[str, Any]] = []
     for day in sorted(stops_by_day):

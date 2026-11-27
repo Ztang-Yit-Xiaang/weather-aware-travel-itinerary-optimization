@@ -31,22 +31,22 @@ def _validate_route_registry(route_registry):
 
 
 def _route_checkbox_html(route, *, compact=False):
-        color = _escape(str(route.get("color", "#2563EB")))
-        control_id = _escape(str(route.get("control_id", route.get("label", "route"))))
-        control_label = _escape(str(route.get("control_label", route.get("label", "route"))))
-        family = _escape(str(route.get("family", "route")))
-        checked = " checked" if bool(route.get("default_checked", route.get("default_visible", False))) else ""
-        distance = _finite_float(route.get("distance_km"), 0.0)
-        unique_points = int(route.get("unique_points", 0) or 0)
-        meta_text = (
-            f"{distance:.0f} km"
-            if np.isfinite(distance) and distance > 0
-            else f"{unique_points} pts"
-            if unique_points
-            else ""
-        )
-        compact_class = " blueprint-route-check-compact" if compact else ""
-        return f"""
+    color = _escape(str(route.get("color", "#2563EB")))
+    control_id = _escape(str(route.get("control_id", route.get("label", "route"))))
+    control_label = _escape(str(route.get("control_label", route.get("label", "route"))))
+    family = _escape(str(route.get("family", "route")))
+    checked = " checked" if bool(route.get("default_checked", route.get("default_visible", False))) else ""
+    distance = _finite_float(route.get("distance_km"), 0.0)
+    unique_points = int(route.get("unique_points", 0) or 0)
+    meta_text = (
+        f"{distance:.0f} km"
+        if np.isfinite(distance) and distance > 0
+        else f"{unique_points} pts"
+        if unique_points
+        else ""
+    )
+    compact_class = " blueprint-route-check-compact" if compact else ""
+    return f"""
             <label class="blueprint-route-check{compact_class}" data-route-family="{family}">
                 <input type="checkbox" data-route-checkbox="{control_id}" data-route-family="{family}"{checked}>
                 <span class="blueprint-route-swatch" style="background:{color};"></span>
@@ -58,65 +58,64 @@ def _route_checkbox_html(route, *, compact=False):
 
 def _build_route_checkbox_html(route_registry):
     matrix_full_routes = [
-            route
-            for route in route_registry
-            if str(route.get("selector_group")) == "route_matrix" and str(route.get("layer_role")) == "full_route"
-        ]
+        route
+        for route in route_registry
+        if str(route.get("selector_group")) == "route_matrix" and str(route.get("layer_role")) == "full_route"
+    ]
     if matrix_full_routes:
-
-            child_routes = {}
-            for route in route_registry:
-                role = str(route.get("layer_role", ""))
-                if str(route.get("selector_group")) != "route_matrix" or role in {"full_route", "selected_hotels"}:
-                    continue
-                parent_key = str(route.get("parent_route_key", route.get("route_key", "")))
-                child_routes.setdefault(parent_key, []).append(route)
-            day_values = sorted(
-                {
-                    int(_finite_float(route.get("trip_days"), 0))
-                    for route in matrix_full_routes
-                    if int(_finite_float(route.get("trip_days"), 0)) > 0
-                }
-            )
-            method_order = [
-                "hierarchical_gurobi_pipeline",
-                "hierarchical_greedy_baseline",
-                "hierarchical_bandit_gurobi_repair",
+        child_routes = {}
+        for route in route_registry:
+            role = str(route.get("layer_role", ""))
+            if str(route.get("selector_group")) != "route_matrix" or role in {"full_route", "selected_hotels"}:
+                continue
+            parent_key = str(route.get("parent_route_key", route.get("route_key", "")))
+            child_routes.setdefault(parent_key, []).append(route)
+        day_values = sorted(
+            {
+                int(_finite_float(route.get("trip_days"), 0))
+                for route in matrix_full_routes
+                if int(_finite_float(route.get("trip_days"), 0)) > 0
+            }
+        )
+        method_order = [
+            "hierarchical_gurobi_pipeline",
+            "hierarchical_greedy_baseline",
+            "hierarchical_bandit_gurobi_repair",
+        ]
+        profile_order = ["relaxed", "balanced", "explorer"]
+        matrix_html = []
+        for day_value in day_values:
+            day_routes = [
+                route for route in matrix_full_routes if int(_finite_float(route.get("trip_days"), 0)) == day_value
             ]
-            profile_order = ["relaxed", "balanced", "explorer"]
-            matrix_html = []
-            for day_value in day_values:
-                day_routes = [
-                    route for route in matrix_full_routes if int(_finite_float(route.get("trip_days"), 0)) == day_value
-                ]
-                method_blocks = []
-                for method in method_order:
-                    method_routes = [route for route in day_routes if str(route.get("method")) == method]
-                    if not method_routes:
-                        continue
-                    method_label = str(method_routes[0].get("method_label", method_routes[0].get("method", "Method")))
-                    method_routes = sorted(
-                        method_routes,
-                        key=lambda route: (
-                            profile_order.index(str(route.get("profile")))
-                            if str(route.get("profile")) in profile_order
+            method_blocks = []
+            for method in method_order:
+                method_routes = [route for route in day_routes if str(route.get("method")) == method]
+                if not method_routes:
+                    continue
+                method_label = str(method_routes[0].get("method_label", method_routes[0].get("method", "Method")))
+                method_routes = sorted(
+                    method_routes,
+                    key=lambda route: (
+                        profile_order.index(str(route.get("profile")))
+                        if str(route.get("profile")) in profile_order
+                        else 99
+                    ),
+                )
+                route_rows = []
+                for route in method_routes:
+                    route_key = str(route.get("route_key"))
+                    children = sorted(
+                        child_routes.get(route_key, []),
+                        key=lambda child: (
+                            ["city_loop", "transition", "must_go"].index(str(child.get("layer_role")))
+                            if str(child.get("layer_role")) in ["city_loop", "transition", "must_go"]
                             else 99
                         ),
                     )
-                    route_rows = []
-                    for route in method_routes:
-                        route_key = str(route.get("route_key"))
-                        children = sorted(
-                            child_routes.get(route_key, []),
-                            key=lambda child: (
-                                ["city_loop", "transition", "must_go"].index(str(child.get("layer_role")))
-                                if str(child.get("layer_role")) in ["city_loop", "transition", "must_go"]
-                                else 99
-                            ),
-                        )
-                        child_rows = "".join(_route_checkbox_html(child, compact=True) for child in children)
-                        route_rows.append(
-                            f"""
+                    child_rows = "".join(_route_checkbox_html(child, compact=True) for child in children)
+                    route_rows.append(
+                        f"""
                         <details class="blueprint-route-leaf" data-route-key="{_escape(route_key)}">
                             <summary>{_route_checkbox_html(route)}<span class="blueprint-route-subhint">details</span></summary>
                             <div class="blueprint-route-subsection">
@@ -127,73 +126,73 @@ def _build_route_checkbox_html(route_registry):
                             </div>
                         </details>
                         """
-                        )
-                    method_blocks.append(
-                        f"""
+                    )
+                method_blocks.append(
+                    f"""
                     <details class="blueprint-route-method" data-method="{_escape(method)}">
                         <summary>{_escape(method_label)} <span>{len(method_routes)}</span></summary>
                         {"".join(route_rows)}
                     </details>
                     """
-                    )
-                matrix_html.append(
-                    f"""
+                )
+            matrix_html.append(
+                f"""
                 <details class="blueprint-route-group blueprint-route-matrix-day" data-selector-group="route_matrix" open>
                     <summary>{int(day_value)}-Day Routes <span>{len(day_routes)}</span></summary>
                     {"".join(method_blocks)}
                 </details>
                 """
-                )
-            auxiliary_rows = []
-            for route in route_registry:
-                if str(route.get("selector_group")) == "route_matrix":
-                    continue
-                if str(route.get("layer_role")) == "selected_hotels":
-                    continue
-                auxiliary_rows.append(_route_checkbox_html(route))
-            if auxiliary_rows:
-                matrix_html.append(
-                    f"""
+            )
+        auxiliary_rows = []
+        for route in route_registry:
+            if str(route.get("selector_group")) == "route_matrix":
+                continue
+            if str(route.get("layer_role")) == "selected_hotels":
+                continue
+            auxiliary_rows.append(_route_checkbox_html(route))
+        if auxiliary_rows:
+            matrix_html.append(
+                f"""
                 <details class="blueprint-route-group" data-selector-group="context">
                     <summary>Context / Candidates <span>{len(auxiliary_rows)}</span></summary>
                     {"".join(auxiliary_rows)}
                 </details>
                 """
-                )
-            checkbox_html = "".join(matrix_html)
+            )
+        checkbox_html = "".join(matrix_html)
     else:
-            group_order = [
-                ("core", "Core"),
-                ("trip_length", "Trip Length"),
-                ("method", "Methods"),
-                ("traveler_profile", "Travelers"),
-                ("city_detail", "City Details"),
-                ("transition", "Transitions"),
-                ("must_go", "Must-Go"),
-                ("hotel", "Hotels"),
-                ("context", "Context Routes"),
-            ]
-            grouped_routes = {key: [] for key, _ in group_order}
-            for route in route_registry:
-                selector_group = str(route.get("selector_group", route.get("family", "context")))
-                if selector_group not in grouped_routes:
-                    grouped_routes[selector_group] = []
-                grouped_routes[selector_group].append(_route_checkbox_html(route))
-            group_html = []
-            for group_key, group_label in group_order:
-                rows = grouped_routes.get(group_key, [])
-                if not rows:
-                    continue
-                open_attr = " open" if group_key in {"core", "trip_length", "method"} else ""
-                group_html.append(
-                    f"""
+        group_order = [
+            ("core", "Core"),
+            ("trip_length", "Trip Length"),
+            ("method", "Methods"),
+            ("traveler_profile", "Travelers"),
+            ("city_detail", "City Details"),
+            ("transition", "Transitions"),
+            ("must_go", "Must-Go"),
+            ("hotel", "Hotels"),
+            ("context", "Context Routes"),
+        ]
+        grouped_routes = {key: [] for key, _ in group_order}
+        for route in route_registry:
+            selector_group = str(route.get("selector_group", route.get("family", "context")))
+            if selector_group not in grouped_routes:
+                grouped_routes[selector_group] = []
+            grouped_routes[selector_group].append(_route_checkbox_html(route))
+        group_html = []
+        for group_key, group_label in group_order:
+            rows = grouped_routes.get(group_key, [])
+            if not rows:
+                continue
+            open_attr = " open" if group_key in {"core", "trip_length", "method"} else ""
+            group_html.append(
+                f"""
                 <details class="blueprint-route-group" data-selector-group="{_escape(group_key)}"{open_attr}>
                     <summary>{_escape(group_label)} <span>{len(rows)}</span></summary>
                     {"".join(rows)}
                 </details>
                 """
-                )
-            checkbox_html = "".join(group_html)
+            )
+        checkbox_html = "".join(group_html)
     return checkbox_html
 
 
@@ -203,20 +202,20 @@ def build_route_selector_model(map_object, route_registry, hidden_default_layers
     map_var = map_object.get_name()
     hidden_default_layers = hidden_default_layers or []
     hidden_vars = [
-            layer.get_name() for layer in hidden_default_layers if layer is not None and hasattr(layer, "get_name")
-        ]
+        layer.get_name() for layer in hidden_default_layers if layer is not None and hasattr(layer, "get_name")
+    ]
     bounds_points = []
     for route in route_registry:
-            bounds = route.get("bounds") or []
-            if len(bounds) == 2:
-                bounds_points.extend(bounds)
+        bounds = route.get("bounds") or []
+        if len(bounds) == 2:
+            bounds_points.extend(bounds)
     registry_json = json.dumps(route_registry).replace("</", "<\\/")
     hidden_json = json.dumps(hidden_vars)
     bounds_json = json.dumps(bounds_points)
     families = sorted({str(route.get("family", "")) for route in route_registry})
     checked_count = sum(
-            1 for route in route_registry if bool(route.get("default_checked", route.get("default_visible", False)))
-        )
+        1 for route in route_registry if bool(route.get("default_checked", route.get("default_visible", False)))
+    )
     checkbox_html = _build_route_checkbox_html(route_registry)
     return {
         "map_var": map_var,
@@ -232,7 +231,7 @@ def build_route_selector_model(map_object, route_registry, hidden_default_layers
 
 
 _CONTROLS_HTML_PARTS = (
-    '''
+    """
     <style>
     #blueprint-route-selector {
         position: fixed;
@@ -455,8 +454,8 @@ _CONTROLS_HTML_PARTS = (
         max-height: 300px;
     }
     </style>
-    <script id="blueprint-route-debug-registry" type="application/json">''',
-    '''</script>
+    <script id="blueprint-route-debug-registry" type="application/json">""",
+    """</script>
     <div id="blueprint-route-selector" class="blueprint-floating-panel blueprint-draggable" data-panel-id="route-selector">
         <button class="blueprint-panel-header" type="button" aria-expanded="true">
             <span>Route Selector</span>
@@ -475,8 +474,8 @@ _CONTROLS_HTML_PARTS = (
             </div>
             <button type="button" id="blueprint-hotel-showcase-toggle" class="blueprint-route-action" data-route-action="hotel_showcase" aria-pressed="false" style="width:100%; margin-bottom:6px;">Hotel Showcase: Off</button>
             <button type="button" class="blueprint-route-action" data-route-action="zoom" style="width:100%; margin-bottom:8px;">Zoom to checked routes</button>
-            <div class="blueprint-route-checkboxes">''',
-    '''</div>
+            <div class="blueprint-route-checkboxes">""",
+    """</div>
         </div>
     </div>
     <button id="blueprint-route-debug-tab" type="button" aria-controls="blueprint-route-debug-panel" aria-expanded="false">Debug</button>
@@ -486,31 +485,31 @@ _CONTROLS_HTML_PARTS = (
             <span class="blueprint-panel-chevron">+</span>
         </button>
         <div class="blueprint-panel-body">
-            <div class="summary-line"><b>Default checked routes:</b> ''',
-    '''</div>
-            <div class="summary-line"><b>Registered checkbox routes:</b> ''',
-    '''</div>
-            <div class="summary-line"><b>Unchecked on load:</b> ''',
-    '''</div>
-            <div class="summary-line"><b>Families:</b> ''',
-    '''</div>
+            <div class="summary-line"><b>Default checked routes:</b> """,
+    """</div>
+            <div class="summary-line"><b>Registered checkbox routes:</b> """,
+    """</div>
+            <div class="summary-line"><b>Unchecked on load:</b> """,
+    """</div>
+            <div class="summary-line"><b>Families:</b> """,
+    """</div>
             <div class="summary-line muted-note">Browser registry: blueprint-route-debug-registry. The Route Selector owns route visibility on first open.</div>
         </div>
     </div>
-    ''',
+    """,
 )
 
 _CONTROLS_JS_PARTS = (
-    '''
+    """
     (function() {
-        var registry = ''',
-    ''';
-        var hiddenLayerVars = ''',
-    ''';
-        var routeBounds = ''',
+        var registry = """,
+    """;
+        var hiddenLayerVars = """,
+    """;
+        var routeBounds = """,
     ''';
         var mapVarName = "''',
-    '''";
+    """";
         var mapObject = null;
         var listenersAttached = false;
         var hotelShowcaseEnabled = false;
@@ -896,8 +895,9 @@ _CONTROLS_JS_PARTS = (
             bootstrapRouteSelector(0);
         });
     })();
-    ''',
+    """,
 )
+
 
 def _join_asset_parts(parts, values):
     output = []

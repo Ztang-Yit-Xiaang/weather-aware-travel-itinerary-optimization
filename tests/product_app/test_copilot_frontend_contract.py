@@ -10,9 +10,7 @@ COPILOT_JS = STATIC / "js" / "copilot.js"
 INDEX = STATIC / "index.html"
 CSS = STATIC / "css" / "app.css"
 EXECUTABLE_CONTRACT = ROOT / "tests" / "product_app" / "copilot_draftability_contract.test.mjs"
-INTERACTION_CONTRACT = (
-    ROOT / "tests" / "product_app" / "copilot_interaction_state_contract.test.mjs"
-)
+INTERACTION_CONTRACT = ROOT / "tests" / "product_app" / "copilot_interaction_state_contract.test.mjs"
 
 
 def _read(path: Path) -> str:
@@ -22,7 +20,11 @@ def _read(path: Path) -> str:
 def test_reference_links_are_clickable_without_html_interpretation() -> None:
     result = subprocess.run(
         ["node", "--test", str(Path(__file__).with_name("copilot_reference_links.test.mjs"))],
-        cwd=ROOT, capture_output=True, text=True, encoding="utf-8", timeout=30,
+        cwd=ROOT,
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        timeout=30,
     )
     assert result.returncode == 0, result.stdout + result.stderr
 
@@ -45,7 +47,9 @@ def test_provider_labels_and_persistent_disclosures_are_truthful() -> None:
     assert 'id="copilot-provider-label"' in markup
     assert 'id="copilot-disclosure"' in markup
     assert 'provider === "openai" ? "OpenAI Copilot" : "Deterministic demo"' in controller
-    assert "visible trip context, your message, and a bounded recent conversation window are sent to OpenAI" in controller
+    assert (
+        "visible trip context, your message, and a bounded recent conversation window are sent to OpenAI" in controller
+    )
     assert "requests stay on this computer" in controller
     assert "expire after 30 days without a new turn" in controller
     assert "separately saved test/evidence reports are not deleted" in controller
@@ -165,22 +169,34 @@ def test_copilot_draftability_guard_is_executable() -> None:
 def test_copilot_preview_rechecks_exact_draft_after_pending_selection() -> None:
     result = subprocess.run(
         ["node", str(ROOT / "tests/product_app/copilot_preview_boundary_contract.test.mjs")],
-        cwd=ROOT, check=False, capture_output=True, text=True,
+        cwd=ROOT,
+        check=False,
+        capture_output=True,
+        text=True,
     )
     assert result.returncode == 0, result.stdout + result.stderr
     assert "Actual preview boundary rejects changed Copilot drafts after selection" in result.stdout
 
 
 def test_capacity_block_executes_real_controller_without_unknown_retry() -> None:
-    result = subprocess.run(["node", str(ROOT / "tests/product_app/copilot_capacity_contract.test.mjs")],
-                            cwd=ROOT, check=False, capture_output=True, text=True)
+    result = subprocess.run(
+        ["node", str(ROOT / "tests/product_app/copilot_capacity_contract.test.mjs")],
+        cwd=ROOT,
+        check=False,
+        capture_output=True,
+        text=True,
+    )
     assert result.returncode == 0, result.stdout + result.stderr
     assert "copilot capacity controller contract passed" in result.stdout
 
 
 def test_copilot_interaction_state_contract_is_executable() -> None:
-    staged = subprocess.run(["node", str(ROOT / "tests/product_app/copilot_staged_preview_contract.test.mjs")],
-                            cwd=ROOT, capture_output=True, text=True)
+    staged = subprocess.run(
+        ["node", str(ROOT / "tests/product_app/copilot_staged_preview_contract.test.mjs")],
+        cwd=ROOT,
+        capture_output=True,
+        text=True,
+    )
     assert staged.returncode == 0, staged.stdout + staged.stderr
     result = subprocess.run(
         ["node", str(INTERACTION_CONTRACT)],
@@ -196,7 +212,10 @@ def test_copilot_interaction_state_contract_is_executable() -> None:
 def test_copilot_session_revision_guards_execute_in_normal_pytest() -> None:
     result = subprocess.run(
         ["node", "--test", str(ROOT / "tests/product_app/copilot_session_revision_contract.test.mjs")],
-        cwd=ROOT, capture_output=True, text=True, encoding="utf-8",
+        cwd=ROOT,
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
     )
     assert result.returncode == 0, result.stdout + result.stderr
 
@@ -204,7 +223,10 @@ def test_copilot_session_revision_guards_execute_in_normal_pytest() -> None:
 def test_copilot_conversation_generation_guards_execute_in_normal_pytest() -> None:
     result = subprocess.run(
         ["node", "--test", str(ROOT / "tests/product_app/copilot_conversation_generation_contract.test.mjs")],
-        cwd=ROOT, capture_output=True, text=True, encoding="utf-8",
+        cwd=ROOT,
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
     )
     assert result.returncode == 0, result.stdout + result.stderr
 
@@ -249,7 +271,7 @@ def test_copilot_layout_remains_responsive_and_utf8_is_valid() -> None:
     assert "safe-area-inset-bottom" in stylesheet
     assert "@media (max-width: 820px)" in stylesheet
     assert "@media (max-width: 820px) and (max-height: 500px)" in stylesheet
-    assert '.copilot-dock .icon-button { width: 44px; height: 44px; }' in stylesheet
+    assert ".copilot-dock .icon-button { width: 44px; height: 44px; }" in stylesheet
     assert 'role="complementary"' in markup
     assert 'role="log"' in markup
     assert 'id="copilot-submit"' in markup

@@ -1,4 +1,5 @@
 """Independent fail-closed remount counterexamples, not browser evidence."""
+
 from __future__ import annotations
 
 import sys
@@ -20,8 +21,13 @@ def test_loading_before_replacement_cannot_leave_acceptance_enabled(absent):
     gap = deepcopy(rows[1])
     gap.update(reason="mutation", detail=None, observed_at="2026-09-08T12:00:02.500+00:00", performance_ms=2.5)
     if absent:
-        gap.update(current_map_id=None, current_map=None, current_connected=False,
-            previous_connected=False, previous_map={"mapReady": "false"})
+        gap.update(
+            current_map_id=None,
+            current_map=None,
+            current_connected=False,
+            previous_connected=False,
+            previous_map={"mapReady": "false"},
+        )
     else:
         gap["current_map"]["mapReady"] = "false"
     # The previously rendered acknowledgement and enabled acceptance are stale

@@ -116,8 +116,12 @@ class RepairMasterModelTests(unittest.TestCase):
         self.assertIsNone(model.variables.decision_variable("select_stop[poi_e]").fixed_value)
         self.assertEqual(model.variables.decision_variable("assign_lodging[2]").fixed_value, "hotel_y")
         self.assertEqual(model.required_route_pairs, (("poi_b", "poi_c"),))
-        self.assertTrue(any(change.change_type == ChangeVariableType.DELETE_STOP for change in model.variables.change_variables))
-        self.assertTrue(any(change.change_type == ChangeVariableType.ADD_STOP for change in model.variables.change_variables))
+        self.assertTrue(
+            any(change.change_type == ChangeVariableType.DELETE_STOP for change in model.variables.change_variables)
+        )
+        self.assertTrue(
+            any(change.change_type == ChangeVariableType.ADD_STOP for change in model.variables.change_variables)
+        )
 
     def test_context_aware_model_compiles_selection_and_evidence_overlays(self):
         parent = parent_plan()
@@ -173,7 +177,9 @@ class RepairMasterModelTests(unittest.TestCase):
             request_without_permission,
             RepairRadius.HOTEL_CHANGING_REPAIR,
         )
-        locked_model = build_repair_master_model(parent, request_without_permission, locked_neighborhood, empty_matrix())
+        locked_model = build_repair_master_model(
+            parent, request_without_permission, locked_neighborhood, empty_matrix()
+        )
 
         self.assertEqual(locked_model.variables.decision_variable("assign_lodging[2]").fixed_value, "hotel_y")
         self.assertEqual(locked_model.variables.decision_variable("relax_constraint[booked_hotel_y]").fixed_value, 0)
@@ -184,7 +190,9 @@ class RepairMasterModelTests(unittest.TestCase):
             request_with_permission,
             RepairRadius.HOTEL_CHANGING_REPAIR,
         )
-        editable_model = build_repair_master_model(parent, request_with_permission, editable_neighborhood, empty_matrix())
+        editable_model = build_repair_master_model(
+            parent, request_with_permission, editable_neighborhood, empty_matrix()
+        )
 
         self.assertIsNone(editable_model.variables.decision_variable("assign_lodging[2]").fixed_value)
         self.assertIsNone(editable_model.variables.decision_variable("relax_constraint[booked_hotel_y]").fixed_value)

@@ -211,10 +211,15 @@ def build_interest_surface(
     center = points.mean(axis=0)
     if search_center is not None:
         search_center = np.asarray(search_center, dtype=float)
-        if (search_center.shape != (2,) or not np.isfinite(search_center).all()
-                or np.any(np.abs(search_center) > [180, 85])
-                or isinstance(search_radius_m, bool) or not isinstance(search_radius_m, (int, float))
-                or not np.isfinite(search_radius_m) or not 1000 <= search_radius_m <= 25000):
+        if (
+            search_center.shape != (2,)
+            or not np.isfinite(search_center).all()
+            or np.any(np.abs(search_center) > [180, 85])
+            or isinstance(search_radius_m, bool)
+            or not isinstance(search_radius_m, (int, float))
+            or not np.isfinite(search_radius_m)
+            or not 1000 <= search_radius_m <= 25000
+        ):
             raise ValueError("interest_search_area_invalid")
     elif search_radius_m is not None:
         raise ValueError("interest_search_area_invalid")
@@ -231,8 +236,12 @@ def build_interest_surface(
     projected_support = shapely.transform(geographic_support, lambda coordinates: _project(coordinates, center))
     if search_center is not None:
         local_center = _project(search_center[None, :], center)[0]
-        projected_support = projected_support.intersection(shapely.Point(local_center).buffer(search_radius_m, quad_segs=64))
-        geographic_support = shapely.transform(projected_support, lambda coordinates: _project(coordinates, center, inverse=True))
+        projected_support = projected_support.intersection(
+            shapely.Point(local_center).buffer(search_radius_m, quad_segs=64)
+        )
+        geographic_support = shapely.transform(
+            projected_support, lambda coordinates: _project(coordinates, center, inverse=True)
+        )
     shapely.prepare(projected_support)
     cells = shapely.box(
         np.tile(x[:-1], grid_size),

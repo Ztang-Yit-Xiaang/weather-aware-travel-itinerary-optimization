@@ -120,7 +120,9 @@ def fake_replay(monkeypatch, tmp_path, recorded_runtime_inputs):
     monkeypatch.setenv("OPENAI_COPILOT_MODEL", "fake-no-network")
     monkeypatch.setenv("OPENAI_API_KEY", "synthetic-test-key-not-usable")
     monkeypatch.setenv("PRODUCT_APP_ORIGIN", "http://127.0.0.1:49152")
-    historical = recorded_runtime_inputs / fixtures.HARDENED_REPLAY_EVIDENCE / live.SCENARIO / "provider_exact_llm_io.json"
+    historical = (
+        recorded_runtime_inputs / fixtures.HARDENED_REPLAY_EVIDENCE / live.SCENARIO / "provider_exact_llm_io.json"
+    )
     output = tmp_path / "replay"
     monkeypatch.setattr(live, "_port_available", lambda port: True)
     monkeypatch.setattr(live, "_source_rows", lambda: [])
@@ -395,51 +397,68 @@ def test_failure_completion_status_distinguishes_authorized_unknown_from_no_disp
     response_text = fixtures._record()["response_body_utf8"]
 
     def receive(request):
-        forwarded.append({"method":request.method,"url":str(request.url),"request_body_utf8":request.content.decode()})
+        forwarded.append(
+            {"method": request.method, "url": str(request.url), "request_body_utf8": request.content.decode()}
+        )
         if outcome == "timeout":
             raise httpx.ReadTimeout("Synthetic external transport timeout", request=request)
         if outcome == "cancelled":
             raise asyncio.CancelledError("Synthetic external transport cancellation")
-        return httpx.Response(200,content=response_text.encode(),headers={"content-type":"application/json"})
+        return httpx.Response(200, content=response_text.encode(), headers={"content-type": "application/json"})
 
-    transport = live.ExactIOTransport(httpx.MockTransport(receive),
-        request_validator=live._one_provider_attempt_validator(authorized_path))
-    transport.begin_case(effort=live.EFFORT,case_id="e2e1_live_website_chat")
+    transport = live.ExactIOTransport(
+        httpx.MockTransport(receive), request_validator=live._one_provider_attempt_validator(authorized_path)
+    )
+    transport.begin_case(effort=live.EFFORT, case_id="e2e1_live_website_chat")
     request = fixtures._request()
     if outcome == "rejected":
         request["instructions"] += " NOT_AUTHORIZED"
 
     async def submit():
         async with httpx.AsyncClient(transport=transport) as client:
-            await client.post(live.PROVIDER_ENDPOINT,json=request)
+            await client.post(live.PROVIDER_ENDPOINT, json=request)
             if outcome == "complete_then_cap_rejected":
-                await client.post(live.PROVIDER_ENDPOINT,json=request)
+                await client.post(live.PROVIDER_ENDPOINT, json=request)
         raise RuntimeError("Synthetic later browser failure")
 
-    error = {"rejected":live.LiveE2E1Error,"timeout":httpx.ReadTimeout,
-        "cancelled":asyncio.CancelledError,"complete":RuntimeError,
-        "complete_then_cap_rejected":live.LiveE2E1Error}[outcome]
+    error = {
+        "rejected": live.LiveE2E1Error,
+        "timeout": httpx.ReadTimeout,
+        "cancelled": asyncio.CancelledError,
+        "complete": RuntimeError,
+        "complete_then_cap_rejected": live.LiveE2E1Error,
+    }[outcome]
     with pytest.raises(error):
-        with live._failure_evidence(tmp_path,source_inputs=[],execution_mode="live_openai",
-                current_records=transport.records,health={}):
+        with live._failure_evidence(
+            tmp_path, source_inputs=[], execution_mode="live_openai", current_records=transport.records, health={}
+        ):
             asyncio.run(submit())
     trace = json.loads((tmp_path / "failure_trace.json").read_text())
     provider = json.loads((scenario / "provider_exact_llm_io.json").read_text())
     # Persist provenance and all observed I/O before the red/green assertion.
-    live._write_json(tmp_path / "fake_transport_provenance.json", {
-        "scope":"external_httpx_MockTransport_only_no_fallthrough","actual_provider_calls":0,
-        "outcome":outcome,"fake_transport_attempts":len(forwarded),"exact_forwarded_requests":forwarded,
-        "exact_response_body_utf8":response_text if outcome in {"complete","complete_then_cap_rejected"} else None,
-        "transport_records":transport.records,"failure_trace":trace,
-        "expected_provider_completion_unknown":outcome in {"timeout","cancelled"},
-    })
+    live._write_json(
+        tmp_path / "fake_transport_provenance.json",
+        {
+            "scope": "external_httpx_MockTransport_only_no_fallthrough",
+            "actual_provider_calls": 0,
+            "outcome": outcome,
+            "fake_transport_attempts": len(forwarded),
+            "exact_forwarded_requests": forwarded,
+            "exact_response_body_utf8": response_text
+            if outcome in {"complete", "complete_then_cap_rejected"}
+            else None,
+            "transport_records": transport.records,
+            "failure_trace": trace,
+            "expected_provider_completion_unknown": outcome in {"timeout", "cancelled"},
+        },
+    )
     assert provider["records"] == transport.records
     assert len(forwarded) == (0 if outcome == "rejected" else 1)
     assert authorized_path.is_file() is (outcome != "rejected")
     assert len(transport.records) == (2 if outcome == "complete_then_cap_rejected" else 1)
     if forwarded:
         assert forwarded[0]["request_body_utf8"] == transport.records[0]["request_body_utf8"]
-    if outcome in {"complete","complete_then_cap_rejected"}:
+    if outcome in {"complete", "complete_then_cap_rejected"}:
         assert transport.records[0]["response_body_utf8"] == response_text
     if outcome == "complete":
         assert trace["current_usage"] == live._usage(transport.records)
@@ -447,4 +466,4 @@ def test_failure_completion_status_distinguishes_authorized_unknown_from_no_disp
     else:
         assert trace["current_usage"] is None and trace["current_billed_cost_usd"] is None
     assert trace["assertions_passed"] is False
-    assert trace["provider_completion_unknown"] is (outcome in {"timeout","cancelled"})
+    assert trace["provider_completion_unknown"] is (outcome in {"timeout", "cancelled"})

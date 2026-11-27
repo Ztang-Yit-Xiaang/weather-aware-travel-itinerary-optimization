@@ -18,8 +18,10 @@ ROOT = Path(__file__).resolve().parents[2]
 def registered_delta(tmp_path_factory):
     assert Path(_route_matrix.__code__.co_filename).resolve().is_relative_to(ROOT / "src")
     app = create_product_app(
-        repository_root=ROOT, state_root=tmp_path_factory.mktemp("registered-interest"),
-        additional_allowed_authorities=("testserver",), copilot=DeterministicCopilotAdapter(),
+        repository_root=ROOT,
+        state_root=tmp_path_factory.mktemp("registered-interest"),
+        additional_allowed_authorities=("testserver",),
+        copilot=DeterministicCopilotAdapter(),
     )
     with TestClient(app) as client:
         created = client.post("/api/sessions", json={})
@@ -37,14 +39,17 @@ def registered_delta(tmp_path_factory):
 @pytest.mark.parametrize("day", [1, 5, 6])
 def test_registered_seven_day_interest_is_read_only(registered_delta, day):
     client, payload, _, session, parent, geography, matrix = registered_delta
-    route = next(f["properties"] for f in geography["validated_legs"]["features"]
-                 if f["properties"]["day"] == day)
+    route = next(f["properties"] for f in geography["validated_legs"]["features"] if f["properties"]["day"] == day)
     before = deepcopy(session.public_dict())
     response = client.get(
         f"/api/sessions/{session.session_id}/map/interest-regions",
         headers={"X-Session-Token": payload["mutation_token"]},
-        params={"expected_revision": session.revision, "day": day,
-                "route_leg_id": route["route_leg_id"], "plan_id": parent["plan_id"]},
+        params={
+            "expected_revision": session.revision,
+            "day": day,
+            "route_leg_id": route["route_leg_id"],
+            "plan_id": parent["plan_id"],
+        },
     )
     assert response.status_code == 200, response.text
     result = response.json()
@@ -65,13 +70,16 @@ def test_registered_seven_day_interest_is_read_only(registered_delta, day):
     assert matrix["source_content_sha256"][:16] == matrix["matrix_id"].removeprefix("route_matrix_delta_")
 
 
-@pytest.mark.parametrize("field,value", [
-    ("matrix_id", "route_matrix_delta_0000000000000000"),
-    ("source_bundle_id", "route_bundle_composite_0000000000000000"),
-    ("source_content_sha256", "0" * 64),
-    ("source_content_sha256", None),
-    ("matrix_id", "arbitrary_matrix"),
-])
+@pytest.mark.parametrize(
+    "field,value",
+    [
+        ("matrix_id", "route_matrix_delta_0000000000000000"),
+        ("source_bundle_id", "route_bundle_composite_0000000000000000"),
+        ("source_content_sha256", "0" * 64),
+        ("source_content_sha256", None),
+        ("matrix_id", "arbitrary_matrix"),
+    ],
+)
 def test_composite_matrix_identifiers_must_match_descriptor(registered_delta, field, value):
     record = {"schema_version": "route-matrix-v1", **deepcopy(registered_delta[-1])}
     record[field] = value
@@ -94,11 +102,16 @@ def test_registered_delta_keeps_global_duplicate_and_exact_geometry_guards(regis
 def _nearby_request(fixture, **query):
     client, payload, _, session, _, geography, _ = fixture
     day = query.pop("day", 1)
-    leg = next(f["properties"]["route_leg_id"] for f in geography["validated_legs"]["features"]
-               if f["properties"]["day"] == day)
-    return client.get(f"/api/sessions/{session.session_id}/map/interest-regions",
+    leg = next(
+        f["properties"]["route_leg_id"]
+        for f in geography["validated_legs"]["features"]
+        if f["properties"]["day"] == day
+    )
+    return client.get(
+        f"/api/sessions/{session.session_id}/map/interest-regions",
         headers={"X-Session-Token": payload["mutation_token"]},
-        params={"expected_revision": session.revision, "day": day, "route_leg_id": leg, **query})
+        params={"expected_revision": session.revision, "day": day, "route_leg_id": leg, **query},
+    )
 
 
 def test_current_stop_search_excludes_distant_point_reyes_and_radius_is_monotone(registered_delta):
@@ -128,8 +141,11 @@ def test_density_and_all_region_boundaries_stay_inside_the_selected_radius(regis
                 for ring in polygon:
                     for longitude, latitude in ring:
                         latitude, longitude = map(math.radians, [latitude, longitude])
-                        a = math.sin((latitude-origin_lat)/2)**2 + math.cos(latitude)*math.cos(origin_lat)*math.sin((longitude-origin_lon)/2)**2
-                        assert 2*6371.0088*math.asin(math.sqrt(min(1, a))) <= 2.01
+                        a = (
+                            math.sin((latitude - origin_lat) / 2) ** 2
+                            + math.cos(latitude) * math.cos(origin_lat) * math.sin((longitude - origin_lon) / 2) ** 2
+                        )
+                        assert 2 * 6371.0088 * math.asin(math.sqrt(min(1, a))) <= 2.01
 
 
 @pytest.mark.parametrize("radius", [0, 0.5, -1, 26, "nan", "inf"])
@@ -178,17 +194,30 @@ def test_large_park_search_is_explicit_and_original_pin_remains_available(regist
 
 
 def test_online_points_cache_and_outage_fallback_preserve_the_itinerary(registered_delta, tmp_path, monkeypatch):
-    from itinerary_system.product_app import nearby_places as online
     from types import SimpleNamespace
+
+    from itinerary_system.product_app import nearby_places as online
+
     _, _, service, session, _, _, _ = registered_delta
     monkeypatch.setattr(service, "nearby_places", online.NearbyPlaceCache(tmp_path / "online"))
     clock = [1800000000.0]
     monkeypatch.setattr(online, "time", SimpleNamespace(time=lambda: clock[0]))
     calls = []
+
     def fetch(query):
         calls.append(query)
-        return {"elements": [{"type": "node", "id": 987654321099, "lat": 37.8193, "lon": -122.4787,
-            "tags": {"name": "API-only nearby museum", "tourism": "museum"}}]}
+        return {
+            "elements": [
+                {
+                    "type": "node",
+                    "id": 987654321099,
+                    "lat": 37.8193,
+                    "lon": -122.4787,
+                    "tags": {"name": "API-only nearby museum", "tourism": "museum"},
+                }
+            ]
+        }
+
     monkeypatch.setattr(online, "_fetch", fetch)
     before = deepcopy(session.public_dict())
     first = _nearby_request(registered_delta, radius_km=2)
@@ -200,8 +229,10 @@ def test_online_points_cache_and_outage_fallback_preserve_the_itinerary(register
     assert _nearby_request(registered_delta, radius_km=2).json()["place_data"]["status"] == "fresh_cache"
     assert len(calls) == 1
     clock[0] += online.FRESH_SECONDS + 1
+
     def unavailable(_):
         raise TimeoutError("offline")
+
     monkeypatch.setattr(online, "_fetch", unavailable)
     cached = _nearby_request(registered_delta, radius_km=2).json()
     assert cached["place_data"]["status"] == "stale_cache"
@@ -210,14 +241,19 @@ def test_online_points_cache_and_outage_fallback_preserve_the_itinerary(register
     assert _nearby_request(registered_delta, refresh_places="yes").status_code == 422
 
 
-def test_a_new_selection_during_the_online_lookup_cannot_return_a_mixed_revision(registered_delta, tmp_path, monkeypatch):
+def test_a_new_selection_during_the_online_lookup_cannot_return_a_mixed_revision(
+    registered_delta, tmp_path, monkeypatch
+):
     from itinerary_system.product_app import nearby_places as online
+
     _, _, service, session, _, _, _ = registered_delta
     monkeypatch.setattr(service, "nearby_places", online.NearbyPlaceCache(tmp_path / "online"))
     revision = session.revision
+
     def fetch(_):
         session.revision += 1
         return {"elements": []}
+
     monkeypatch.setattr(online, "_fetch", fetch)
     try:
         response = _nearby_request(registered_delta, radius_km=2)

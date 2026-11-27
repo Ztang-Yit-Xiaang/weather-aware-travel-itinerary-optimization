@@ -78,9 +78,7 @@ def test_child_parent_lineage_mismatch_is_rejected(product_run_factory) -> None:
 
 
 def test_certificate_lineage_mismatch_is_a_visible_truth_state(product_run_factory) -> None:
-    bundle = load_product_dashboard_source(
-        product_run_factory(certificate_updates={"plan_content_hash": "wrong"})
-    )
+    bundle = load_product_dashboard_source(product_run_factory(certificate_updates={"plan_content_hash": "wrong"}))
 
     assert "certificate_mismatch" in bundle.truth_states
     assert "eligible_repair" not in bundle.truth_states
@@ -115,13 +113,7 @@ def test_infeasibility_is_not_mislabeled_as_exact_incomplete(product_run_factory
 
 def test_booked_change_preserves_permission_provenance(product_run_factory) -> None:
     bundle = load_product_dashboard_source(
-        product_run_factory(
-            diff_updates={
-                "added_stops": [
-                    {"stop_id": "c", "day": 2, "owner_strength": "booked"}
-                ]
-            }
-        )
+        product_run_factory(diff_updates={"added_stops": [{"stop_id": "c", "day": 2, "owner_strength": "booked"}]})
     )
 
     assert "permission_required" in bundle.truth_states

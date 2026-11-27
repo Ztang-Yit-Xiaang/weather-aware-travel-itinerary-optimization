@@ -85,7 +85,9 @@ class RepairDiagnosis:
         return {
             "status": self.status,
             "attempted_radii": [radius.value for radius in self.attempted_radii],
-            "minimum_relaxation_radius": self.minimum_relaxation_radius.value if self.minimum_relaxation_radius else None,
+            "minimum_relaxation_radius": self.minimum_relaxation_radius.value
+            if self.minimum_relaxation_radius
+            else None,
             "minimum_relaxation_count": self.minimum_relaxation_count,
             "best_weighted_edit_cost": self.best_weighted_edit_cost,
             "failure_reasons": list(self.failure_reasons),
@@ -347,9 +349,7 @@ def _attempt_radius(
             failure_reasons.append("evaluation_ineligible")
             selected_id = str(result.selected_solution.metadata.get("candidate_id", ""))
             remaining = tuple(
-                candidate
-                for candidate in remaining
-                if str(candidate.metadata.get("candidate_id", "")) != selected_id
+                candidate for candidate in remaining if str(candidate.metadata.get("candidate_id", "")) != selected_id
             )
     except Exception as exc:
         failure_reasons.append(f"{type(exc).__name__}:{exc}")
@@ -378,7 +378,11 @@ def _attempt_radius(
         candidate_evaluations=tuple(candidate_evaluations),
         failure_reasons=tuple(dict.fromkeys(failure_reasons)),
     )
-    accepted = (child_plan, diff_record, evaluation_record) if child_plan is not None and diff_record is not None and evaluation_record is not None else None
+    accepted = (
+        (child_plan, diff_record, evaluation_record)
+        if child_plan is not None and diff_record is not None and evaluation_record is not None
+        else None
+    )
     return attempt, accepted
 
 
@@ -416,7 +420,9 @@ def _evaluate_child(
     else:
         raise TypeError("evaluator must be callable or expose evaluate()/evaluate_final_plan()")
     record = _record_from_evaluation(raw)
-    record.setdefault("evaluation_id", f"eval_{stable_content_hash({'plan': child_plan.plan_id, 'diff': diff_record.get('diff_id')})}")
+    record.setdefault(
+        "evaluation_id", f"eval_{stable_content_hash({'plan': child_plan.plan_id, 'diff': diff_record.get('diff_id')})}"
+    )
     record.setdefault("plan_id", child_plan.plan_id)
     record.setdefault("diff_id", diff_record.get("diff_id"))
     return record

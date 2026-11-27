@@ -1,0 +1,26 @@
+{
+  "maplibre_version": "5.24.0",
+  "role": "Renderer and one font range; no PMTiles extract, no offline tile cache",
+  "files": {
+    "maplibre-gl.js": {
+      "sha256": "45a9b07a9189ce56054c620a947ccf41e291e58c95e9b61533b740aaa65ee5cb",
+      "bytes": 1056837
+    },
+    "maplibre-gl.css": {
+      "sha256": "ab1e70d59ec40465bae7e7030da2f3ccf28133fd502e62bd598eefbadfd7a732",
+      "bytes": 70024
+    },
+    "fonts/Noto Sans Regular/0-255.pbf": {
+      "sha256": "62c6d49b15fa836eb6aa45e259c7ca6762f44b011b09e47776efbe4a6db1b397",
+      "bytes": 76044
+    },
+    "licenses/MapLibre-BSD-3-Clause.txt": {
+      "sha256": "ee5fc05a0677eaf69601d2c7db0d9ecd6cc27c3abc1d0733bc9ed34707cf8ef2",
+      "bytes": 5984
+    },
+    "licenses/Noto-OFL-1.1.txt": {
+      "sha256": "7713cfc8e3c36d5ec4aa3d6cffe7500a1b3310f8a86d914b8ea09c2a9dee7c2d",
+      "bytes": 4374
+    }
+  }
+}

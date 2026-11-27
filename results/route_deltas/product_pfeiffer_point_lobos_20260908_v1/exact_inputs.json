@@ -1,0 +1,76 @@
+{
+  "base_matrix_sha256": "fcb37e3aedbcd5c91d09f3851a6d751a74eff4d91874769abc96722395c1b041",
+  "catalog_sha256": "20b3f41d4dfa8907c058f5fef1f1d917a46baf34c7a67cd4fc20104aee40bb97",
+  "places": {
+    "pfeiffer_big_sur_state_park": {
+      "display_coordinate": {
+        "latitude": 36.2524,
+        "longitude": -121.7879
+      },
+      "route_access": {
+        "access_confidence": "provider_access_point",
+        "access_point_id": "pfeiffer_big_sur_state_park_road_endpoint",
+        "access_type": "road_route_endpoint",
+        "coordinate": {
+          "latitude": 36.252418,
+          "longitude": -121.787339
+        },
+        "evidence_refs": [
+          "17940a60cd8a39fb",
+          "a37d676da3e6dbd8"
+        ],
+        "road_validated": true,
+        "source_ref": "route_matrix_b33928f302ba9055"
+      }
+    },
+    "point_lobos_state_natural_reserve": {
+      "display_coordinate": {
+        "latitude": 36.5159,
+        "longitude": -121.9425
+      },
+      "route_access": {
+        "access_confidence": "provider_access_point",
+        "access_point_id": "point_lobos_state_natural_reserve_road_endpoint",
+        "access_type": "road_route_endpoint",
+        "coordinate": {
+          "latitude": 36.517094,
+          "longitude": -121.941786
+        },
+        "evidence_refs": [
+          "75e694c0dee9f5e0",
+          "ff1d33802a9ba484"
+        ],
+        "road_validated": true,
+        "source_ref": "route_matrix_b33928f302ba9055"
+      }
+    }
+  },
+  "route_point_overrides": {
+    "pfeiffer_big_sur_state_park": [
+      36.252418,
+      -121.787339
+    ],
+    "point_lobos_state_natural_reserve": [
+      36.517094,
+      -121.941786
+    ]
+  },
+  "route_rows": [
+    {
+      "attraction_name": "pfeiffer_big_sur_state_park",
+      "day": 5,
+      "latitude": 36.2524,
+      "longitude": -121.7879,
+      "method": "product_directed_route_delta",
+      "stop_order": 1
+    },
+    {
+      "attraction_name": "point_lobos_state_natural_reserve",
+      "day": 5,
+      "latitude": 36.5159,
+      "longitude": -121.9425,
+      "method": "product_directed_route_delta",
+      "stop_order": 2
+    }
+  ]
+}

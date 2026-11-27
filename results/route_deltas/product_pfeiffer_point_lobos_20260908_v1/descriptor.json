@@ -1,0 +1,25 @@
+{
+  "activated_in_product": false,
+  "base_matrix_id": "route_matrix_b33928f302ba9055",
+  "base_matrix_path": "runs/california-coast-coherent-demo-v1/routing/route_matrix_b33928f302ba9055.json",
+  "base_matrix_sha256": "fcb37e3aedbcd5c91d09f3851a6d751a74eff4d91874769abc96722395c1b041",
+  "catalog_sha256": "20b3f41d4dfa8907c058f5fef1f1d917a46baf34c7a67cd4fc20104aee40bb97",
+  "context_snapshot_id": "context_coherent_california_demo_2026_08",
+  "delta_bundle_id": "route_bundle_34950a5401d1b61d",
+  "delta_manifest_sha256": "a1ad888103a517b9677b444cfd7c031f3006e4b44f976c063af9e0823c354d48",
+  "delta_matrix_id": "route_matrix_4ab1413814efb681",
+  "delta_matrix_sha256": "725bee2e7a106a8213da43e467ea88ffba147698243e6141e096b4694e20297f",
+  "directed_pairs": [
+    [
+      "pfeiffer_big_sur_state_park",
+      "point_lobos_state_natural_reserve"
+    ]
+  ],
+  "exact_inputs_sha256": "0e61ca370e1e5d64a4d277dcc39843c3c86a14ba5724dd2b2acb772b33fc4311",
+  "provider_attempt_count": 1,
+  "provider_calls_sha256": "2577495a07c7e7766a6b7725da4bca228dbd64d25c2561361b0f1dc2e58169e3",
+  "publication_ready": true,
+  "raw_response_sha256": "54bc660e3e0e10df58c0b956eaa45be044c5ed525b7f3d04e50e8ff7e59749a4",
+  "runtime_witness_sha256": "84c405c686ba358b116f68971cd68772e0b13bb26be68966d409b72fe72b4e85",
+  "schema_version": "product-route-delta-v1"
+}

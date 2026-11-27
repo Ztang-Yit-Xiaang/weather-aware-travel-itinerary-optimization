@@ -91,8 +91,7 @@ def _constraint(
         "relation": relation,
         "value": value,
         "confirmed": True,
-        "relaxation_policy": relaxation_policy
-        or ("never" if strength == "locked" else "always"),
+        "relaxation_policy": relaxation_policy or ("never" if strength == "locked" else "always"),
         "evidence_refs": [],
         "schema_version": "owned-constraint-v1",
     }
@@ -190,9 +189,7 @@ def test_role_owned_constraints_are_attribute_independent_and_value_aware() -> N
 
     role_soft_other = replace(
         parent,
-        owned_constraints=(
-            _constraint(relation="role", value="activity", strength="soft"),
-        ),
+        owned_constraints=(_constraint(relation="role", value="activity", strength="soft"),),
     )
     soft_result = _direct(role_soft_other).compile((_operation().as_dict(),))
     soft_change = soft_result.diff.role_changes[0]
@@ -315,9 +312,7 @@ def test_explicit_role_no_effect_and_malformed_parent_fail_closed() -> None:
     malformed[0]["itinerary_role"] = "meal"
     malformed[0]["itinerary_role_source"] = "place_category_inference"
     with pytest.raises(WorkspaceError, match="draft_parent_role_invalid"):
-        _direct(replace(parent, selected_stops=tuple(malformed))).compile(
-            (_operation().as_dict(),)
-        )
+        _direct(replace(parent, selected_stops=tuple(malformed))).compile((_operation().as_dict(),))
 
 
 def test_workspace_role_lock_rejects_before_append_but_existence_lock_does_not(
@@ -339,9 +334,7 @@ def test_workspace_role_lock_rejects_before_append_but_existence_lock_does_not(
         "parent_stop_ids": {TARGET},
         "parent_day_by_stop": {TARGET: 4},
         "parent_order_by_day": {4: (TARGET,)},
-        "parent_role_by_stop": {
-            TARGET: {"itinerary_role": None, "itinerary_role_source": None}
-        },
+        "parent_role_by_stop": {TARGET: {"itinerary_role": None, "itinerary_role_source": None}},
     }
     added = store.add_operation(
         session,
@@ -364,9 +357,7 @@ def test_workspace_role_lock_rejects_before_append_but_existence_lock_does_not(
                         "constraint_id": "role_lock",
                         "strength": "hard",
                         "value": "activity",
-                        "permission_semantics": (
-                            "explicit_permission_required_for_mismatch"
-                        ),
+                        "permission_semantics": ("explicit_permission_required_for_mismatch"),
                     },
                 )
             },
@@ -381,9 +372,7 @@ def test_role_api_exposes_v4_impact_geography_and_w5_block(tmp_path: Path) -> No
         created = client.post("/api/sessions", json={}).json()
         session_id = created["session"]["session_id"]
         headers = {"X-Session-Token": created["mutation_token"]}
-        workspace_role_constraints = created["workspace"][
-            "role_constraint_evidence"
-        ]
+        workspace_role_constraints = created["workspace"]["role_constraint_evidence"]
         appended = client.post(
             f"/api/sessions/{session_id}/draft/operations",
             headers=headers,
@@ -426,9 +415,7 @@ def test_role_api_exposes_v4_impact_geography_and_w5_block(tmp_path: Path) -> No
     proposal = preview.json()["proposal"]
     assert proposal["plan_diff"]["schema_version"] == "plan-diff-v4"
     assert proposal["role_impact"]["schema_version"] == "evaluated-role-impact-v1"
-    assert proposal["role_impact"]["role_constraint_evidence"] == (
-        workspace_role_constraints
-    )
+    assert proposal["role_impact"]["role_constraint_evidence"] == (workspace_role_constraints)
     assert proposal["decision_eligible"] is False
     assert proposal["ranking_eligible"] is False
     assert proposal["acceptance_eligible"] is False
@@ -480,9 +467,7 @@ def test_structural_role_api_stays_draft_only_with_specific_blocker(
     assert row["feedback_tier"] == "draft_only"
     assert row["preview_executable"] is False
     assert row["blocking_codes"] == ["stop_role_evaluation_not_supported"]
-    assert impact.json()["summary"]["blocking_codes"] == [
-        "stop_role_evaluation_not_supported"
-    ]
+    assert impact.json()["summary"]["blocking_codes"] == ["stop_role_evaluation_not_supported"]
     assert preview.status_code == 409
     assert preview.json() == {"detail": "stop_role_evaluation_not_supported"}
 
@@ -525,9 +510,7 @@ def test_role_api_stale_write_changes_nothing_and_restart_restores_proposal(
                 "parameters": {"role": "activity"},
             },
         )
-        after_stale = first.get(
-            f"/api/sessions/{session_id}", headers=headers
-        ).json()["session"]
+        after_stale = first.get(f"/api/sessions/{session_id}", headers=headers).json()["session"]
         preview = first.post(
             f"/api/sessions/{session_id}/preview",
             headers=headers,
@@ -546,9 +529,7 @@ def test_role_api_stale_write_changes_nothing_and_restart_restores_proposal(
     saved_proposal = preview.json()["proposal"]
 
     with _client(state_root) as restarted:
-        restored = restarted.get(
-            f"/api/sessions/{session_id}", headers=headers
-        )
+        restored = restarted.get(f"/api/sessions/{session_id}", headers=headers)
 
     assert restored.status_code == 200, restored.json()
     restored_session = restored.json()["session"]
@@ -587,9 +568,7 @@ def test_restart_rejects_persisted_duplicate_role_operations_without_rewrite(
     tampered_bytes = snapshot_path.read_bytes()
 
     with _client(state_root) as restarted:
-        restored = restarted.get(
-            f"/api/sessions/{session_id}", headers=headers
-        )
+        restored = restarted.get(f"/api/sessions/{session_id}", headers=headers)
 
     assert restored.status_code == 409
     assert restored.json() == {"detail": "draft_conflicting_attribute_edits"}
@@ -636,42 +615,28 @@ def test_restart_revalidates_persisted_role_proposal_without_rewrite(
     snapshot = json.loads(snapshot_path.read_text(encoding="utf-8"))
     proposal = snapshot["session"]["proposal"]
     if tamper == "impact":
-        proposal["role_impact"]["semantic_scope"]["recommendation_claim"] = (
-            "validated"
-        )
+        proposal["role_impact"]["semantic_scope"]["recommendation_claim"] = "validated"
         impact_payload = dict(proposal["role_impact"])
         impact_payload.pop("content_hash")
         forged_hash = stable_content_hash(impact_payload)
         proposal["role_impact"]["content_hash"] = forged_hash
         proposal["role_impact_identity"]["content_hash"] = forged_hash
     elif tamper == "certificate":
-        proposal["certificate_role_evidence"]["warning_codes"].append(
-            "forged_role_warning"
-        )
+        proposal["certificate_role_evidence"]["warning_codes"].append("forged_role_warning")
         evidence_payload = dict(proposal["certificate_role_evidence"])
         evidence_payload.pop("content_hash")
-        proposal["certificate_role_evidence"]["content_hash"] = (
-            stable_content_hash(evidence_payload)
-        )
+        proposal["certificate_role_evidence"]["content_hash"] = stable_content_hash(evidence_payload)
     elif tamper == "certificate_hash":
         forged_hash = "0" * 16
         proposal["certificate_content_hash"] = forged_hash
         proposal["certificate_identity"]["content_hash"] = forged_hash
-        proposal["certificate_role_evidence"][
-            "certificate_content_hash"
-        ] = forged_hash
-        proposal["role_impact_identity"][
-            "certificate_content_hash"
-        ] = forged_hash
+        proposal["certificate_role_evidence"]["certificate_content_hash"] = forged_hash
+        proposal["role_impact_identity"]["certificate_content_hash"] = forged_hash
         evidence_payload = dict(proposal["certificate_role_evidence"])
         evidence_payload.pop("content_hash")
-        proposal["certificate_role_evidence"]["content_hash"] = (
-            stable_content_hash(evidence_payload)
-        )
+        proposal["certificate_role_evidence"]["content_hash"] = stable_content_hash(evidence_payload)
     elif tamper == "certificate_timestamp":
-        certificate_record = proposal["certificate_role_evidence"][
-            "certificate_record"
-        ]
+        certificate_record = proposal["certificate_role_evidence"]["certificate_record"]
         certificate_record["evaluated_at"] = "2099-01-01T00:00:00+00:00"
         certificate_payload = dict(certificate_record)
         certificate_payload.pop("content_hash")
@@ -679,17 +644,11 @@ def test_restart_revalidates_persisted_role_proposal_without_rewrite(
         certificate_record["content_hash"] = forged_hash
         proposal["certificate_content_hash"] = forged_hash
         proposal["certificate_identity"]["content_hash"] = forged_hash
-        proposal["certificate_role_evidence"][
-            "certificate_content_hash"
-        ] = forged_hash
-        proposal["role_impact_identity"][
-            "certificate_content_hash"
-        ] = forged_hash
+        proposal["certificate_role_evidence"]["certificate_content_hash"] = forged_hash
+        proposal["role_impact_identity"]["certificate_content_hash"] = forged_hash
         evidence_payload = dict(proposal["certificate_role_evidence"])
         evidence_payload.pop("content_hash")
-        proposal["certificate_role_evidence"]["content_hash"] = (
-            stable_content_hash(evidence_payload)
-        )
+        proposal["certificate_role_evidence"]["content_hash"] = stable_content_hash(evidence_payload)
     elif tamper == "diff":
         proposal["plan_diff"]["role_changes"][0]["to_role"] = "activity"
         forged_hash = stable_content_hash(proposal["plan_diff"])
@@ -697,18 +656,14 @@ def test_restart_revalidates_persisted_role_proposal_without_rewrite(
         proposal["diff_identity"]["content_hash"] = forged_hash
     else:
         feature = next(
-            row
-            for row in proposal["geography_plan"]["stops"]["features"]
-            if row["properties"]["stop_id"] == TARGET
+            row for row in proposal["geography_plan"]["stops"]["features"] if row["properties"]["stop_id"] == TARGET
         )
         feature["properties"]["itinerary_role"] = "activity"
     snapshot_path.write_text(json.dumps(snapshot), encoding="utf-8")
     tampered_bytes = snapshot_path.read_bytes()
 
     with _client(state_root) as restarted:
-        restored = restarted.get(
-            f"/api/sessions/{session_id}", headers=headers
-        )
+        restored = restarted.get(f"/api/sessions/{session_id}", headers=headers)
 
     assert restored.status_code == 409
     assert restored.json() == {"detail": "draft_role_proposal_invalid"}
@@ -745,9 +700,7 @@ def test_role_proposal_rejects_coherently_rehashed_evidence(tamper: str) -> None
         impact["child_schedule"]["metrics"][metric] += 1.0
         child_payload = dict(impact["child_schedule"])
         child_payload.pop("content_hash")
-        impact["child_schedule"]["content_hash"] = stable_content_hash(
-            child_payload
-        )
+        impact["child_schedule"]["content_hash"] = stable_content_hash(child_payload)
     elif tamper == "certificate_codes":
         certificate["warnings"].append(
             {
@@ -769,16 +722,12 @@ def test_role_proposal_rejects_coherently_rehashed_evidence(tamper: str) -> None
                 "scope": "stop",
                 "relation": "role",
                 "relaxation_policy": "never",
-                "permission_semantics": (
-                    "explicit_permission_required_for_mismatch"
-                ),
+                "permission_semantics": ("explicit_permission_required_for_mismatch"),
             }
         ]
         constraint_payload = dict(impact["role_constraint_evidence"])
         constraint_payload.pop("content_hash")
-        impact["role_constraint_evidence"]["content_hash"] = stable_content_hash(
-            constraint_payload
-        )
+        impact["role_constraint_evidence"]["content_hash"] = stable_content_hash(constraint_payload)
     impact_payload = dict(impact)
     impact_payload.pop("content_hash")
     impact["content_hash"] = stable_content_hash(impact_payload)
@@ -802,33 +751,57 @@ def _role_selection_fixture(api, repaired: bool = False):
     headers = {"X-Session-Token": created["mutation_token"]}
     path = f"/api/sessions/{session['session_id']}"
     if repaired:
-        drafted = api.post(path + "/draft/operations", headers=headers, json={
-            "expected_revision": session["revision"], "type": "replace_nearby",
-            "target": "bixby_creek_bridge_viewpoint", "parameters": {"candidate_id": "pfeiffer_big_sur_state_park"},
-        })
+        drafted = api.post(
+            path + "/draft/operations",
+            headers=headers,
+            json={
+                "expected_revision": session["revision"],
+                "type": "replace_nearby",
+                "target": "bixby_creek_bridge_viewpoint",
+                "parameters": {"candidate_id": "pfeiffer_big_sur_state_park"},
+            },
+        )
         drafted.raise_for_status()
-        evaluated = api.post(path + "/preview", headers=headers, json={"expected_revision": drafted.json()["session"]["revision"]})
+        evaluated = api.post(
+            path + "/preview", headers=headers, json={"expected_revision": drafted.json()["session"]["revision"]}
+        )
         evaluated.raise_for_status()
         assert evaluated.json()["proposal"]["acceptance_eligible"] is True
-        accepted = api.post(path + "/accept", headers=headers, json={
-            "expected_revision": evaluated.json()["session"]["revision"],
-            "confirmation": "accept_evaluated_repair", "idempotency_key": "role-selection-parent-fixture-0001",
-        })
+        accepted = api.post(
+            path + "/accept",
+            headers=headers,
+            json={
+                "expected_revision": evaluated.json()["session"]["revision"],
+                "confirmation": "accept_evaluated_repair",
+                "idempotency_key": "role-selection-parent-fixture-0001",
+            },
+        )
         accepted.raise_for_status()
         session = accepted.json()["session"]
-    drafted = api.post(path + "/draft/operations", headers=headers, json={
-        "expected_revision": session["revision"], "type": "set_stop_role",
-        "target": TARGET, "parameters": {"role": "scenic_stop"},
-    })
+    drafted = api.post(
+        path + "/draft/operations",
+        headers=headers,
+        json={
+            "expected_revision": session["revision"],
+            "type": "set_stop_role",
+            "target": TARGET,
+            "parameters": {"role": "scenic_stop"},
+        },
+    )
     drafted.raise_for_status()
-    evaluated = api.post(path + "/preview", headers=headers, json={"expected_revision": drafted.json()["session"]["revision"]})
+    evaluated = api.post(
+        path + "/preview", headers=headers, json={"expected_revision": drafted.json()["session"]["revision"]}
+    )
     evaluated.raise_for_status()
     return path, headers, evaluated.json()
 
 
 def _role_selection_evidence(proposal):
-    return {key: value for key, value in proposal.items()
-            if key not in {"expected_revision", "session_revision", "role_proposal_integrity"}}
+    return {
+        key: value
+        for key, value in proposal.items()
+        if key not in {"expected_revision", "session_revision", "role_proposal_integrity"}
+    }
 
 
 @pytest.mark.parametrize("repaired", [False, True])
@@ -839,9 +812,15 @@ def test_role_selection_repeated_restore_and_restart_keep_exact_evidence(tmp_pat
         original = evaluated["proposal"]
         revision = evaluated["session"]["revision"]
         for stop, day in ((TARGET, 6), ("griffith_observatory", 7)):
-            selected = first.post(path + "/selection", headers=headers, json={
-                "expected_revision": revision, "selected_day": day, "selected_stop_id": stop,
-            })
+            selected = first.post(
+                path + "/selection",
+                headers=headers,
+                json={
+                    "expected_revision": revision,
+                    "selected_day": day,
+                    "selected_stop_id": stop,
+                },
+            )
             selected.raise_for_status()
             session = selected.json()["session"]
             assert session["revision"] == revision + 1
@@ -867,14 +846,25 @@ def test_role_selection_explicit_acceptance_keeps_the_evaluated_child(tmp_path: 
         path, headers, evaluated = _role_selection_fixture(api, repaired=True)
         proposal = evaluated["proposal"]
         assert proposal["acceptance_eligible"] is True
-        selected = api.post(path + "/selection", headers=headers, json={
-            "expected_revision": evaluated["session"]["revision"], "selected_day": 6, "selected_stop_id": TARGET,
-        })
+        selected = api.post(
+            path + "/selection",
+            headers=headers,
+            json={
+                "expected_revision": evaluated["session"]["revision"],
+                "selected_day": 6,
+                "selected_stop_id": TARGET,
+            },
+        )
         selected.raise_for_status()
-        accepted = api.post(path + "/accept", headers=headers, json={
-            "expected_revision": selected.json()["session"]["revision"],
-            "confirmation": "accept_evaluated_repair", "idempotency_key": "role-selection-child-fixture-0001",
-        })
+        accepted = api.post(
+            path + "/accept",
+            headers=headers,
+            json={
+                "expected_revision": selected.json()["session"]["revision"],
+                "confirmation": "accept_evaluated_repair",
+                "idempotency_key": "role-selection-child-fixture-0001",
+            },
+        )
         assert accepted.status_code == 200, accepted.text
         session = accepted.json()["session"]
         assert session["accepted_plan_id"] == proposal["child_plan_id"]
@@ -894,9 +884,15 @@ def test_role_selection_refuses_tampered_evidence_without_snapshot_rewrite(tmp_p
     snapshot.write_text(json.dumps(record), encoding="utf-8")
     before = snapshot.read_bytes()
     with _client(state_root) as restarted:
-        rejected = restarted.post(path + "/selection", headers=headers, json={
-            "expected_revision": evaluated["session"]["revision"], "selected_day": 6, "selected_stop_id": TARGET,
-        })
+        rejected = restarted.post(
+            path + "/selection",
+            headers=headers,
+            json={
+                "expected_revision": evaluated["session"]["revision"],
+                "selected_day": 6,
+                "selected_stop_id": TARGET,
+            },
+        )
         assert rejected.status_code == 409
         assert rejected.json() == {"detail": "draft_role_proposal_invalid"}
     assert snapshot.read_bytes() == before
@@ -908,9 +904,15 @@ def test_role_selection_stale_request_preserves_snapshot(tmp_path: Path) -> None
         path, headers, evaluated = _role_selection_fixture(api)
         snapshot = state_root / "sessions" / (evaluated["session"]["session_id"] + ".json")
         before = snapshot.read_bytes()
-        rejected = api.post(path + "/selection", headers=headers, json={
-            "expected_revision": 0, "selected_day": 6, "selected_stop_id": TARGET,
-        })
+        rejected = api.post(
+            path + "/selection",
+            headers=headers,
+            json={
+                "expected_revision": 0,
+                "selected_day": 6,
+                "selected_stop_id": TARGET,
+            },
+        )
         assert rejected.status_code == 409
         assert rejected.json() == {"detail": "stale_session_revision"}
         assert snapshot.read_bytes() == before

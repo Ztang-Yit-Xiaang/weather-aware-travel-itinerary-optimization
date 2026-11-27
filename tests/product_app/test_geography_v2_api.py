@@ -69,4 +69,3 @@ def test_created_session_returns_the_same_v2_workspace_contract(tmp_path: Path) 
     geography = response.json()["workspace"]["geography"]
     assert geography["schema_version"] == "product-geography-v2"
     assert geography["coverage"]["gap_count"] == 0
-

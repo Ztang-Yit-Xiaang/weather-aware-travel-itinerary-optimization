@@ -15,10 +15,7 @@ def _css() -> str:
 def test_critical_controls_and_disclosures_have_44px_targets() -> None:
     css = _css()
 
-    assert (
-        ".icon-button { width: 44px; min-width: 44px; height: 44px; "
-        "min-height: 44px;" in css
-    )
+    assert ".icon-button { width: 44px; min-width: 44px; height: 44px; min-height: 44px;" in css
     assert ".toolbar-button { min-width: 44px; min-height: 44px;" in css
     assert ".map-context-card button { min-height: 44px;" in css
     assert ".alternative-card button { width: 100%; min-height: 44px;" in css
@@ -83,4 +80,4 @@ def test_desktop_copilot_reserves_resizable_workspace_space() -> None:
     assert ".map-legend { top: 78px; bottom: auto; }" in css
     assert ".map-context-card { top: 126px; max-height: max(120px, calc(100% - 370px)); }" in css
     assert '.style.setProperty("--copilot-width", `${bounded}px`)' in controller
-    assert 'event.preventDefault();\n      const current = dock.getBoundingClientRect().width;' in controller
+    assert "event.preventDefault();\n      const current = dock.getBoundingClientRect().width;" in controller

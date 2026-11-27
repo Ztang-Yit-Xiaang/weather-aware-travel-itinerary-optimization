@@ -61,93 +61,201 @@ def receipt():
 
 def decision_fixture():
     import hashlib
+
     def signed(value):
-        return {**value,'content_hash':hashlib.sha256(json.dumps(value,sort_keys=True,separators=(',',':'),
-            ensure_ascii=False,allow_nan=False).encode()).hexdigest()}
-    assertions={name:{'active_plan_id':name,'active_plan_content_hash':'h-'+name,'rendered_map_plan_id':name,
-        'rendered_geometry_hash':'g-'+name,'rendered_marker_ids':[name],'preview_state':'PREVIEW_RENDERED'} for name in ('a','b','c')}
-    rows,events,records=[],[],[]
-    previous='a'
-    for index,(kind,context,name) in enumerate((('accept_repair','original','b'),('accept_repair','accepted_child','c'),
-            ('keep_original','accepted_child','a'),('keep_original','original','a'))):
-        accepted=kind=='accept_repair'
-        selector='#accept-repair' if accepted else '#keep-original'
-        endpoint='accept' if accepted else 'keep-original'
-        before={'session_id':'s','trip_id':'trip','run_id':'run','accepted_plan_id':previous,'revision':index,'draft':[],'proposal':None}
-        after={**before,'accepted_plan_id':name,'revision':index+1}
-        decision=signed({'decision_id':'d'+str(index),'decision_type':kind,'previous_plan_id':previous,
-            'selected_plan_id':name,'selected_plan_content_hash':'h-'+name,'session_revision_before':index,
-            'session_revision_after':index+1,'pointer_revision_after':index+1})
-        pointer=signed({'schema_version':'accepted-plan-pointer-v1','accepted_plan_id':name,'accepted_plan_content_hash':'h-'+name,
-            'original_plan_id':'a','original_plan_content_hash':'h-a','decision_id':decision['decision_id'],'revision':index+1})
-        public={key:pointer[key] for key in ('schema_version','accepted_plan_id','accepted_plan_content_hash','decision_id','revision')}
-        payload={'session':after,'result':{'decision':decision,'pointer':pointer},'workspace':{'accepted_plan_pointer':public}}
-        request={'confirmation':'accept_evaluated_repair' if accepted else 'keep_original_plan','expected_revision':index,
-            'idempotency_key':endpoint+':unique'+str(index)}
-        event={'trusted':True,'type':'click','at':100+index,'selector':selector,'path':'/app/itinerary','visible':True,'disabled':False}
-        row={'binding_id':kind,'selector':selector,'context':context,'phase':str(index),'events':[event],
-            'confirmation_messages':['Accept this independently evaluated repair as the durable trip plan?' if accepted else
-                'Keep the immutable original plan as the durable trip plan?'],'assertions_passed':True,
-            'session_before':before,'request':request,'response':payload,'restored':deepcopy(payload),
-            'rendered_before':deepcopy(assertions[name if accepted else previous]),'rendered_after':deepcopy(assertions[name])}
-        records.append({'method':'POST','url':'http://local/api/sessions/s/'+endpoint,'phase':str(index),
-            'request_body_utf8':json.dumps(request),'response_body_utf8':json.dumps(payload)})
+        return {
+            **value,
+            "content_hash": hashlib.sha256(
+                json.dumps(value, sort_keys=True, separators=(",", ":"), ensure_ascii=False, allow_nan=False).encode()
+            ).hexdigest(),
+        }
+
+    assertions = {
+        name: {
+            "active_plan_id": name,
+            "active_plan_content_hash": "h-" + name,
+            "rendered_map_plan_id": name,
+            "rendered_geometry_hash": "g-" + name,
+            "rendered_marker_ids": [name],
+            "preview_state": "PREVIEW_RENDERED",
+        }
+        for name in ("a", "b", "c")
+    }
+    rows, events, records = [], [], []
+    previous = "a"
+    for index, (kind, context, name) in enumerate(
+        (
+            ("accept_repair", "original", "b"),
+            ("accept_repair", "accepted_child", "c"),
+            ("keep_original", "accepted_child", "a"),
+            ("keep_original", "original", "a"),
+        )
+    ):
+        accepted = kind == "accept_repair"
+        selector = "#accept-repair" if accepted else "#keep-original"
+        endpoint = "accept" if accepted else "keep-original"
+        before = {
+            "session_id": "s",
+            "trip_id": "trip",
+            "run_id": "run",
+            "accepted_plan_id": previous,
+            "revision": index,
+            "draft": [],
+            "proposal": None,
+        }
+        after = {**before, "accepted_plan_id": name, "revision": index + 1}
+        decision = signed(
+            {
+                "decision_id": "d" + str(index),
+                "decision_type": kind,
+                "previous_plan_id": previous,
+                "selected_plan_id": name,
+                "selected_plan_content_hash": "h-" + name,
+                "session_revision_before": index,
+                "session_revision_after": index + 1,
+                "pointer_revision_after": index + 1,
+            }
+        )
+        pointer = signed(
+            {
+                "schema_version": "accepted-plan-pointer-v1",
+                "accepted_plan_id": name,
+                "accepted_plan_content_hash": "h-" + name,
+                "original_plan_id": "a",
+                "original_plan_content_hash": "h-a",
+                "decision_id": decision["decision_id"],
+                "revision": index + 1,
+            }
+        )
+        public = {
+            key: pointer[key]
+            for key in ("schema_version", "accepted_plan_id", "accepted_plan_content_hash", "decision_id", "revision")
+        }
+        payload = {
+            "session": after,
+            "result": {"decision": decision, "pointer": pointer},
+            "workspace": {"accepted_plan_pointer": public},
+        }
+        request = {
+            "confirmation": "accept_evaluated_repair" if accepted else "keep_original_plan",
+            "expected_revision": index,
+            "idempotency_key": endpoint + ":unique" + str(index),
+        }
+        event = {
+            "trusted": True,
+            "type": "click",
+            "at": 100 + index,
+            "selector": selector,
+            "path": "/app/itinerary",
+            "visible": True,
+            "disabled": False,
+        }
+        row = {
+            "binding_id": kind,
+            "selector": selector,
+            "context": context,
+            "phase": str(index),
+            "events": [event],
+            "confirmation_messages": [
+                "Accept this independently evaluated repair as the durable trip plan?"
+                if accepted
+                else "Keep the immutable original plan as the durable trip plan?"
+            ],
+            "assertions_passed": True,
+            "session_before": before,
+            "request": request,
+            "response": payload,
+            "restored": deepcopy(payload),
+            "rendered_before": deepcopy(assertions[name if accepted else previous]),
+            "rendered_after": deepcopy(assertions[name]),
+        }
+        records.append(
+            {
+                "method": "POST",
+                "url": "http://local/api/sessions/s/" + endpoint,
+                "phase": str(index),
+                "request_body_utf8": json.dumps(request),
+                "response_body_utf8": json.dumps(payload),
+            }
+        )
         rows.append(row)
         events.append(event)
-        previous=name
-    return rows,events,records,assertions
+        previous = name
+    return rows, events, records, assertions
 
 
-@pytest.mark.parametrize('fault',[None,'context','missing_click','untrusted','disabled','wrong_selector','no_confirmation',
-    'wrong_request','wrong_response','stale_revision','foreign_session','wrong_lineage','wrong_target','wrong_pointer',
-    'wrong_restored_pointer','wrong_restored_hash','wrong_marker','wrong_geometry','not_rendered'])
+@pytest.mark.parametrize(
+    "fault",
+    [
+        None,
+        "context",
+        "missing_click",
+        "untrusted",
+        "disabled",
+        "wrong_selector",
+        "no_confirmation",
+        "wrong_request",
+        "wrong_response",
+        "stale_revision",
+        "foreign_session",
+        "wrong_lineage",
+        "wrong_target",
+        "wrong_pointer",
+        "wrong_restored_pointer",
+        "wrong_restored_hash",
+        "wrong_marker",
+        "wrong_geometry",
+        "not_rendered",
+    ],
+)
 def test_exact_decision_controls_reject_false_durable_acceptance_credit(fault):
-    rows,events,records,assertions=decision_fixture()
-    row=rows[1]
-    if fault=='context':
-        row['context']='original'
-    elif fault=='missing_click':
+    rows, events, records, assertions = decision_fixture()
+    row = rows[1]
+    if fault == "context":
+        row["context"] = "original"
+    elif fault == "missing_click":
         events.pop()
-    elif fault=='untrusted':
-        row['events'][0]['trusted']=False
-    elif fault=='disabled':
-        row['events'][0]['disabled']=True
-    elif fault=='wrong_selector':
-        row['events'][0]['selector']='#compare-choose'
-    elif fault=='no_confirmation':
-        row['confirmation_messages']=[]
-    elif fault=='wrong_request':
-        records[1]['request_body_utf8']='{}'
-    elif fault=='wrong_response':
-        records[1]['response_body_utf8']='{}'
-    elif fault=='stale_revision':
-        row['session_before']['revision']=99
-    elif fault=='foreign_session':
-        row['session_before']['session_id']='foreign'
-    elif fault=='wrong_lineage':
-        row['session_before']['accepted_plan_id']='foreign'
-    elif fault=='wrong_target':
-        assertions['c']['active_plan_id']='other'
-    elif fault=='wrong_pointer':
-        row['response']['result']['pointer']['content_hash']='bad'
-        records[1]['response_body_utf8']=json.dumps(row['response'])
-    elif fault=='wrong_restored_pointer':
-        row['restored']['workspace']['accepted_plan_pointer']['accepted_plan_id']='other'
-    elif fault=='wrong_restored_hash':
-        row['restored']['workspace']['accepted_plan_pointer']['accepted_plan_content_hash']='other'
-    elif fault=='wrong_marker':
-        row['rendered_after']['rendered_marker_ids']=[]
-    elif fault=='wrong_geometry':
-        row['rendered_after']['rendered_geometry_hash']='other'
-    elif fault=='not_rendered':
-        row['rendered_before']['preview_state']='PREVIEW_DATA_READY'
+    elif fault == "untrusted":
+        row["events"][0]["trusted"] = False
+    elif fault == "disabled":
+        row["events"][0]["disabled"] = True
+    elif fault == "wrong_selector":
+        row["events"][0]["selector"] = "#compare-choose"
+    elif fault == "no_confirmation":
+        row["confirmation_messages"] = []
+    elif fault == "wrong_request":
+        records[1]["request_body_utf8"] = "{}"
+    elif fault == "wrong_response":
+        records[1]["response_body_utf8"] = "{}"
+    elif fault == "stale_revision":
+        row["session_before"]["revision"] = 99
+    elif fault == "foreign_session":
+        row["session_before"]["session_id"] = "foreign"
+    elif fault == "wrong_lineage":
+        row["session_before"]["accepted_plan_id"] = "foreign"
+    elif fault == "wrong_target":
+        assertions["c"]["active_plan_id"] = "other"
+    elif fault == "wrong_pointer":
+        row["response"]["result"]["pointer"]["content_hash"] = "bad"
+        records[1]["response_body_utf8"] = json.dumps(row["response"])
+    elif fault == "wrong_restored_pointer":
+        row["restored"]["workspace"]["accepted_plan_pointer"]["accepted_plan_id"] = "other"
+    elif fault == "wrong_restored_hash":
+        row["restored"]["workspace"]["accepted_plan_pointer"]["accepted_plan_content_hash"] = "other"
+    elif fault == "wrong_marker":
+        row["rendered_after"]["rendered_marker_ids"] = []
+    elif fault == "wrong_geometry":
+        row["rendered_after"]["rendered_geometry_hash"] = "other"
+    elif fault == "not_rendered":
+        row["rendered_before"]["preview_state"] = "PREVIEW_DATA_READY"
     if fault:
         with pytest.raises(core.E2E1VerificationError):
-            verifier.decision_controls(rows,events,records,assertions)
+            verifier.decision_controls(rows, events, records, assertions)
     else:
-        result=verifier.decision_controls(rows,events,records,assertions)
-        assert {(row['binding_id'],row['context']) for row in result}=={
-            (kind,context) for kind in ('accept_repair','keep_original') for context in ('original','accepted_child')}
+        result = verifier.decision_controls(rows, events, records, assertions)
+        assert {(row["binding_id"], row["context"]) for row in result} == {
+            (kind, context) for kind in ("accept_repair", "keep_original") for context in ("original", "accepted_child")
+        }
 
 
 @pytest.mark.parametrize(
@@ -298,36 +406,77 @@ def test_real_public_field_names_and_one_based_order_are_bound(kind, parameters,
         verifier.parameter_fields(kind, parameters, bad)
 
 
-@pytest.mark.parametrize('fault',[None,'missing_input','untrusted','other_form','enabled','hidden','wrong_capability',
-    'changed_map','different_day','request_post'])
+@pytest.mark.parametrize(
+    "fault",
+    [
+        None,
+        "missing_input",
+        "untrusted",
+        "other_form",
+        "enabled",
+        "hidden",
+        "wrong_capability",
+        "changed_map",
+        "different_day",
+        "request_post",
+    ],
+)
 def test_disabled_day_requires_actual_change_with_server_bound_rejection(fault):
-    control={'operation':'set_stop_day','form_id':3,'disabled':True,'visible':True,'path':'/app/map','fields':{'day':'6'}}
-    events=[{'type':'change','trusted':True,'operation':'set_stop_day','form_id':3,'name':'day','value':'6','path':'/app/map'}]
-    cap={'enabled':False}
-    parent={'active_plan_id':'parent'}
-    value={'context':'original','assertions_passed':True,'capability':cap,'parent':parent,'map':deepcopy(parent),'phase':'inventory',
-        'before':{'control':deepcopy(control),'event_start':0},'after':{'control':deepcopy(control),'event_start':1},'events':events}
-    records=[]
-    if fault=='missing_input':
+    control = {
+        "operation": "set_stop_day",
+        "form_id": 3,
+        "disabled": True,
+        "visible": True,
+        "path": "/app/map",
+        "fields": {"day": "6"},
+    }
+    events = [
+        {
+            "type": "change",
+            "trusted": True,
+            "operation": "set_stop_day",
+            "form_id": 3,
+            "name": "day",
+            "value": "6",
+            "path": "/app/map",
+        }
+    ]
+    cap = {"enabled": False}
+    parent = {"active_plan_id": "parent"}
+    value = {
+        "context": "original",
+        "assertions_passed": True,
+        "capability": cap,
+        "parent": parent,
+        "map": deepcopy(parent),
+        "phase": "inventory",
+        "before": {"control": deepcopy(control), "event_start": 0},
+        "after": {"control": deepcopy(control), "event_start": 1},
+        "events": events,
+    }
+    records = []
+    if fault == "missing_input":
         events.clear()
-    elif fault=='untrusted':
-        events[0]['trusted']=False
-    elif fault=='other_form':
-        events[0]['form_id']=4
-    elif fault=='enabled':
-        value['after']['control']['disabled']=False
-    elif fault=='hidden':
-        value['after']['control']['visible']=False
-    elif fault=='wrong_capability':
-        value['capability']={'enabled':True}
-    elif fault=='changed_map':
-        value['map']={'active_plan_id':'child'}
-    elif fault=='different_day':
-        value['after']['control']['fields']['day']='5'
-    elif fault=='request_post':
-        records=[{'phase':'inventory','method':'POST','url':'http://127.0.0.1:8127/api/sessions/s/draft/operations'}]
+    elif fault == "untrusted":
+        events[0]["trusted"] = False
+    elif fault == "other_form":
+        events[0]["form_id"] = 4
+    elif fault == "enabled":
+        value["after"]["control"]["disabled"] = False
+    elif fault == "hidden":
+        value["after"]["control"]["visible"] = False
+    elif fault == "wrong_capability":
+        value["capability"] = {"enabled": True}
+    elif fault == "changed_map":
+        value["map"] = {"active_plan_id": "child"}
+    elif fault == "different_day":
+        value["after"]["control"]["fields"]["day"] = "5"
+    elif fault == "request_post":
+        records = [
+            {"phase": "inventory", "method": "POST", "url": "http://127.0.0.1:8127/api/sessions/s/draft/operations"}
+        ]
     if fault:
         with pytest.raises(core.E2E1VerificationError):
-            verifier.disabled_day(value,cap,records,'original',parent)
+            verifier.disabled_day(value, cap, records, "original", parent)
     else:
-        assert verifier.disabled_day(value,cap,records,'original',parent)['unsupported_claimed'] is False
+        assert verifier.disabled_day(value, cap, records, "original", parent)["unsupported_claimed"] is False

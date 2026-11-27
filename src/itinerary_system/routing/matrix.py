@@ -375,7 +375,9 @@ def validate_route_matrix(
             errors.append(f"invalid_distance_or_duration:{origin_id}->{destination_id}")
     if not pairs_to_check:
         warnings.append("route_matrix_has_no_checked_cells")
-    publication_ready = bool(pairs_to_check) and missing == 0 and fallback == 0 and invalid == 0 and road_validated == present
+    publication_ready = (
+        bool(pairs_to_check) and missing == 0 and fallback == 0 and invalid == 0 and road_validated == present
+    )
     if require_publication_ready and not publication_ready:
         errors.append("route_matrix_not_publication_ready")
     return RouteMatrixValidationReport(
@@ -494,10 +496,10 @@ def load_route_matrix_from_cache(
         raise RouteMatrixMissing(f"route matrix cache not found: {matrix_path}")
     source_sha256 = hashlib.sha256(matrix_path.read_bytes()).hexdigest()
     if expected_source_sha256 and source_sha256.lower() != str(expected_source_sha256).lower():
-        raise RouteMatrixNotPublicationEligible(
-            "route cache SHA-256 does not match the frozen evidence manifest"
-        )
-    matrix_id = f"route_matrix_{_stable_hash({'source_sha256': source_sha256, 'context_snapshot_id': context_snapshot_id})}"
+        raise RouteMatrixNotPublicationEligible("route cache SHA-256 does not match the frozen evidence manifest")
+    matrix_id = (
+        f"route_matrix_{_stable_hash({'source_sha256': source_sha256, 'context_snapshot_id': context_snapshot_id})}"
+    )
     frame = pd.read_csv(matrix_path)
     if frame.empty:
         return RouteMatrix(
@@ -641,7 +643,9 @@ def route_result_for_sequence(
     """Create a RouteResult from the same cells consumed by solvers."""
 
     normalized = tuple(_normalize_entity_id(value) for value in sequence)
-    legs = tuple(matrix.leg(left, right, strict=strict) for left, right in zip(normalized[:-1], normalized[1:], strict=False))
+    legs = tuple(
+        matrix.leg(left, right, strict=strict) for left, right in zip(normalized[:-1], normalized[1:], strict=False)
+    )
     return RouteResult(
         route_id=route_id or f"route_{matrix.matrix_id}_{_stable_hash(normalized)}",
         legs=legs,

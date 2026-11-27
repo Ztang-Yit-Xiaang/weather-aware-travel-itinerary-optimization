@@ -163,16 +163,25 @@ def test_deterministic_operations_are_typed_without_activation(
 def test_named_operation_highlights_resolved_stop_instead_of_prior_selection() -> None:
     named_context = replace(
         context(),
-        known_places=({
-            "place_id": "stop_b", "name": "Stearns Wharf", "aliases": (),
-            "categories": ("itinerary_stop",), "region_id": "santa_barbara",
-            "route_status": "accepted_stop",
-        },),
+        known_places=(
+            {
+                "place_id": "stop_b",
+                "name": "Stearns Wharf",
+                "aliases": (),
+                "categories": ("itinerary_stop",),
+                "region_id": "santa_barbara",
+                "route_status": "accepted_stop",
+            },
+        ),
     )
 
-    result = asyncio.run(DeterministicCopilotAdapter().interpret(
-        context=named_context, history=(), message="Keep Stearns Wharf.",
-    ))
+    result = asyncio.run(
+        DeterministicCopilotAdapter().interpret(
+            context=named_context,
+            history=(),
+            message="Keep Stearns Wharf.",
+        )
+    )
 
     assert result.intents == (CopilotIntentV1(type="keep_stop", target_stop_id="stop_b"),)
     assert result.highlights == CopilotHighlightsV1(stop_ids=("stop_b",))

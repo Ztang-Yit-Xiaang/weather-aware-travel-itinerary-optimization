@@ -2,15 +2,7 @@ import subprocess
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
-CONTROLLER = (
-    ROOT
-    / "src"
-    / "itinerary_system"
-    / "product_app"
-    / "static"
-    / "js"
-    / "map-controller-v2.js"
-)
+CONTROLLER = ROOT / "src" / "itinerary_system" / "product_app" / "static" / "js" / "map-controller-v2.js"
 
 
 def _source() -> str:
@@ -20,7 +12,11 @@ def _source() -> str:
 def test_independent_map_identity_and_readiness_guards() -> None:
     result = subprocess.run(
         ["node", "--test", str(Path(__file__).with_name("map_guard_independent_review.test.mjs"))],
-        cwd=ROOT, capture_output=True, text=True, encoding="utf-8", timeout=30,
+        cwd=ROOT,
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        timeout=30,
     )
     assert result.returncode == 0, result.stdout + result.stderr
 
@@ -28,7 +24,11 @@ def test_independent_map_identity_and_readiness_guards() -> None:
 def test_camera_survives_editor_rerenders_and_size_changes() -> None:
     completed = subprocess.run(
         ["node", "--test", str(Path(__file__).with_name("map_camera_stability.test.mjs"))],
-        cwd=ROOT, capture_output=True, text=True, encoding="utf-8", timeout=30,
+        cwd=ROOT,
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        timeout=30,
     )
     assert completed.returncode == 0, completed.stdout + completed.stderr
 
@@ -94,7 +94,7 @@ def test_null_geometry_gaps_have_text_and_markers_but_never_lines() -> None:
     assert 'id: "v2-route-gap-markers"' in source
     assert 'id: "v2-route-gap-labels"' in source
     assert "unresolvedGapCount" in source
-    gap_layers = source[source.index('map.addSource("v2-route-gaps"'):]
+    gap_layers = source[source.index('map.addSource("v2-route-gaps"') :]
     gap_layers = gap_layers[: gap_layers.index('map.addSource("v2-exploratory-pin"')]
     assert 'type: "line"' not in gap_layers
     assert gap_layers.count('type: "circle"') == 1
@@ -124,7 +124,7 @@ def test_empty_map_click_is_edit_only_and_pin_is_explicitly_provisional() -> Non
     assert "queryRenderedFeatures(event.point" in source
     assert 'validation_status: "raw_coordinate_only"' in source
     assert 'id: "v2-exploratory-pin"' in source
-    exploratory_section = source[source.index("function exploratoryPinFeature"):]
+    exploratory_section = source[source.index("function exploratoryPinFeature") :]
     exploratory_section = exploratory_section[: exploratory_section.index("function exactRouteLegSelection")]
     assert 'type: "line"' not in exploratory_section
 
@@ -197,15 +197,15 @@ def test_map_ready_waits_for_visible_idle_tile_coverage_and_observes_size() -> N
     assert "map.areTilesLoaded() === true" in source
     assert "readiness.tileCoverageRatio < 0.95" in source
     assert 'typeof map?.areTilesLoaded !== "function"' in source
-    assert 'container.dataset.mapReadyAt = mapReadyAt' in source
+    assert "container.dataset.mapReadyAt = mapReadyAt" in source
     assert 'container.dataset.mapReady = "true"' in source
-    assert 'delete container.dataset.mapReadyAt' in source
-    assert 'delete container.dataset.mapTileCoverage' in source
+    assert "delete container.dataset.mapReadyAt" in source
+    assert "delete container.dataset.mapTileCoverage" in source
     assert 'code: "map_resize_revalidation_pending"' in source
-    assert 'Math.abs(rect.width - observedWidth) >= 0.5' in source
-    assert 'if (!sizeChanged) return;' in source
+    assert "Math.abs(rect.width - observedWidth) >= 0.5" in source
+    assert "if (!sizeChanged) return;" in source
     assert 'nextMap.once("idle"' in source
-    assert 'validateReady();' in source
+    assert "validateReady();" in source
     assert "nextMap.fitBounds(fittedBounds" in source
     assert 'window.addEventListener("resize", resize)' in source
     assert "resizeObserver?.disconnect();" in source

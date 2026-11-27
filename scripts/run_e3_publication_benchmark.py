@@ -231,9 +231,7 @@ def main() -> int:
             "config": _file_record(config_path),
             "phase0_plans": _file_record(phase0_plans_path),
             "candidate_catalog": _file_record(candidate_catalog_path) if candidate_catalog_path else {},
-            "candidate_snap_audit": (
-                _file_record(candidate_snap_audit_path) if candidate_snap_audit_path else {}
-            ),
+            "candidate_snap_audit": (_file_record(candidate_snap_audit_path) if candidate_snap_audit_path else {}),
             "route_stops": _file_record(route_stops_path),
             "route_cache": _file_record(route_cache_path),
             "route_evidence_manifest": _file_record(route_manifest_path),
@@ -324,11 +322,7 @@ def main() -> int:
 
 
 def _select_parent_record(path: Path, *, parent_plan_id: str) -> dict[str, Any]:
-    matches = [
-        record
-        for record in _read_jsonl(path)
-        if str(record.get("plan_id") or "") == str(parent_plan_id)
-    ]
+    matches = [record for record in _read_jsonl(path) if str(record.get("plan_id") or "") == str(parent_plan_id)]
     if len(matches) != 1:
         raise ValueError(f"expected exactly one parent plan {parent_plan_id!r}, found {len(matches)}")
     return matches[0]
@@ -458,11 +452,7 @@ def _read_json(path: Path) -> dict[str, Any]:
 
 
 def _read_jsonl(path: Path) -> tuple[dict[str, Any], ...]:
-    return tuple(
-        json.loads(line)
-        for line in path.read_text(encoding="utf-8").splitlines()
-        if line.strip()
-    )
+    return tuple(json.loads(line) for line in path.read_text(encoding="utf-8").splitlines() if line.strip())
 
 
 def _file_record(path: Path) -> dict[str, Any]:

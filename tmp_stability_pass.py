@@ -1,15 +1,13 @@
 from __future__ import annotations
 
 import json
-import statistics
-import re
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
-from playwright.sync_api import sync_playwright, expect
 from PIL import Image
+from playwright.sync_api import expect, sync_playwright
 
 CHROME_CANDIDATES = [
     Path(r"C:\Program Files\Google\Chrome\Application\chrome.exe"),
@@ -19,6 +17,7 @@ CHROME_CANDIDATES = [
 
 BASE_URL = "http://127.0.0.1:8127/app/itinerary"
 OUTPUT = Path(r"results\stability_pass_8127")
+
 
 @dataclass
 class Capture:
@@ -38,7 +37,13 @@ def analyze_map_visibility(path: Path, page, selector: str) -> dict[str, float |
         pixels = list(rgb.getdata())
         total = w * h
         if total == 0:
-            return {"coverage_ratio": 0.0, "gray_ratio": 1.0, "width": w, "height": h, "size_bytes": path.stat().st_size}
+            return {
+                "coverage_ratio": 0.0,
+                "gray_ratio": 1.0,
+                "width": w,
+                "height": h,
+                "size_bytes": path.stat().st_size,
+            }
         gray = 0
         near_gray = 0
         for r, g, b in pixels:
@@ -102,11 +107,11 @@ def wait_for_map_ready(page, timeout_ms=45000):
 
 
 def screenshot_and_log(page, label: str, selector: str, width: int, height: int, out_dir: Path, report: dict[str, Any]):
-    ts = datetime.now(timezone.utc).isoformat()
+    ts = datetime.now(UTC).isoformat()
     out_file = out_dir / f"{label}.png"
     if selector:
         page.locator(selector).scroll_into_view_if_needed()
-        page.locator(selector).screenshot(path=str(out_file), animations='disabled')
+        page.locator(selector).screenshot(path=str(out_file), animations="disabled")
         state = analyze_map_visibility(out_file, page, selector)
     else:
         page.screenshot(path=str(out_file), full_page=True)
@@ -146,10 +151,7 @@ def collect_timeline_state(page):
 
 
 def collect_navigation_state(page):
-    active_nav = [
-        el.inner_text().strip()
-        for el in page.locator("button.nav-item.is-active").all()
-    ]
+    active_nav = [el.inner_text().strip() for el in page.locator("button.nav-item.is-active").all()]
     return {"active_nav": active_nav}
 
 
@@ -212,17 +214,19 @@ def run_case(page, base_label, width, height, actions):
                 selectedStopId: window.state?.selected_stop_id || null,
                 selectedAlternativeId: window.state?.selected_alternative_id || null,
               };
-            }"
+            }"""
         )
     cap = capture
-    cap.state.update({
-        "route": route,
-        "timeline": collect_timeline_state(page) if "/app/itinerary" in route else {},
-        "navigation": collect_navigation_state(page),
-        "diagnostics": diag,
-        "console_errors": console_errors,
-        "network_failures": request_failures,
-    })
+    cap.state.update(
+        {
+            "route": route,
+            "timeline": collect_timeline_state(page) if "/app/itinerary" in route else {},
+            "navigation": collect_navigation_state(page),
+            "diagnostics": diag,
+            "console_errors": console_errors,
+            "network_failures": request_failures,
+        }
+    )
 
     # evaluate coverage rule in code
     if "/app/itinerary" in route:
@@ -241,7 +245,7 @@ def main() -> None:
 
     report: dict[str, Any] = {
         "base_url": BASE_URL,
-        "starts": datetime.now(timezone.utc).isoformat(),
+        "starts": datetime.now(UTC).isoformat(),
         "captures": [],
         "failures": [],
     }
@@ -256,7 +260,9 @@ def main() -> None:
             def on_console(msg):
                 if msg.type == "error":
                     loc = msg.location or {}
-                    console_errors.append(f"{msg.type.upper()}: {msg.text} [{loc.get('url')}:{loc.get('lineNumber')}]".strip())
+                    console_errors.append(
+                        f"{msg.type.upper()}: {msg.text} [{loc.get('url')}:{loc.get('lineNumber')}]".strip()
+                    )
 
             def on_pageerror(err):
                 network_failures.append(f"pageerror: {err}")
@@ -398,11 +404,15 @@ def main() -> None:
                 page.wait_for_timeout(400)
 
             report["final_state"] = {
-                "selected_state": page.evaluate("() => ({\n      selected_day: window.state?.selected_day || null,\n      selected_stop_id: window.state?.selected_stop_id || null,\n      selected_segment_id: window.state?.selected_segment_id || null,\n      selected_candidate_id: window.state?.selected_candidate_id || null,\n      selected_alternative_id: window.state?.selected_alternative_id || null,\n    })"),
-                "route_text_example": safe_text(page, "details.textual-map-alternative p")[:500] if safe_text(page, "details.textual-map-alternative p") else None,
+                "selected_state": page.evaluate(
+                    "() => ({\n      selected_day: window.state?.selected_day || null,\n      selected_stop_id: window.state?.selected_stop_id || null,\n      selected_segment_id: window.state?.selected_segment_id || null,\n      selected_candidate_id: window.state?.selected_candidate_id || null,\n      selected_alternative_id: window.state?.selected_alternative_id || null,\n    })"
+                ),
+                "route_text_example": safe_text(page, "details.textual-map-alternative p")[:500]
+                if safe_text(page, "details.textual-map-alternative p")
+                else None,
             }
 
-            report["ends"] = datetime.now(timezone.utc).isoformat()
+            report["ends"] = datetime.now(UTC).isoformat()
 
     out_json = OUTPUT / "stability_pass_report.json"
     out_json.write_text(json.dumps(_prepare_output(report), indent=2), encoding="utf-8")

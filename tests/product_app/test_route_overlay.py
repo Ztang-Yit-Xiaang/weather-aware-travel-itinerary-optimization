@@ -101,9 +101,7 @@ def test_overlay_exposes_missing_leg_as_gap_without_geometry() -> None:
 
 
 def test_overlay_rejects_continuous_path_that_omits_selected_stop() -> None:
-    specs = (
-        {"day": 1, "origin_id": "a", "destination_id": "c", "evidence_scope": "base"},
-    )
+    specs = ({"day": 1, "origin_id": "a", "destination_id": "c", "evidence_scope": "base"},)
     overlay = build_session_route_overlay(
         _plan(),
         specs,

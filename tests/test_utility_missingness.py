@@ -150,15 +150,18 @@ class UtilityMissingnessTests(unittest.TestCase):
         self.assertEqual(float(masks["source_coverage_score"].iloc[0]), 0.0)
         self.assertEqual(float(signals["active_source_weight"].iloc[0]), 0.0)
         self.assertAlmostEqual(float(scores.iloc[0]), 0.15)
-        self.assertEqual(set(signals["missing_source_list"].iloc[0].split("|")), {
-            "osm",
-            "yelp",
-            "curated",
-            "wikidata",
-            "wikipedia",
-            "weather",
-            "route",
-        })
+        self.assertEqual(
+            set(signals["missing_source_list"].iloc[0].split("|")),
+            {
+                "osm",
+                "yelp",
+                "curated",
+                "wikidata",
+                "wikipedia",
+                "weather",
+                "route",
+            },
+        )
 
     def test_coverage_confidence_and_uncertainty_remain_separate(self):
         config = utility_config()

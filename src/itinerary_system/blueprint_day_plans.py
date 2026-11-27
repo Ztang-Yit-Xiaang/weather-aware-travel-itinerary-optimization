@@ -49,7 +49,6 @@ def _optional_poi_fields(stop):
     return fields
 
 
-
 def _select_pass_through_day_stops(context, pass_through_cities, used_names_by_city, max_stops, profile_config):
     selected_rows = []
     if max_stops <= 0:
@@ -73,9 +72,7 @@ def _select_pass_through_day_stops(context, pass_through_cities, used_names_by_c
         catalog["final_poi_value"] = pd.to_numeric(
             _catalog_series(catalog, "final_poi_value", 0), errors="coerce"
         ).fillna(0)
-        catalog["social_score"] = pd.to_numeric(_catalog_series(catalog, "social_score", 0), errors="coerce").fillna(
-            0
-        )
+        catalog["social_score"] = pd.to_numeric(_catalog_series(catalog, "social_score", 0), errors="coerce").fillna(0)
         catalog["corridor_fit"] = pd.to_numeric(_catalog_series(catalog, "corridor_fit", 0), errors="coerce").fillna(0)
         catalog["route_fit"] = pd.to_numeric(_catalog_series(catalog, "route_fit", 0), errors="coerce").fillna(0)
         catalog["route_context_fit"] = np.maximum(catalog["corridor_fit"], catalog["route_fit"])
@@ -110,7 +107,6 @@ def _select_pass_through_day_stops(context, pass_through_cities, used_names_by_c
     return pd.DataFrame(selected_rows).reset_index(drop=True)
 
 
-
 def _select_corridor_view_stops(context, segment_cities, used_names_by_city, max_stops, profile_config):
     if max_stops <= 0:
         return pd.DataFrame()
@@ -131,9 +127,7 @@ def _select_corridor_view_stops(context, segment_cities, used_names_by_city, max
     pool = pool[~pool["name"].astype(str).isin(used_names)].copy()
     if pool.empty:
         return pd.DataFrame()
-    pool["final_poi_value"] = pd.to_numeric(_catalog_series(pool, "final_poi_value", 0.0), errors="coerce").fillna(
-        0.0
-    )
+    pool["final_poi_value"] = pd.to_numeric(_catalog_series(pool, "final_poi_value", 0.0), errors="coerce").fillna(0.0)
     pool["social_score"] = pd.to_numeric(_catalog_series(pool, "social_score", 0.0), errors="coerce").fillna(0.0)
     pool["corridor_fit"] = pd.to_numeric(_catalog_series(pool, "corridor_fit", 0.0), errors="coerce").fillna(0.0)
     pool["route_fit"] = pd.to_numeric(_catalog_series(pool, "route_fit", 0.0), errors="coerce").fillna(0.0)
@@ -160,7 +154,6 @@ def _select_corridor_view_stops(context, segment_cities, used_names_by_city, max
     for row in selected.itertuples(index=False):
         used_names_by_city.setdefault(str(row.city), set()).add(str(row.name))
     return _normalize_catalog_columns(selected, "corridor", "multi_city_high_utility_view")
-
 
 
 def build_day_plan(context, stops_per_day=None, profile_name="balanced"):
@@ -333,7 +326,6 @@ def build_day_plan(context, stops_per_day=None, profile_name="balanced"):
             day_number += 1
 
     return pd.DataFrame(rows)
-
 
 
 def build_profile_day_plans(context):

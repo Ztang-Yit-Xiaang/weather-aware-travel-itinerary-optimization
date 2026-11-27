@@ -39,7 +39,7 @@ The existing local launcher is `results/repairs/copilot_user_recovery_20261021/r
 
 The generic launcher also supports `PRODUCT_STATE_ROOT` (or the existing explicit `--state-root`) for choosing a durable server state directory. Explicit arguments take precedence. Restarting against a different empty directory creates different state.
 
-The user clarified that permanence means closing and reopening the local app; a new Azure deployment is not requested. The source, catalog, browser preferences and saved server state provide that persistence. The local server must still be launched before its localhost address can be opened. A different hosted deployment would need its own durable state directory, access control and reachable map service; the current application remains loopback-only.
+The source, catalog, browser preferences and saved server state provide local persistence. The local server must still be launched before its localhost address can be opened. A separate hosted launcher now prepares Railway/FastAPI, private Supabase PostgreSQL state and owner sign-in, ORS routing, and a gated GitHub Pages frontend. See the [deployment guide](../deployment/railway_supabase_ors.md). No cloud deployment has been completed. Hosted interest exploration uses labelled saved places; the public Overpass lookup remains disabled there until a suitable discovery service is supplied.
 
 ## Verification
 

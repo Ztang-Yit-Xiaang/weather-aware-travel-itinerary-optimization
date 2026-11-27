@@ -52,9 +52,7 @@ def publication_readiness(
     route_evidence_complete = bool(records) and all(_route_evidence_valid(record) for record in records)
     represented_method_ids = {str(record.get("method_id") or "") for record in records}
     method_run_coverage_complete = set(REQUIRED_PUBLICATION_METHOD_IDS).issubset(represented_method_ids)
-    run_keys = tuple(
-        (str(record.get("scenario_id") or ""), str(record.get("method_id") or "")) for record in records
-    )
+    run_keys = tuple((str(record.get("scenario_id") or ""), str(record.get("method_id") or "")) for record in records)
     duplicate_run_keys = tuple(sorted({key for key in run_keys if run_keys.count(key) > 1}))
     scenario_ids = {str(record.get("scenario_id") or "") for record in records}
     route_hashes_by_scenario = {
@@ -99,8 +97,7 @@ def publication_readiness(
         "route_input_consistency_complete": route_input_consistency_complete,
         "route_source_bundle_consistency_complete": route_source_bundle_consistency_complete,
         "route_source_bundle_ids_by_scenario": {
-            scenario_id: sorted(bundle_ids)
-            for scenario_id, bundle_ids in sorted(source_bundle_ids_by_scenario.items())
+            scenario_id: sorted(bundle_ids) for scenario_id, bundle_ids in sorted(source_bundle_ids_by_scenario.items())
         },
         "route_matrix_hashes_by_scenario": {
             scenario_id: sorted(hashes) for scenario_id, hashes in sorted(route_hashes_by_scenario.items())
@@ -115,8 +112,7 @@ def _route_evidence_valid(record: Mapping[str, Any]) -> bool:
     if record.get("quality_route_validated") is True:
         return True
     failed_without_output = (
-        str(record.get("status", "")).lower().startswith("fail")
-        and not str(record.get("output_plan_id") or "").strip()
+        str(record.get("status", "")).lower().startswith("fail") and not str(record.get("output_plan_id") or "").strip()
     )
     if not failed_without_output:
         return False
@@ -134,4 +130,3 @@ def _record(value: Mapping[str, Any] | Any) -> dict[str, Any]:
     if hasattr(value, "__dict__"):
         return dict(vars(value))
     return {}
-

@@ -1,0 +1,35 @@
+{
+  "container": {
+    "command": [
+      "osrm-routed",
+      "--algorithm",
+      "mld",
+      "/data/california.osrm"
+    ],
+    "configured_image": "ghcr.io/project-osrm/osrm-backend@sha256:aa6a1de3a71dafffd0ba39340542524f66e6841fc19bf7874a0e6a7967837f56",
+    "container_id": "797f2ec510d4e00a1674c5e3febe94b2584606b577b2170d7b732f0fa2224032",
+    "image_id": "sha256:aa6a1de3a71dafffd0ba39340542524f66e6841fc19bf7874a0e6a7967837f56",
+    "mounts": [
+      {
+        "Destination": "/data",
+        "Mode": "ro",
+        "Propagation": "rprivate",
+        "RW": false,
+        "Source": "F:\\UMN Courses\\IE 5533\\Project\\weather-aware-travel-itinerary-optimization\\docker\\osrm\\data",
+        "Type": "bind"
+      }
+    ],
+    "ports": {
+      "5000/tcp": [
+        {
+          "HostIp": "127.0.0.1",
+          "HostPort": "5000"
+        }
+      ]
+    },
+    "running": true
+  },
+  "observed_at": "2026-09-08T05:36:36.550304+00:00",
+  "pbf_sha256": "5a8313f8631a1ffceb837a6b3a5049f486bcbbdb0b786796ddb0df898565a85e",
+  "scope": "Observed running image, command, read-only mount, loopback binding and input PBF hash; not a new graph-build attestation."
+}

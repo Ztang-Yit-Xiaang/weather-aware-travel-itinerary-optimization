@@ -39,9 +39,10 @@ def test_builder_emits_two_distinct_independently_evaluated_children(tmp_path: P
     assert package["run_id"] == "california_coast_product_demo_v2"
     assert package["parent"]["content_hash"] == builder.PINNED_PARENT_CONTENT_HASH
     assert package["route_evidence"]["matrix_id"] == builder.PINNED_MATRIX_ID
-    assert package["route_evidence"]["matrix_file_sha256"] == builder.PINNED_SOURCE_SHA256[
-        builder.MATRIX_RELATIVE.as_posix()
-    ]
+    assert (
+        package["route_evidence"]["matrix_file_sha256"]
+        == builder.PINNED_SOURCE_SHA256[builder.MATRIX_RELATIVE.as_posix()]
+    )
     declared_hashes = package["artifacts_sha256"]
     actual_paths = {
         path.relative_to(manifest_path.parent).as_posix()

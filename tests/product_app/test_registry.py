@@ -70,9 +70,7 @@ def test_strict_registry_accepts_pinned_run_without_dashboard(tmp_path: Path) ->
             "manifest_hash_mismatch",
         ),
         (
-            lambda value: value["runs"][0].update(
-                capabilities=["read_only_artifacts", "read_only_artifacts"]
-            ),
+            lambda value: value["runs"][0].update(capabilities=["read_only_artifacts", "read_only_artifacts"]),
             "duplicate_capability",
         ),
         (
@@ -112,9 +110,7 @@ def test_registry_rejects_duplicate_run_and_non_single_default(tmp_path: Path) -
     assert missing_default.value.code == "expected_one_default_run"
 
 
-def test_registry_sanitizes_missing_and_unreadable_artifacts(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_registry_sanitizes_missing_and_unreadable_artifacts(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     path, payload = valid_registry_payload(tmp_path)
     write_registry(path, payload)
     manifest = tmp_path / "runs" / "demo" / "manifest.json"
@@ -138,4 +134,3 @@ def test_registry_sanitizes_missing_and_unreadable_artifacts(
         ProductRunRegistry(tmp_path, path)
     assert unavailable.value.code == "run_artifact_unavailable"
     assert str(tmp_path) not in str(unavailable.value)
-

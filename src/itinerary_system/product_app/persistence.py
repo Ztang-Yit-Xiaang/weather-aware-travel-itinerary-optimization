@@ -220,9 +220,7 @@ class LocalStateLayout:
             with StateFileLock(self.lock_path, self.lock_timeout_seconds):
                 legacy = self._detect_legacy_strict()
                 code = self._probe_locked()
-                status: Literal["ready", "failed"] = (
-                    "ready" if code == "state_store_ready" else "failed"
-                )
+                status: Literal["ready", "failed"] = "ready" if code == "state_store_ready" else "failed"
                 return StateReadiness(status=status, code=code, legacy=legacy)
         except StateLockTimeoutError:
             return StateReadiness(status="failed", code="state_lock_timeout")
@@ -271,11 +269,7 @@ class LocalStateLayout:
         pointer_count = 1 if pointer.is_file() else 0
         decision_count = 0
         if decision_dir.is_dir():
-            decision_count = sum(
-                1
-                for path in decision_dir.iterdir()
-                if path.is_file() and path.suffix == ".json"
-            )
+            decision_count = sum(1 for path in decision_dir.iterdir() if path.is_file() and path.suffix == ".json")
         return LegacyStateReport(
             workspace_pointer_count=pointer_count,
             decision_file_count=decision_count,
@@ -591,7 +585,9 @@ class SessionSnapshotStore:
             }
         )
         return {
-            "schema_version": MUTATION_SNAPSHOT_SCHEMA_VERSION if session.mutation_receipts else SESSION_SNAPSHOT_SCHEMA_VERSION,
+            "schema_version": MUTATION_SNAPSHOT_SCHEMA_VERSION
+            if session.mutation_receipts
+            else SESSION_SNAPSHOT_SCHEMA_VERSION,
             "token_verifier": {
                 "algorithm": TOKEN_VERIFIER_ALGORITHM,
                 "salt": session.mutation_token_salt,
@@ -663,8 +659,10 @@ class SessionSnapshotStore:
         proposal = session.get("proposal")
         if not isinstance(draft, list) or len(draft) > 32:
             raise SessionSnapshotError("session_snapshot_invalid")
-        if not isinstance(permissions, list) or len(permissions) > 32 or any(
-            not isinstance(item, dict) for item in permissions
+        if (
+            not isinstance(permissions, list)
+            or len(permissions) > 32
+            or any(not isinstance(item, dict) for item in permissions)
         ):
             raise SessionSnapshotError("session_snapshot_invalid")
         if proposal is not None and not isinstance(proposal, dict):
@@ -705,10 +703,20 @@ class SessionSnapshotStore:
                 raise SessionSnapshotError("session_snapshot_invalid")
             identity = receipt["mutation_id"]
             before, after = receipt["expected_revision"], receipt["committed_revision"]
-            if (not isinstance(identity, str) or re.fullmatch(r"mutation_[0-9a-f]{32}", identity) is None
-                or identity in identifiers or not _valid_hex(receipt["request_sha256"], 64)
-                or isinstance(before, bool) or not isinstance(before, int) or before < 0
-                or isinstance(after, bool) or not isinstance(after, int) or after != before + 1 or after > revision or after <= last_revision):
+            if (
+                not isinstance(identity, str)
+                or re.fullmatch(r"mutation_[0-9a-f]{32}", identity) is None
+                or identity in identifiers
+                or not _valid_hex(receipt["request_sha256"], 64)
+                or isinstance(before, bool)
+                or not isinstance(before, int)
+                or before < 0
+                or isinstance(after, bool)
+                or not isinstance(after, int)
+                or after != before + 1
+                or after > revision
+                or after <= last_revision
+            ):
                 raise SessionSnapshotError("session_snapshot_invalid")
             identifiers.add(identity)
             last_revision = after
@@ -725,7 +733,11 @@ class SessionSnapshotStore:
             elif receipt["action"] == "operations":
                 if set(result) == {"operation"}:
                     cls._decode_operation(result["operation"])
-                elif set(result) == {"operations"} and isinstance(result["operations"], list) and 1 <= len(result["operations"]) <= 32:
+                elif (
+                    set(result) == {"operations"}
+                    and isinstance(result["operations"], list)
+                    and 1 <= len(result["operations"]) <= 32
+                ):
                     for operation in result["operations"]:
                         cls._decode_operation(operation)
                 else:
@@ -742,8 +754,10 @@ class SessionSnapshotStore:
         if not isinstance(payload.get("parameters"), dict):
             raise SessionSnapshotError("session_snapshot_invalid")
         refs = payload.get("evidence_refs")
-        if not isinstance(refs, (list, tuple)) or len(refs) > 16 or any(
-            not isinstance(ref, str) or not ref or len(ref) > 256 for ref in refs
+        if (
+            not isinstance(refs, (list, tuple))
+            or len(refs) > 16
+            or any(not isinstance(ref, str) or not ref or len(ref) > 256 for ref in refs)
         ):
             raise SessionSnapshotError("session_snapshot_invalid")
         return DraftOperationV1(
@@ -767,16 +781,13 @@ def _valid_session_id(value: str) -> bool:
 
 
 def _valid_hex(value: Any, length: int) -> bool:
-    return isinstance(value, str) and len(value) == length and all(
-        character in "0123456789abcdef" for character in value
+    return (
+        isinstance(value, str) and len(value) == length and all(character in "0123456789abcdef" for character in value)
     )
 
 
 def _require_text_fields(payload: dict[str, Any], names: tuple[str, ...]) -> None:
-    if any(
-        not isinstance(payload.get(name), str) or not payload[name] or len(payload[name]) > 256
-        for name in names
-    ):
+    if any(not isinstance(payload.get(name), str) or not payload[name] or len(payload[name]) > 256 for name in names):
         raise SessionSnapshotError("session_snapshot_invalid")
 
 
@@ -784,10 +795,7 @@ def _json_value_is_finite(value: Any) -> bool:
     if isinstance(value, float):
         return math.isfinite(value)
     if isinstance(value, dict):
-        return all(
-            isinstance(key, str) and _json_value_is_finite(item)
-            for key, item in value.items()
-        )
+        return all(isinstance(key, str) and _json_value_is_finite(item) for key, item in value.items())
     if isinstance(value, (list, tuple)):
         return all(_json_value_is_finite(item) for item in value)
     return value is None or isinstance(value, (str, int, bool))

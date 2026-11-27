@@ -40,8 +40,7 @@ def load_coherent_product_demo_package(package_dir: Path) -> Any:
         not isinstance(parent_record, dict)
         or not isinstance(route_evidence, dict)
         or not isinstance(declared, list)
-        or [row.get("role") for row in declared if isinstance(row, dict)]
-        != ["recommended", "low_driving"]
+        or [row.get("role") for row in declared if isinstance(row, dict)] != ["recommended", "low_driving"]
     ):
         _fail("product_demo_schema_invalid")
 
@@ -54,22 +53,18 @@ def load_coherent_product_demo_package(package_dir: Path) -> Any:
         _sha256(matrix_path) != route_evidence.get("matrix_file_sha256")
         or route_matrix.get("matrix_id") != route_evidence.get("matrix_id")
         or route_matrix.get("source_bundle_id") != route_evidence.get("source_bundle_id")
-        or route_matrix.get("source_content_sha256")
-        != route_evidence.get("source_content_sha256")
+        or route_matrix.get("source_content_sha256") != route_evidence.get("source_content_sha256")
     ):
         _fail("product_demo_route_matrix_hash_mismatch")
     _validate_plan_hash(parent)
-    if (
-        parent.get("plan_id") != parent_record.get("plan_id")
-        or parent.get("content_hash") != parent_record.get("content_hash")
+    if parent.get("plan_id") != parent_record.get("plan_id") or parent.get("content_hash") != parent_record.get(
+        "content_hash"
     ):
         _fail("product_demo_parent_invalid")
 
     planner_runs = _json_lines(planner_path)
     planner_by_id = {str(row.get("run_id") or ""): row for row in planner_runs}
-    alternatives_for_coherence: dict[
-        str, tuple[dict[str, Any], dict[str, Any], dict[str, Any]]
-    ] = {}
+    alternatives_for_coherence: dict[str, tuple[dict[str, Any], dict[str, Any], dict[str, Any]]] = {}
     bundles: list[ProductDashboardSourceBundle] = []
     summaries: list[dict[str, Any]] = []
     evidence: dict[str, dict[str, Any]] = {}
@@ -80,15 +75,9 @@ def load_coherent_product_demo_package(package_dir: Path) -> Any:
         role = str(row.get("role") or "")
         child_path = _contained(package_dir, str(row.get("plan_relative_path") or ""))
         diff_path = _contained(package_dir, str(row.get("diff_relative_path") or ""))
-        certificate_path = _contained(
-            package_dir, str(row.get("certificate_relative_path") or "")
-        )
-        request_path = _contained(
-            package_dir, str(row.get("request_relative_path") or "")
-        )
-        explanation_path = _contained(
-            package_dir, str(row.get("explanation_relative_path") or "")
-        )
+        certificate_path = _contained(package_dir, str(row.get("certificate_relative_path") or ""))
+        request_path = _contained(package_dir, str(row.get("request_relative_path") or ""))
+        explanation_path = _contained(package_dir, str(row.get("explanation_relative_path") or ""))
         metrics_path = _contained(package_dir, str(row.get("metrics_relative_path") or ""))
         child = _json(child_path)
         diff = _json(diff_path)
@@ -111,14 +100,12 @@ def load_coherent_product_demo_package(package_dir: Path) -> Any:
             or certificate.get("plan_id") != child.get("plan_id")
             or certificate.get("plan_content_hash") != child.get("content_hash")
             or certificate.get("comparison_eligibility") != "eligible"
-            or certificate.get("evaluation_status")
-            not in {"PASSED", "PASSED_WITH_WARNINGS"}
+            or certificate.get("evaluation_status") not in {"PASSED", "PASSED_WITH_WARNINGS"}
             or route_validation.get("publication_ready") is not True
             or route_validation.get("fallback_leg_count") != 0
             or route_validation.get("matrix_id") != route_matrix.get("matrix_id")
             or route_validation.get("source_bundle_id") != route_matrix.get("source_bundle_id")
-            or route_validation.get("source_content_sha256")
-            != route_matrix.get("source_content_sha256")
+            or route_validation.get("source_content_sha256") != route_matrix.get("source_content_sha256")
             or explanation.get("parent_plan_id") != parent.get("plan_id")
             or explanation.get("child_plan_id") != child.get("plan_id")
             or not planner
@@ -248,16 +235,16 @@ def _validate_diff(diff: dict[str, Any]) -> None:
     for record_key, _ in groups:
         records = diff.get(record_key)
         if not isinstance(records, list) or any(
-            not isinstance(change, dict) or not _finite(change.get("cost"))
-            for change in records
+            not isinstance(change, dict) or not _finite(change.get("cost")) for change in records
         ):
             _fail("product_demo_diff_cost_invalid")
         changes[record_key] = records
     weighted_cost = diff.get("weighted_edit_cost")
-    if not _finite(weighted_cost) or abs(
-        sum(float(change["cost"]) for records in changes.values() for change in records)
-        - float(weighted_cost)
-    ) > 1e-9:
+    if (
+        not _finite(weighted_cost)
+        or abs(sum(float(change["cost"]) for records in changes.values() for change in records) - float(weighted_cost))
+        > 1e-9
+    ):
         _fail("product_demo_diff_cost_invalid")
     seed = {
         "parent_plan_id": diff.get("parent_plan_id"),
@@ -331,9 +318,7 @@ def _validate_route_legs(
         total_seconds += float(cell["duration_s"])
         result.append(dict(row))
         previous_destination = destination
-    if expected_total_minutes is not None and abs(
-        total_seconds / 60.0 - expected_total_minutes
-    ) > 1e-6:
+    if expected_total_minutes is not None and abs(total_seconds / 60.0 - expected_total_minutes) > 1e-6:
         _fail("product_demo_route_total_mismatch")
     return tuple(result)
 

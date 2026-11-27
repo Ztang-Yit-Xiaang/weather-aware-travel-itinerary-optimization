@@ -51,7 +51,9 @@ def test_big_sur_exploration_keeps_only_local_sourced_entries_without_readding_t
         ]
     }
     search = {"coordinate": {"latitude": 36.2503, "longitude": -121.7831}, "radius_km": 10}
-    places, manifest = _exploration_places(ROOT, {"context": {"route_leg_id": "test_leg"}}, parent, geography, None, search)
+    places, manifest = _exploration_places(
+        ROOT, {"context": {"route_leg_id": "test_leg"}}, parent, geography, None, search
+    )
     names = {point["name"] for point in places}
     assert "Andrew Molera State Park" in names
     assert not {"Garrapata State Park", "Point Lobos State Natural Reserve"} & names
@@ -327,8 +329,8 @@ def test_complete_500_place_endpoint_over_loopback_http_is_read_only_and_concurr
                 "place_id": f"load_only_{index:04d}",
                 "name": f"Synthetic load fixture {index:04d}",
                 "display_coordinate": {
-                    "longitude": float(rng.uniform(focus["longitude"] - .01, focus["longitude"] + .01)),
-                    "latitude": float(rng.uniform(focus["latitude"] - .01, focus["latitude"] + .01)),
+                    "longitude": float(rng.uniform(focus["longitude"] - 0.01, focus["longitude"] + 0.01)),
+                    "latitude": float(rng.uniform(focus["latitude"] - 0.01, focus["latitude"] + 0.01)),
                 },
                 "place_categories": ["nature", "outdoor"],
                 "source_refs": ["synthetic_load_test_not_a_real_place"],

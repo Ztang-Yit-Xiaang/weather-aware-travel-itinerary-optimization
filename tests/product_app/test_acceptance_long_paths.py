@@ -54,11 +54,18 @@ def test_snapshot_in_long_directory_preserves_atomic_append_contract(tmp_path, m
     assert [event["operation"] for event in events].index("file_fsync") < [
         event["operation"] for event in events
     ].index("hard_link")
-    (tmp_path / "exact_long_path_io.json").write_text(json.dumps({
-        "input": {"target_path": str(target), "target_path_length": len(str(target)), "payload": payload},
-        "io_events": events, "output": json.loads(target.read_text(encoding="utf-8")),
-        "temporary_files_remaining": [],
-    }, indent=2), encoding="utf-8")
+    (tmp_path / "exact_long_path_io.json").write_text(
+        json.dumps(
+            {
+                "input": {"target_path": str(target), "target_path_length": len(str(target)), "payload": payload},
+                "io_events": events,
+                "output": json.loads(target.read_text(encoding="utf-8")),
+                "temporary_files_remaining": [],
+            },
+            indent=2,
+        ),
+        encoding="utf-8",
+    )
 
 
 def test_existing_snapshot_is_idempotent_but_different_payload_cannot_replace_it(tmp_path):

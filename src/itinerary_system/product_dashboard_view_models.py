@@ -69,9 +69,7 @@ def build_product_dashboard_view_model(bundle: ProductDashboardSourceBundle) -> 
         "alternatives": _alternative_rows(bundle),
         "map": _map_view(bundle, selected_day),
         "truth_states": [truth_state_view(state) for state in dict.fromkeys(active_states)],
-        "truth_state_catalog": [
-            truth_state_view(state) for state in TRUTH_STATE_LABELS
-        ],
+        "truth_state_catalog": [truth_state_view(state) for state in TRUTH_STATE_LABELS],
         "research": _research_view(bundle),
         "map_alternative": _map_alternative_text(timeline, affected_days),
         "interaction": {
@@ -257,11 +255,7 @@ def _comparison_metrics(
             "route_validity",
             "Road-validated route legs",
             None,
-            (
-                f"{route.get('road_validated_leg_count')}/{route.get('required_leg_count')}"
-                if route
-                else None
-            ),
+            (f"{route.get('road_validated_leg_count')}/{route.get('required_leg_count')}" if route else None),
             direction="required",
             owner="independent_evaluator",
         ),
@@ -464,9 +458,7 @@ def _alternative_rows(bundle: ProductDashboardSourceBundle) -> list[dict[str, An
                 "failure_reason": failure or None,
                 "exact_search_incomplete": exact_incomplete,
                 "requested_method_id": str(row.get("benchmark_expected_method_id") or ""),
-                "executed_method_ids": [
-                    str(value) for value in row.get("benchmark_planner_method_executed_ids") or []
-                ],
+                "executed_method_ids": [str(value) for value in row.get("benchmark_planner_method_executed_ids") or []],
                 "runtime_seconds": row.get("computation_runtime_seconds"),
                 "weighted_edit_cost": row.get("preservation_weighted_edit_cost"),
                 "utility_retained": row.get("quality_utility_retained"),
@@ -563,12 +555,8 @@ def _display_geometry(geometry: list[Any], *, max_points: int = 320) -> tuple[li
 def _research_view(bundle: ProductDashboardSourceBundle) -> dict[str, Any]:
     certificate = bundle.certificate or {}
     route = certificate.get("route_validation") or {}
-    requested = list(
-        dict.fromkeys(str(run.get("method_requested") or "") for run in bundle.planner_runs)
-    )
-    executed = list(
-        dict.fromkeys(str(run.get("method_executed") or "") for run in bundle.planner_runs)
-    )
+    requested = list(dict.fromkeys(str(run.get("method_requested") or "") for run in bundle.planner_runs))
+    executed = list(dict.fromkeys(str(run.get("method_executed") or "") for run in bundle.planner_runs))
     return {
         "lineage": {
             "run_id": str(bundle.run_manifest.get("run_id") or ""),
@@ -616,27 +604,27 @@ def _research_view(bundle: ProductDashboardSourceBundle) -> dict[str, Any]:
         },
         "certificate": certificate,
         "diff": bundle.diff,
-        "source_artifacts": {
-            category: list(paths) for category, paths in sorted(bundle.source_paths.items())
-        },
+        "source_artifacts": {category: list(paths) for category, paths in sorted(bundle.source_paths.items())},
         "source_hashes": dict(sorted(bundle.source_hashes.items())),
     }
 
 
 def _affected_days(request: dict[str, Any], diff: dict[str, Any]) -> list[int]:
-    days = [
-        int(day)
-        for day in (request.get("confirmed_constraints") or {}).get("affected_days") or []
-    ]
+    days = [int(day) for day in (request.get("confirmed_constraints") or {}).get("affected_days") or []]
     if not days:
         days = _diff_changed_days(diff)
     return list(dict.fromkeys(days))
 
 
 def _diff_changed_days(diff: dict[str, Any]) -> list[int]:
-    return sorted({day for item in _all_diff_changes(diff)
-        for field in ("day", "from_day", "to_day")
-        if type(day := item.get(field)) is int and day > 0})
+    return sorted(
+        {
+            day
+            for item in _all_diff_changes(diff)
+            for field in ("day", "from_day", "to_day")
+            if type(day := item.get(field)) is int and day > 0
+        }
+    )
 
 
 def _all_diff_changes(diff: dict[str, Any]) -> list[dict[str, Any]]:
@@ -675,22 +663,11 @@ def _stop_names(plan: dict[str, Any]) -> dict[str, str]:
 
 
 def _stop_id(stop: dict[str, Any]) -> str:
-    return str(
-        stop.get("stop_id")
-        or stop.get("poi_id")
-        or stop.get("attraction_name")
-        or stop.get("name")
-        or ""
-    )
+    return str(stop.get("stop_id") or stop.get("poi_id") or stop.get("attraction_name") or stop.get("name") or "")
 
 
 def _stop_name(stop: dict[str, Any]) -> str:
-    return str(
-        stop.get("attraction_name")
-        or stop.get("name")
-        or _titleize(_stop_id(stop))
-        or "Unnamed stop"
-    )
+    return str(stop.get("attraction_name") or stop.get("name") or _titleize(_stop_id(stop)) or "Unnamed stop")
 
 
 def _ownership_by_target(plan: dict[str, Any]) -> dict[str, str]:

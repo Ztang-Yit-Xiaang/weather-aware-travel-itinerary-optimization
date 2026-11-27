@@ -85,26 +85,20 @@ def clone_source_run(
         destination = output_run / "benchmark" / "metrics" / "benchmark_metrics.jsonl"
         destination.parent.mkdir(parents=True)
         shutil.copy2(benchmark_metrics, destination)
-        copied_artifacts["benchmark_metrics"] = [
-            "benchmark/metrics/benchmark_metrics.jsonl"
-        ]
+        copied_artifacts["benchmark_metrics"] = ["benchmark/metrics/benchmark_metrics.jsonl"]
         copied_artifacts["benchmark_planner_runs"] = _copy_benchmark_planner_runs(
             benchmark_metrics=benchmark_metrics,
             output_run=output_run,
         )
 
     derived_manifest = {
-        key: value
-        for key, value in source_manifest.items()
-        if key not in {"run_id", "artifacts", "artifact_counts"}
+        key: value for key, value in source_manifest.items() if key not in {"run_id", "artifacts", "artifact_counts"}
     }
     derived_manifest.update(
         {
             "run_id": run_id,
             "artifacts": copied_artifacts,
-            "artifact_counts": {
-                category: len(paths) for category, paths in copied_artifacts.items()
-            },
+            "artifact_counts": {category: len(paths) for category, paths in copied_artifacts.items()},
             "derived_from": {
                 "derivation_kind": "read_only_product_snapshot",
                 "source_run_id": source_manifest.get("run_id"),
@@ -112,15 +106,11 @@ def clone_source_run(
             },
         }
     )
-    (output_run / "manifest.json").write_text(
-        json_text(derived_manifest) + "\n", encoding="utf-8", newline="\n"
-    )
+    (output_run / "manifest.json").write_text(json_text(derived_manifest) + "\n", encoding="utf-8", newline="\n")
     return output_run
 
 
-def _copy_benchmark_planner_runs(
-    *, benchmark_metrics: Path, output_run: Path
-) -> list[str]:
+def _copy_benchmark_planner_runs(*, benchmark_metrics: Path, output_run: Path) -> list[str]:
     """Copy canonical failure diagnostics referenced by benchmark rows."""
 
     copied: list[str] = []

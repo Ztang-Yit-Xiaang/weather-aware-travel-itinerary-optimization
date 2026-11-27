@@ -70,7 +70,9 @@ def classify_validation_failure(result: CheckResult) -> str:
     return "unknown"
 
 
-def run_check(command: list[str], env: Mapping[str, str], *, name: str | None = None, timeout_seconds: int = 900) -> CheckResult:
+def run_check(
+    command: list[str], env: Mapping[str, str], *, name: str | None = None, timeout_seconds: int = 900
+) -> CheckResult:
     """Run one validation command and return a summarized result."""
 
     started = time.perf_counter()

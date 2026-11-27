@@ -157,22 +157,35 @@ def _isolation_passed(isolation: dict[str, Any]) -> bool:
     return bool(
         isolation.get("artifact") == "provider_isolation.json"
         and record.get("schema_version") == "e2e1-provider-isolation-v1"
-        and isinstance(record.get("run_id"), str) and bool(record["run_id"].strip())
+        and isinstance(record.get("run_id"), str)
+        and bool(record["run_id"].strip())
         and record.get("run_id") == isolation.get("run_id")
-        and type(record.get("process_id")) is int and record["process_id"] > 0
+        and type(record.get("process_id")) is int
+        and record["process_id"] > 0
         and type(isolation.get("server_pid")) is int
         and record["process_id"] == isolation.get("server_pid")
         and record.get("scope") == "application_server"
         and record.get("guard_boundaries") == ["httpx.Client.send", "httpx.AsyncClient.send", "socket.connect"]
-        and all(record.get(name) is True for name in (
-            "finalized", "api_key_disabled", "app_initialized", "server_started", "server_stopped",
-        ))
-        and record.get("installed_at") and record.get("finalized_at")
+        and all(
+            record.get(name) is True
+            for name in (
+                "finalized",
+                "api_key_disabled",
+                "app_initialized",
+                "server_started",
+                "server_stopped",
+            )
+        )
+        and record.get("installed_at")
+        and record.get("finalized_at")
         and record.get("effective_adapter") == "deterministic"
         and record.get("actual_adapter") == "DeterministicCopilotAdapter"
-        and type(record.get("sent_provider_calls")) is int and record["sent_provider_calls"] == 0
-        and type(record.get("allowed_local_connections")) is int and record["allowed_local_connections"] > 0
-        and record.get("blocked_attempts") == [] and record.get("failure_code") is None
+        and type(record.get("sent_provider_calls")) is int
+        and record["sent_provider_calls"] == 0
+        and type(record.get("allowed_local_connections")) is int
+        and record["allowed_local_connections"] > 0
+        and record.get("blocked_attempts") == []
+        and record.get("failure_code") is None
     )
 
 
@@ -193,8 +206,12 @@ def build_manifest(
         isolation_record = json.loads(isolation_path.read_text(encoding="utf-8"))
     except (OSError, UnicodeDecodeError, ValueError):
         isolation_record = None
-    isolation = {"artifact": "provider_isolation.json", "run_id": run_id,
-                 "server_pid": server_pid, "record": isolation_record}
+    isolation = {
+        "artifact": "provider_isolation.json",
+        "run_id": run_id,
+        "server_pid": server_pid,
+        "record": isolation_record,
+    }
     isolation_passed = _isolation_passed(isolation)
     files = []
     for path in sorted(item for item in output_dir.rglob("*") if item.is_file()):
@@ -224,10 +241,9 @@ def build_manifest(
         "base_url": base_url,
         "command": command,
         "pytest_exit_code": pytest_exit_code,
-        "assertions_passed": pytest_exit_code == 0 and isolation_passed and all(
-            (ROOT / row["path"]).is_file() and _sha256(ROOT / row["path"]) == row["sha256"]
-            for row in sources
-        ),
+        "assertions_passed": pytest_exit_code == 0
+        and isolation_passed
+        and all((ROOT / row["path"]).is_file() and _sha256(ROOT / row["path"]) == row["sha256"] for row in sources),
         "health": {
             "build_id": health.get("build_id"),
             "map": health.get("components", {}).get("map", {}).get("code"),
@@ -271,11 +287,7 @@ def verify_manifest(
             raise E2E1RunnerError("e2e1_artifact_binding_mismatch")
     for row in manifest.get("source_inputs", []):
         path = ROOT / str(row["path"])
-        if (
-            not path.is_file()
-            or path.stat().st_size != row["size_bytes"]
-            or _sha256(path) != row["sha256"]
-        ):
+        if not path.is_file() or path.stat().st_size != row["size_bytes"] or _sha256(path) != row["sha256"]:
             raise E2E1RunnerError("e2e1_source_binding_mismatch")
     if not require_complete:
         return
@@ -286,30 +298,50 @@ def verify_manifest(
     llm_records = manifest.get("llm_records")
     scenario_paths = {
         tuple(name for _, name in SCENARIOS): sorted(
-            [f"{name}/llm_io.json" for _, name in SCENARIOS]
-            + ["registered_replacement/one_click_llm_io.json"]),
-        ("map_initialization_recovery",): [f"map_initialization_recovery/{context}/llm_io.json" for context in ("accepted_child", "original")],
+            [f"{name}/llm_io.json" for _, name in SCENARIOS] + ["registered_replacement/one_click_llm_io.json"]
+        ),
+        ("map_initialization_recovery",): [
+            f"map_initialization_recovery/{context}/llm_io.json" for context in ("accepted_child", "original")
+        ],
         ("completed_preview_race",): ["completed_preview_race/llm_io.json"],
         ("workspace_stability",): sorted(
-            f"workspace_stability/{size}/llm_io.json"
-            for size in ("1440x900", "1280x800", "1024x768", "390x844")),
-        ("direct_edits",): sorted(f"direct_edits/{kind}/llm_io.json" for kind in ("combined", "duration", "time_window", "role", "order")),
+            f"workspace_stability/{size}/llm_io.json" for size in ("1440x900", "1280x800", "1024x768", "390x844")
+        ),
+        ("direct_edits",): sorted(
+            f"direct_edits/{kind}/llm_io.json" for kind in ("combined", "duration", "time_window", "role", "order")
+        ),
         ("addition_continuation",): ["addition_continuation/llm_io.json"],
         ("mobile_chat",): ["mobile_chat/llm_io.json"],
         ("waypoint_pointer",): ["waypoint_pointer/llm_io.json"],
-        ("capability_controls",): ["capability_controls/accepted_child/llm_io.json", "capability_controls/original/llm_io.json"],
-        ("evaluated_variants",): ["evaluated_variants/accepted_child/llm_io.json", "evaluated_variants/original/llm_io.json"],
+        ("capability_controls",): [
+            "capability_controls/accepted_child/llm_io.json",
+            "capability_controls/original/llm_io.json",
+        ],
+        ("evaluated_variants",): [
+            "evaluated_variants/accepted_child/llm_io.json",
+            "evaluated_variants/original/llm_io.json",
+        ],
         ("webgl_recovery",): ["webgl_recovery/llm_io.json"],
         ("chat_closure",): ["chat_closure/accepted_child/llm_io.json", "chat_closure/original/llm_io.json"],
         ("same_plan_remount",): ["same_plan_remount/llm_io.json"],
-        ("waypoint_contexts",): ["waypoint_contexts/accepted_child/llm_io.json", "waypoint_contexts/original/llm_io.json"],
+        ("waypoint_contexts",): [
+            "waypoint_contexts/accepted_child/llm_io.json",
+            "waypoint_contexts/original/llm_io.json",
+        ],
         ("candidate_day_matrix",): ["candidate_day_matrix/llm_io.json"],
     }
     scenarios = manifest.get("scenarios")
-    if not isinstance(scenarios, list) or not all(isinstance(name, str) for name in scenarios) or tuple(scenarios) not in scenario_paths:
+    if (
+        not isinstance(scenarios, list)
+        or not all(isinstance(name, str) for name in scenarios)
+        or tuple(scenarios) not in scenario_paths
+    ):
         raise E2E1RunnerError("e2e1_scenario_universe_invalid")
-    if (not isinstance(llm_records, list) or not all(isinstance(item, dict) for item in llm_records)
-            or [item.get("path") for item in llm_records] != scenario_paths[tuple(scenarios)]):
+    if (
+        not isinstance(llm_records, list)
+        or not all(isinstance(item, dict) for item in llm_records)
+        or [item.get("path") for item in llm_records] != scenario_paths[tuple(scenarios)]
+    ):
         raise E2E1RunnerError("e2e1_llm_record_universe_mismatch")
     for item in llm_records:
         record = item.get("record", {})
@@ -325,13 +357,14 @@ def verify_manifest(
             or record.get("llm_output") is not None
             or not isinstance(record.get("reason"), str)
             or not record["reason"].strip()
-            or ("actual_openai_connectivity_claimed" in expected_keys
-                and record.get("actual_openai_connectivity_claimed") is not False)
+            or (
+                "actual_openai_connectivity_claimed" in expected_keys
+                and record.get("actual_openai_connectivity_claimed") is not False
+            )
             or (
                 "verification_test" in expected_keys
                 and record.get("verification_test")
-                != "tests/product_app/test_openai_copilot.py::"
-                "test_removal_language_is_rejected_before_provider_call"
+                != "tests/product_app/test_openai_copilot.py::test_removal_language_is_rejected_before_provider_call"
             )
         ):
             raise E2E1RunnerError("e2e1_unexpected_llm_io")
@@ -361,8 +394,7 @@ def render_report(manifest: dict[str, Any]) -> str:
     for row in manifest["files"]:
         location = row["exact_content_location"]
         lines.append(
-            f"| {row['role']} | {row['path']} | {row['size_bytes']} | "
-            f"{row['sha256']} | [{location}]({location}) |"
+            f"| {row['role']} | {row['path']} | {row['size_bytes']} | {row['sha256']} | [{location}]({location}) |"
         )
     lines += [
         "",
@@ -399,8 +431,37 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument("--live-copilot-chat", action="store_true")
     parser.add_argument("--confirm-billed-synthetic-context", action="store_true")
-    parser.add_argument("--browser-test", choices=("vertical-slice", "map-recovery", "completed-response-race", "workspace-stability", "direct-edits", "addition-continuation", "mobile-chat", "waypoint-pointer", "capability-controls", "evaluated-variants", "webgl-recovery", "chat-closure", "same-plan-remount", "waypoint-contexts", "candidate-day-matrix", "conversation", "combined-conflicts", "owned-edits", "build-coherence", "bootstrap-recovery", "optional-evidence-fault", "preview-geography-fault", "queued-preview", "aggregate"), default="vertical-slice",
-                        help="A repository-known deterministic suite; map-recovery covers original and accepted-child journeys.")
+    parser.add_argument(
+        "--browser-test",
+        choices=(
+            "vertical-slice",
+            "map-recovery",
+            "completed-response-race",
+            "workspace-stability",
+            "direct-edits",
+            "addition-continuation",
+            "mobile-chat",
+            "waypoint-pointer",
+            "capability-controls",
+            "evaluated-variants",
+            "webgl-recovery",
+            "chat-closure",
+            "same-plan-remount",
+            "waypoint-contexts",
+            "candidate-day-matrix",
+            "conversation",
+            "combined-conflicts",
+            "owned-edits",
+            "build-coherence",
+            "bootstrap-recovery",
+            "optional-evidence-fault",
+            "preview-geography-fault",
+            "queued-preview",
+            "aggregate",
+        ),
+        default="vertical-slice",
+        help="A repository-known deterministic suite; map-recovery covers original and accepted-child journeys.",
+    )
     return parser.parse_args()
 
 
@@ -408,7 +469,8 @@ def _persist_manifest(output_dir: Path, **inputs: Any) -> dict[str, Any]:
     """Bind the final result, including a retained semantic-verification failure."""
     manifest = build_manifest(output_dir, **inputs)
     (output_dir / MANIFEST_NAME).write_text(
-        json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8",
+        json.dumps(manifest, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
     )
     (output_dir / REPORT_NAME).write_text(render_report(manifest), encoding="utf-8")
     return manifest
@@ -416,7 +478,16 @@ def _persist_manifest(output_dir: Path, **inputs: Any) -> dict[str, Any]:
 
 def main() -> int:
     args = parse_args()
-    if getattr(args, "browser_test", "") in {"conversation", "combined-conflicts", "owned-edits", "build-coherence", "bootstrap-recovery", "optional-evidence-fault", "preview-geography-fault", "queued-preview"}:
+    if getattr(args, "browser_test", "") in {
+        "conversation",
+        "combined-conflicts",
+        "owned-edits",
+        "build-coherence",
+        "bootstrap-recovery",
+        "optional-evidence-fault",
+        "preview-geography-fault",
+        "queued-preview",
+    }:
         if args.live_copilot_chat or args.confirm_billed_synthetic_context:
             raise E2E1RunnerError("e2e1_self_managed_is_non_live_only")
         from run_e2e1_self_managed import run
@@ -442,7 +513,19 @@ def main() -> int:
     remount = getattr(args, "browser_test", "vertical-slice") == "same-plan-remount"
     waypoint_contexts = getattr(args, "browser_test", "vertical-slice") == "waypoint-contexts"
     candidate_days = getattr(args, "browser_test", "vertical-slice") == "candidate-day-matrix"
-    if (direct_edits or addition or mobile_chat or waypoint or controls or evaluated or webgl or chat_closure or remount or waypoint_contexts or candidate_days) and (args.live_copilot_chat or args.confirm_billed_synthetic_context):
+    if (
+        direct_edits
+        or addition
+        or mobile_chat
+        or waypoint
+        or controls
+        or evaluated
+        or webgl
+        or chat_closure
+        or remount
+        or waypoint_contexts
+        or candidate_days
+    ) and (args.live_copilot_chat or args.confirm_billed_synthetic_context):
         raise E2E1RunnerError("e2e1_edit_journeys_are_deterministic_only")
     if stability and (args.live_copilot_chat or args.confirm_billed_synthetic_context):
         raise E2E1RunnerError("e2e1_workspace_stability_is_deterministic_only")
@@ -471,7 +554,9 @@ def main() -> int:
     if not _port_is_available(port):
         raise E2E1RunnerError(f"e2e1_port_{port}_occupied")
     output_dir.mkdir(parents=True, exist_ok=True)
-    browser_test = COMPLETED_RACE_BROWSER_TEST if completed_race else MAP_RECOVERY_BROWSER_TEST if recovery else BROWSER_TEST
+    browser_test = (
+        COMPLETED_RACE_BROWSER_TEST if completed_race else MAP_RECOVERY_BROWSER_TEST if recovery else BROWSER_TEST
+    )
     scenarios = COMPLETED_RACE_SCENARIOS if completed_race else MAP_RECOVERY_SCENARIOS if recovery else SCENARIOS
     if stability:
         browser_test, scenarios = WORKSPACE_STABILITY_BROWSER_TEST, WORKSPACE_STABILITY_SCENARIOS
@@ -498,8 +583,17 @@ def main() -> int:
     if candidate_days:
         browser_test, scenarios = CANDIDATE_DAYS_BROWSER_TEST, CANDIDATE_DAYS_SCENARIOS
     source_inputs = _source_rows(browser_test) if browser_test != BROWSER_TEST else _source_rows()
-    command = [sys.executable, "-m", "pytest", browser_test, "-q", "-p", "no:cacheprovider",
-               "--junitxml", str(output_dir / "pytest_junit.xml")]
+    command = [
+        sys.executable,
+        "-m",
+        "pytest",
+        browser_test,
+        "-q",
+        "-p",
+        "no:cacheprovider",
+        "--junitxml",
+        str(output_dir / "pytest_junit.xml"),
+    ]
     health: dict[str, Any] = {}
     exit_code = 1
     server: subprocess.Popen[str] | None = None
@@ -540,9 +634,10 @@ def main() -> int:
             environment[variable] = str(directory)
         command += ["--basetemp", str(temp_root / "pytest")]
         try:
-            with (output_dir / "server.stdout.log").open("w", encoding="utf-8") as stdout, (
-                output_dir / "server.stderr.log"
-            ).open("w", encoding="utf-8") as stderr:
+            with (
+                (output_dir / "server.stdout.log").open("w", encoding="utf-8") as stdout,
+                (output_dir / "server.stderr.log").open("w", encoding="utf-8") as stderr,
+            ):
                 server = subprocess.Popen(
                     [
                         sys.executable,
@@ -551,8 +646,10 @@ def main() -> int:
                         str(port),
                         "--state-root",
                         str(temp_root / "state"),
-                        "--output", str(output_dir / "provider_isolation.json"),
-                        "--run-id", run_id,
+                        "--output",
+                        str(output_dir / "provider_isolation.json"),
+                        "--run-id",
+                        run_id,
                     ],
                     cwd=ROOT,
                     env=environment,
@@ -579,10 +676,16 @@ def main() -> int:
         except (E2E1RunnerError, OSError) as error:
             prior_exit_code = exit_code
             exit_code = exit_code or 1
-            (output_dir / "runner_failure.json").write_text(json.dumps({
-                "code": str(error) if isinstance(error, E2E1RunnerError) else "e2e1_runner_os_error",
-                "pytest_exit_code": prior_exit_code, "runner_exit_code": exit_code,
-            }), encoding="utf-8")
+            (output_dir / "runner_failure.json").write_text(
+                json.dumps(
+                    {
+                        "code": str(error) if isinstance(error, E2E1RunnerError) else "e2e1_runner_os_error",
+                        "pytest_exit_code": prior_exit_code,
+                        "runner_exit_code": exit_code,
+                    }
+                ),
+                encoding="utf-8",
+            )
         finally:
             if server is not None and server.poll() is None:
                 try:
@@ -599,9 +702,16 @@ def main() -> int:
             _verify_map_recovery(output_dir, base_url)
         except (E2E1VerificationError, OSError, ValueError, KeyError) as error:
             exit_code = 1
-            (output_dir / "recovery_verification_failure.json").write_text(json.dumps({
-                "assertions_passed": False, "error_type": type(error).__name__, "code": str(error),
-            }), encoding="utf-8")
+            (output_dir / "recovery_verification_failure.json").write_text(
+                json.dumps(
+                    {
+                        "assertions_passed": False,
+                        "error_type": type(error).__name__,
+                        "code": str(error),
+                    }
+                ),
+                encoding="utf-8",
+            )
     manifest_inputs = dict(
         command=command,
         pytest_exit_code=exit_code,
@@ -622,11 +732,18 @@ def main() -> int:
             verify(output_dir)
         except (E2E1VerificationError, OSError, ValueError, KeyError, TypeError, AttributeError) as error:
             exit_code = 1
-            (output_dir / "semantic_verification_failure.json").write_text(json.dumps({
-                "assertions_passed": False, "error_type": type(error).__name__,
-                "code": str(error), "pytest_exit_code": manifest_inputs["pytest_exit_code"],
-                "runner_exit_code": exit_code,
-            }), encoding="utf-8")
+            (output_dir / "semantic_verification_failure.json").write_text(
+                json.dumps(
+                    {
+                        "assertions_passed": False,
+                        "error_type": type(error).__name__,
+                        "code": str(error),
+                        "pytest_exit_code": manifest_inputs["pytest_exit_code"],
+                        "runner_exit_code": exit_code,
+                    }
+                ),
+                encoding="utf-8",
+            )
             manifest = _persist_manifest(output_dir, **dict(manifest_inputs, pytest_exit_code=exit_code))
             verify_manifest(output_dir, manifest, require_complete=False)
     print(

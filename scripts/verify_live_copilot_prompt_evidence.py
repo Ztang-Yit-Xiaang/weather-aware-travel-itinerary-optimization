@@ -28,10 +28,19 @@ from run_live_copilot_prompt_evaluation import (  # noqa: E402
 )
 
 _CASE_FIELDS = {
-    "schema_version", "generated_at", "model", "reasoning_effort",
-    "prompt_version", "prompt_sha256", "corpus_path", "corpus_sha256",
-    "source_snapshot", "request_controls", "raw_provider_content_persisted",
-    "records", "content_hash",
+    "schema_version",
+    "generated_at",
+    "model",
+    "reasoning_effort",
+    "prompt_version",
+    "prompt_sha256",
+    "corpus_path",
+    "corpus_sha256",
+    "source_snapshot",
+    "request_controls",
+    "raw_provider_content_persisted",
+    "records",
+    "content_hash",
 }
 
 
@@ -42,9 +51,7 @@ def _read_json(path: Path) -> dict[str, Any]:
     return value
 
 
-def _verify_case_document(
-    *, path: Path, corpus_path: Path, corpus: dict[str, Any], effort: str
-) -> dict[str, Any]:
+def _verify_case_document(*, path: Path, corpus_path: Path, corpus: dict[str, Any], effort: str) -> dict[str, Any]:
     document = _read_json(path)
     if set(document) != _CASE_FIELDS:
         raise ValueError("invalid_case_evidence_fields")
@@ -124,9 +131,7 @@ def verify_evidence_directory(output_dir: Path, corpus_path: Path = DEFAULT_CORP
         "recommended_reasoning_effort": recommended,
         "all_thresholds_passed": all(summary["thresholds_passed"] for summary in summaries.values()),
         "provider_attempts_total": sum(summary["provider_attempts_total"] for summary in summaries.values()),
-        "case_evidence_sha256": {
-            effort: summary["case_evidence_sha256"] for effort, summary in summaries.items()
-        },
+        "case_evidence_sha256": {effort: summary["case_evidence_sha256"] for effort, summary in summaries.items()},
         "source_snapshot_sha256": next(iter(source_hashes)),
         "raw_provider_content_persisted": False,
         "summaries": summaries,

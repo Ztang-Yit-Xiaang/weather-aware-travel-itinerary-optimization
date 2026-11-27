@@ -115,9 +115,7 @@ class ProductRuntimeConfig:
             os.environ.get("PRODUCT_MAP_BASE_URL", f"http://127.0.0.1:{map_port}"),
             expected_port=map_port,
         )
-        routing_base_url = _loopback_http_url(
-            os.environ.get("PRODUCT_ROUTING_BASE_URL", "http://127.0.0.1:5000")
-        )
+        routing_base_url = _loopback_http_url(os.environ.get("PRODUCT_ROUTING_BASE_URL", "http://127.0.0.1:5000"))
         adapter = os.environ.get("PRODUCT_COPILOT_ADAPTER", "deterministic").strip().lower()
         if adapter not in {"deterministic", "openai"}:
             raise ProductConfigError("invalid_copilot_adapter")
@@ -172,9 +170,7 @@ class ProductRuntimeConfig:
     @property
     def allowed_authorities(self) -> frozenset[str]:
         port = self.application_port
-        return frozenset(
-            {f"127.0.0.1:{port}", f"localhost:{port}", *self.additional_allowed_authorities}
-        )
+        return frozenset({f"127.0.0.1:{port}", f"localhost:{port}", *self.additional_allowed_authorities})
 
     @property
     def allowed_origins(self) -> frozenset[str]:

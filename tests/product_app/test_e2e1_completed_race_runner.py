@@ -6,13 +6,23 @@ import pytest
 from test_e2e1_runner import _evidence, runner
 
 FOCUSED_LAYOUTS = [
-    ("direct_edits", runner.DIRECT_EDITS_BROWSER_TEST, [f"direct_edits/{kind}/llm_io.json" for kind in ("combined", "duration", "order", "role", "time_window")]),
+    (
+        "direct_edits",
+        runner.DIRECT_EDITS_BROWSER_TEST,
+        [f"direct_edits/{kind}/llm_io.json" for kind in ("combined", "duration", "order", "role", "time_window")],
+    ),
     ("addition_continuation", runner.ADDITION_BROWSER_TEST, ["addition_continuation/llm_io.json"]),
     ("completed_preview_race", runner.COMPLETED_RACE_BROWSER_TEST, ["completed_preview_race/llm_io.json"]),
-    ("map_initialization_recovery", runner.MAP_RECOVERY_BROWSER_TEST,
-     [f"map_initialization_recovery/{context}/llm_io.json" for context in ("accepted_child", "original")]),
-    ("workspace_stability", runner.WORKSPACE_STABILITY_BROWSER_TEST,
-     [f"workspace_stability/{size}/llm_io.json" for size in ("1024x768", "1280x800", "1440x900", "390x844")]),
+    (
+        "map_initialization_recovery",
+        runner.MAP_RECOVERY_BROWSER_TEST,
+        [f"map_initialization_recovery/{context}/llm_io.json" for context in ("accepted_child", "original")],
+    ),
+    (
+        "workspace_stability",
+        runner.WORKSPACE_STABILITY_BROWSER_TEST,
+        [f"workspace_stability/{size}/llm_io.json" for size in ("1024x768", "1280x800", "1440x900", "390x844")],
+    ),
 ]
 
 
@@ -26,14 +36,35 @@ def _focused_manifest(tmp_path, scenario, browser_test, paths):
     for relative in paths:
         destination = output / relative
         destination.parent.mkdir(parents=True, exist_ok=True)
-        destination.write_text(json.dumps({"llm_input": None, "llm_output": None,
-            "provider_call_count": 0, "reason": "explicit_unit_fixture_not_a_browser_run"}), encoding="utf-8")
-    manifest = runner.build_manifest(output, command=["python", "-m", "pytest", browser_test, "-q", "-p", "no:cacheprovider"],
-        pytest_exit_code=0, health={"build_id": "unit_fixture", "components": {
-            "map": {"code": "maplibre_ready"}, "routing": {"code": "runtime_osrm_ready"},
-            "openai": {"code": "deterministic_adapter_selected"}}}, base_url="http://127.0.0.1:49152",
-        source_inputs=runner._source_rows(browser_test), run_id="unit-fixture", server_pid=123,
-        scenarios=(scenario,))
+        destination.write_text(
+            json.dumps(
+                {
+                    "llm_input": None,
+                    "llm_output": None,
+                    "provider_call_count": 0,
+                    "reason": "explicit_unit_fixture_not_a_browser_run",
+                }
+            ),
+            encoding="utf-8",
+        )
+    manifest = runner.build_manifest(
+        output,
+        command=["python", "-m", "pytest", browser_test, "-q", "-p", "no:cacheprovider"],
+        pytest_exit_code=0,
+        health={
+            "build_id": "unit_fixture",
+            "components": {
+                "map": {"code": "maplibre_ready"},
+                "routing": {"code": "runtime_osrm_ready"},
+                "openai": {"code": "deterministic_adapter_selected"},
+            },
+        },
+        base_url="http://127.0.0.1:49152",
+        source_inputs=runner._source_rows(browser_test),
+        run_id="unit-fixture",
+        server_pid=123,
+        scenarios=(scenario,),
+    )
     return output, manifest
 
 
@@ -76,11 +107,21 @@ def test_completed_response_race_is_allowlisted_without_changing_default(monkeyp
 
 
 @pytest.mark.parametrize("flag", ["live_copilot_chat", "confirm_billed_synthetic_context"])
-@pytest.mark.parametrize("mode,error", [("completed-response-race", "e2e1_completed_race_is_deterministic_only"),
-                                       ("workspace-stability", "e2e1_workspace_stability_is_deterministic_only")])
+@pytest.mark.parametrize(
+    "mode,error",
+    [
+        ("completed-response-race", "e2e1_completed_race_is_deterministic_only"),
+        ("workspace-stability", "e2e1_workspace_stability_is_deterministic_only"),
+    ],
+)
 def test_completed_response_race_cannot_dispatch_a_billed_runner(monkeypatch, flag, mode, error):
-    arguments = {"browser_test": mode, "output_dir": None, "port": 8127,
-                 "live_copilot_chat": False, "confirm_billed_synthetic_context": False}
+    arguments = {
+        "browser_test": mode,
+        "output_dir": None,
+        "port": 8127,
+        "live_copilot_chat": False,
+        "confirm_billed_synthetic_context": False,
+    }
     arguments[flag] = True
     monkeypatch.setattr(runner, "parse_args", lambda: type("Args", (), arguments)())
     with pytest.raises(runner.E2E1RunnerError, match=error):
@@ -108,4 +149,6 @@ def test_active_route_delta_registration_and_exact_bundle_are_hashed():
     descriptor = runner.ROOT / json.loads(registration.read_text(encoding="utf-8"))["descriptor_path"]
     assert registration.relative_to(runner.ROOT).as_posix() in paths
     assert descriptor.relative_to(runner.ROOT).as_posix() in paths
-    assert all(path.relative_to(runner.ROOT).as_posix() in paths for path in descriptor.parent.rglob("*") if path.is_file())
+    assert all(
+        path.relative_to(runner.ROOT).as_posix() in paths for path in descriptor.parent.rglob("*") if path.is_file()
+    )

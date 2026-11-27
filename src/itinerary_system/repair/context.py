@@ -78,6 +78,7 @@ def contextualize_plan_for_evaluation(plan: Any, request: Any) -> Any:
         selected_stops=contextualize_stop_records(getattr(plan, "selected_stops", ()), request),
     )
 
+
 def context_selection_requirements(
     request: Any,
     stop_records: Iterable[Mapping[str, Any]],

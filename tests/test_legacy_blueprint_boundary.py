@@ -99,10 +99,7 @@ def test_renderer_surface_is_package_owned_and_legacy_aliases_are_identical():
     assert len(renderer_callables) == 57
     assert set(renderer_callables).isdisjoint(LEGACY_ONLY_CALLABLES)
     assert all(getattr(blueprint, name) is value for name, value in renderer_callables.items())
-    assert all(
-        getattr(blueprint, name) is getattr(blueprint_render_primitives, name)
-        for name in RENDERER_CONSTANTS
-    )
+    assert all(getattr(blueprint, name) is getattr(blueprint_render_primitives, name) for name in RENDERER_CONSTANTS)
     assert blueprint.build_production_trip_map is blueprint_renderer.build_production_trip_map
 
 
@@ -110,21 +107,16 @@ def test_notebook_facade_and_package_sources_enforce_the_renderer_boundary():
     notebook_path = REPO_ROOT / "notebook" / "blueprint_trip_map.py"
     notebook_tree = ast.parse(notebook_path.read_text(encoding="utf-8"))
     notebook_defs = {
-        node.name
-        for node in notebook_tree.body
-        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
+        node.name for node in notebook_tree.body if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
     }
 
     assert notebook_defs == LEGACY_ONLY_CALLABLES
 
-    map_renderer_source = (REPO_ROOT / "src" / "itinerary_system" / "map_renderer.py").read_text(
-        encoding="utf-8"
-    )
+    map_renderer_source = (REPO_ROOT / "src" / "itinerary_system" / "map_renderer.py").read_text(encoding="utf-8")
     assert 'import_legacy_module("blueprint_trip_map")' not in map_renderer_source
     assert "blueprint_renderer.build_production_trip_map(" in map_renderer_source
 
     package_sources = "\n".join(
-        path.read_text(encoding="utf-8")
-        for path in (REPO_ROOT / "src" / "itinerary_system").glob("*.py")
+        path.read_text(encoding="utf-8") for path in (REPO_ROOT / "src" / "itinerary_system").glob("*.py")
     )
     assert 'import_legacy_module("blueprint_trip_map")' not in package_sources

@@ -19,6 +19,7 @@ import { createMutationRecovery } from "./mutation-recovery.js";
 import { interestPlacesInRegion, normalizeInterestResponse } from "./interest-regions.js";
 
 import { createWorkspaceStorage, restoreInterestPreferences } from "./workspace-storage.js";
+import { productFetch as fetch, currentAppPath, appRouteUrl, ensureHostedLogin, signOutHosted } from "./deployment-client.js";
 
 const state = {
   clientBuildId: document.querySelector('meta[name="product-build-id"]')?.content || "",
@@ -34,7 +35,7 @@ const state = {
   sessionRecoveryNotice: null,
   mutationRecovery: { status: "idle", blocked: false, message: "" },
   registry: null,
-  route: normalizeRoute(location.pathname),
+  route: normalizeRoute(currentAppPath()),
   tripPreviewPlanId: null,
   acknowledgedPreviewPlanId: null,
   mapInteraction: {
@@ -783,10 +784,10 @@ function pythonStableJson(value, parentKey = null) {
   if (!value || typeof value !== "object") return null;
   const fields = [];
   for (const key of Object.keys(value).sort()) {
-    const serialized = pythonStableJson(
-      value[key],
-      STABLE_FLOAT_OBJECTS.has(parentKey) ? parentKey : key,
-    );
+    // Guide-reference durations are integer metadata, unlike itinerary-stop durations.
+    const scopeKey = parentKey === "destination_places" && key === "visit_duration_minutes"
+      ? null : STABLE_FLOAT_OBJECTS.has(parentKey) ? parentKey : key;
+    const serialized = pythonStableJson(value[key], scopeKey);
     if (serialized === null) return null;
     fields.push(`${JSON.stringify(key)}:${serialized}`);
   }
@@ -1834,7 +1835,7 @@ async function normalizeTimeWindowScheduleImpact(value, identity, proposal, plan
       || typeof value.evaluator_version !== "string" || !value.evaluator_version
       || value.route_matrix_id !== routeValidation.matrix_id
       || value.configured_default_visit_minutes !== 45
-      || value.configured_day_start_minute !== 480
+      || value.configured_day_start_minute !== 540
       || !normalizeTimeWindowCostPolicy(value.time_window_cost_policy)
       || !exactKeys(identity, [
         "content_hash", "evaluator_version", "route_matrix_id", "parent_plan_id",
@@ -2100,7 +2101,7 @@ async function normalizeRoleImpact(value, identity, proposal, planDiff, routeVal
       || typeof value.evaluator_version !== "string" || !value.evaluator_version
       || value.route_matrix_id !== routeValidation.matrix_id
       || value.configured_default_visit_minutes !== 45
-      || value.configured_day_start_minute !== 480
+      || value.configured_day_start_minute !== 540
       || !exactStringArray(value.supported_evaluated_roles, EVALUATED_STOP_ROLES)
       || !sameJson(value.semantic_scope, ROLE_SEMANTIC_SCOPE)
       || !exactKeys(identity, [
@@ -3139,7 +3140,7 @@ async function normalizeCombinedRuntimeExecution(value, proposal, draft) {
       || diff.day_moves.length || diff.time_shifts.length || diff.lodging_changes.length
       || !Number.isFinite(diff.weighted_edit_cost)
       || await computedStableContentHash(diff) !== proposal.diff_content_hash) return null;
-  if (owned && (certificate.evaluator_version !== "verify-001-plan-evaluator-v2"
+  if (owned && (certificate.evaluator_version !== "verify-001-plan-evaluator-v3"
       || (diff.schema_version === "plan-diff-v7" && typed.length < 2 && !typed.includes("role_changes"))
       || (diff.schema_version === "plan-diff-v5" && (typed.length > 1 || typed.includes("role_changes")))
       || !await normalizeCombinedAttributeOwnership(diff, proposal, child))) return null;
@@ -3548,6 +3549,11 @@ function normalizeRoute(path) {
 }
 
 const API_ERROR_COPY = {
+  owner_sign_in_required: "Please sign in again to open your private workspace.",
+  hosted_auth_unavailable: "Sign-in is temporarily unavailable. Your workspace has been kept. Please try again.",
+  hosted_state_unavailable: "Your workspace is temporarily unavailable. Saved changes are protected; please try again after the service restarts.",
+  invalid_copilot_stream: "The reply could not be read. Check the saved conversation before trying again.",
+  copilot_stream_incomplete: "The connection closed before the reply finished. Check its saved status before sending it again.",
   copilot_outcome_unknown: "The provider outcome is unknown. This message will not be sent again automatically; checking it only reconciles saved status.",
   copilot_result_context_stale: "The itinerary changed while the reply was running. The reply is retained in history but cannot stage changes for this newer itinerary.",
   conversation_turn_limit_reached: "This conversation is full. Start a new conversation before sending another message. No provider call was made.",
@@ -3894,6 +3900,7 @@ function renderCoreRecovery(health) {
 }
 
 function renderStartupFailure(error) {
+  if ($("#loading-screen")?.querySelector?.(".hosted-login")) return;
   if (isBuildMismatch(error?.code)) return renderBuildRecovery(error.code);
   const code = error?.message === "invalid_product_health" ? "invalid_product_health" : "health_unavailable";
   $("#loading-screen").classList.add("recovery-screen");
@@ -3942,6 +3949,12 @@ function applyRuntimeAvailability() {
 }
 
 function bindEvents() {
+  const signOut = $("#hosted-sign-out");
+  signOut.hidden = window.PRODUCT_DEPLOYMENT?.static_frontend !== true;
+  if (!signOut.hidden) signOut.addEventListener("click", () => {
+    signOutHosted();
+    location.reload();
+  });
   $$("[data-route]").forEach((button) => button.addEventListener("click", () => navigate(button.dataset.route)));
   copilot.bind();
   bindWorkspaceSynchronization();
@@ -3995,7 +4008,7 @@ function bindEvents() {
     }
   });
   window.addEventListener("popstate", () => {
-    state.route = normalizeRoute(location.pathname);
+    state.route = normalizeRoute(currentAppPath());
     renderAll();
   });
   setupDockResize();
@@ -4003,7 +4016,7 @@ function bindEvents() {
 
 function navigate(route) {
   const normalized = normalizeRoute(route);
-  if (location.pathname !== normalized) history.pushState({}, "", normalized);
+  if (currentAppPath() !== normalized) history.pushState({}, "", appRouteUrl(normalized));
   state.route = normalized;
   if (normalized === "/app/compare" && !state.session.selected_alternative_id && !activeProposalPlan()) {
     const recommendedId = recommendedAlternativeId();
@@ -5978,6 +5991,35 @@ function renderCompare() {
   });
 }
 
+async function downloadEvidenceBundle(runId, planId, button) {
+  if (button.disabled) return;
+  button.disabled = true;
+  let objectUrl;
+  let download;
+  try {
+    const headers = {Accept: "application/zip", "X-Product-Build-Id": state.clientBuildId || ""};
+    if (state.token) headers["X-Session-Token"] = state.token;
+    const response = await fetch(`/api/runs/${encodeURIComponent(runId)}/evidence-bundle?plan_id=${encodeURIComponent(planId)}`, {headers});
+    if (!response.ok) {
+      const payload = (response.headers.get("content-type") || "").includes("application/json") ? await response.json() : null;
+      if (isBuildMismatch(payload?.detail)) renderBuildRecovery(payload.detail);
+      throw new Error("evidence_download_failed");
+    }
+    objectUrl = URL.createObjectURL(await response.blob());
+    download = document.createElement("a");
+    download.href = objectUrl;
+    download.download = `${runId}-${planId}-evidence.zip`.replace(/[^\w.-]/g, "_");
+    document.body.append(download);
+    download.click();
+  } catch {
+    toast("Evidence could not be downloaded. Please try again.", true);
+  } finally {
+    download?.remove();
+    if (objectUrl) setTimeout(() => URL.revokeObjectURL(objectUrl), 1000);
+    button.disabled = false;
+  }
+}
+
 function renderEvidence() {
   const context = evidencePresentationContext();
   const resolution = resolveCompareSelection(context?.workspace || state.workspace, context?.session || state.session);
@@ -6028,7 +6070,7 @@ function renderEvidence() {
       <article class="evidence-card"><h3>3 · Route and source evidence</h3>
         <p>${escapeHtml(routeDescription)}</p>
         <p>${sourceHashCount || "No"} selected-plan source hashes are available.</p>
-        ${proposalMatches ? '<p class="truth-note">This is evaluated preview evidence, not an accepted change. Explicit acceptance persists the child and its lineage.</p>' : context?.scope === "accepted" ? '<p class="truth-note">This is the persisted accepted itinerary, with its exact inspected certificate and parent-child diff. It is not a new preview.</p>' : `<a class="download-link" href="/api/runs/${encodeURIComponent(state.session.run_id)}/evidence-bundle?plan_id=${encodeURIComponent(selectedAlternative.plan_id)}">Download selected-plan evidence</a>`}
+        ${proposalMatches ? '<p class="truth-note">This is evaluated preview evidence, not an accepted change. Explicit acceptance persists the child and its lineage.</p>' : context?.scope === "accepted" ? '<p class="truth-note">This is the persisted accepted itinerary, with its exact inspected certificate and parent-child diff. It is not a new preview.</p>' : '<button class="download-link" id="evidence-download" type="button">Download selected-plan evidence</button>'}
       </article>
       <article class="evidence-card"><h3>4 · Requested and executed methods</h3>
         <details open><summary>Requested methods</summary><p>${escapeHtml((methods.requested || []).join(", ") || "Unavailable")}</p></details>
@@ -6039,6 +6081,8 @@ function renderEvidence() {
     </div>
   </div>`;
   $("#evidence-back").addEventListener("click", () => navigate("/app/itinerary"));
+  const runId = state.session.run_id;
+  $("#evidence-download")?.addEventListener("click", event => downloadEvidenceBundle(runId, selectedAlternative.plan_id, event.currentTarget));
 }
 
 function renderRepairHistory() {
@@ -7671,4 +7715,4 @@ function toast(message, error = false) {
   setTimeout(() => item.remove(), 5000);
 }
 
-boot();
+ensureHostedLogin().then(boot).catch(renderStartupFailure);

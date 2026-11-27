@@ -74,12 +74,16 @@ def main() -> int:
 
     output_dir.mkdir(parents=True)
     audit_path = output_dir / "candidate_snap_audit.csv"
-    fieldnames = tuple(rows[0]) if rows else (
-        "entity_id",
-        "name",
-        "city",
-        "status",
-        "snap_validated",
+    fieldnames = (
+        tuple(rows[0])
+        if rows
+        else (
+            "entity_id",
+            "name",
+            "city",
+            "status",
+            "snap_validated",
+        )
     )
     with audit_path.open("w", encoding="utf-8", newline="") as handle:
         writer = csv.DictWriter(handle, fieldnames=fieldnames)
@@ -140,10 +144,7 @@ def _nearest_row(
         snap_distance = None
         status = f"fetch_error:{type(exc).__name__}"
     snap_validated = bool(
-        status == "ok"
-        and snap_distance is not None
-        and math.isfinite(snap_distance)
-        and snap_distance <= threshold
+        status == "ok" and snap_distance is not None and math.isfinite(snap_distance) and snap_distance <= threshold
     )
     return {
         "entity_id": entity_id,

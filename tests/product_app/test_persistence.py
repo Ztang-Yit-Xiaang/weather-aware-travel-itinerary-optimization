@@ -18,10 +18,7 @@ ROOT = Path(__file__).resolve().parents[2]
 
 
 def legacy_snapshot(paths: list[Path]) -> dict[str, tuple[str, int]]:
-    return {
-        path.name: (hashlib.sha256(path.read_bytes()).hexdigest(), path.stat().st_mtime_ns)
-        for path in paths
-    }
+    return {path.name: (hashlib.sha256(path.read_bytes()).hexdigest(), path.stat().st_mtime_ns) for path in paths}
 
 
 def test_state_layout_probe_and_legacy_detection_preserve_legacy_files(tmp_path: Path) -> None:
@@ -77,9 +74,7 @@ def test_state_layout_rejects_unsupported_metadata_without_rewriting_it(tmp_path
     assert metadata.read_bytes() == before
 
 
-def test_state_probe_failure_preserves_valid_metadata(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_state_probe_failure_preserves_valid_metadata(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     layout = LocalStateLayout(tmp_path / "state")
     assert layout.initialize().ready
     metadata_before = layout.state_path.read_bytes()
@@ -149,9 +144,7 @@ def test_atomic_json_write_does_not_retry_unrecognized_replace_error(
     assert list(tmp_path.glob(".tmp-*.json")) == []
 
 
-def test_state_probe_retries_transient_windows_replace_lock(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_state_probe_retries_transient_windows_replace_lock(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     layout = LocalStateLayout(tmp_path / "state")
     assert layout.initialize().ready
     original_replace = os.replace

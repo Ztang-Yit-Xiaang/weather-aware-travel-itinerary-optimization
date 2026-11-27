@@ -1,0 +1,39 @@
+{
+  "artifact_hashes": {
+    "cache_audit": "52f7b6321c0032d643b3a1b486520ebf761041fd04f5de7ff446555257e09f9d",
+    "provider_provenance": "fcb6328ad210261e2ff260cd337eeb44cf4b27e5a296b626abb7f7b33f13db65",
+    "requests": "ff0e38528f3cc96a4380f21018629b55f8a28e6cad698091f60fee00f37fd690",
+    "validated_cache": "24bc416c2d1ae25aef83eef5332babb1659c81ef3a171f84e168ce45a70c2156"
+  },
+  "bundle_id": "route_bundle_34950a5401d1b61d",
+  "cache_alignment_valid": true,
+  "cache_row_count": 1,
+  "earliest_retrieved_at": "2026-09-08T05:36:36.573582+00:00",
+  "errors": [],
+  "expected_request_count": 1,
+  "fallback_free": true,
+  "freshness_valid": true,
+  "generated_at": "2026-09-08T05:36:36.595363+00:00",
+  "latest_retrieved_at": "2026-09-08T05:36:36.573582+00:00",
+  "max_allowed_cache_age_days": 1.0,
+  "maximum_cache_age_days": 2.520949074074074e-07,
+  "output_dir": "results/route_deltas/product_pfeiffer_point_lobos_20260908_v1",
+  "provider_counts": {
+    "cached_osrm": 1
+  },
+  "provider_provenance_valid": true,
+  "publication_ready": true,
+  "request_audit_alignment_valid": true,
+  "request_count": 1,
+  "request_set_hash": "3a1331274b2cc870",
+  "road_validation_complete": true,
+  "schema_version": "route-evidence-bundle-v1",
+  "snap_validated_count": 1,
+  "snap_validation_complete": true,
+  "status_counts": {
+    "fetched_osrm_validated": 1
+  },
+  "unique_request_count": 1,
+  "validated_route_count": 1,
+  "warnings": []
+}

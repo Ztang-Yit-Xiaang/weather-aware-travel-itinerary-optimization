@@ -1,4 +1,5 @@
 """Adversarial tests of the browser observer's full accepted-reference check."""
+
 from __future__ import annotations
 
 import hashlib
@@ -15,33 +16,76 @@ from test_chat_runtime_closure_live import _assert_accepted_reference, _hash, _w
 
 def _seal(record):
     body = {key: value for key, value in record.items() if key != "content_hash"}
-    record["content_hash"] = hashlib.sha256(json.dumps(body, sort_keys=True,
-        separators=(",", ":"), ensure_ascii=False, allow_nan=False).encode()).hexdigest()
+    record["content_hash"] = hashlib.sha256(
+        json.dumps(body, sort_keys=True, separators=(",", ":"), ensure_ascii=False, allow_nan=False).encode()
+    ).hexdigest()
 
 
 def _inputs(accepted_child):
     original = {"plan_id": "plan_parent", "sequence": ["bixby", "golden_gate"]}
     original["content_hash"] = _hash(original)
-    accepted = {"plan_id": "plan_child", "sequence": ["pfeiffer", "golden_gate"]} if accepted_child else deepcopy(original)
+    accepted = (
+        {"plan_id": "plan_child", "sequence": ["pfeiffer", "golden_gate"]} if accepted_child else deepcopy(original)
+    )
     accepted["content_hash"] = _hash(accepted)
-    initial = {"active_plan_id": original["plan_id"], "active_plan_content_hash": original["content_hash"],
-        "rendered_map_plan_id": original["plan_id"], "rendered_marker_ids": original["sequence"]}
-    parent = {"active_plan_id": accepted["plan_id"], "active_plan_content_hash": accepted["content_hash"],
-        "rendered_map_plan_id": accepted["plan_id"], "rendered_marker_ids": accepted["sequence"]}
-    pointer = {"schema_version": "workspace-pointer-v1", "trip_id": "trip", "run_id": "run",
-        "original_plan_id": original["plan_id"], "original_plan_content_hash": original["content_hash"],
-        "accepted_plan_id": accepted["plan_id"], "accepted_plan_content_hash": accepted["content_hash"],
+    initial = {
+        "active_plan_id": original["plan_id"],
+        "active_plan_content_hash": original["content_hash"],
+        "rendered_map_plan_id": original["plan_id"],
+        "rendered_marker_ids": original["sequence"],
+    }
+    parent = {
+        "active_plan_id": accepted["plan_id"],
+        "active_plan_content_hash": accepted["content_hash"],
+        "rendered_map_plan_id": accepted["plan_id"],
+        "rendered_marker_ids": accepted["sequence"],
+    }
+    pointer = {
+        "schema_version": "workspace-pointer-v1",
+        "trip_id": "trip",
+        "run_id": "run",
+        "original_plan_id": original["plan_id"],
+        "original_plan_content_hash": original["content_hash"],
+        "accepted_plan_id": accepted["plan_id"],
+        "accepted_plan_content_hash": accepted["content_hash"],
         "decision_id": "decision_" + "a" * 32 if accepted_child else None,
-        "revision": int(accepted_child), "updated_at": "2026-09-08T12:00:00+00:00"}
+        "revision": int(accepted_child),
+        "updated_at": "2026-09-08T12:00:00+00:00",
+    }
     _seal(pointer)
-    public = {key: pointer[key] for key in ("schema_version", "accepted_plan_id", "accepted_plan_content_hash", "decision_id", "revision")}
-    decision = {"decision_id": pointer["decision_id"], "pointer_revision_after": 1, "trip_id": "trip", "run_id": "run",
-        "selected_plan_id": accepted["plan_id"], "selected_plan_content_hash": accepted["content_hash"]} if accepted_child else None
+    public = {
+        key: pointer[key]
+        for key in ("schema_version", "accepted_plan_id", "accepted_plan_content_hash", "decision_id", "revision")
+    }
+    decision = (
+        {
+            "decision_id": pointer["decision_id"],
+            "pointer_revision_after": 1,
+            "trip_id": "trip",
+            "run_id": "run",
+            "selected_plan_id": accepted["plan_id"],
+            "selected_plan_content_hash": accepted["content_hash"],
+        }
+        if accepted_child
+        else None
+    )
     if decision:
         _seal(decision)
-    return {"pointer": pointer, "public": public,
-        "session": {"session_id": "session", "trip_id": "trip", "run_id": "run", "accepted_plan_id": accepted["plan_id"]},
-        "accepted": accepted, "original": original, "parent": parent, "initial": initial, "decision": decision}
+    return {
+        "pointer": pointer,
+        "public": public,
+        "session": {
+            "session_id": "session",
+            "trip_id": "trip",
+            "run_id": "run",
+            "accepted_plan_id": accepted["plan_id"],
+        },
+        "accepted": accepted,
+        "original": original,
+        "parent": parent,
+        "initial": initial,
+        "decision": decision,
+    }
 
 
 @pytest.mark.parametrize("accepted_child", [False, True])
@@ -54,9 +98,30 @@ def test_full_reference_retains_extra_canonical_fields(tmp_path, accepted_child)
     _write_json(tmp_path / "reference_exact_io.json", {"input": inputs, "output": output, "provider_calls": 0})
 
 
-@pytest.mark.parametrize("fault", ["public_extra", "public_hash", "pointer_hash", "trip", "run", "original_id",
-    "original_hash", "accepted_id", "accepted_hash", "missing_timestamp", "naive_timestamp", "boolean_revision",
-    "decision_id", "missing_decision", "decision_hash", "decision_selected", "plan_tamper", "rendered_id", "marker_set"])
+@pytest.mark.parametrize(
+    "fault",
+    [
+        "public_extra",
+        "public_hash",
+        "pointer_hash",
+        "trip",
+        "run",
+        "original_id",
+        "original_hash",
+        "accepted_id",
+        "accepted_hash",
+        "missing_timestamp",
+        "naive_timestamp",
+        "boolean_revision",
+        "decision_id",
+        "missing_decision",
+        "decision_hash",
+        "decision_selected",
+        "plan_tamper",
+        "rendered_id",
+        "marker_set",
+    ],
+)
 def test_mismatched_or_coherently_rehashed_reference_is_rejected(tmp_path, fault):
     inputs = _inputs(True)
     _assert_accepted_reference(**inputs)
@@ -65,8 +130,14 @@ def test_mismatched_or_coherently_rehashed_reference_is_rejected(tmp_path, fault
     elif fault == "public_hash":
         inputs["public"]["accepted_plan_content_hash"] = "wrong"
     elif fault in {"trip", "run", "original_id", "original_hash", "accepted_id", "accepted_hash"}:
-        field = {"trip": "trip_id", "run": "run_id", "original_id": "original_plan_id", "original_hash": "original_plan_content_hash",
-            "accepted_id": "accepted_plan_id", "accepted_hash": "accepted_plan_content_hash"}[fault]
+        field = {
+            "trip": "trip_id",
+            "run": "run_id",
+            "original_id": "original_plan_id",
+            "original_hash": "original_plan_content_hash",
+            "accepted_id": "accepted_plan_id",
+            "accepted_hash": "accepted_plan_content_hash",
+        }[fault]
         inputs["pointer"][field] = "wrong"
         if field in inputs["public"]:
             inputs["public"][field] = "wrong"
@@ -97,5 +168,7 @@ def test_mismatched_or_coherently_rehashed_reference_is_rejected(tmp_path, fault
         _seal(inputs["pointer"])
     with pytest.raises(AssertionError):
         _assert_accepted_reference(**inputs)
-    _write_json(tmp_path / "reference_exact_io.json", {"fault": fault, "input": inputs,
-        "output": {"rejected": True}, "provider_calls": 0})
+    _write_json(
+        tmp_path / "reference_exact_io.json",
+        {"fault": fault, "input": inputs, "output": {"rejected": True}, "provider_calls": 0},
+    )

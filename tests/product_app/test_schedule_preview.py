@@ -84,9 +84,7 @@ def test_complete_preview_accounts_for_every_component_and_exact_slack() -> None
         source="place_snapshot",
         evidence_refs=("hours:museum",),
     )
-    result = preview_day_schedule(
-        _day(_stop(opening=opening, opening_hours_applicable=True), limit=240, end_travel=20)
-    )
+    result = preview_day_schedule(_day(_stop(opening=opening, opening_hours_applicable=True), limit=240, end_travel=20))
 
     stop = result.stops[0]
     assert stop.arrival_minute == 570
@@ -158,7 +156,12 @@ def test_missing_opening_hours_prevents_timeline_completion_when_applicable() ->
         (_duration("maximum", preferred=40, maximum=60), 40, "preferred", None),
         (_duration("maximum", preferred=None, maximum=60), None, "unavailable", "schedule_visit_duration_unavailable"),
         (_duration("range", preferred=45, minimum=30, maximum=60), 45, "preferred", None),
-        (_duration("range", preferred=None, minimum=30, maximum=60), None, "unavailable", "schedule_visit_duration_unavailable"),
+        (
+            _duration("range", preferred=None, minimum=30, maximum=60),
+            None,
+            "unavailable",
+            "schedule_visit_duration_unavailable",
+        ),
     ],
 )
 def test_duration_modes_have_truthful_accounting_semantics(

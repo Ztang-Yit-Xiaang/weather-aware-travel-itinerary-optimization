@@ -140,10 +140,8 @@ def validate_exact_io(
         document["reasoning_effort"] != effort
         or document["model"] != case_document["model"]
         or document["prompt_sha256"] != case_document["prompt_sha256"]
-        or document["source_snapshot_sha256"]
-        != case_document["source_snapshot"]["content_hash"]
-        or document["request_controls_sha256"]
-        != case_document["request_controls"]["content_hash"]
+        or document["source_snapshot_sha256"] != case_document["source_snapshot"]["content_hash"]
+        or document["request_controls_sha256"] != case_document["request_controls"]["content_hash"]
     ):
         raise ValueError("exact_io_identity_mismatch")
     if (
@@ -161,9 +159,7 @@ def validate_exact_io(
         raise ValueError("exact_io_records_invalid")
     cases = {case["case_id"]: case for case in corpus["cases"]}
     fixtures = corpus["context_fixtures"]
-    evidence_records = {
-        record["case_id"]: record for record in case_document["records"]
-    }
+    evidence_records = {record["case_id"]: record for record in case_document["records"]}
     counts: dict[str, int] = {}
     previous_completed: datetime | None = None
     for sequence, record in enumerate(records, start=1):
@@ -188,9 +184,7 @@ def validate_exact_io(
             raise ValueError("exact_transport_attempt_order_invalid")
         started = parse_aware(record["started_at"], "exact_transport_time_invalid")
         completed = parse_aware(record["completed_at"], "exact_transport_time_invalid")
-        if completed < started or (
-            previous_completed is not None and started < previous_completed
-        ):
+        if completed < started or (previous_completed is not None and started < previous_completed):
             raise ValueError("exact_transport_time_order_invalid")
         previous_completed = completed
         if (
@@ -201,9 +195,7 @@ def validate_exact_io(
             raise ValueError("exact_transport_latency_invalid")
         request_text = record["request_body_utf8"]
         response_text = record["response_body_utf8"]
-        if not isinstance(request_text, str) or hash_text(request_text) != record[
-            "request_body_sha256"
-        ]:
+        if not isinstance(request_text, str) or hash_text(request_text) != record["request_body_sha256"]:
             raise ValueError("exact_request_body_hash_mismatch")
         if (
             record["response_status_code"] != 200
@@ -228,8 +220,7 @@ def validate_exact_io(
             or request.get("store") is not False
             or request.get("tools") != []
             or request.get("max_output_tokens") != bundle.max_output_tokens
-            or request.get("reasoning")
-            != {"effort": effort, "context": bundle.reasoning_context}
+            or request.get("reasoning") != {"effort": effort, "context": bundle.reasoning_context}
             or not isinstance(request.get("text"), dict)
             or request["text"].get("verbosity") != bundle.text_verbosity
         ):
@@ -247,9 +238,7 @@ def validate_exact_io(
             raise ValueError("exact_response_identity_mismatch")
         try:
             parsed_json = json.loads(output_text(response))
-            parsed = OpenAIInterpretationSchemaV1.model_validate(
-                parsed_json, strict=True
-            )
+            parsed = OpenAIInterpretationSchemaV1.model_validate(parsed_json, strict=True)
         except (TypeError, ValueError) as exc:
             raise ValueError("exact_response_schema_invalid") from exc
         parsed_intents = [intent.model_dump(mode="json") for intent in parsed.intents]
@@ -282,20 +271,13 @@ def verify_file_manifest(output_dir: Path, source_snapshot: dict[str, Any]) -> N
     content_hash = unsigned.pop("content_hash", None)
     if content_hash != canonical_sha256(unsigned):
         raise ValueError("file_io_manifest_hash_mismatch")
-    if (
-        document.get("secret_input_files_omitted") is not True
-        or document.get("api_key_value_persisted") is not False
-    ):
+    if document.get("secret_input_files_omitted") is not True or document.get("api_key_value_persisted") is not False:
         raise ValueError("file_io_secret_boundary_invalid")
-    expected_inputs = {
-        row["path"]: (row["sha256"], row["size_bytes"])
-        for row in source_snapshot["files"]
-    }
+    expected_inputs = {row["path"]: (row["sha256"], row["size_bytes"]) for row in source_snapshot["files"]}
     observed_inputs = {
         row.get("path"): (row.get("sha256"), row.get("size_bytes"))
         for row in document.get("input_files", [])
-        if isinstance(row, dict)
-        and row.get("exact_content_location") == row.get("path")
+        if isinstance(row, dict) and row.get("exact_content_location") == row.get("path")
     }
     if observed_inputs != expected_inputs:
         raise ValueError("file_io_inputs_mismatch")
@@ -327,9 +309,7 @@ def verify_file_manifest(output_dir: Path, source_snapshot: dict[str, Any]) -> N
         raise ValueError("file_io_output_universe_mismatch")
 
 
-def verify_evidence_directory(
-    output_dir: Path, corpus_path: Path = DEFAULT_CORPUS
-) -> dict[str, Any]:
+def verify_evidence_directory(output_dir: Path, corpus_path: Path = DEFAULT_CORPUS) -> dict[str, Any]:
     output_dir = output_dir.resolve()
     corpus_path = corpus_path.resolve()
     corpus = load_corpus(corpus_path)
@@ -376,22 +356,11 @@ def verify_evidence_directory(
         "evaluation_scope": "live_fixed_24_exact_io",
         "reasoning_efforts": ["low", "medium"],
         "recommended_reasoning_effort": recommended,
-        "all_thresholds_passed": all(
-            summary["thresholds_passed"] for summary in summaries.values()
-        ),
-        "provider_attempts_total": sum(
-            summary["provider_attempts_total"] for summary in summaries.values()
-        ),
-        "transport_attempts_total": sum(
-            summary["transport_attempts_total"] for summary in summaries.values()
-        ),
-        "case_evidence_sha256": {
-            effort: summary["case_evidence_sha256"]
-            for effort, summary in summaries.items()
-        },
-        "exact_llm_io_sha256": {
-            effort: exact[effort]["sha256"] for effort in ("low", "medium")
-        },
+        "all_thresholds_passed": all(summary["thresholds_passed"] for summary in summaries.values()),
+        "provider_attempts_total": sum(summary["provider_attempts_total"] for summary in summaries.values()),
+        "transport_attempts_total": sum(summary["transport_attempts_total"] for summary in summaries.values()),
+        "case_evidence_sha256": {effort: summary["case_evidence_sha256"] for effort, summary in summaries.items()},
+        "exact_llm_io_sha256": {effort: exact[effort]["sha256"] for effort in ("low", "medium")},
         "source_snapshot_sha256": summaries["low"]["source_snapshot_sha256"],
         "raw_provider_content_persisted": False,
         "exact_llm_io_persisted": True,
@@ -435,4 +404,3 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-

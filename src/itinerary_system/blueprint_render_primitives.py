@@ -52,15 +52,12 @@ MATRIX_DEFAULT_ROUTE_KEY = "d7__bandit_repair__balanced"
 MATRIX_ROUTE_OFFSETS_ENABLED = False
 
 
-
 def _escape(value):
     return html.escape(str(value))
 
 
-
 def _route_cache_key(points):
     return "|".join(f"{lat:.5f},{lon:.5f}" for lat, lon in points)
-
 
 
 def _nearest_corridor_anchor(point, max_distance_km=55.0):
@@ -74,7 +71,6 @@ def _nearest_corridor_anchor(point, max_distance_km=55.0):
             best_name = name
             best_distance = distance
     return best_name if best_name is not None and best_distance <= float(max_distance_km) else None
-
 
 
 def _curated_corridor_fallback(left, right):
@@ -101,7 +97,6 @@ def _curated_corridor_fallback(left, right):
     if _point_distance_km(path[-1][0], path[-1][1], right[0], right[1]) > 1.0:
         path.append(right)
     return path, f"curated-corridor:{left_anchor}->{right_anchor}"
-
 
 
 def _fetch_osrm_route(points, cache, run_live=False):
@@ -226,7 +221,6 @@ def _fetch_osrm_route(points, cache, run_live=False):
     return stitched_path, mode
 
 
-
 def _dedupe_route_points(points):
     output = []
     for point in points:
@@ -238,7 +232,6 @@ def _dedupe_route_points(points):
     return output
 
 
-
 def _offset_route_points_for_visibility(points, offset_index):
     """Shift overview routes into visible bands so overlapping plans can be audited."""
     clean_points = _dedupe_route_points(points)
@@ -247,7 +240,6 @@ def _offset_route_points_for_visibility(points, offset_index):
     lat_shift = float(offset_index) * FULL_SCENE_OFFSET_LAT_STEP
     lon_shift = float(offset_index) * FULL_SCENE_OFFSET_LON_STEP
     return [[lat + lat_shift, lon + lon_shift] for lat, lon in clean_points]
-
 
 
 def _fetch_stitched_route(points, cache, run_live=False):
@@ -284,7 +276,6 @@ def _fetch_stitched_route(points, cache, run_live=False):
     return stitched_path, mode
 
 
-
 def _route_mode_label(modes):
     if not modes:
         return "single-point"
@@ -295,7 +286,6 @@ def _route_mode_label(modes):
     return "stitched-leg-cache"
 
 
-
 def _add_route_panes(map_object):
     """Keep generated route lines above the basemap and under marker labels."""
     folium.map.CustomPane(ROUTE_CONTEXT_PANE, z_index=620).add_to(map_object)
@@ -303,10 +293,8 @@ def _add_route_panes(map_object):
     folium.map.CustomPane(ROUTE_TOP_PANE, z_index=690).add_to(map_object)
 
 
-
 def _route_points_for_names(names):
     return [_coord_for_place(name) for name in names]
-
 
 
 def _finite_float(value, default=np.nan):
@@ -315,7 +303,6 @@ def _finite_float(value, default=np.nan):
     except Exception:
         return default
     return value if np.isfinite(value) else default
-
 
 
 def _add_static_result_line(
@@ -367,7 +354,6 @@ def _add_static_result_line(
     return f"{geometry_mode_prefix}; static-polyline; canvas-arrow-markers={arrow_count}"
 
 
-
 def _route_bounds(points):
     clean_points = _dedupe_route_points(points)
     if not clean_points:
@@ -378,7 +364,6 @@ def _route_bounds(points):
         [float(min(latitudes)), float(min(longitudes))],
         [float(max(latitudes)), float(max(longitudes))],
     ]
-
 
 
 def _route_midpoint(points):
@@ -404,7 +389,6 @@ def _route_midpoint(points):
     return clean_points[-1]
 
 
-
 def _bearing_degrees(left, right):
     lat1 = math.radians(float(left[0]))
     lat2 = math.radians(float(right[0]))
@@ -412,7 +396,6 @@ def _bearing_degrees(left, right):
     y = math.sin(delta_lon) * math.cos(lat2)
     x = math.cos(lat1) * math.sin(lat2) - math.sin(lat1) * math.cos(lat2) * math.cos(delta_lon)
     return (math.degrees(math.atan2(y, x)) + 360.0) % 360.0
-
 
 
 def _route_arrow_samples(points, interval_km=95.0, max_arrows=9):
@@ -445,7 +428,6 @@ def _route_arrow_samples(points, interval_km=95.0, max_arrows=9):
     return samples
 
 
-
 def _add_canvas_direction_arrows(
     layer, points, *, color, pane=ROUTE_TOP_PANE, interval_km=95.0, max_arrows=9, class_name="blueprint-route-arrow"
 ):
@@ -466,7 +448,6 @@ def _add_canvas_direction_arrows(
             pane=pane,
         ).add_to(layer)
     return len(samples)
-
 
 
 def _add_full_scene_route_band(
@@ -561,7 +542,6 @@ def _add_full_scene_route_band(
     return f"full-route-polyline-with-canvas-arrows; canvas-arrow-markers={arrow_count}"
 
 
-
 def _route_debug_value(value, default=""):
     if value is None:
         return default
@@ -571,7 +551,6 @@ def _route_debug_value(value, default=""):
     except Exception:
         pass
     return value
-
 
 
 def _route_points_from_day_group(group):
@@ -596,7 +575,6 @@ def _route_points_from_day_group(group):
     ]
 
 
-
 def _hotel_point_from_day_group(group):
     if group is None or group.empty:
         return []
@@ -606,7 +584,6 @@ def _hotel_point_from_day_group(group):
     if np.isfinite(hotel_lat) and np.isfinite(hotel_lon):
         return [float(hotel_lat), float(hotel_lon)]
     return []
-
 
 
 def _hotel_loop_points_from_day_group(group):
@@ -627,7 +604,6 @@ def _hotel_loop_points_from_day_group(group):
     local_rows = local_rows.sort_values(["stop_order", "attraction_name"]).reset_index(drop=True)
     stop_points = local_rows[["latitude", "longitude"]].dropna().astype(float).values.tolist()
     return [hotel_point, *stop_points, hotel_point], local_rows
-
 
 
 def _transition_points_from_day_group(group):
@@ -653,9 +629,7 @@ def _transition_points_from_day_group(group):
     overnight_city = str(first.get("overnight_city", first.get("city", "")))
     transition_rows = group[~group["city"].astype(str).eq(overnight_city)].copy()
     if not transition_rows.empty:
-        transition_rows["stop_order"] = (
-            _numeric_catalog_series(transition_rows, "stop_order", 1).astype(int)
-        )
+        transition_rows["stop_order"] = _numeric_catalog_series(transition_rows, "stop_order", 1).astype(int)
         transition_rows = transition_rows.sort_values(["stop_order", "attraction_name"]).reset_index(drop=True)
     stop_points = (
         transition_rows[["latitude", "longitude"]].dropna().astype(float).values.tolist()
@@ -663,7 +637,6 @@ def _transition_points_from_day_group(group):
         else []
     )
     return [start_point, *stop_points, end_point], transition_rows
-
 
 
 def _route_endpoint_city_labels(frame, fallback_start="San Francisco", fallback_end="Los Angeles"):
@@ -689,7 +662,6 @@ def _route_endpoint_city_labels(frame, fallback_start="San Francisco", fallback_
         or fallback_end
     )
     return start_city, end_city
-
 
 
 def _append_route_debug_row(
@@ -790,7 +762,6 @@ def _append_route_debug_row(
     )
 
 
-
 def _matrix_route_color(method, profile, trip_days):
     base_color = MATRIX_METHOD_STYLES.get(str(method), ("Route", "#E91E63", None, 0.0))[1]
     if str(profile) == "balanced":
@@ -798,7 +769,6 @@ def _matrix_route_color(method, profile, trip_days):
     if str(profile) == "relaxed":
         return {"#0096C7": "#38BDF8", "#111827": "#64748B", "#00A63E": "#2A9D8F"}.get(base_color, "#00897B")
     return {"#0096C7": "#7C2DFF", "#111827": "#7A5195", "#00A63E": "#E91E63"}.get(base_color, "#A020F0")
-
 
 
 def _matrix_route_offset(method, profile, trip_days):
@@ -810,7 +780,6 @@ def _matrix_route_offset(method, profile, trip_days):
     return float(method_offset + profile_offset + day_offset)
 
 
-
 def _matrix_route_control_label(first):
     if "comparison_label" in first and str(first.get("comparison_label", "")).strip():
         return str(first.get("comparison_label"))
@@ -818,7 +787,6 @@ def _matrix_route_control_label(first):
     method_label = MATRIX_METHOD_STYLES.get(str(first.get("method", "")), ("Route", "#E91E63", None, 0.0))[0]
     profile_label = str(first.get("profile_label", str(first.get("profile", "Route")).title()))
     return f"{trip_days}-Day · {method_label} · {profile_label}"
-
 
 
 def _full_route_points_from_plan(plan_df):

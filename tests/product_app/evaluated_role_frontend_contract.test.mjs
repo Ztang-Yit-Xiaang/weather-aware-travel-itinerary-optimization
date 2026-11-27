@@ -63,6 +63,15 @@ assert.ok(normalizers.exactKeys(row.preview.session.proposal, proposalKeys));
 assert.ok(await normalizers.normalizeRoleProposalIntegrity(
   proposal.role_proposal_integrity, proposal,
 ));
+const changedGuide = structuredClone(proposal);
+const guideStop = changedGuide.geography_plan.stops.features.find(
+  (feature) => feature.properties.destination_places?.length,
+);
+assert.ok(guideStop, "the signed proposal contains destination guide references");
+guideStop.properties.destination_places[0].visit_duration_minutes += 1;
+assert.equal(await normalizers.normalizeRoleProposalIntegrity(
+  proposal.role_proposal_integrity, changedGuide,
+), null, "destination guide metadata remains bound by the proposal signature");
 assert.equal(proposal.draft_content_hash, await normalizers.computedDraftContentHash(row.expected.draft));
 assert.equal(
   normalizers.canonicalJson(proposal.compiled_request.operations),

@@ -147,13 +147,8 @@ def freeze_route_evidence_bundle(
 
     road_flags = _bool_series(audit, "road_validated", "cache_audit", errors)
     snap_flags = _bool_series(audit, "snap_validated", "cache_audit", errors)
-    validated_keys = {
-        key for key, valid in zip(audit_keys, road_flags, strict=False) if valid and key
-    }
-    cache_alignment_valid = (
-        len(cache_keys) == len(set(cache_keys))
-        and cache_key_set == validated_keys
-    )
+    validated_keys = {key for key, valid in zip(audit_keys, road_flags, strict=False) if valid and key}
+    cache_alignment_valid = len(cache_keys) == len(set(cache_keys)) and cache_key_set == validated_keys
     if not cache_alignment_valid:
         errors.append("validated_cache_key_mismatch")
 
@@ -189,9 +184,7 @@ def freeze_route_evidence_bundle(
         if provenance_path.exists():
             paths["provider_provenance"] = provenance_path
 
-    artifact_hashes = {
-        name: _sha256(path) for name, path in paths.items() if path.exists() and path.is_file()
-    }
+    artifact_hashes = {name: _sha256(path) for name, path in paths.items() if path.exists() and path.is_file()}
     request_set_hash = _stable_hash(sorted(request_key_set)) if request_key_set else ""
     status_counts = _counts(audit, "status")
     provider_counts = _counts(cache, "provider")

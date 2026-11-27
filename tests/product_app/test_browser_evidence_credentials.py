@@ -26,8 +26,9 @@ def test_exact_nonsecret_body_is_not_reserialized() -> None:
 
 def test_session_response_redacts_credentials_and_discloses_original_hash() -> None:
     raw = '{"session_id":"session_synthetic","mutation_token":"synthetic-private-token"}'
-    response = SimpleNamespace(request=SimpleNamespace(post_data=None, method="POST"),
-                               url="http://127.0.0.1:8127/api/sessions", status=201)
+    response = SimpleNamespace(
+        request=SimpleNamespace(post_data=None, method="POST"), url="http://127.0.0.1:8127/api/sessions", status=201
+    )
     record = capture._http_record(response, response_body=raw)
     assert "synthetic-private-token" not in json.dumps(record)
     assert json.loads(record["response_body_utf8"])["mutation_token"] == "OMITTED_SECRET"
@@ -60,20 +61,25 @@ def test_evidence_security_scan_rejects_unredacted_token_verifier(tmp_path: Path
     verifier._verify_text_security(tmp_path)
 
 
-@pytest.mark.parametrize("filename,index_name", [
-    ("test_direct_edit_journeys_live.py", "responses"),
-    ("test_mobile_chat_journey_live.py", "http"),
-])
+@pytest.mark.parametrize(
+    "filename,index_name",
+    [
+        ("test_direct_edit_journeys_live.py", "responses"),
+        ("test_mobile_chat_journey_live.py", "http"),
+    ],
+)
 def test_nested_response_callback_does_not_overwrite_exact_io(tmp_path, filename, index_name):
     source = (_PATH.parent / filename).read_text(encoding="utf-8")
-    callback = next(node for node in ast.walk(ast.parse(source)) if isinstance(node, ast.FunctionDef) and node.name == "record")
+    callback = next(
+        node for node in ast.walk(ast.parse(source)) if isinstance(node, ast.FunctionDef) and node.name == "record"
+    )
     index = []
-    namespace = {"evidence":tmp_path,index_name:index,"urlsplit":urlsplit,"_write_json":capture._write_json}
+    namespace = {"evidence": tmp_path, index_name: index, "urlsplit": urlsplit, "_write_json": capture._write_json}
 
     def read_body(response, *, response_body=None):
         if response.url.endswith("/outer"):
             namespace["record"](SimpleNamespace(url="http://127.0.0.1:8127/api/inner"))
-        return {"url":response.url,"method":"GET","response_status_code":200}
+        return {"url": response.url, "method": "GET", "response_status_code": 200}
 
     namespace["_http_record"] = read_body
     exec(compile(ast.Module(body=[callback], type_ignores=[]), filename, "exec"), namespace)

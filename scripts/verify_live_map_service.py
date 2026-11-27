@@ -79,10 +79,7 @@ def verify(asset_root: Path, base_url: str, allowed_origin: str) -> dict[str, An
         verified_assets += 1
 
     status, headers, body = request(f"{base_url}/provenance.json", origin=allowed_origin)
-    if (
-        status != 200
-        or hashlib.sha256(body).hexdigest() != hashlib.sha256(provenance_path.read_bytes()).hexdigest()
-    ):
+    if status != 200 or hashlib.sha256(body).hexdigest() != hashlib.sha256(provenance_path.read_bytes()).hexdigest():
         raise LiveMapVerificationError("served_provenance_mismatch")
 
     archive_size = provenance["artifact_size"]
@@ -128,9 +125,7 @@ def verify(asset_root: Path, base_url: str, allowed_origin: str) -> dict[str, An
         for method in ("POST", "PUT", "DELETE"):
             status, _, _ = request(f"{base_url}{target}", method=method)
             if status != 405:
-                raise LiveMapVerificationError(
-                    f"unsafe_method_allowed:{target}:{method}:{status}"
-                )
+                raise LiveMapVerificationError(f"unsafe_method_allowed:{target}:{method}:{status}")
     status, _, _ = request(
         archive_url,
         origin=allowed_origin,

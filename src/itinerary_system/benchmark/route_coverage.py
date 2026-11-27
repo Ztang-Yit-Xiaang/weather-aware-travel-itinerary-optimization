@@ -40,8 +40,7 @@ class BenchmarkRouteCoverageReport:
             "missing_pair_count": len(self.missing_pairs),
             "ineligible_pair_count": len(self.ineligible_pairs),
             "missing_pairs": [
-                {"origin_id": origin, "destination_id": destination}
-                for origin, destination in self.missing_pairs
+                {"origin_id": origin, "destination_id": destination} for origin, destination in self.missing_pairs
             ],
             "ineligible_pairs": [
                 {"origin_id": origin, "destination_id": destination, "reason": reason}

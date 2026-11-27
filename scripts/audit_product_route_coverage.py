@@ -22,14 +22,8 @@ def build_report(repository_root: Path, demo_directory: Path) -> dict[str, Any]:
         bundle.child_plan,
         *(plan for plan, _label in package.additional_plans),
     )
-    cell_index = {
-        (str(cell["origin_id"]), str(cell["destination_id"])): cell
-        for cell in bundle.route_matrix["cells"]
-    }
-    reports = [
-        audit_route_coverage(plan, package.route_legs_by_plan[plan["plan_id"]], cell_index)
-        for plan in plans
-    ]
+    cell_index = {(str(cell["origin_id"]), str(cell["destination_id"])): cell for cell in bundle.route_matrix["cells"]}
+    reports = [audit_route_coverage(plan, package.route_legs_by_plan[plan["plan_id"]], cell_index) for plan in plans]
     return {
         "schema_version": "product-route-coverage-audit-v1",
         "status": "complete" if all(report.complete for report in reports) else "incomplete",

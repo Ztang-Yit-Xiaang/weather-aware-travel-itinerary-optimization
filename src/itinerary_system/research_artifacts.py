@@ -306,14 +306,18 @@ def owned_constraint_records(
     return tuple(active)
 
 
-def detect_post_solve_mutation(before: PlanArtifact | PlanArtifactV2, after: PlanArtifact | PlanArtifactV2) -> MutationReport:
+def detect_post_solve_mutation(
+    before: PlanArtifact | PlanArtifactV2, after: PlanArtifact | PlanArtifactV2
+) -> MutationReport:
     """Detect material plan-content changes that require new lineage."""
 
     before_v2 = _ensure_v2(before)
     after_v2 = _ensure_v2(after)
     before_record = before_v2.to_record(include_content_hash=False)
     after_record = after_v2.to_record(include_content_hash=False)
-    changed_fields = tuple(field for field in MATERIAL_PLAN_FIELDS if before_record.get(field) != after_record.get(field))
+    changed_fields = tuple(
+        field for field in MATERIAL_PLAN_FIELDS if before_record.get(field) != after_record.get(field)
+    )
     reason_codes = tuple(_mutation_reason_code(field) for field in changed_fields)
     material_change = bool(changed_fields)
     return MutationReport(

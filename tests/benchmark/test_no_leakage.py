@@ -317,7 +317,9 @@ def test_publication_manifest_blocks_unvalidated_routes(tmp_path: Path):
     )
     result = run_benchmark_suite(
         scenarios=(scenario,),
-        methods=tuple(BenchmarkMethodAdapter(method_id=method_id, runner=unvalidated_result) for method_id in method_ids),
+        methods=tuple(
+            BenchmarkMethodAdapter(method_id=method_id, runner=unvalidated_result) for method_id in method_ids
+        ),
         output_dir=tmp_path / "publication",
         publication_mode=True,
     )
@@ -343,9 +345,7 @@ def test_publication_manifest_requires_method_specific_planner_provenance(tmp_pa
         def run(_):
             return {
                 "status": "completed",
-                "planner_runs": (
-                    {"method_requested": method_id, "method_executed": method_id},
-                ),
+                "planner_runs": ({"method_requested": method_id, "method_executed": method_id},),
                 "evaluations": (
                     {
                         "comparison_eligibility": "eligible",
@@ -369,8 +369,7 @@ def test_publication_manifest_requires_method_specific_planner_provenance(tmp_pa
     result = run_benchmark_suite(
         scenarios=(scenario,),
         methods=tuple(
-            BenchmarkMethodAdapter(method_id=method_id, runner=result_for(method_id))
-            for method_id in method_ids
+            BenchmarkMethodAdapter(method_id=method_id, runner=result_for(method_id)) for method_id in method_ids
         ),
         output_dir=tmp_path / "provenance",
         publication_mode=True,
@@ -395,9 +394,7 @@ def test_publication_manifest_rejects_relabelled_method_implementation(tmp_path:
     def relabelled_result(_):
         return {
             "status": "completed",
-            "planner_runs": (
-                {"method_requested": "full_reoptimization", "method_executed": "full_reoptimization"},
-            ),
+            "planner_runs": ({"method_requested": "full_reoptimization", "method_executed": "full_reoptimization"},),
             "evaluations": (
                 {
                     "comparison_eligibility": "eligible",
@@ -410,7 +407,9 @@ def test_publication_manifest_rejects_relabelled_method_implementation(tmp_path:
 
     result = run_benchmark_suite(
         scenarios=(scenario,),
-        methods=tuple(BenchmarkMethodAdapter(method_id=method_id, runner=relabelled_result) for method_id in method_ids),
+        methods=tuple(
+            BenchmarkMethodAdapter(method_id=method_id, runner=relabelled_result) for method_id in method_ids
+        ),
         output_dir=tmp_path / "relabelled",
         publication_mode=True,
     )

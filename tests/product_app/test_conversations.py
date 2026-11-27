@@ -152,9 +152,7 @@ def test_retention_delete_one_and_delete_all(tmp_path: Path) -> None:
         repository.get(expiring.conversation_id, expiring.session_id)
 
 
-def test_capacity_and_turn_limits_never_truncate_active_data(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_capacity_and_turn_limits_never_truncate_active_data(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(conversation_module, "MAX_FILES", 2)
     monkeypatch.setattr(conversation_module, "MAX_TURNS", 1)
     repository = ConversationRepository(tmp_path / "state")

@@ -11,6 +11,7 @@ This directory is organized by the kind of question you are trying to answer.
 | [planning/](planning/) | Active planning index, research gates, technical specification, and Copilot implementation plan. |
 | [audits/](audits/) | Current independent product audits, reproducible baseline evidence, and cross-audit synthesis. |
 | [reference/](reference/) | Stable engineering references such as the data dictionary and quality workflow. |
+| [deployment/](deployment/) | Railway, Supabase, ORS and GitHub Pages deployment instructions and cost limits. |
 | [slides/](slides/) | Literature-review slide source and PDF output. |
 | [assets/](assets/) | README/dashboard images. |
 | [figures/](figures/) | Research figures referenced from Markdown or papers. |
@@ -19,6 +20,7 @@ This directory is organized by the kind of question you are trying to answer.
 
 | Need | Start Here |
 | --- | --- |
+| Low-cost interactive app hosting | [deployment/railway_supabase_ors.md](deployment/railway_supabase_ors.md) |
 | Project and literature orientation | [literature/literature_onboarding_guide.md](literature/literature_onboarding_guide.md) |
 | Core papers and publication positioning | [literature/core_paper_reading_cards.md](literature/core_paper_reading_cards.md) |
 | Full evidence bank | [literature/literature_deep_read_study_report.md](literature/literature_deep_read_study_report.md) |

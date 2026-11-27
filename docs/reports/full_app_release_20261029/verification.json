@@ -1,0 +1,247 @@
+{
+  "schema_version": "full-app-hosting-preparation-v1",
+  "recorded_at": "2026-10-30T06:26:31.339824+00:00",
+  "build_id": "d50d8ba9ec56a322",
+  "status": "implemented_and_focused_local_verified",
+  "cloud_deployed": false,
+  "paid_resources_provisioned": false,
+  "openai_calls": 0,
+  "live_ors_calls": 0,
+  "database": "disposable local PostgreSQL 16",
+  "authentication": "synthetic local browser Auth; real Supabase not exercised",
+  "tests": {
+    "regression-final.xml": {
+      "tests": 448,
+      "errors": 0,
+      "failures": 0,
+      "skipped": 1,
+      "passed": 447,
+      "seconds": 334.099
+    },
+    "hosted-final.xml": {
+      "tests": 91,
+      "errors": 0,
+      "failures": 0,
+      "skipped": 0,
+      "passed": 91,
+      "seconds": 173.148
+    },
+    "postgres-real-final.xml": {
+      "tests": 85,
+      "errors": 0,
+      "failures": 0,
+      "skipped": 2,
+      "passed": 83,
+      "seconds": 5.47
+    },
+    "providers.xml": {
+      "tests": 228,
+      "errors": 0,
+      "failures": 0,
+      "skipped": 0,
+      "passed": 228,
+      "seconds": 14.596
+    },
+    "pages-export.xml": {
+      "tests": 9,
+      "errors": 0,
+      "failures": 0,
+      "skipped": 0,
+      "passed": 9,
+      "seconds": 0.614
+    },
+    "frontend-wrappers.xml": {
+      "tests": 118,
+      "errors": 0,
+      "failures": 1,
+      "skipped": 0,
+      "passed": 117,
+      "seconds": 189.164
+    },
+    "frontend-ownership.xml": {
+      "tests": 21,
+      "errors": 0,
+      "failures": 0,
+      "skipped": 0,
+      "passed": 21,
+      "seconds": 1.223
+    }
+  },
+  "standalone_node_without_recorded_input_fixtures": {
+    "tests": 495,
+    "pass": 483,
+    "fail": 10,
+    "skipped": 2
+  },
+  "browser": {
+    "frontend_origin": "http://127.0.0.1:8160",
+    "api_origin": "http://127.0.0.1:8159",
+    "subpath": "/demo/?view=map",
+    "selected_day": 3,
+    "radius_km": 2,
+    "nature_preference": 1,
+    "mass_level": 0.95,
+    "catalog_places": 14,
+    "reload_retains_settings": true,
+    "sign_out_returns_to_form": true,
+    "backend_restart_restores_day_and_settings": true,
+    "new_drafts": 0,
+    "new_acceptances": 0,
+    "zoom_refresh_evidence": [
+      "screenshots/11-hosted-zoom-settled.jpg",
+      "screenshots/12-hosted-zoom-after-refresh.jpg"
+    ]
+  },
+  "container": {
+    "uid": 10001,
+    "build_id": "d50d8ba9ec56a322",
+    "health": "ready",
+    "unauthenticated_status": 401,
+    "session_create": 200,
+    "selection": 200,
+    "postgres_restart_restore": true,
+    "peak_rss_mib": 318.62,
+    "ors_calls": 0,
+    "openai_calls": 0,
+    "auth": "synthetic local verifier",
+    "cloud_deployment": false
+  },
+  "source_sha256": {
+    ".railway/railway.ts": "da83907a2ed0aac899b3d5ac394cdec9073268fe8df680420a9dbc88a60d3cd5",
+    "configs/interest_regions/exploration_catalog.json": "7789594b11100b609fa05051813b7a3a6b3b02e2e48365d626eb8faf991edf45",
+    "configs/interest_regions/exploration_manifest.json": "323a3d9ab4a2cc2ffc8f2f6c47635a0aee2efbfc27ebb8a2c1de8783d37ccb78",
+    "configs/interest_regions/itinerary_places.json": "303287ec150ecdc2108033aec50efae3a57d3c877ec3f88b8733c7e23d36747a",
+    "configs/interest_regions/presidio_places.json": "8b16c58df65f2656dd9d9495f0b714df323f7f5c4bbc2689d122117ea78a9b58",
+    "deploy/hosted.env.example": "359fab01940b3560d63ad936f457c90a9487b26321a50cadaab654f7338dd656",
+    "deploy/requirements-hosted.txt": "47db7d34993fbe51285bbffac123d90f447f821b1fbff0748ab80fe7e156e720",
+    "deploy/supabase/001_itinerary_state.sql": "60bcf4b031293009bb5aaa546f391688afbe76c9019d8db351c837840486e3fe",
+    "scripts/export_product_pages.py": "b2f789507f6f9f47410f790ad984f6c78eb9e80254d000320b467086f2b3ef4e",
+    "scripts/prepare_interest_region_catalog.py": "cad6e8dd2f8bbeff0bd6d4914c545793a08a734ec8acc43556819cb75495b08e",
+    "scripts/run_hosted_app.py": "d707ed08c8cc19c353605c0715e0f837ff209c52d930e330994d4c5a38236bcc",
+    "scripts/run_product_app.py": "727d1908d5509afed81565617f1124ab3d91da5402de47d8facbf13d15f2470b",
+    "src/itinerary_system/interest_surface.py": "350d087b85a088b17b5cf057039461e6c8a3f1cb650ba731d200501fe52ab434",
+    "src/itinerary_system/product_app/api.py": "ab5fed66ce5b548b521d84a2b381a13ecaaed0e40dc32503beadbefb4e2ad5bd",
+    "src/itinerary_system/product_app/candidate_discovery.py": "6ecaa533aa64d8717d0cfd21363fcef624d862f21ad099265a687c82cb21c4cb",
+    "src/itinerary_system/product_app/draft_compiler.py": "2c2702739fa19f199bc77e57aad71e7797f4a53c85e76483cc7643794e18f4ea",
+    "src/itinerary_system/product_app/hosted.py": "49b4402b3d4051df510abeba49dce65ee31c7892ad362f058d08d7d18dbb66f3",
+    "src/itinerary_system/product_app/interest_regions.py": "da5e2c595bb69c5b02a9fa16cbdb43b6279e3d5eda4aa836fc555c56f53199ea",
+    "src/itinerary_system/product_app/map_interactions.py": "76ea158d21bad92836250f466b32ab4f4dc2c01aaa2e3ba8024c077863075152",
+    "src/itinerary_system/product_app/nearby_places.py": "dfaf43b15aa062d3f35e8ec85134109ab4584f7ac6151e20fbee94f9abb62d8f",
+    "src/itinerary_system/product_app/ors_runtime.py": "0a5b7c435e27b16c7f9bd14869005ae5fbe2ccb13d85720c286e9522657fe09a",
+    "src/itinerary_system/product_app/postgres_state.py": "71f9bbd83b4404cac879b13f11ce05d93a8445f88adc2da93b6fe59e29be05b8",
+    "src/itinerary_system/product_app/routing_runtime.py": "c8ad10450246e5af2e7c680e81eef644747947f6a0a079cfc03aa1c056fb7dc8",
+    "src/itinerary_system/product_app/runtime.py": "79930d4043c3a86f19a34d07e70bf45d953ce8406bf744562257316707ecd875",
+    "src/itinerary_system/product_app/service.py": "7450d1663cd66a4eda92ba9e0cdcc7152f94ce95c4125f6ae47a6144cb40dfa2",
+    "src/itinerary_system/product_app/static/css/app.css": "5019c50c6aa19c8ac9e968d49743d1497824545064c25ad008ad4013f8a58b4e",
+    "src/itinerary_system/product_app/static/index.html": "17e4cc8e0696466cf0d93f9d914c53d221622c00d4aac5de01dcf905b6639e7b",
+    "src/itinerary_system/product_app/static/js/app.js": "da09be331777d13c334a86d9130443c61da92807dfbe9ebefc447f39f43480fe",
+    "src/itinerary_system/product_app/static/js/deployment-client.js": "94b2d59b4ebb1e9e7f895162f3bc750655c78b8341ab7df462b253e2eb0a17b3",
+    "src/itinerary_system/product_app/static/js/deployment.js": "d3aa54c129780bed360cb106daf59f91b5ef57634671dc92951553eb07ebbccb",
+    "src/itinerary_system/product_app/static/js/interest-regions.js": "b503beb9d071ba3e6a9217701cf8342f8ca9cf2d1590c017a55450e2828c694d",
+    "src/itinerary_system/product_app/static/js/map-controller-v2.js": "486affa5888ed682ce03cace6757db9dd7c3e9f1af4b10bf2194a1ea18cbfa82",
+    "src/itinerary_system/product_app/static/js/map.js": "3cc35fccb59eecebc7fb2284e84f5bbf69faba96b56d99eb780db60d2ab0871d",
+    "src/itinerary_system/product_app/static/js/workspace-storage.js": "bf4a5693a5d4ff9b103bdf5ad25be050d5012ecde98d770bf0fc870a160009ab",
+    "src/itinerary_system/product_app/static/vendor/fonts/Noto Sans Regular/0-255.pbf": "62c6d49b15fa836eb6aa45e259c7ca6762f44b011b09e47776efbe4a6db1b397",
+    "src/itinerary_system/product_app/static/vendor/licenses/MapLibre-BSD-3-Clause.txt": "ee5fc05a0677eaf69601d2c7db0d9ecd6cc27c3abc1d0733bc9ed34707cf8ef2",
+    "src/itinerary_system/product_app/static/vendor/licenses/Noto-OFL-1.1.txt": "7713cfc8e3c36d5ec4aa3d6cffe7500a1b3310f8a86d914b8ea09c2a9dee7c2d",
+    "src/itinerary_system/product_app/static/vendor/manifest.json": "54ace46ac2da7fe490c450a2c84419bd23c8f497b6dbf947cfab16d195657fb3",
+    "src/itinerary_system/product_app/static/vendor/maplibre-gl.css": "ab1e70d59ec40465bae7e7030da2f3ccf28133fd502e62bd598eefbadfd7a732",
+    "src/itinerary_system/product_app/static/vendor/maplibre-gl.js": "45a9b07a9189ce56054c620a947ccf41e291e58c95e9b61533b740aaa65ee5cb",
+    "src/itinerary_system/product_app/trip_replanner.py": "afa09f4e0777c998f79e33c547c034f0c1d6adc311317f88a550240c91dd17ac",
+    "src/itinerary_system/product_app/workspace.py": "40ea588218f6d19cccaf47fce397d444e96344c58843c1a85b80fdcb8c8ab55b"
+  },
+  "screenshots": [
+    {
+      "path": "screenshots/01-default-parent-interest.jpg",
+      "sha256": "1c2a4f9a6f237ebeebc4adc69fd6ea68878a277e11a6aa926b042c1cc78a0158",
+      "bytes": 136987,
+      "build_id": "d417281312091261"
+    },
+    {
+      "path": "screenshots/02-golden-gate-two-km.jpg",
+      "sha256": "12200883eaf6c4576a237ef58694fbf39f3ae7d3a5a84779ed1b66d060936a59",
+      "bytes": 138330,
+      "build_id": "d417281312091261"
+    },
+    {
+      "path": "screenshots/03-saved-interest-settings.jpg",
+      "sha256": "7672eb770b510514999ab8aa2c6e776f1b222cfc69f904742c08f11bb556b63e",
+      "bytes": 139179,
+      "build_id": "d417281312091261"
+    },
+    {
+      "path": "screenshots/04-yosemite-visitor-area.jpg",
+      "sha256": "a9d96796b6e79a77caf3d91504a8df79eaf55579686d273378e580e95a16233b",
+      "bytes": 141140,
+      "build_id": "d417281312091261"
+    },
+    {
+      "path": "screenshots/05-hosted-local-sign-in.jpg",
+      "sha256": "a09ac6cd2fe7ad14f3b9066d5c1b9cd58cdd2f30bd6492edd1e30a6ea3ade283",
+      "bytes": 25444,
+      "build_id": "d50d8ba9ec56a322"
+    },
+    {
+      "path": "screenshots/06-hosted-local-workspace.jpg",
+      "sha256": "0b2006b577260aea70572d8afb32f6300f7255c88e26eaa60bfbf7886333fe36",
+      "bytes": 191671,
+      "build_id": "d50d8ba9ec56a322"
+    },
+    {
+      "path": "screenshots/07-hosted-local-map-ready.jpg",
+      "sha256": "37f501218a9e126e52c5bdb8b478ec045f25e70186e216976ee37abcdb329ab9",
+      "bytes": 143367,
+      "build_id": "d50d8ba9ec56a322"
+    },
+    {
+      "path": "screenshots/08-hosted-yosemite-preferences.jpg",
+      "sha256": "efa48f34597bc80d184a57459bbab50d09ec2ca8d6c8dbead986f77b08c1ce12",
+      "bytes": 171308,
+      "build_id": "d50d8ba9ec56a322"
+    },
+    {
+      "path": "screenshots/09-hosted-zoom-before-refresh.jpg",
+      "sha256": "4b5d9e4e09a65375be0adbab719de993d00f62b3de7102c8404f53924ec223c5",
+      "bytes": 171047,
+      "build_id": "d50d8ba9ec56a322"
+    },
+    {
+      "path": "screenshots/10-hosted-map-double-click.jpg",
+      "sha256": "e0e47f2df685ae00b9d9160202e54a34171758d3a169e48470028013b902363d",
+      "bytes": 157362,
+      "build_id": "d50d8ba9ec56a322"
+    },
+    {
+      "path": "screenshots/11-hosted-zoom-settled.jpg",
+      "sha256": "c0271e767cfff30acad9a80c6b9f7317ac05b55171ed8246a524edf486fe3073",
+      "bytes": 153397,
+      "build_id": "d50d8ba9ec56a322"
+    },
+    {
+      "path": "screenshots/12-hosted-zoom-after-refresh.jpg",
+      "sha256": "2ba9a273a4965c20794efd5440626f293d040d77b8f34e817d68b55d8585e1f2",
+      "bytes": 157986,
+      "build_id": "d50d8ba9ec56a322"
+    },
+    {
+      "path": "screenshots/13-hosted-signed-out.jpg",
+      "sha256": "a09ac6cd2fe7ad14f3b9066d5c1b9cd58cdd2f30bd6492edd1e30a6ea3ade283",
+      "bytes": 25444,
+      "build_id": "d50d8ba9ec56a322"
+    },
+    {
+      "path": "screenshots/14-hosted-after-database-restart.jpg",
+      "sha256": "4b5d9e4e09a65375be0adbab719de993d00f62b3de7102c8404f53924ec223c5",
+      "bytes": 171047,
+      "build_id": "d50d8ba9ec56a322"
+    }
+  ],
+  "remaining": [
+    "free account and credential setup",
+    "real Supabase Auth/TLS and real ORS smoke",
+    "cloud restart and optimizer peak-memory test",
+    "gated Pages publish",
+    "historical recorded-input browser/language gate"
+  ],
+  "cleanup": "Owned temporary services and artifacts removed after receipt retention; see cleanup.json"
+}

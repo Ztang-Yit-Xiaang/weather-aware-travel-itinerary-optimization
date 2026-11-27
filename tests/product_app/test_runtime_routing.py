@@ -279,8 +279,7 @@ def test_table_builds_directed_matrix_and_preserves_unavailable_cells() -> None:
     assert matrix.cell("a", "c").road_validated is False
     assert matrix.cell("a", "c").routing_status == "osrm_table_unavailable"
     assert transport.calls[0]["url"] == (
-        "http://127.0.0.1:5000/table/v1/driving/"
-        "-118.25,34.05;-118.2,34.1;-118.15,34.15?annotations=duration,distance"
+        "http://127.0.0.1:5000/table/v1/driving/-118.25,34.05;-118.2,34.1;-118.15,34.15?annotations=duration,distance"
     )
 
 
@@ -389,9 +388,7 @@ def test_default_transport_enforces_redirect_body_limit_and_timeout() -> None:
     payload = json.dumps({"code": "Ok"}).encode()
 
     redirect_transport = _UrlLibRoutingTransport()
-    redirect_transport._opener = FakeOpener(
-        FakeResponse(payload, url="http://127.0.0.1:5001/redirected")
-    )
+    redirect_transport._opener = FakeOpener(FakeResponse(payload, url="http://127.0.0.1:5001/redirected"))
     with pytest.raises(RuntimeRoutingError, match="routing_redirect_not_allowed"):
         redirect_transport.fetch(
             "http://127.0.0.1:5000/route",

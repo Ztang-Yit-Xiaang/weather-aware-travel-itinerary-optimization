@@ -146,7 +146,6 @@ def _add_flow_route(
     return full_path, f"{mode}; {line_count} connected legs; canvas-arrow-markers={arrow_count}"
 
 
-
 def _add_intercity_route_layer(map_object, route_name, sequence, color, route_cache, run_live, scenic=False, show=True):
     layer = folium.FeatureGroup(name=route_name, show=show)
     leg_rows = []
@@ -241,7 +240,6 @@ def _add_intercity_route_layer(map_object, route_name, sequence, color, route_ca
 
     layer.add_to(map_object)
     return leg_rows, all_path_points, layer
-
 
 
 def _add_selected_result_layer(
@@ -339,7 +337,6 @@ def _add_selected_result_layer(
 
     layer.add_to(map_object)
     return layer
-
 
 
 def _add_model_comparison_layers(
@@ -511,7 +508,6 @@ def _add_model_comparison_layers(
     return {name: layers for name, layers in grouped_layers.items() if layers}
 
 
-
 def _add_traveler_overview_layers(
     map_object, profile_day_plans, route_cache=None, run_live=False, route_debug_rows=None, show_by_default=True
 ):
@@ -531,9 +527,7 @@ def _add_traveler_overview_layers(
 
         sorted_plan = plan_df.copy()
         sorted_plan["day"] = _numeric_catalog_series(sorted_plan, "day", 1).astype(int)
-        sorted_plan["stop_order"] = (
-            _numeric_catalog_series(sorted_plan, "stop_order", 1).astype(int)
-        )
+        sorted_plan["stop_order"] = _numeric_catalog_series(sorted_plan, "stop_order", 1).astype(int)
         sorted_plan = sorted_plan.sort_values(["day", "stop_order", "attraction_name"]).reset_index(drop=True)
 
         full_points = []
@@ -584,7 +578,6 @@ def _add_traveler_overview_layers(
         layer.add_to(map_object)
         layers.append(layer)
     return layers
-
 
 
 def _add_city_detail_layers(
@@ -851,7 +844,6 @@ def _add_city_detail_layers(
     return city_layers, transition_layers
 
 
-
 def _add_route_matrix_layers(
     map_object, output_dir, route_cache, run_live, route_debug_rows=None, route_debug_registry=None
 ):
@@ -862,9 +854,7 @@ def _add_route_matrix_layers(
     matrix_routes = matrix_routes.copy()
     matrix_routes["trip_days"] = _numeric_catalog_series(matrix_routes, "trip_days", 7).astype(int)
     matrix_routes["day"] = _numeric_catalog_series(matrix_routes, "day", 1).astype(int)
-    matrix_routes["stop_order"] = (
-        _numeric_catalog_series(matrix_routes, "stop_order", 1).astype(int)
-    )
+    matrix_routes["stop_order"] = _numeric_catalog_series(matrix_routes, "stop_order", 1).astype(int)
     matrix_routes = matrix_routes.sort_values(["trip_days", "method", "profile", "day", "stop_order"]).reset_index(
         drop=True
     )
@@ -1333,7 +1323,6 @@ def _add_route_matrix_layers(
         except Exception:
             pass
     return all_layers, hidden_layers
-
 
 
 def _add_full_scene_overview_layer(

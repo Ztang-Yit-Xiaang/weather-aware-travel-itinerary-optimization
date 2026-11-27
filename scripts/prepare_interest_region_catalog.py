@@ -60,20 +60,22 @@ def main() -> None:
             raise ValueError("exploration_park_coordinate_invalid")
         stem, suffix = attributes["PARK_NAME"].rsplit(" ", 1)
         name = stem + " " + suffixes[suffix]
-        points.append({
-            "place_id": "csp_entry_" + attributes["GISID"].lower(),
-            "name": name,
-            "display_coordinate": {"longitude": longitude, "latitude": latitude},
-            "place_categories": ["culture", "outdoor"] if suffix == "SHP" else ["nature", "outdoor"],
-            "source_refs": [attributes["PARK_WEB_PG"], park_service],
-            "description": "California State Parks mapped park entry. Current opening status and itinerary access have not been checked.",
-            "location_kind": "park_entry",
-            "source_name": attributes["PARK_NAME"],
-            "source_attribution": "California State Parks",
-            "recommended_visit_minutes": None,
-            "weather_suitability": None,
-            "static_utility": None,
-        })
+        points.append(
+            {
+                "place_id": "csp_entry_" + attributes["GISID"].lower(),
+                "name": name,
+                "display_coordinate": {"longitude": longitude, "latitude": latitude},
+                "place_categories": ["culture", "outdoor"] if suffix == "SHP" else ["nature", "outdoor"],
+                "source_refs": [attributes["PARK_WEB_PG"], park_service],
+                "description": "California State Parks mapped park entry. Current opening status and itinerary access have not been checked.",
+                "location_kind": "park_entry",
+                "source_name": attributes["PARK_NAME"],
+                "source_attribution": "California State Parks",
+                "recommended_visit_minutes": None,
+                "weather_suitability": None,
+                "static_utility": None,
+            }
+        )
     local_sources = []
     visitor_areas = []
     for filename in ("presidio_places.json", "itinerary_places.json"):
@@ -83,17 +85,31 @@ def main() -> None:
         if local["schema_version"] != "interest-local-places-v1":
             raise ValueError("exploration_local_source_invalid")
         visitor_areas.extend(local.get("visitor_areas", []))
-        local_sources.append({"file": filename, "sha256": hashlib.sha256(local_payload).hexdigest(),
-                              "count": len(local["places"]), "attribution": local["attribution"],
-                              "license_url": local.get("license_url"), "retrieved_at": local["retrieved_at"]})
+        local_sources.append(
+            {
+                "file": filename,
+                "sha256": hashlib.sha256(local_payload).hexdigest(),
+                "count": len(local["places"]),
+                "attribution": local["attribution"],
+                "license_url": local.get("license_url"),
+                "retrieved_at": local["retrieved_at"],
+            }
+        )
         for point in local["places"]:
             coordinate = point["display_coordinate"]
             if not (-180 <= coordinate["longitude"] <= 180 and -90 <= coordinate["latitude"] <= 90):
                 raise ValueError("exploration_local_coordinate_invalid")
             # Merge nearby records with the same name, keeping official coordinates first.
-            duplicate = next((old for old in points if old["name"].casefold() == point["name"].casefold()
-                              and abs(old["display_coordinate"]["latitude"] - coordinate["latitude"]) < .002
-                              and abs(old["display_coordinate"]["longitude"] - coordinate["longitude"]) < .002), None)
+            duplicate = next(
+                (
+                    old
+                    for old in points
+                    if old["name"].casefold() == point["name"].casefold()
+                    and abs(old["display_coordinate"]["latitude"] - coordinate["latitude"]) < 0.002
+                    and abs(old["display_coordinate"]["longitude"] - coordinate["longitude"]) < 0.002
+                ),
+                None,
+            )
             if duplicate:
                 duplicate["source_refs"] = list(dict.fromkeys(duplicate["source_refs"] + point["source_refs"]))
             else:

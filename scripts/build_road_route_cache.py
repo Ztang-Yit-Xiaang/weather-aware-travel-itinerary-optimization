@@ -117,9 +117,7 @@ def main() -> int:
         print(f"Configured routing anchors: {', '.join(sorted(routing_anchors))}")
     validated = int(result.cache_df["road_validated"].astype(bool).sum()) if not result.cache_df.empty else 0
     snap_validated = (
-        int(result.audit_df["snap_validated"].astype(bool).sum())
-        if "snap_validated" in result.audit_df.columns
-        else 0
+        int(result.audit_df["snap_validated"].astype(bool).sum()) if "snap_validated" in result.audit_df.columns else 0
     )
     requested = int(len(result.audit_df))
     print(f"Wrote {result.cache_path}")

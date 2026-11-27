@@ -103,8 +103,22 @@ def _distance_from_focus(coordinate: dict, focus: dict) -> float:
     return float(2 * 6371.0088 * np.arcsin(np.sqrt(np.clip(haversine, 0, 1))))
 
 
-def _interest_search_context(parent_plan, geography, day, route_leg_id, focus_stop_id, radius_km, repository_root=None, search_area="visitor_area"):
-    if isinstance(radius_km, bool) or not isinstance(radius_km, (int, float)) or not np.isfinite(radius_km) or not 1 <= radius_km <= 25:
+def _interest_search_context(
+    parent_plan,
+    geography,
+    day,
+    route_leg_id,
+    focus_stop_id,
+    radius_km,
+    repository_root=None,
+    search_area="visitor_area",
+):
+    if (
+        isinstance(radius_km, bool)
+        or not isinstance(radius_km, (int, float))
+        or not np.isfinite(radius_km)
+        or not 1 <= radius_km <= 25
+    ):
         raise POICandidateDiscoveryError("interest_radius_invalid")
     plan = next(p for p in geography["plans"] if p["plan_id"] == parent_plan["plan_id"])
     stops = [f for f in plan["stops"]["features"] if f["properties"]["day"] == day]
@@ -119,21 +133,37 @@ def _interest_search_context(parent_plan, geography, day, route_leg_id, focus_st
     if search_area not in {"visitor_area", "itinerary_pin"}:
         raise POICandidateDiscoveryError("interest_search_area_invalid")
     if repository_root is not None:
-        manifest = json.loads((repository_root / "configs/interest_regions/exploration_manifest.json").read_text(encoding="utf-8"))
-        visitor_area = next((area for area in manifest.get("visitor_areas", []) if area["stop_id"] == stop["properties"]["stop_id"]), None)
+        manifest = json.loads(
+            (repository_root / "configs/interest_regions/exploration_manifest.json").read_text(encoding="utf-8")
+        )
+        visitor_area = next(
+            (area for area in manifest.get("visitor_areas", []) if area["stop_id"] == stop["properties"]["stop_id"]),
+            None,
+        )
     name = stop["properties"]["name"]
     if visitor_area and search_area == "visitor_area":
         longitude, latitude = (visitor_area["coordinate"][key] for key in ("longitude", "latitude"))
         name += " · " + visitor_area["name"]
-    return {"stop_id": stop["properties"]["stop_id"], "name": name,
-            "area_mode": search_area, "visitor_area": visitor_area,
-            "coordinate": {"longitude": longitude, "latitude": latitude},
-            "radius_km": float(radius_km), "distance_kind": "straight_line"}
+    return {
+        "stop_id": stop["properties"]["stop_id"],
+        "name": name,
+        "area_mode": search_area,
+        "visitor_area": visitor_area,
+        "coordinate": {"longitude": longitude, "latitude": latitude},
+        "radius_km": float(radius_km),
+        "distance_kind": "straight_line",
+    }
 
 
 def _exploration_places(
-    repository_root: Path, discovered: dict, parent_plan: dict, geography: dict, role: str | None,
-    search_context: dict | None = None, place_cache: NearbyPlaceCache | None = None, refresh_places: bool = False,
+    repository_root: Path,
+    discovered: dict,
+    parent_plan: dict,
+    geography: dict,
+    role: str | None,
+    search_context: dict | None = None,
+    place_cache: NearbyPlaceCache | None = None,
+    refresh_places: bool = False,
 ) -> tuple[list, dict]:
     directory = repository_root / "configs" / "interest_regions"
     manifest = json.loads((directory / "exploration_manifest.json").read_text(encoding="utf-8"))
@@ -153,24 +183,35 @@ def _exploration_places(
     if data.get("schema_version") != "interest-exploration-catalog-v1" or not isinstance(rows, list) or len(rows) > 500:
         raise ValueError("interest_exploration_catalog_invalid")
     if search_context is None:
-        search_context = _interest_search_context(parent_plan, geography, discovered["context"]["day"],
-                                                  discovered["context"]["route_leg_id"], None, 5)
+        search_context = _interest_search_context(
+            parent_plan, geography, discovered["context"]["day"], discovered["context"]["route_leg_id"], None, 5
+        )
     place_data = {"status": "bundled_fallback", "fetched_at": None, "error_code": None, "cache_persisted": False}
     if place_cache is not None:
         online, place_data = place_cache.search(search_context, refresh=refresh_places)
         if place_data["status"] != "bundled_fallback":
             rows = [row for row in rows if not row["place_id"].startswith("osm_")]
             for point in online:
-                duplicate = next((row for row in rows if row["place_id"] == point["place_id"] or
-                    row["name"].casefold() == point["name"].casefold()
-                    and abs(row["display_coordinate"]["latitude"] - point["display_coordinate"]["latitude"]) < .002
-                    and abs(row["display_coordinate"]["longitude"] - point["display_coordinate"]["longitude"]) < .002), None)
+                duplicate = next(
+                    (
+                        row
+                        for row in rows
+                        if row["place_id"] == point["place_id"]
+                        or row["name"].casefold() == point["name"].casefold()
+                        and abs(row["display_coordinate"]["latitude"] - point["display_coordinate"]["latitude"]) < 0.002
+                        and abs(row["display_coordinate"]["longitude"] - point["display_coordinate"]["longitude"])
+                        < 0.002
+                    ),
+                    None,
+                )
                 if duplicate:
                     duplicate["source_refs"] = list(dict.fromkeys(duplicate["source_refs"] + point["source_refs"]))
                 else:
                     rows.append(point)
     if place_data["status"] == "bundled_fallback":
-        snapshot = next((source for source in manifest.get("local_sources", []) if source["file"] == "itinerary_places.json"), {})
+        snapshot = next(
+            (source for source in manifest.get("local_sources", []) if source["file"] == "itinerary_places.json"), {}
+        )
         place_data["bundled_snapshot_at"] = snapshot.get("retrieved_at")
     manifest = {**manifest, "place_data": place_data}
     selected = parent_plan.get("selected_stops") or []
@@ -182,7 +223,8 @@ def _exploration_places(
         if _distance_from_focus(coordinate, search_context["coordinate"]) > search_context["radius_km"]:
             continue
         if any(
-            str(stop.get("attraction_name", stop.get("name"))).casefold().removesuffix(" viewpoint") == row["name"].casefold().removesuffix(" viewpoint")
+            str(stop.get("attraction_name", stop.get("name"))).casefold().removesuffix(" viewpoint")
+            == row["name"].casefold().removesuffix(" viewpoint")
             and (
                 row.get("location_kind") == "park_entry"
                 or abs(float(stop.get("latitude", 99)) - coordinate["latitude"]) < 0.01
@@ -196,9 +238,17 @@ def _exploration_places(
 
 
 def discover_interest_regions(
-    *, repository_root: Path, parent_plan: dict, geography: dict, nature_preference: float = 0.0,
-    focus_stop_id: str | None = None, radius_km: float = 5.0, search_area: str = "visitor_area",
-    place_cache: NearbyPlaceCache | None = None, refresh_places: bool = False, **context
+    *,
+    repository_root: Path,
+    parent_plan: dict,
+    geography: dict,
+    nature_preference: float = 0.0,
+    focus_stop_id: str | None = None,
+    radius_km: float = 5.0,
+    search_area: str = "visitor_area",
+    place_cache: NearbyPlaceCache | None = None,
+    refresh_places: bool = False,
+    **context,
 ) -> dict:
     discovered = discover_poi_candidates(
         repository_root=repository_root,
@@ -208,8 +258,16 @@ def discover_interest_regions(
         **context,
     )
     catalog = _catalog(repository_root, context["trip_id"])
-    search_context = _interest_search_context(parent_plan, geography, context["day"], context["route_leg_id"],
-                                              focus_stop_id, radius_km, repository_root, search_area)
+    search_context = _interest_search_context(
+        parent_plan,
+        geography,
+        context["day"],
+        context["route_leg_id"],
+        focus_stop_id,
+        radius_km,
+        repository_root,
+        search_area,
+    )
     try:
         required = required_interest_points(parent_plan, geography, context["day"], catalog)
         model = _model(repository_root)
@@ -239,7 +297,14 @@ def discover_interest_regions(
     required_ids = {point["place_id"] for point in required}
     try:
         exploration, exploration_manifest = _exploration_places(
-            repository_root, discovered, parent_plan, geography, context.get("role"), search_context, place_cache, refresh_places
+            repository_root,
+            discovered,
+            parent_plan,
+            geography,
+            context.get("role"),
+            search_context,
+            place_cache,
+            refresh_places,
         )
     except (OSError, ValueError, KeyError, TypeError) as exc:
         raise POICandidateDiscoveryError("interest_exploration_catalog_unavailable") from exc
@@ -269,8 +334,11 @@ def discover_interest_regions(
                 }
             )
     optional = [row for row in optional if not row["candidate"] or row["candidate"]["candidate_id"] not in required_ids]
-    optional = [row for row in optional
-                if _distance_from_focus(row["place"]["display_coordinate"], search_context["coordinate"]) <= radius_km]
+    optional = [
+        row
+        for row in optional
+        if _distance_from_focus(row["place"]["display_coordinate"], search_context["coordinate"]) <= radius_km
+    ]
     if len(optional) > 500:
         raise POICandidateDiscoveryError("interest_candidate_universe_limit_exceeded")
     features = np.array(
@@ -294,7 +362,9 @@ def discover_interest_regions(
                 "place_id": row["candidate"]["candidate_id"] if row["candidate"] else row["place"]["place_id"],
                 "name": row["place"]["name"],
                 "display_coordinate": row["place"]["display_coordinate"],
-                "distance_from_focus_km": _distance_from_focus(row["place"]["display_coordinate"], search_context["coordinate"]),
+                "distance_from_focus_km": _distance_from_focus(
+                    row["place"]["display_coordinate"], search_context["coordinate"]
+                ),
                 "interest_probability_mean": float(prediction["mean"][index]),
                 "interest_probability_interval": prediction["interval"][index].tolist(),
                 "interval_level": prediction["interval_level"],
@@ -322,9 +392,14 @@ def discover_interest_regions(
                     for row in optional
                 ]
             )
-            surface = build_interest_surface(coordinates, prediction["draws"], geometry=geometry, manifest=manifest,
+            surface = build_interest_surface(
+                coordinates,
+                prediction["draws"],
+                geometry=geometry,
+                manifest=manifest,
                 search_center=np.array(list(search_context["coordinate"][key] for key in ("longitude", "latitude"))),
-                search_radius_m=radius_km * 1000)
+                search_radius_m=radius_km * 1000,
+            )
             for point, supported in zip(predictions, surface.pop("candidate_support"), strict=True):
                 point["region_support_status"] = "supported" if supported else "outside_cartographic_land_support"
         except OSError:

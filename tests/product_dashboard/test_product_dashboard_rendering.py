@@ -17,9 +17,7 @@ def test_render_registers_separately_versioned_artifact(product_run_factory) -> 
     run_manifest = json.loads((run_dir / "manifest.json").read_text(encoding="utf-8"))
 
     assert product.product_version == "1.0.0"
-    assert run_manifest["artifacts"]["dashboard_product"] == [
-        "dashboard_product/manifest.json"
-    ]
+    assert run_manifest["artifacts"]["dashboard_product"] == ["dashboard_product/manifest.json"]
     assert (run_dir / "dashboard_product/index.html").is_file()
     assert validate_product_dashboard(run_dir) == []
 
@@ -39,9 +37,7 @@ def test_embedded_data_escapes_script_breakout(product_run_factory) -> None:
     request["user_intent"] = "</script><script>alert(1)</script>"
     request_path.write_text(json.dumps(request), encoding="utf-8")
     render_product_dashboard(run_dir)
-    data = (run_dir / "dashboard_product/assets/product_data.js").read_text(
-        encoding="utf-8"
-    )
+    data = (run_dir / "dashboard_product/assets/product_data.js").read_text(encoding="utf-8")
 
     assert "</script>" not in data
     assert "\\u003c/script\\u003e" in data
@@ -60,9 +56,7 @@ def test_read_only_artifact_excludes_ux5_controls(product_run_factory) -> None:
     run_dir = product_run_factory()
     render_product_dashboard(run_dir)
     html = (run_dir / "dashboard_product/index.html").read_text(encoding="utf-8")
-    ui = (run_dir / "dashboard_product/assets/product_ui.js").read_text(
-        encoding="utf-8"
-    )
+    ui = (run_dir / "dashboard_product/assets/product_ui.js").read_text(encoding="utf-8")
 
     for label in ("Accept repair", "Keep original", "Ask permission", "Clarify meaning"):
         assert label not in html
@@ -74,9 +68,7 @@ def test_map_controller_synchronizes_route_and_ownership_states(
 ) -> None:
     run_dir = product_run_factory()
     render_product_dashboard(run_dir)
-    map_script = (run_dir / "dashboard_product/assets/product_map.js").read_text(
-        encoding="utf-8"
-    )
+    map_script = (run_dir / "dashboard_product/assets/product_map.js").read_text(encoding="utf-8")
 
     assert "routeLines.forEach" in map_script
     assert "line.setStyle(routeStyle" in map_script
@@ -87,9 +79,7 @@ def test_map_controller_synchronizes_route_and_ownership_states(
 def test_generated_output_does_not_expose_host_paths(product_run_factory) -> None:
     run_dir = product_run_factory()
     render_product_dashboard(run_dir)
-    data = (run_dir / "dashboard_product/assets/product_data.js").read_text(
-        encoding="utf-8"
-    )
+    data = (run_dir / "dashboard_product/assets/product_data.js").read_text(encoding="utf-8")
 
     assert str(run_dir) not in data
     assert "C:\\\\" not in data

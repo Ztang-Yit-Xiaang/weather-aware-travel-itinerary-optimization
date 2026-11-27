@@ -89,15 +89,9 @@ def test_product_demo_route_specs_account_for_all_selected_stops() -> None:
         bundle.child_plan,
         *(plan for plan, _label in package.additional_plans),
     )
-    cell_index = {
-        (str(cell["origin_id"]), str(cell["destination_id"])): cell
-        for cell in bundle.route_matrix["cells"]
-    }
+    cell_index = {(str(cell["origin_id"]), str(cell["destination_id"])): cell for cell in bundle.route_matrix["cells"]}
 
-    reports = [
-        audit_route_coverage(plan, package.route_legs_by_plan[plan["plan_id"]], cell_index)
-        for plan in plans
-    ]
+    reports = [audit_route_coverage(plan, package.route_legs_by_plan[plan["plan_id"]], cell_index) for plan in plans]
 
     assert len(reports) == 3
     assert all(report.required_leg_count == 16 for report in reports)

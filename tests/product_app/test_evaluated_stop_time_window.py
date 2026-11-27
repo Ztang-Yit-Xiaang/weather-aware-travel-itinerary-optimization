@@ -104,11 +104,7 @@ def _append(
 
 
 def _target_trace(schedule: dict, target: str = TARGET) -> dict:
-    return next(
-        trace
-        for trace in schedule["stop_traces"]
-        if trace["stop_id"] == target
-    )
+    return next(trace for trace in schedule["stop_traces"] if trace["stop_id"] == target)
 
 
 def test_earliest_only_window_builds_v3_diff_trace_and_fresh_certificate() -> None:
@@ -129,9 +125,7 @@ def test_earliest_only_window_builds_v3_diff_trace_and_fresh_certificate() -> No
     assert child["content_hash"] != parent_before["content_hash"]
     assert child["created_at"] == ""
     target = next(row for row in child["selected_stops"] if row["poi_id"] == TARGET)
-    parent_target = next(
-        row for row in parent_before["selected_stops"] if row["poi_id"] == TARGET
-    )
+    parent_target = next(row for row in parent_before["selected_stops"] if row["poi_id"] == TARGET)
     assert target["time_window_constraint"] == _constraint()
     assert "time_window_constraint" not in parent_target
     for field in ("opening_start", "opening_end", "arrival_time", "departure_time"):
@@ -191,9 +185,7 @@ def test_earliest_only_window_builds_v3_diff_trace_and_fresh_certificate() -> No
     assert trace["incoming_route_query_hash"]
     assert trace["road_arrival_minute"] <= trace["service_start_minute"]
     assert trace["required_window_wait_minutes"] >= 0
-    assert trace["departure_minute"] == pytest.approx(
-        trace["service_start_minute"] + trace["visit_minutes"]
-    )
+    assert trace["departure_minute"] == pytest.approx(trace["service_start_minute"] + trace["visit_minutes"])
     assert trace["visit_duration_source"] in {
         "visit_duration_minutes",
         "configured_evaluator_default",
@@ -214,22 +206,14 @@ def test_latest_departure_is_checked_after_visit_with_positive_overrun() -> None
     assert compiled.reason == "independent_evaluation_failed"
     assert compiled.certificate["evaluation_status"] == "FAILED"
     assert compiled.certificate["comparison_eligibility"] == "ineligible"
-    assert [row["code"] for row in compiled.certificate["failures"]] == [
-        "stop_time_window_latest_departure_exceeded"
-    ]
+    assert [row["code"] for row in compiled.certificate["failures"]] == ["stop_time_window_latest_departure_exceeded"]
     trace = _target_trace(compiled.schedule_impact["child"])
     assert trace["road_arrival_minute"] < trace["departure_minute"]
     assert trace["latest_departure_status"] == "violated"
     assert trace["latest_departure_overrun_minutes"] > 0
-    assert trace["latest_departure_overrun_minutes"] == pytest.approx(
-        trace["departure_minute"] - 1
-    )
-    assert trace["failure_codes"] == [
-        "stop_time_window_latest_departure_exceeded"
-    ]
-    assert compiled.schedule_impact["child"]["blocking_codes"] == [
-        "stop_time_window_latest_departure_exceeded"
-    ]
+    assert trace["latest_departure_overrun_minutes"] == pytest.approx(trace["departure_minute"] - 1)
+    assert trace["failure_codes"] == ["stop_time_window_latest_departure_exceeded"]
+    assert compiled.schedule_impact["child"]["blocking_codes"] == ["stop_time_window_latest_departure_exceeded"]
     assert compiled.certificate["route_validation"]["required_leg_count"] == 16
 
 
@@ -254,12 +238,15 @@ def test_time_window_preview_api_exposes_exact_bound_evidence_and_w5_block(
         created = client.post("/api/sessions", json={}).json()
         session_id = created["session"]["session_id"]
         headers = {"X-Session-Token": created["mutation_token"]}
-        assert _append(
-            client,
-            session_id,
-            headers,
-            revision=0,
-        ).status_code == 200
+        assert (
+            _append(
+                client,
+                session_id,
+                headers,
+                revision=0,
+            ).status_code
+            == 200
+        )
         impact = client.post(
             f"/api/sessions/{session_id}/draft/impact-preview",
             headers=headers,
@@ -288,21 +275,13 @@ def test_time_window_preview_api_exposes_exact_bound_evidence_and_w5_block(
     assert proposal["acceptance_eligible"] is False
     assert proposal["acceptance_blocking_code"] == "proposal_not_eligible"
     assert proposal["plan_diff"]["schema_version"] == "plan-diff-v3"
-    assert proposal["diff_identity"]["content_hash"] == stable_content_hash(
-        proposal["plan_diff"]
-    )
-    assert proposal["schedule_impact"]["schema_version"] == (
-        "evaluated-time-window-schedule-impact-v1"
-    )
-    assert proposal["schedule_impact_identity"]["content_hash"] == (
-        proposal["schedule_impact"]["content_hash"]
-    )
+    assert proposal["diff_identity"]["content_hash"] == stable_content_hash(proposal["plan_diff"])
+    assert proposal["schedule_impact"]["schema_version"] == ("evaluated-time-window-schedule-impact-v1")
+    assert proposal["schedule_impact_identity"]["content_hash"] == (proposal["schedule_impact"]["content_hash"])
     evidence = proposal["certificate_schedule_evidence"]
     evidence_payload = dict(evidence)
     assert evidence_payload.pop("content_hash") == stable_content_hash(evidence_payload)
-    assert evidence["schema_version"] == (
-        "evaluated-time-window-certificate-schedule-evidence-v1"
-    )
+    assert evidence["schema_version"] == ("evaluated-time-window-certificate-schedule-evidence-v1")
     assert evidence["warning_codes"] == ["opening_window_evidence_missing"]
     assert evidence["failure_codes"] == ["weather_infeasible"]
     assert proposal["repair"]["tradeoffs"]["utility_retained"] is None
@@ -320,14 +299,17 @@ def test_ineligible_time_window_api_preserves_failed_evidence_and_w5_block(
         created = client.post("/api/sessions", json={}).json()
         session_id = created["session"]["session_id"]
         headers = {"X-Session-Token": created["mutation_token"]}
-        assert _append(
-            client,
-            session_id,
-            headers,
-            revision=0,
-            earliest=None,
-            latest="00:01",
-        ).status_code == 200
+        assert (
+            _append(
+                client,
+                session_id,
+                headers,
+                revision=0,
+                earliest=None,
+                latest="00:01",
+            ).status_code
+            == 200
+        )
         response = client.post(
             f"/api/sessions/{session_id}/preview",
             headers=headers,
@@ -351,9 +333,7 @@ def test_ineligible_time_window_api_preserves_failed_evidence_and_w5_block(
     assert proposal["acceptance_eligible"] is False
     schedule = proposal["schedule_impact"]
     assert schedule["child"]["status"] == "failed"
-    assert schedule["child"]["blocking_codes"] == [
-        "stop_time_window_latest_departure_exceeded"
-    ]
+    assert schedule["child"]["blocking_codes"] == ["stop_time_window_latest_departure_exceeded"]
     trace = _target_trace(schedule["child"])
     assert trace["latest_departure_status"] == "violated"
     assert trace["latest_departure_overrun_minutes"] > 0

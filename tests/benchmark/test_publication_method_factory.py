@@ -44,9 +44,7 @@ def scenario() -> DisruptionScenario:
             "weather_risk_overrides": {"outdoor": 0.95},
             "weather_feasible": {"outdoor": False},
         },
-        candidate_pois=(
-            {"stop_id": "indoor", "name": "Indoor", "day": 1, "lodging_id": "hotel", "utility": 6},
-        ),
+        candidate_pois=({"stop_id": "indoor", "name": "Indoor", "day": 1, "lodging_id": "hotel", "utility": 6},),
     )
     return DisruptionScenario(
         scenario_id="scenario_publication_factory",
@@ -136,9 +134,7 @@ def test_four_concrete_adapters_run_together_and_retain_ineligible_baseline(tmp_
     assert by_method["full_reoptimization"]["benchmark_ranking_eligible"] is True
     assert all(row["output_plan_id"] != "parent_publication_factory" for row in rows)
     assert len({row["benchmark_route_matrix_hash"] for row in rows}) == 1
-    assert {row["benchmark_route_source_bundle_id"] for row in rows} == {
-        "synthetic_publication_fixture_bundle"
-    }
+    assert {row["benchmark_route_source_bundle_id"] for row in rows} == {"synthetic_publication_fixture_bundle"}
     # Selection changed and per-stop risk evidence is incomplete. Do not invent a comparable delta.
     assert by_method["deterministic_context_aware_heuristic"]["quality_weather_risk_delta"] is None
     assert by_method["progressive_sequential_lexicographic_repair"]["quality_weather_risk_delta"] is None
@@ -163,9 +159,7 @@ def test_non_exact_adapters_retain_expected_physical_infeasibility_evidence(tmp_
         DisruptionFamily.REDUCED_DRIVING_TOLERANCE,
     }
     scenarios = tuple(
-        item
-        for item in generate_disruption_scenarios(parent_plan(), seed=19)
-        if item.family in target_families
+        item for item in generate_disruption_scenarios(parent_plan(), seed=19) if item.family in target_families
     )
     methods = tuple(
         method
@@ -210,9 +204,7 @@ def test_non_exact_adapters_retain_expected_physical_infeasibility_evidence(tmp_
         evidence_by_request.setdefault(request_id, []).append(json.dumps(record, sort_keys=True))
     road_request = next(item.request.request_id for item in scenarios if item.family == DisruptionFamily.ROAD_CLOSURE)
     tolerance_request = next(
-        item.request.request_id
-        for item in scenarios
-        if item.family == DisruptionFamily.REDUCED_DRIVING_TOLERANCE
+        item.request.request_id for item in scenarios if item.family == DisruptionFamily.REDUCED_DRIVING_TOLERANCE
     )
     road_evidence = " ".join(evidence_by_request[road_request])
     tolerance_evidence = " ".join(evidence_by_request[tolerance_request])

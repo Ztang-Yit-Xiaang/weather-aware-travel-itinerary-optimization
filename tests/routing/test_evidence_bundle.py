@@ -22,7 +22,13 @@ def write_bundle(root: Path, *, snap_validated: bool = True) -> Path:
     keys = ("key_a", "key_b")
     pd.DataFrame(
         [
-            {"cache_key": key, "origin_latitude": 1, "origin_longitude": 2, "destination_latitude": 3, "destination_longitude": 4}
+            {
+                "cache_key": key,
+                "origin_latitude": 1,
+                "origin_longitude": 2,
+                "destination_latitude": 3,
+                "destination_longitude": 4,
+            }
             for key in keys
         ]
     ).to_csv(root / ROAD_ROUTE_REQUESTS_FILENAME, index=False)

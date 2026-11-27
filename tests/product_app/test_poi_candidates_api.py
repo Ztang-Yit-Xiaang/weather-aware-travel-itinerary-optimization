@@ -286,13 +286,9 @@ def test_replacement_uses_incoming_and_outgoing_target_baseline(candidate_app) -
     burden = payload["candidates"][0]["burden"]
     assert burden["context_kind"] == "replacement"
     assert burden["predecessor_to_successor_minutes"] is None
-    assert burden["marginal_travel_minutes"] == pytest.approx(
-        330 - context["baseline_travel_minutes"]
-    )
+    assert burden["marginal_travel_minutes"] == pytest.approx(330 - context["baseline_travel_minutes"])
     assert len(payload["candidates"][0]["route_evidence_refs"]) == 4
-    assert {
-        row["role"] for row in payload["candidates"][0]["route_evidence_refs"]
-    } == {
+    assert {row["role"] for row in payload["candidates"][0]["route_evidence_refs"]} == {
         "predecessor_candidate",
         "candidate_successor",
         "predecessor_target",
@@ -389,9 +385,7 @@ def test_research_run_exposes_both_hash_pinned_registered_replacements(
         additional_allowed_authorities=("testserver",),
     )
     with TestClient(app) as client:
-        created = client.post(
-            "/api/sessions", json={"run_id": RUN_ID}
-        ).json()
+        created = client.post("/api/sessions", json={"run_id": RUN_ID}).json()
         session = created["session"]
         headers = {"X-Session-Token": created["mutation_token"]}
         response = client.get(
@@ -477,9 +471,7 @@ def test_missing_or_invalid_catalog_fails_explicitly(candidate_app) -> None:
 
 
 @pytest.mark.parametrize("cell_kind", ["missing", "fallback"])
-def test_missing_or_fallback_candidate_cell_is_never_exposed(
-    candidate_app, cell_kind: str
-) -> None:
+def test_missing_or_fallback_candidate_cell_is_never_exposed(candidate_app, cell_kind: str) -> None:
     client, service, session, headers, repository_root = candidate_app
     _write_catalog(repository_root, _catalog_record())
     cells = [_cell("stearns_wharf", "candidate_alpha", minutes=5)]
@@ -520,14 +512,10 @@ def test_missing_or_fallback_candidate_cell_is_never_exposed(
         ("duration_s", 0),
     ],
 )
-def test_candidate_cell_provenance_must_match_frozen_osrm_contract(
-    candidate_app, field: str, value: Any
-) -> None:
+def test_candidate_cell_provenance_must_match_frozen_osrm_contract(candidate_app, field: str, value: Any) -> None:
     client, service, session, headers, repository_root = candidate_app
     _write_catalog(repository_root, _catalog_record())
-    second = _cell(
-        "candidate_alpha", "surf_n_wear_s_beach_house", minutes=6
-    )
+    second = _cell("candidate_alpha", "surf_n_wear_s_beach_house", minutes=6)
     second[field] = value
     _append_candidate_cells(
         service,
@@ -559,9 +547,7 @@ def test_candidate_cell_provenance_must_match_frozen_osrm_contract(
         ("entity_ids", [1]),
     ],
 )
-def test_matrix_header_provenance_is_mandatory(
-    candidate_app, field: str, value: Any
-) -> None:
+def test_matrix_header_provenance_is_mandatory(candidate_app, field: str, value: Any) -> None:
     client, service, session, headers, repository_root = candidate_app
     _write_catalog(repository_root, _catalog_record())
     bundle = service._bundles[RUN_ID]
@@ -589,11 +575,7 @@ def test_malformed_accepted_baseline_cell_fails_the_endpoint(candidate_app) -> N
     client, service, session, headers, repository_root = candidate_app
     _write_catalog(repository_root, _catalog_record())
     bundle = service._bundles[RUN_ID]
-    baseline = next(
-        cell
-        for cell in bundle.route_matrix["cells"]
-        if cell["route_leg_id"] == INSERTION_LEG
-    )
+    baseline = next(cell for cell in bundle.route_matrix["cells"] if cell["route_leg_id"] == INSERTION_LEG)
     baseline["provider"] = "foreign_router"
 
     response = _request(client, session, headers)
@@ -603,9 +585,7 @@ def test_malformed_accepted_baseline_cell_fails_the_endpoint(candidate_app) -> N
 
 
 @pytest.mark.parametrize("mismatch", ["source", "evidence"])
-def test_catalog_access_must_bind_to_exact_matrix_candidate_cells(
-    candidate_app, mismatch: str
-) -> None:
+def test_catalog_access_must_bind_to_exact_matrix_candidate_cells(candidate_app, mismatch: str) -> None:
     client, service, session, headers, repository_root = candidate_app
     record = _catalog_record()
     access = record["places"][0]["access_points"][0]

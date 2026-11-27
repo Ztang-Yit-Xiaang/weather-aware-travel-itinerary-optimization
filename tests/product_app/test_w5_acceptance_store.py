@@ -90,9 +90,7 @@ def test_commit_is_append_only_and_idempotent(tmp_path):
 def test_idempotency_key_cannot_select_a_different_plan(tmp_path):
     store = AcceptanceStore(tmp_path)
     original = _plan("plan_original")
-    pointer = store.ensure_pointer(
-        trip_id="trip_demo", run_id="run_demo", original_plan=_record(original)
-    )
+    pointer = store.ensure_pointer(trip_id="trip_demo", run_id="run_demo", original_plan=_record(original))
 
     def commit(plan_id: str):
         child = replace(
@@ -119,12 +117,11 @@ def test_idempotency_key_cannot_select_a_different_plan(tmp_path):
         commit("plan_child_two")
     assert len(store.history("trip_demo")) == 1
 
+
 def test_plan_id_collision_fails_with_stable_code_before_ledger_append(tmp_path):
     store = AcceptanceStore(tmp_path)
     original = _plan("plan_original")
-    pointer = store.ensure_pointer(
-        trip_id="trip_demo", run_id="run_demo", original_plan=_record(original)
-    )
+    pointer = store.ensure_pointer(trip_id="trip_demo", run_id="run_demo", original_plan=_record(original))
     conflicting = replace(original, sequence=("poi_b", "poi_a"))
 
     with pytest.raises(AcceptanceError, match="acceptance_plan_repository_conflict"):
@@ -146,6 +143,7 @@ def test_plan_id_collision_fails_with_stable_code_before_ledger_append(tmp_path)
     assert store.history("trip_demo") == ()
     assert store.load_pointer("trip_demo") == pointer
 
+
 def test_failure_before_prepare_leaves_pointer_and_ledger_unchanged(tmp_path):
     def fail_at(name: str) -> None:
         if name == "after_plan_save":
@@ -163,9 +161,7 @@ def test_failure_before_prepare_leaves_pointer_and_ledger_unchanged(tmp_path):
 def test_two_concurrent_writers_produce_one_decision(tmp_path):
     store = AcceptanceStore(tmp_path)
     original = _plan("plan_original")
-    pointer = store.ensure_pointer(
-        trip_id="trip_demo", run_id="run_demo", original_plan=_record(original)
-    )
+    pointer = store.ensure_pointer(trip_id="trip_demo", run_id="run_demo", original_plan=_record(original))
 
     def commit(index: int):
         child = replace(
@@ -199,6 +195,7 @@ def test_two_concurrent_writers_produce_one_decision(tmp_path):
     assert len([row for row in outcomes if row.startswith("decision_")]) == 1
     assert outcomes.count("acceptance_pointer_conflict") == 1
     assert len(store.history("trip_demo")) == 1
+
 
 @pytest.mark.parametrize("stage", ["after_prepare", "after_ledger_append", "after_pointer_replace"])
 def test_restart_recovers_interrupted_transaction(tmp_path, stage):

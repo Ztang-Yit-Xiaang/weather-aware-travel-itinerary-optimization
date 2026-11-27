@@ -147,10 +147,7 @@ def _plan_exact_baseline(
         budget_limit = _budget_limit(request)
 
         assignment_count = prod(len(selection_choices[stop_id]) for stop_id in stop_ids)
-        empty_assignment_count = int(
-            bool(stop_ids)
-            and all(None in selection_choices[stop_id] for stop_id in stop_ids)
-        )
+        empty_assignment_count = int(bool(stop_ids) and all(None in selection_choices[stop_id] for stop_id in stop_ids))
         lodging_count = prod(len(lodging_choices[day]) for day in lodging_days)
         candidate_space_lower_bound = max(0, assignment_count - empty_assignment_count) * lodging_count
         if candidate_space_lower_bound > max_complete_candidates:
@@ -163,21 +160,16 @@ def _plan_exact_baseline(
             )
 
         assignment_options = (
-            ()
-            if not search_complete
-            else product(*(selection_choices[stop_id] for stop_id in stop_ids))
+            () if not search_complete else product(*(selection_choices[stop_id] for stop_id in stop_ids))
         )
         for assignments in assignment_options:
             selected_assignment = {
-                stop_id: int(day)
-                for stop_id, day in zip(stop_ids, assignments, strict=True)
-                if day is not None
+                stop_id: int(day) for stop_id, day in zip(stop_ids, assignments, strict=True) if day is not None
             }
             if not selected_assignment:
                 continue
             ids_by_day = {
-                day: tuple(stop_id for stop_id in stop_ids if selected_assignment.get(stop_id) == day)
-                for day in days
+                day: tuple(stop_id for stop_id in stop_ids if selected_assignment.get(stop_id) == day) for day in days
             }
             if budget_limit is not None:
                 assignment_cost = sum(_stop_cost(stop_lookup.get(sid, {})) for sid in selected_assignment)
@@ -188,8 +180,7 @@ def _plan_exact_baseline(
                 day_stops = ids_by_day[day]
                 if day_stops:
                     min_visit = sum(
-                        _visit_duration(stop_lookup.get(sid, {}), config.default_visit_minutes)
-                        for sid in day_stops
+                        _visit_duration(stop_lookup.get(sid, {}), config.default_visit_minutes) for sid in day_stops
                     )
                     if min_visit > config.max_day_minutes:
                         skip_assignment = True
@@ -197,17 +188,14 @@ def _plan_exact_baseline(
             if skip_assignment:
                 continue
             lodging_options = tuple(lodging_choices[day] for day in lodging_days)
-            assignment_candidate_count = prod(
-                factorial(len(ids_by_day[day])) for day in days
-            ) * prod(len(options) for options in lodging_options)
+            assignment_candidate_count = prod(factorial(len(ids_by_day[day])) for day in days) * prod(
+                len(options) for options in lodging_options
+            )
             if candidate_count + assignment_candidate_count > max_complete_candidates:
                 search_complete = False
                 failure_reasons.append(f"complete_candidate_limit_exceeded:{max_complete_candidates}")
                 break
-            sequence_options = tuple(
-                tuple(permutations(ids_by_day[day])) if ids_by_day[day] else ((),)
-                for day in days
-            )
+            sequence_options = tuple(tuple(permutations(ids_by_day[day])) if ids_by_day[day] else ((),) for day in days)
             for sequences in product(*sequence_options):
                 for lodging_values in product(*lodging_options):
                     candidate_count += 1
@@ -215,13 +203,9 @@ def _plan_exact_baseline(
                         search_complete = False
                         failure_reasons.append(f"complete_candidate_limit_exceeded:{max_complete_candidates}")
                         break
-                    day_sequences = {
-                        str(day): tuple(sequence)
-                        for day, sequence in zip(days, sequences, strict=True)
-                    }
+                    day_sequences = {str(day): tuple(sequence) for day, sequence in zip(days, sequences, strict=True)}
                     lodging_assignments = {
-                        str(day): str(value)
-                        for day, value in zip(lodging_days, lodging_values, strict=True)
+                        str(day): str(value) for day, value in zip(lodging_days, lodging_values, strict=True)
                     }
                     route_ids = _route_ids_for_sequences(
                         model,
@@ -229,9 +213,7 @@ def _plan_exact_baseline(
                         day_sequences,
                         closed_route_ids=set(model.metadata.get("context_closed_route_ids", ())),
                     )
-                    ordered_ids = tuple(
-                        stop_id for day in days for stop_id in day_sequences[str(day)]
-                    )
+                    ordered_ids = tuple(stop_id for day in days for stop_id in day_sequences[str(day)])
                     solution = RepairSolution(
                         selected_stop_ids=ordered_ids,
                         day_assignments=selected_assignment,
@@ -354,11 +336,7 @@ def _selection_day_choices(
         else:
             allowed_days = tuple(
                 sorted(
-                    {
-                        int(value)
-                        for value in day_variable.allowed_values
-                        if str(value).strip() and int(value) in days
-                    }
+                    {int(value) for value in day_variable.allowed_values if str(value).strip() and int(value) in days}
                 )
             )
         if selection.fixed_value == 0:
@@ -400,9 +378,7 @@ def _route_ids_for_sequences(
     for raw_day, sequence in day_sequences.items():
         day = int(raw_day)
         parent_sequence = tuple(
-            str(stop_id)
-            for stop_id in parent.sequence
-            if int(parent_day_by_stop.get(str(stop_id), -1)) == day
+            str(stop_id) for stop_id in parent.sequence if int(parent_day_by_stop.get(str(stop_id), -1)) == day
         )
         parent_route = str(parent.route_ids_by_day.get(day) or "")
         if sequence == parent_sequence and parent_route not in closed_route_ids:

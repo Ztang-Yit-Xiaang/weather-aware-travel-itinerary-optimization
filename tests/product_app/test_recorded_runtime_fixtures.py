@@ -1,4 +1,5 @@
 """Integrity checks for portable historical data, not runtime acceptance."""
+
 from __future__ import annotations
 
 import gzip
@@ -18,8 +19,14 @@ def test_recorded_inputs_preserve_bytes_and_reject_corruption(tmp_path, fault):
     data = b'{"historical":true}\n'
     packed = gzip.compress(data, mtime=0)
     digest = hashlib.sha256(data).hexdigest()
-    row = {"path": "results/e2e/example/receipt.json", "sha256": digest, "size_bytes": len(data),
-        "blob": "blobs/" + digest + ".gz", "gzip_sha256": hashlib.sha256(packed).hexdigest(), "gzip_size_bytes": len(packed)}
+    row = {
+        "path": "results/e2e/example/receipt.json",
+        "sha256": digest,
+        "size_bytes": len(data),
+        "blob": "blobs/" + digest + ".gz",
+        "gzip_sha256": hashlib.sha256(packed).hexdigest(),
+        "gzip_size_bytes": len(packed),
+    }
     (source / row["blob"]).write_bytes(packed)
     if fault == "path_escape":
         row["path"] = "results/e2e/../../../escaped.json"

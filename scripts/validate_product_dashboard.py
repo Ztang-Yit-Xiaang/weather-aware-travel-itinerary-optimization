@@ -134,13 +134,9 @@ def validate_product_dashboard(run_dir: Path) -> list[str]:
             errors.append("read-only product artifact enabled interaction")
         if data.get("run", {}).get("interaction_enabled") is not False:
             errors.append("run view model enabled interaction")
-        if manifest.get("parent_plan_id") != data.get("research", {}).get("lineage", {}).get(
-            "parent_plan_id"
-        ):
+        if manifest.get("parent_plan_id") != data.get("research", {}).get("lineage", {}).get("parent_plan_id"):
             errors.append("product manifest/data parent lineage mismatch")
-        if manifest.get("child_plan_id") != data.get("research", {}).get("lineage", {}).get(
-            "child_plan_id"
-        ):
+        if manifest.get("child_plan_id") != data.get("research", {}).get("lineage", {}).get("child_plan_id"):
             errors.append("product manifest/data child lineage mismatch")
     return errors
 

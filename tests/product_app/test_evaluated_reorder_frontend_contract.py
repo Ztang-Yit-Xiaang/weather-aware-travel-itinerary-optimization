@@ -156,9 +156,7 @@ def test_actual_api_reorder_preview_passes_js_and_forged_variants_fail(
         )
         assert mixed_order.status_code == 200
         mixed_session = mixed_order.json()["session"]
-        day_one_stop = next(row for row in workspace["timeline"] if row["day"] == 1)[
-            "stops"
-        ][0]["id"]
+        day_one_stop = next(row for row in workspace["timeline"] if row["day"] == 1)["stops"][0]["id"]
         mixed_day = client.post(
             f"/api/sessions/{mixed_session['session_id']}/draft/operations",
             headers=mixed_headers,
@@ -243,6 +241,6 @@ def test_actual_api_reorder_preview_passes_js_and_forged_variants_fail(
 def test_assets_are_build_bound_for_evaluated_reorder_contract() -> None:
     markup = INDEX.read_text(encoding="utf-8")
 
-    assert '/static/css/app.css?v=__PRODUCT_BUILD_ID__' in markup
-    assert '/static/js/app.js?v=__PRODUCT_BUILD_ID__' in markup
+    assert "/static/css/app.css?v=__PRODUCT_BUILD_ID__" in markup
+    assert "/static/js/app.js?v=__PRODUCT_BUILD_ID__" in markup
     assert '<meta name="product-build-id" content="__PRODUCT_BUILD_ID__">' in markup

@@ -46,7 +46,6 @@ from itinerary_system.product_app.openai_copilot import (  # noqa: E402
 )
 
 _REQUEST_FIELDS = {
-
     "input",
     "instructions",
     "max_output_tokens",
@@ -157,10 +156,8 @@ def validate_exact_io(
         document["reasoning_effort"] != effort
         or document["model"] != case_document["model"]
         or document["prompt_sha256"] != case_document["prompt_sha256"]
-        or document["source_snapshot_sha256"]
-        != case_document["source_snapshot"]["content_hash"]
-        or document["request_controls_sha256"]
-        != case_document["request_controls"]["content_hash"]
+        or document["source_snapshot_sha256"] != case_document["source_snapshot"]["content_hash"]
+        or document["request_controls_sha256"] != case_document["request_controls"]["content_hash"]
     ):
         raise ValueError("exact_io_identity_mismatch")
     if (
@@ -178,9 +175,7 @@ def validate_exact_io(
         raise ValueError("exact_io_records_invalid")
     cases = {case["case_id"]: case for case in corpus["cases"]}
     fixtures = corpus["context_fixtures"]
-    evidence_records = {
-        record["case_id"]: record for record in case_document["records"]
-    }
+    evidence_records = {record["case_id"]: record for record in case_document["records"]}
     counts: dict[str, int] = {}
     previous_completed: datetime | None = None
     for sequence, record in enumerate(records, start=1):
@@ -205,9 +200,7 @@ def validate_exact_io(
             raise ValueError("exact_transport_attempt_order_invalid")
         started = parse_aware(record["started_at"], "exact_transport_time_invalid")
         completed = parse_aware(record["completed_at"], "exact_transport_time_invalid")
-        if completed < started or (
-            previous_completed is not None and started < previous_completed
-        ):
+        if completed < started or (previous_completed is not None and started < previous_completed):
             raise ValueError("exact_transport_time_order_invalid")
         previous_completed = completed
         if (
@@ -218,9 +211,7 @@ def validate_exact_io(
             raise ValueError("exact_transport_latency_invalid")
         request_text = record["request_body_utf8"]
         response_text = record["response_body_utf8"]
-        if not isinstance(request_text, str) or hash_text(request_text) != record[
-            "request_body_sha256"
-        ]:
+        if not isinstance(request_text, str) or hash_text(request_text) != record["request_body_sha256"]:
             raise ValueError("exact_request_body_hash_mismatch")
         if (
             record["response_status_code"] != 200
@@ -252,8 +243,7 @@ def validate_exact_io(
             or request.get("store") is not False
             or request.get("tools") != []
             or request.get("max_output_tokens") != bundle.max_output_tokens
-            or request.get("reasoning")
-            != {"effort": effort, "context": bundle.reasoning_context}
+            or request.get("reasoning") != {"effort": effort, "context": bundle.reasoning_context}
             or not isinstance(request.get("text"), dict)
             or set(request["text"]) != {"format", "verbosity"}
             or request["text"].get("verbosity") != bundle.text_verbosity
@@ -273,14 +263,10 @@ def validate_exact_io(
             raise ValueError("exact_response_identity_mismatch")
         try:
             parsed_json = json.loads(output_text(response))
-            parsed = OpenAIInterpretationSchemaV1.model_validate(
-                parsed_json, strict=True
-            )
+            parsed = OpenAIInterpretationSchemaV1.model_validate(parsed_json, strict=True)
         except (TypeError, ValueError) as exc:
             raise ValueError("exact_response_schema_invalid") from exc
-        canonical = _canonicalize_provider_copy(
-            _to_dataclass(parsed), context=context, message=case["input"]
-        )
+        canonical = _canonicalize_provider_copy(_to_dataclass(parsed), context=context, message=case["input"])
         parsed_intents = [intent.as_dict() for intent in canonical.intents]
         if (
             canonical.state != evidence["state"]
@@ -311,20 +297,13 @@ def verify_file_manifest(output_dir: Path, source_snapshot: dict[str, Any]) -> N
     content_hash = unsigned.pop("content_hash", None)
     if content_hash != canonical_sha256(unsigned):
         raise ValueError("file_io_manifest_hash_mismatch")
-    if (
-        document.get("secret_input_files_omitted") is not True
-        or document.get("api_key_value_persisted") is not False
-    ):
+    if document.get("secret_input_files_omitted") is not True or document.get("api_key_value_persisted") is not False:
         raise ValueError("file_io_secret_boundary_invalid")
-    expected_inputs = {
-        row["path"]: (row["sha256"], row["size_bytes"])
-        for row in source_snapshot["files"]
-    }
+    expected_inputs = {row["path"]: (row["sha256"], row["size_bytes"]) for row in source_snapshot["files"]}
     observed_inputs = {
         row.get("path"): (row.get("sha256"), row.get("size_bytes"))
         for row in document.get("input_files", [])
-        if isinstance(row, dict)
-        and row.get("exact_content_location") == row.get("path")
+        if isinstance(row, dict) and row.get("exact_content_location") == row.get("path")
     }
     if observed_inputs != expected_inputs:
         raise ValueError("file_io_inputs_mismatch")
@@ -358,15 +337,11 @@ def verify_file_manifest(output_dir: Path, source_snapshot: dict[str, Any]) -> N
 
 def provider_model_matches(requested: str, actual: object) -> bool:
     return isinstance(actual, str) and (
-        actual == requested
-        or re.fullmatch(rf"{re.escape(requested)}-\d{{4}}-\d{{2}}-\d{{2}}", actual)
-        is not None
+        actual == requested or re.fullmatch(rf"{re.escape(requested)}-\d{{4}}-\d{{2}}-\d{{2}}", actual) is not None
     )
 
 
-def validate_record_bindings(
-    document: dict[str, Any], controls: dict[str, Any]
-) -> set[str]:
+def validate_record_bindings(document: dict[str, Any], controls: dict[str, Any]) -> set[str]:
     generated_at = datetime.fromisoformat(document["generated_at"])
     if generated_at.tzinfo is None or generated_at.utcoffset() is None:
         raise ValueError("case_evidence_generated_at_invalid")
@@ -379,20 +354,14 @@ def validate_record_bindings(
             raise ValueError("record_prompt_binding_mismatch")
         if record.get("request_controls_sha256") != controls["content_hash"]:
             raise ValueError("record_control_binding_mismatch")
-        if (
-            record.get("source_snapshot_sha256")
-            != document["source_snapshot"]["content_hash"]
-        ):
+        if record.get("source_snapshot_sha256") != document["source_snapshot"]["content_hash"]:
             raise ValueError("record_source_binding_mismatch")
         if not provider_model_matches(document["model"], record.get("provider_model")):
             raise ValueError("record_provider_model_mismatch")
         if record.get("structured_valid") is not True:
             continue
         created_value = record.get("provider_created_at")
-        if (
-            not isinstance(created_value, (int, float))
-            or isinstance(created_value, bool)
-        ):
+        if not isinstance(created_value, (int, float)) or isinstance(created_value, bool):
             raise ValueError("record_provider_created_at_invalid")
         try:
             created_at = datetime.fromtimestamp(created_value, UTC)
@@ -404,9 +373,7 @@ def validate_record_bindings(
             raise ValueError("record_provider_created_at_not_monotonic")
         previous_created_at = created_at
         response_hash = record.get("provider_response_id_sha256")
-        if not isinstance(response_hash, str) or not re.fullmatch(
-            r"[0-9a-f]{64}", response_hash
-        ):
+        if not isinstance(response_hash, str) or not re.fullmatch(r"[0-9a-f]{64}", response_hash):
             raise ValueError("record_provider_response_hash_invalid")
         if response_hash in response_hashes:
             raise ValueError("duplicate_provider_response_hash")
@@ -435,10 +402,7 @@ def verify_case_document(
         raise ValueError("raw_provider_content_not_allowed")
     if document["reasoning_effort"] != effort or document["model"] == "offline-fake":
         raise ValueError("case_evidence_identity_mismatch")
-    if (
-        document["prompt_version"] != "copilot-prompt-v1"
-        or document["prompt_sha256"] != v2.prompt_sha256()
-    ):
+    if document["prompt_version"] != "copilot-prompt-v1" or document["prompt_sha256"] != v2.prompt_sha256():
         raise ValueError("case_evidence_prompt_identity_mismatch")
     if document["corpus_path"] != corpus_path.relative_to(REPOSITORY_ROOT).as_posix():
         raise ValueError("case_evidence_corpus_path_mismatch")
@@ -461,9 +425,7 @@ def verify_case_document(
     if document["request_controls"] != controls:
         raise ValueError("case_evidence_request_controls_mismatch")
     records = document["records"]
-    if not isinstance(records, list) or not all(
-        isinstance(record, dict) for record in records
-    ):
+    if not isinstance(records, list) or not all(isinstance(record, dict) for record in records):
         raise ValueError("invalid_case_evidence_records")
     validate_record_bindings(document, controls)
     summary = v2.evaluate_results(corpus, records, model=document["model"])
@@ -486,24 +448,17 @@ def verify_case_document(
     return summary
 
 
-def verify_evidence_directory(
-    output_dir: Path, corpus_path: Path = DEFAULT_CORPUS
-) -> dict[str, Any]:
+def verify_evidence_directory(output_dir: Path, corpus_path: Path = DEFAULT_CORPUS) -> dict[str, Any]:
     output_dir = output_dir.resolve()
     corpus_path = corpus_path.resolve()
     corpus = load_corpus(corpus_path)
-    recorded_source_snapshot = read_json(output_dir / "low_cases.json")[
-        "source_snapshot"
-    ]
+    recorded_source_snapshot = read_json(output_dir / "low_cases.json")["source_snapshot"]
     recorded_source_paths = {
-        row.get("path")
-        for row in recorded_source_snapshot.get("files", ())
-        if isinstance(row, dict)
+        row.get("path") for row in recorded_source_snapshot.get("files", ()) if isinstance(row, dict)
     }
     source_builder = (
         runner_v3.build_source_snapshot
-        if "scripts/run_live_copilot_prompt_evaluation_v3.py"
-        in recorded_source_paths
+        if "scripts/run_live_copilot_prompt_evaluation_v3.py" in recorded_source_paths
         else build_source_snapshot
     )
     summaries: dict[str, dict[str, Any]] = {}
@@ -545,22 +500,11 @@ def verify_evidence_directory(
         "evaluation_scope": "live_fixed_24_exact_io",
         "reasoning_efforts": ["low", "medium"],
         "recommended_reasoning_effort": recommended,
-        "all_thresholds_passed": all(
-            summary["thresholds_passed"] for summary in summaries.values()
-        ),
-        "provider_attempts_total": sum(
-            summary["provider_attempts_total"] for summary in summaries.values()
-        ),
-        "transport_attempts_total": sum(
-            summary["transport_attempts_total"] for summary in summaries.values()
-        ),
-        "case_evidence_sha256": {
-            effort: summary["case_evidence_sha256"]
-            for effort, summary in summaries.items()
-        },
-        "exact_llm_io_sha256": {
-            effort: exact[effort]["sha256"] for effort in ("low", "medium")
-        },
+        "all_thresholds_passed": all(summary["thresholds_passed"] for summary in summaries.values()),
+        "provider_attempts_total": sum(summary["provider_attempts_total"] for summary in summaries.values()),
+        "transport_attempts_total": sum(summary["transport_attempts_total"] for summary in summaries.values()),
+        "case_evidence_sha256": {effort: summary["case_evidence_sha256"] for effort, summary in summaries.items()},
+        "exact_llm_io_sha256": {effort: exact[effort]["sha256"] for effort in ("low", "medium")},
         "source_snapshot_sha256": summaries["low"]["source_snapshot_sha256"],
         "raw_provider_content_persisted": False,
         "exact_llm_io_persisted": True,
@@ -604,4 +548,3 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-

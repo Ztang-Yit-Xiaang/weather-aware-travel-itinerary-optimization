@@ -427,8 +427,7 @@ def test_actual_snapshot_schema_and_exact_protected_files(fault):
 @pytest.mark.parametrize("newline", ["\n", "\r\n"])
 def test_fault_patch_changes_only_optional_backend_projection(fault, newline):
     original = (core.ROOT / verifier.RELATIVE).read_text(encoding="utf-8").replace("\n", newline).encode()
-    after = original.decode().replace(
-        verifier.ANCHOR.replace("\n", newline), verifier.FAULT.replace("\n", newline))
+    after = original.decode().replace(verifier.ANCHOR.replace("\n", newline), verifier.FAULT.replace("\n", newline))
     row = {
         "schema_version": "optional-evidence-projection-fault-v1",
         "path": verifier.RELATIVE,

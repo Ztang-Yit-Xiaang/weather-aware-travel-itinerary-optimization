@@ -282,6 +282,24 @@ function loadScript(url, id, ready) {
 }
 
 async function loadMapRuntime(config) {
+  if (config?.schema_version === EXPECTED_MAP_SCHEMA && config.status === "ready"
+      && config.provider === "maplibre_raster") {
+    const base = new URL(config.base_url);
+    const expected = window.PRODUCT_DEPLOYMENT?.api_origin || location.origin;
+    const local = base.protocol === "http:" && LOOPBACK_HOSTS.has(base.hostname)
+      && LOOPBACK_HOSTS.has(location.hostname);
+    if (base.origin !== expected || (base.protocol !== "https:" && !local)
+        || base.username || base.password || base.pathname !== "/" || base.search || base.hash
+        || config.script_url !== `${base.origin}/static/vendor/maplibre-gl.js`
+        || config.stylesheet_url !== `${base.origin}/static/vendor/maplibre-gl.css`
+        || config.style_url !== `${base.origin}/public/map-style.json`
+        || config.range_requests_required !== false || config.protocol_script_url !== null) {
+      throw new Error("hosted_map_asset_invalid");
+    }
+    await loadStylesheet(config.stylesheet_url);
+    await loadScript(config.script_url, "hosted-maplibre-runtime", () => Boolean(window.maplibregl?.Map));
+    return config.style_url;
+  }
   if (config?.schema_version !== EXPECTED_MAP_SCHEMA
       || config.status !== "ready" || config.provider !== "maplibre_pmtiles") {
     throw new Error("map_runtime_unavailable");

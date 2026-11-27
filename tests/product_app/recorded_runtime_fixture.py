@@ -1,4 +1,5 @@
 """Exact historical inputs shared by verifier tests; not current browser proof."""
+
 from __future__ import annotations
 
 import gzip

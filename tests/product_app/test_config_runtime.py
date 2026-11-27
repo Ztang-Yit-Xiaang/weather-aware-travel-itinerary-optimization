@@ -27,9 +27,14 @@ from itinerary_system.product_app.models import ComponentHealthV1
 from itinerary_system.product_app.runtime import MAP_CACHE_SECONDS, ProductRuntime, product_build_id
 
 
-@pytest.mark.parametrize("relative_path", [
-    "evaluation/plan_evaluator.py", "pipeline_runner.py", "repair/day_route_solver.py",
-])
+@pytest.mark.parametrize(
+    "relative_path",
+    [
+        "evaluation/plan_evaluator.py",
+        "pipeline_runner.py",
+        "repair/day_route_solver.py",
+    ],
+)
 def test_build_guard_tracks_imported_backend_source(tmp_path, monkeypatch, relative_path):
     runtime = ProductRuntime(runtime_config(tmp_path, monkeypatch))
     dependency = tmp_path / "src/itinerary_system" / relative_path
@@ -57,6 +62,7 @@ def test_build_fingerprint_tracks_interest_model_and_spatial_algorithm(tmp_path)
     model.write_text("model = 2\n", encoding="utf-8")
     assert product_build_id(tmp_path) != second
 
+
 ENVIRONMENT_KEYS = (
     "PRODUCT_APP_ORIGIN",
     "PRODUCT_MAP_PROVIDER",
@@ -72,9 +78,7 @@ ENVIRONMENT_KEYS = (
 )
 
 
-def runtime_config(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, **environment: str
-) -> ProductRuntimeConfig:
+def runtime_config(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, **environment: str) -> ProductRuntimeConfig:
     for key in ENVIRONMENT_KEYS:
         monkeypatch.delenv(key, raising=False)
     for key, value in environment.items():
@@ -86,9 +90,7 @@ def runtime_config(
     )
 
 
-def test_runtime_config_defaults_and_secret_repr(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_runtime_config_defaults_and_secret_repr(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     config = runtime_config(
         tmp_path,
         monkeypatch,
@@ -188,9 +190,7 @@ def test_runtime_config_rejects_non_loopback_or_invalid_port(
         )
 
 
-def _healthy_maplibre_fetch(
-    path_or_url: str, *, range_request: bool = False
-) -> tuple[bytes, dict[str, str], int]:
+def _healthy_maplibre_fetch(path_or_url: str, *, range_request: bool = False) -> tuple[bytes, dict[str, str], int]:
     cors = {"Access-Control-Allow-Origin": "http://127.0.0.1:8127"}
     if path_or_url == "http://127.0.0.1:8080/styles/protomaps-light.json":
         style = {
@@ -200,10 +200,7 @@ def _healthy_maplibre_fetch(
             "sources": {
                 "protomaps": {
                     "type": "vector",
-                    "url": (
-                        "pmtiles://http://127.0.0.1:8080/data/"
-                        "california-coast-v1.pmtiles"
-                    ),
+                    "url": ("pmtiles://http://127.0.0.1:8080/data/california-coast-v1.pmtiles"),
                     "attribution": (
                         'Protomaps | <a href="https://www.openstreetmap.org/copyright" '
                         'target="_blank" rel="noopener">© OpenStreetMap contributors</a>'
@@ -221,71 +218,79 @@ def _healthy_maplibre_fetch(
         }
         return json.dumps(style).encode(), cors, 200
     if path_or_url == "http://127.0.0.1:8080/provenance.json":
-        return json.dumps(
-            {
-                "schema_version": "map-data-provenance-v1",
-                "source": "OpenStreetMap",
-                "source_url": EXPECTED_SOURCE_URL,
-                "source_build": EXPECTED_SOURCE_BUILD,
-                "upstream_blake3": EXPECTED_UPSTREAM_BLAKE3,
-                "upstream_packages": EXPECTED_UPSTREAM_PACKAGES,
-                "license": "ODbL-1.0",
-                "attribution": "Protomaps | © OpenStreetMap contributors",
-                "attribution_url": "https://www.openstreetmap.org/copyright",
-                "artifact_url": "/data/california-coast-v1.pmtiles",
-                "artifact_sha256": "a" * 64,
-                "artifact_size": 2048,
-                "bounds": [-123.0, 33.5, -117.5, 38.5],
-                "maxzoom": 15,
-                "generated_at": "2026-08-04T00:00:00Z",
-                "extraction_command": (
-                    "pmtiles extract SOURCE data/california-coast-v1.pmtiles "
-                    "--bbox=-123.0,33.5,-117.5,38.5 --maxzoom=15"
-                ),
-                "header_json_sha256": "c" * 64,
-                "metadata_json_sha256": "d" * 64,
-                "verify_output_sha256": "e" * 64,
-                "tool_versions": {
-                    "maplibre-gl": "5.24.0",
-                    "pmtiles-js": "4.4.1",
-                    "protomaps-basemap-style": "5.7.2",
-                    "pmtiles-cli": "1.30.0",
-                },
-                "license_notices": {
-                    "BSD-3-Clause": "licenses/BSD-3-Clause.txt",
-                    "CC0-1.0": "licenses/CC0-1.0.txt",
-                    "MIT": "licenses/MIT.txt",
-                    "ODbL-1.0": "licenses/ODbL-1.0.txt",
-                    "OFL-1.1": "licenses/OFL-1.1.txt",
-                    "Protomaps-Data-Notices": "licenses/PROTOMAPS_DATA.txt",
-                },
-                "glyph_ranges": ["fonts/NotoSans/0-255.pbf"],
-                "assets": [
-                    {"path": path, "sha256": "f" * 64, "license": license_id}
-                    for path, license_id in (
-                        ("maplibre/maplibre-gl.js", "BSD-3-Clause"),
-                        ("maplibre/maplibre-gl.css", "BSD-3-Clause"),
-                        ("pmtiles/pmtiles.js", "BSD-3-Clause"),
-                        ("styles/protomaps-light.json", "CC0-1.0"),
-                        ("fonts/NotoSans/0-255.pbf", "OFL-1.1"),
-                        ("licenses/BSD-3-Clause.txt", "BSD-3-Clause"),
-                        ("licenses/CC0-1.0.txt", "CC0-1.0"),
-                        ("licenses/MIT.txt", "MIT"),
-                        ("licenses/ODbL-1.0.txt", "ODbL-1.0"),
-                        ("licenses/OFL-1.1.txt", "OFL-1.1"),
-                        ("licenses/PROTOMAPS_DATA.txt", "Protomaps-Data-Notices"),
-                    )
-                ],
-            }
-        ).encode(), cors, 200
+        return (
+            json.dumps(
+                {
+                    "schema_version": "map-data-provenance-v1",
+                    "source": "OpenStreetMap",
+                    "source_url": EXPECTED_SOURCE_URL,
+                    "source_build": EXPECTED_SOURCE_BUILD,
+                    "upstream_blake3": EXPECTED_UPSTREAM_BLAKE3,
+                    "upstream_packages": EXPECTED_UPSTREAM_PACKAGES,
+                    "license": "ODbL-1.0",
+                    "attribution": "Protomaps | © OpenStreetMap contributors",
+                    "attribution_url": "https://www.openstreetmap.org/copyright",
+                    "artifact_url": "/data/california-coast-v1.pmtiles",
+                    "artifact_sha256": "a" * 64,
+                    "artifact_size": 2048,
+                    "bounds": [-123.0, 33.5, -117.5, 38.5],
+                    "maxzoom": 15,
+                    "generated_at": "2026-08-04T00:00:00Z",
+                    "extraction_command": (
+                        "pmtiles extract SOURCE data/california-coast-v1.pmtiles "
+                        "--bbox=-123.0,33.5,-117.5,38.5 --maxzoom=15"
+                    ),
+                    "header_json_sha256": "c" * 64,
+                    "metadata_json_sha256": "d" * 64,
+                    "verify_output_sha256": "e" * 64,
+                    "tool_versions": {
+                        "maplibre-gl": "5.24.0",
+                        "pmtiles-js": "4.4.1",
+                        "protomaps-basemap-style": "5.7.2",
+                        "pmtiles-cli": "1.30.0",
+                    },
+                    "license_notices": {
+                        "BSD-3-Clause": "licenses/BSD-3-Clause.txt",
+                        "CC0-1.0": "licenses/CC0-1.0.txt",
+                        "MIT": "licenses/MIT.txt",
+                        "ODbL-1.0": "licenses/ODbL-1.0.txt",
+                        "OFL-1.1": "licenses/OFL-1.1.txt",
+                        "Protomaps-Data-Notices": "licenses/PROTOMAPS_DATA.txt",
+                    },
+                    "glyph_ranges": ["fonts/NotoSans/0-255.pbf"],
+                    "assets": [
+                        {"path": path, "sha256": "f" * 64, "license": license_id}
+                        for path, license_id in (
+                            ("maplibre/maplibre-gl.js", "BSD-3-Clause"),
+                            ("maplibre/maplibre-gl.css", "BSD-3-Clause"),
+                            ("pmtiles/pmtiles.js", "BSD-3-Clause"),
+                            ("styles/protomaps-light.json", "CC0-1.0"),
+                            ("fonts/NotoSans/0-255.pbf", "OFL-1.1"),
+                            ("licenses/BSD-3-Clause.txt", "BSD-3-Clause"),
+                            ("licenses/CC0-1.0.txt", "CC0-1.0"),
+                            ("licenses/MIT.txt", "MIT"),
+                            ("licenses/ODbL-1.0.txt", "ODbL-1.0"),
+                            ("licenses/OFL-1.1.txt", "OFL-1.1"),
+                            ("licenses/PROTOMAPS_DATA.txt", "Protomaps-Data-Notices"),
+                        )
+                    ],
+                }
+            ).encode(),
+            cors,
+            200,
+        )
     if range_request:
         assert path_or_url == "http://127.0.0.1:8080/data/california-coast-v1.pmtiles"
-        return b"PMTiles" + bytes([3]) + bytes(1016), {
-            **cors,
-            "Accept-Ranges": "bytes",
-            "Content-Range": "bytes 0-1023/2048",
-            "Content-Length": "1024",
-        }, 206
+        return (
+            b"PMTiles" + bytes([3]) + bytes(1016),
+            {
+                **cors,
+                "Accept-Ranges": "bytes",
+                "Content-Range": "bytes 0-1023/2048",
+                "Content-Length": "1024",
+            },
+            206,
+        )
     return b"ok", cors, 200
 
 
@@ -347,12 +352,12 @@ def test_maplibre_probe_fails_closed_with_stable_codes(
         if mutation == "missing_sources" and str(path_or_url).endswith("protomaps-light.json"):
             return b'{"version":8}', headers, 200
         if mutation == "foreign_style_url" and str(path_or_url).endswith("protomaps-light.json"):
-            return json.dumps(
-                {"version": 8, "sprite": "https://example.com/sprite", "sources": {}}
-            ).encode(), headers, 200
-        if mutation == "foreign_source_data" and str(path_or_url).endswith(
-            "protomaps-light.json"
-        ):
+            return (
+                json.dumps({"version": 8, "sprite": "https://example.com/sprite", "sources": {}}).encode(),
+                headers,
+                200,
+            )
+        if mutation == "foreign_source_data" and str(path_or_url).endswith("protomaps-light.json"):
             value = json.loads(body)
             value["sources"]["protomaps"]["data"] = "https://example.com/data.geojson"
             return json.dumps(value).encode(), headers, 200
@@ -370,9 +375,7 @@ def test_maplibre_probe_fails_closed_with_stable_codes(
             value = json.loads(body)
             value["tool_versions"]["maplibre-gl"] = "latest"
             return json.dumps(value).encode(), headers, 200
-        if mutation == "wrong_upstream_source" and str(path_or_url).endswith(
-            "provenance.json"
-        ):
+        if mutation == "wrong_upstream_source" and str(path_or_url).endswith("provenance.json"):
             value = json.loads(body)
             value["upstream_packages"]["maplibre-gl"]["git_commit"] = "0" * 40
             return json.dumps(value).encode(), headers, 200
@@ -388,9 +391,7 @@ def test_maplibre_probe_fails_closed_with_stable_codes(
             value = json.loads(body)
             del value["sources"]["protomaps"]["attribution"]
             return json.dumps(value).encode(), headers, 200
-        if mutation == "plain_attribution" and str(path_or_url).endswith(
-            "protomaps-light.json"
-        ):
+        if mutation == "plain_attribution" and str(path_or_url).endswith("protomaps-light.json"):
             value = json.loads(body)
             value["sources"]["protomaps"]["attribution"] = (
                 "© OpenStreetMap contributors https://www.openstreetmap.org/copyright"
@@ -401,10 +402,14 @@ def test_maplibre_probe_fails_closed_with_stable_codes(
         if range_request and mutation == "range_200":
             return body, headers, 200
         if range_request and mutation == "missing_accept_ranges":
-            return body, {
-                "Access-Control-Allow-Origin": headers["Access-Control-Allow-Origin"],
-                "Content-Range": headers["Content-Range"],
-            }, status
+            return (
+                body,
+                {
+                    "Access-Control-Allow-Origin": headers["Access-Control-Allow-Origin"],
+                    "Content-Range": headers["Content-Range"],
+                },
+                status,
+            )
         if range_request and mutation == "bad_content_range":
             return body, {**headers, "Content-Range": "bytes 1-1024/2048"}, status
         if range_request and mutation == "low_content_range_total":
@@ -449,7 +454,9 @@ def test_map_fetch_reads_complete_bounded_asset(tmp_path: Path, monkeypatch: pyt
         assert len(runtime._fetch("/maplibre/maplibre-gl.js")[0]) == length
 
 
-def test_map_probe_transport_diagnostic_excludes_exception_text(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, caplog) -> None:
+def test_map_probe_transport_diagnostic_excludes_exception_text(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, caplog
+) -> None:
     runtime = ProductRuntime(runtime_config(tmp_path, monkeypatch))
 
     def denied(*args, **kwargs):
@@ -462,9 +469,7 @@ def test_map_probe_transport_diagnostic_excludes_exception_text(tmp_path: Path, 
     assert "secret-sensitive" not in caplog.text
 
 
-def test_map_fetch_rejects_redirect_outside_configured_origin(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_map_fetch_rejects_redirect_outside_configured_origin(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     runtime = ProductRuntime(runtime_config(tmp_path, monkeypatch))
 
     class RedirectedResponse:
@@ -521,9 +526,7 @@ def test_map_probe_reports_each_missing_local_asset(
     assert runtime._probe_map().code == expected_code
 
 
-def test_map_probe_is_cached_for_two_seconds(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_map_probe_is_cached_for_two_seconds(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     runtime = ProductRuntime(runtime_config(tmp_path, monkeypatch))
     runtime._initialized = True
     runtime._components = {
@@ -603,12 +606,8 @@ def test_core_service_remains_available_during_optional_map_probe(tmp_path, monk
         assert probing.result(timeout=2).components["map"].status == "degraded"
 
 
-def test_atlas_is_explicit_opt_in_and_requires_runtime_license(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    runtime = ProductRuntime(
-        runtime_config(tmp_path, monkeypatch, PRODUCT_MAP_PROVIDER="mapbox_atlas_v3")
-    )
+def test_atlas_is_explicit_opt_in_and_requires_runtime_license(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    runtime = ProductRuntime(runtime_config(tmp_path, monkeypatch, PRODUCT_MAP_PROVIDER="mapbox_atlas_v3"))
     assert runtime._probe_map().code == "atlas_runtime_license_missing"
     assert runtime.map_configuration().provider == "mapbox_atlas_v3"
 
@@ -628,9 +627,10 @@ def test_atlas_backup_can_pass_only_when_explicitly_selected_and_licensed(
 
     def fetch(path_or_url: str, *, range_request: bool = False):
         if str(path_or_url).endswith("streets-v12.json"):
-            return json.dumps(
-                {
-                    "version": 8,
+            return (
+                json.dumps(
+                    {
+                        "version": 8,
                         "sprite": "/data/sprites/streets",
                         "glyphs": "/data/fonts/{fontstack}/{range}.pbf",
                         "sources": {"streets": {"url": "pmtiles:///data/tiles/streets.pmtiles"}},
@@ -645,15 +645,22 @@ def test_atlas_backup_can_pass_only_when_explicitly_selected_and_licensed(
                                 },
                             }
                         ],
-                }
-            ).encode(), cors, 200
+                    }
+                ).encode(),
+                cors,
+                200,
+            )
         if range_request:
-            return b"PMTiles" + bytes([3]) + bytes(1016), {
-                **cors,
+            return (
+                b"PMTiles" + bytes([3]) + bytes(1016),
+                {
+                    **cors,
                     "Accept-Ranges": "bytes",
                     "Content-Range": "bytes 0-1023/2048",
                     "Content-Length": "1024",
-            }, 206
+                },
+                206,
+            )
         return b"ok", cors, 200
 
     monkeypatch.setattr(runtime, "_fetch", fetch)
@@ -661,15 +668,11 @@ def test_atlas_backup_can_pass_only_when_explicitly_selected_and_licensed(
     assert runtime.map_configuration().runtime_license == "read-only-runtime-license"
 
 
-def test_openai_health_is_explicit_and_does_not_expose_secrets(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_openai_health_is_explicit_and_does_not_expose_secrets(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     deterministic = ProductRuntime(runtime_config(tmp_path, monkeypatch))
     assert deterministic._openai_health().code == "deterministic_adapter_selected"
 
-    unconfigured = ProductRuntime(
-        runtime_config(tmp_path, monkeypatch, PRODUCT_COPILOT_ADAPTER="openai")
-    )
+    unconfigured = ProductRuntime(runtime_config(tmp_path, monkeypatch, PRODUCT_COPILOT_ADAPTER="openai"))
     assert unconfigured._openai_health().code == "openai_not_configured"
 
     configured = ProductRuntime(
@@ -688,9 +691,7 @@ def test_openai_health_is_explicit_and_does_not_expose_secrets(
     assert "never-render-this-key" not in serialized
 
 
-def test_runtime_config_accepts_explicit_copilot_bounds(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_runtime_config_accepts_explicit_copilot_bounds(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     config = runtime_config(
         tmp_path,
         monkeypatch,
@@ -741,8 +742,7 @@ def test_local_environment_loader_is_literal_atomic_and_does_not_override(
 ) -> None:
     launcher = _load_launcher_module()
     (tmp_path / ".env.local").write_text(
-        "# local only\nOPENAI_API_KEY=local-secret\n"
-        "OPENAI_COPILOT_MODEL=$(not-a-command)\n",
+        "# local only\nOPENAI_API_KEY=local-secret\nOPENAI_COPILOT_MODEL=$(not-a-command)\n",
         encoding="utf-8",
     )
     environment = {"OPENAI_COPILOT_MODEL": "explicit-process-value"}
@@ -843,9 +843,14 @@ def test_fastapi_cache_cleanup_releases_closed_app_runtime(
             response = client.get("/api/runs/california_coast_coherent_demo_v1/workspace")
             (tmp_path / "closed_app_workspace_response.json").write_bytes(response.content)
             assert response.status_code == 200
-            references = tuple(weakref.ref(value) for value in (
-                app, app.state.product_runtime, app.state.product_service,
-            ))
+            references = tuple(
+                weakref.ref(value)
+                for value in (
+                    app,
+                    app.state.product_runtime,
+                    app.state.product_service,
+                )
+            )
         return references
 
     references = close_app()

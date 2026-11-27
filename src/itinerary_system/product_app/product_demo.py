@@ -100,12 +100,10 @@ def load_product_demo_package(repository_root: Path, package_dir: Path) -> Produ
             or route_validation.get("fallback_leg_count") != 0
             or route_matrix.get("matrix_id") != route_evidence.get("matrix_id")
             or route_matrix.get("source_bundle_id") != route_evidence.get("source_bundle_id")
-            or route_matrix.get("source_content_sha256")
-            != route_evidence.get("source_content_sha256")
+            or route_matrix.get("source_content_sha256") != route_evidence.get("source_content_sha256")
             or route_validation.get("matrix_id") != route_evidence.get("matrix_id")
             or route_validation.get("source_bundle_id") != route_evidence.get("source_bundle_id")
-            or route_validation.get("source_content_sha256")
-            != route_evidence.get("source_content_sha256")
+            or route_validation.get("source_content_sha256") != route_evidence.get("source_content_sha256")
             or len(routing_paths) != 1
             or bundle.source_hashes.get(routing_paths[0]) != matrix_file_sha256
         ):
@@ -162,9 +160,7 @@ def load_product_demo_package(repository_root: Path, package_dir: Path) -> Produ
         }
         bundles.append(bundle)
 
-    if len({row["plan_id"] for row in summaries}) != 2 or len(
-        {row["plan_content_hash"] for row in summaries}
-    ) != 2:
+    if len({row["plan_id"] for row in summaries}) != 2 or len({row["plan_content_hash"] for row in summaries}) != 2:
         raise ProductDemoError("product_demo_alternatives_not_distinct")
     if summaries[1]["route_total_minutes"] >= summaries[0]["route_total_minutes"]:
         raise ProductDemoError("product_demo_low_driving_claim_invalid")
@@ -218,11 +214,7 @@ def _load_demo_alternative(run_dir: Path) -> ProductDashboardSourceBundle:
     if not all(len(group) == 1 for group in (requests, diffs, evaluations, routing, metrics)):
         raise ProductDemoError("product_demo_run_artifacts_invalid")
     parent_plan_id = str(manifest.get("parent_plan_id") or "")
-    output_ids = {
-        str(value)
-        for value in (manifest.get("pipeline_run") or {}).get("output_plan_ids", ())
-        if str(value)
-    }
+    output_ids = {str(value) for value in (manifest.get("pipeline_run") or {}).get("output_plan_ids", ()) if str(value)}
     parent = next((plan for plan in plans if plan.get("plan_id") == parent_plan_id), None)
     child = next((plan for plan in plans if plan.get("plan_id") in output_ids), None)
     if not parent or not child:
@@ -262,9 +254,7 @@ def _load_demo_alternative(run_dir: Path) -> ProductDashboardSourceBundle:
         )
     }
     source_hashes = {
-        relative: _sha256(_contained(run_dir, relative))
-        for paths in source_paths.values()
-        for relative in paths
+        relative: _sha256(_contained(run_dir, relative)) for paths in source_paths.values() for relative in paths
     }
     planner_runs: list[dict[str, Any]] = []
     for relative in source_paths["planner_runs"]:
@@ -298,9 +288,7 @@ def _verify_package_inventory(package_dir: Path, declared: Any) -> None:
     if not isinstance(declared, dict) or not declared:
         raise ProductDemoError("product_demo_inventory_missing")
     if not all(
-        isinstance(relative, str)
-        and isinstance(expected, str)
-        and len(expected) == 64
+        isinstance(relative, str) and isinstance(expected, str) and len(expected) == 64
         for relative, expected in declared.items()
     ):
         raise ProductDemoError("product_demo_inventory_invalid")
@@ -323,12 +311,7 @@ def _validate_redacted_config_paths(package_dir: Path, declared: Any) -> None:
         config = _json(_contained(package_dir, str(relative)))
         source_path = str(config.get("_source_path") or "")
         path = Path(source_path)
-        if (
-            not source_path
-            or path.is_absolute()
-            or PureWindowsPath(source_path).drive
-            or ".." in path.parts
-        ):
+        if not source_path or path.is_absolute() or PureWindowsPath(source_path).drive or ".." in path.parts:
             raise ProductDemoError("product_demo_host_path_disclosure")
 
 

@@ -281,9 +281,7 @@ def _merge_day_candidates(
         candidate = selected_by_day.get(day)
         if candidate is None:
             sequence = tuple(
-                str(stop_id)
-                for stop_id in parent.sequence
-                if int(parent_day_by_stop.get(str(stop_id), -1)) == day
+                str(stop_id) for stop_id in parent.sequence if int(parent_day_by_stop.get(str(stop_id), -1)) == day
             )
         else:
             sequence = candidate.stop_sequence

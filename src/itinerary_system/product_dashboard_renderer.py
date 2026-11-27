@@ -52,9 +52,7 @@ def render_product_dashboard(run_dir: Path) -> ProductDashboardManifest:
             assets / "product_ui.js",
             assets / "product_map.js",
         )
-        asset_hashes = {
-            path.relative_to(staging).as_posix(): file_sha256(path) for path in asset_paths
-        }
+        asset_hashes = {path.relative_to(staging).as_posix(): file_sha256(path) for path in asset_paths}
         requested = tuple(
             dict.fromkeys(
                 str(record.get("method_requested") or "")
@@ -80,9 +78,7 @@ def render_product_dashboard(run_dir: Path) -> ProductDashboardManifest:
             diff_id=(bundle.diff or {}).get("diff_id"),
             certificate_id=(bundle.certificate or {}).get("certificate_id"),
             explanation_ids=tuple(
-                str(record.get("evidence_id") or "")
-                for record in bundle.explanations
-                if record.get("evidence_id")
+                str(record.get("evidence_id") or "") for record in bundle.explanations if record.get("evidence_id")
             ),
             route_matrix_id=(bundle.route_matrix or {}).get("matrix_id"),
             requested_method_ids=requested,
@@ -116,10 +112,7 @@ def register_product_dashboard_screenshots(run_dir: Path) -> dict[str, str]:
     screenshots = sorted(screenshot_dir.glob("*.png"))
     if not screenshots:
         raise ProductDashboardValidationError(["missing_product_screenshots"])
-    hashes = {
-        path.relative_to(product_dir).as_posix(): file_sha256(path)
-        for path in screenshots
-    }
+    hashes = {path.relative_to(product_dir).as_posix(): file_sha256(path) for path in screenshots}
     assets = manifest.setdefault("asset_hashes", {})
     overlap = set(hashes) & set(assets)
     if overlap:

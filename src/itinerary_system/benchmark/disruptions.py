@@ -394,7 +394,9 @@ def _highest_weather_stop(parent_plan: PlanArtifactV2) -> dict[str, Any]:
 
 def _last_stop_on_day(parent_plan: PlanArtifactV2, day: int) -> dict[str, Any]:
     stops = [stop for stop in _stops(parent_plan) if _stop_day(stop, default=day) == day]
-    return max(stops or _stops(parent_plan), key=lambda stop: (_int(stop.get("stop_order")), _stop_id(stop, fallback="")))
+    return max(
+        stops or _stops(parent_plan), key=lambda stop: (_int(stop.get("stop_order")), _stop_id(stop, fallback=""))
+    )
 
 
 def _busiest_day(parent_plan: PlanArtifactV2) -> int:
@@ -449,9 +451,7 @@ def _replacement_candidate(
         if _stop_id(candidate, fallback="") not in selected_ids and _has_coordinates(candidate)
     ]
     same_city = [
-        candidate
-        for candidate in all_located
-        if str(candidate.get("city") or "").strip().lower() in target_cities
+        candidate for candidate in all_located if str(candidate.get("city") or "").strip().lower() in target_cities
     ]
     located = same_city or all_located
     target_points = [

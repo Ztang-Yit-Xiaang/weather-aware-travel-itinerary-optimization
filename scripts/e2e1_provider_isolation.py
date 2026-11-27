@@ -119,12 +119,14 @@ class ProviderIsolation:
 
     def _deny(self, boundary: str) -> None:
         with self._lock:
-            self.record["blocked_attempts"].append({
-                "sequence": len(self.record["blocked_attempts"]) + 1,
-                "boundary": boundary,
-                "reason": "non_loopback_target",
-                "at": _now(),
-            })
+            self.record["blocked_attempts"].append(
+                {
+                    "sequence": len(self.record["blocked_attempts"]) + 1,
+                    "boundary": boundary,
+                    "reason": "non_loopback_target",
+                    "at": _now(),
+                }
+            )
             self._write()
         raise ProviderIsolationError("e2e1_external_dispatch_blocked")
 
@@ -183,22 +185,28 @@ class ProviderIsolation:
         from itinerary_system.product_app.copilot import DeterministicCopilotAdapter
 
         adapter = getattr(getattr(runtime, "service", None), "copilot", None)
-        if (getattr(getattr(runtime, "config", None), "copilot_adapter", None) != "deterministic"
-                or type(adapter) is not DeterministicCopilotAdapter
-                or getattr(adapter, "provider_name", None) != "deterministic"
-                or os.environ.get("OPENAI_API_KEY") != ""):
+        if (
+            getattr(getattr(runtime, "config", None), "copilot_adapter", None) != "deterministic"
+            or type(adapter) is not DeterministicCopilotAdapter
+            or getattr(adapter, "provider_name", None) != "deterministic"
+            or os.environ.get("OPENAI_API_KEY") != ""
+        ):
             raise ProviderIsolationError("e2e1_actual_adapter_mismatch")
         self.record.update(
-            effective_adapter="deterministic", actual_adapter="DeterministicCopilotAdapter",
-            api_key_disabled=True, app_initialized=True,
+            effective_adapter="deterministic",
+            actual_adapter="DeterministicCopilotAdapter",
+            api_key_disabled=True,
+            app_initialized=True,
         )
         self._write()
 
     def __exit__(self, exc_type, exc_value, traceback):
         self.record["finalized_at"] = _now()
         self.record["finalized"] = bool(
-            exc_type is None and self.record["app_initialized"]
-            and self.record["server_started"] and self.record["server_stopped"]
+            exc_type is None
+            and self.record["app_initialized"]
+            and self.record["server_started"]
+            and self.record["server_stopped"]
             and self.record["failure_code"] is None
         )
         if not self.record["finalized"]:

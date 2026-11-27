@@ -16,22 +16,34 @@ RUN = "california_coast_coherent_demo_v1"
 
 
 def test_preview_does_not_block_an_independent_health_request(tmp_path, monkeypatch):
-    app = create_product_app(repository_root=ROOT, registry_path=ROOT / "configs/product_app_registry.json",
-                             state_root=tmp_path / "state", additional_allowed_authorities=("testserver",),
-                             copilot=DeterministicCopilotAdapter())
+    app = create_product_app(
+        repository_root=ROOT,
+        registry_path=ROOT / "configs/product_app_registry.json",
+        state_root=tmp_path / "state",
+        additional_allowed_authorities=("testserver",),
+        copilot=DeterministicCopilotAdapter(),
+    )
 
     async def journey():
-        async with app.router.lifespan_context(app), httpx.AsyncClient(
-            transport=httpx.ASGITransport(app=app), base_url="http://testserver"
-        ) as client:
+        async with (
+            app.router.lifespan_context(app),
+            httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://testserver") as client,
+        ):
             created = (await client.post("/api/sessions", json={"run_id": RUN})).json()
             session = created["session"]
             headers = {"X-Session-Token": created["mutation_token"]}
             url = f"/api/sessions/{session['session_id']}"
-            staged = await client.post(f"{url}/draft/operations", headers=headers, json={
-                "expected_revision": 0, "type": "replace_nearby", "target": "bixby_creek_bridge_viewpoint",
-                "parameters": {"candidate_id": "pfeiffer_big_sur_state_park"}, "source": "map",
-            })
+            staged = await client.post(
+                f"{url}/draft/operations",
+                headers=headers,
+                json={
+                    "expected_revision": 0,
+                    "type": "replace_nearby",
+                    "target": "bixby_creek_bridge_viewpoint",
+                    "parameters": {"candidate_id": "pfeiffer_big_sur_state_park"},
+                    "source": "map",
+                },
+            )
             assert staged.status_code == 200
             compiler = app.state.product_service._draft_compilers[RUN]
             original = compiler.compile
@@ -44,8 +56,9 @@ def test_preview_does_not_block_an_independent_health_request(tmp_path, monkeypa
                 return original(*args, **kwargs)
 
             monkeypatch.setattr(compiler, "compile", delayed)
-            preview_task = asyncio.create_task(client.post(f"{url}/preview", headers=headers,
-                                                          json={"expected_revision": 1}))
+            preview_task = asyncio.create_task(
+                client.post(f"{url}/preview", headers=headers, json={"expected_revision": 1})
+            )
             try:
                 compiler_entered_before_health = await asyncio.to_thread(entered.wait, 5)
                 warm_started = time.monotonic()
@@ -60,15 +73,24 @@ def test_preview_does_not_block_an_independent_health_request(tmp_path, monkeypa
             finally:
                 release.set()
                 preview = await preview_task
-            (tmp_path / "exact_responsiveness_io.json").write_text(json.dumps({
-                "injected_fault": "local compiler held until health finishes, with the existing five-second safety bound; internal execution unchanged",
-                "warm_health_elapsed_seconds": warm_elapsed, "warm_health_response": warm_health.json(),
-                "health_elapsed_seconds": elapsed, "health_response": health.json(),
-                "preview_response": preview.json(), "compiler_entered": entered.is_set(),
-                "compiler_entered_before_health": compiler_entered_before_health,
-                "health_completed_while_compiler_paused": health_completed_while_compiler_paused,
-                "latency_scope": "cached health after a real health/probe request; both requests finish before compiler release",
-            }, indent=2), encoding="utf-8")
+            (tmp_path / "exact_responsiveness_io.json").write_text(
+                json.dumps(
+                    {
+                        "injected_fault": "local compiler held until health finishes, with the existing five-second safety bound; internal execution unchanged",
+                        "warm_health_elapsed_seconds": warm_elapsed,
+                        "warm_health_response": warm_health.json(),
+                        "health_elapsed_seconds": elapsed,
+                        "health_response": health.json(),
+                        "preview_response": preview.json(),
+                        "compiler_entered": entered.is_set(),
+                        "compiler_entered_before_health": compiler_entered_before_health,
+                        "health_completed_while_compiler_paused": health_completed_while_compiler_paused,
+                        "latency_scope": "cached health after a real health/probe request; both requests finish before compiler release",
+                    },
+                    indent=2,
+                ),
+                encoding="utf-8",
+            )
             assert compiler_entered_before_health
             assert health_completed_while_compiler_paused
             assert warm_health.status_code == 200

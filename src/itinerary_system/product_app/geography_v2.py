@@ -87,28 +87,18 @@ def build_geographic_workspace_v2(
     if len(plans) < 2:
         return _unavailable("registered_repair_missing")
 
-    points = [
-        point
-        for plan in plans
-        for point in _plan_points(plan)
-    ]
+    points = [point for plan in plans for point in _plan_points(plan)]
     if not points:
         return _unavailable("geographic_coordinates_missing")
     total_gaps = sum(plan["coverage"]["gap_count"] for plan in plans)
     total_required = sum(plan["coverage"]["required_leg_count"] for plan in plans)
-    total_validated = sum(
-        plan["coverage"]["road_validated_leg_count"] for plan in plans
-    )
+    total_validated = sum(plan["coverage"]["road_validated_leg_count"] for plan in plans)
     total_nodes = sum(plan["coverage"]["route_path_node_count"] for plan in plans)
     status = "ready" if total_gaps == 0 else "ready_with_gaps"
     return {
         "schema_version": "product-geography-v2",
         "status": status,
-        "code": (
-            "artifact_geography_complete"
-            if status == "ready"
-            else "artifact_geography_has_route_gaps"
-        ),
+        "code": ("artifact_geography_complete" if status == "ready" else "artifact_geography_has_route_gaps"),
         "bounds": _bounds(points),
         "route_matrix_id": str(route_matrix.get("matrix_id") or ""),
         "route_source_sha256": str(route_matrix.get("source_content_sha256") or ""),
@@ -245,20 +235,33 @@ def _stop_features(
                         "source_confidence": _optional_finite_float(stop.get("source_confidence")),
                     },
                     "stop_id": stop_id,
-                    "name": str(
-                        stop.get("attraction_name") or stop.get("name") or stop_id
-                    ),
+                    "name": str(stop.get("attraction_name") or stop.get("name") or stop_id),
                     "city": str(stop.get("city") or ""),
                     "day": _optional_day(stop.get("day")),
                     "stop_order": _optional_int(stop.get("stop_order")) or sequence_index,
                     "sequence_index": sequence_index,
                     "ownership_strength": ownership.get(stop_id, ""),
-                    **{name: deepcopy(stop[name]) for name in (
-                        "description", "official_url", "informational_url", "place_categories",
-                        "visit_guidance", "selected_access_point", "route_access_point", "access_note",
-                        "arrival_time", "departure_time", "expected_arrival", "expected_departure",
-                        "commitment_strength", "attribute_constraints", "guide",
-                    ) if name in stop},
+                    **{
+                        name: deepcopy(stop[name])
+                        for name in (
+                            "description",
+                            "official_url",
+                            "informational_url",
+                            "place_categories",
+                            "visit_guidance",
+                            "selected_access_point",
+                            "route_access_point",
+                            "access_note",
+                            "arrival_time",
+                            "departure_time",
+                            "expected_arrival",
+                            "expected_departure",
+                            "commitment_strength",
+                            "attribute_constraints",
+                            "guide",
+                        )
+                        if name in stop
+                    },
                 },
             }
         )
@@ -309,11 +312,7 @@ def _route_path_features(
             {
                 "type": "Feature",
                 "id": f"{plan_id}:route-path-node:{occurrence_index}",
-                "geometry": (
-                    {"type": "Point", "coordinates": coordinate}
-                    if coordinate is not None
-                    else None
-                ),
+                "geometry": ({"type": "Point", "coordinates": coordinate} if coordinate is not None else None),
                 "properties": {
                     "plan_id": plan_id,
                     "content_hash": content_hash,
@@ -437,9 +436,7 @@ def _cell_for_spec(
     spec: Mapping[str, Any],
     cell_index: Mapping[tuple[str, str], Mapping[str, Any]],
 ) -> Mapping[str, Any] | None:
-    return cell_index.get(
-        (str(spec.get("origin_id") or ""), str(spec.get("destination_id") or ""))
-    )
+    return cell_index.get((str(spec.get("origin_id") or ""), str(spec.get("destination_id") or "")))
 
 
 def _sequence_route_specs(
@@ -513,11 +510,7 @@ def _itinerary_role_state(stop: Mapping[str, Any]) -> tuple[str | None, str]:
         if source not in {None, "unavailable"}:
             raise GeographyV2Error("itinerary_role_invalid")
         return None, "unavailable"
-    if (
-        not isinstance(role, str)
-        or role not in _ITINERARY_ROLES
-        or source != "user_declared_itinerary_role"
-    ):
+    if not isinstance(role, str) or role not in _ITINERARY_ROLES or source != "user_declared_itinerary_role":
         raise GeographyV2Error("itinerary_role_invalid")
     return role, source
 
@@ -560,10 +553,7 @@ def _points(value: Any) -> list[list[float]]:
     if (
         isinstance(value, list)
         and len(value) == 2
-        and all(
-            isinstance(item, (int, float)) and not isinstance(item, bool)
-            for item in value
-        )
+        and all(isinstance(item, (int, float)) and not isinstance(item, bool) for item in value)
     ):
         return [[float(value[0]), float(value[1])]]
     if isinstance(value, list):

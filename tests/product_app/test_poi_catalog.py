@@ -170,9 +170,7 @@ def test_rejects_noncontained_catalog_path(tmp_path: Path, catalog_file: str) ->
         ("access", "place_name", "access_point_field_unknown"),
     ],
 )
-def test_rejects_unknown_fields_at_every_catalog_boundary(
-    tmp_path: Path, target: str, field: str, code: str
-) -> None:
+def test_rejects_unknown_fields_at_every_catalog_boundary(tmp_path: Path, target: str, field: str, code: str) -> None:
     record = _catalog_record()
     if target == "catalog":
         record[field] = True
@@ -292,14 +290,10 @@ def test_search_is_deterministic_bounded_and_not_a_recommendation(tmp_path: Path
         "alpha_garden",
         "bixby_bridge",
     ]
-    assert [
-        place.place_id
-        for place in catalog.search(source_types=["official"], require_road_access=True)
-    ] == ["bixby_bridge"]
-    assert [
-        place.place_id
-        for place in catalog.search(bounds=(-119.0, 33.0, -118.0, 35.0))
-    ] == ["museum_alpha"]
+    assert [place.place_id for place in catalog.search(source_types=["official"], require_road_access=True)] == [
+        "bixby_bridge"
+    ]
+    assert [place.place_id for place in catalog.search(bounds=(-119.0, 33.0, -118.0, 35.0))] == ["museum_alpha"]
     assert len(catalog.search(limit=1)) == 1
 
 

@@ -28,13 +28,36 @@ FAKE = "results/repairs/r07_typed_chat_20260908/exact_io_v2/current_live_context
 
 
 def request_for(context):
-    return {"input": "\n".join(("<workspace_context>", verifier._canonical_prompt_json(context), "</workspace_context>",
-                "<recent_conversation>", "[]", "</recent_conversation>", "<user_request>",
-                verifier._canonical_prompt_json(verifier.EXPECTED_PROMPT), "</user_request>")),
-            "instructions": verifier.DEVELOPER_INSTRUCTIONS, "max_output_tokens": 1200, "model": "gpt-5.4-mini",
-            "reasoning": {"effort": "low", "context": "current_turn"}, "store": False, "tools": [],
-            "text": {"verbosity": "low", "format": {"type": "json_schema", "strict": True,
-                "name": "OpenAIInterpretationSchemaV2", "schema": verifier.to_strict_json_schema(verifier.OpenAIInterpretationSchemaV2)}}}
+    return {
+        "input": "\n".join(
+            (
+                "<workspace_context>",
+                verifier._canonical_prompt_json(context),
+                "</workspace_context>",
+                "<recent_conversation>",
+                "[]",
+                "</recent_conversation>",
+                "<user_request>",
+                verifier._canonical_prompt_json(verifier.EXPECTED_PROMPT),
+                "</user_request>",
+            )
+        ),
+        "instructions": verifier.DEVELOPER_INSTRUCTIONS,
+        "max_output_tokens": 1200,
+        "model": "gpt-5.4-mini",
+        "reasoning": {"effort": "low", "context": "current_turn"},
+        "store": False,
+        "tools": [],
+        "text": {
+            "verbosity": "low",
+            "format": {
+                "type": "json_schema",
+                "strict": True,
+                "name": "OpenAIInterpretationSchemaV2",
+                "schema": verifier.to_strict_json_schema(verifier.OpenAIInterpretationSchemaV2),
+            },
+        },
+    }
 
 
 @pytest.fixture
@@ -47,7 +70,9 @@ def current_context(tmp_path):
 
 
 def verify_request(request, historical=False):
-    return verifier._provider_request_context(request, request_text=json.dumps(request), allow_historical_schema=historical)
+    return verifier._provider_request_context(
+        request, request_text=json.dumps(request), allow_historical_schema=historical
+    )
 
 
 def test_current_context_binds_current_hash_and_new_fields(current_context):
@@ -87,13 +112,25 @@ def test_complete_approved_prompt_dispatches_once_but_local_blocks_do_not(tmp_pa
     service.workspace.select(session, {"expected_revision": 0, "selected_day": 5, "selected_stop_id": verifier.TARGET})
     context = service.copilot_context(session)
     calls = []
-    parsed = OpenAIInterpretationSchemaV2(schema_version="copilot-interpretation-v2", state="proposal_ready",
-        assistant_message="Provider proposal.", intents=[{"type": "replace_nearby", "target_stop_id": verifier.TARGET, "candidate_id": verifier.CANDIDATE}])
+    parsed = OpenAIInterpretationSchemaV2(
+        schema_version="copilot-interpretation-v2",
+        state="proposal_ready",
+        assistant_message="Provider proposal.",
+        intents=[{"type": "replace_nearby", "target_stop_id": verifier.TARGET, "candidate_id": verifier.CANDIDATE}],
+    )
+
     async def parse(**kwargs):
         calls.append(kwargs)
         return SimpleNamespace(output=[], output_parsed=parsed)
-    adapter = OpenAICopilotAdapter(model="gpt-5.4-mini", api_key="not-a-real-key", client=SimpleNamespace(responses=SimpleNamespace(parse=parse)))
-    for message in ("Replace Bixby Creek Bridge.", "Move Golden Gate Bridge.", "Replace Bixby Creek Bridge and shorten the visit."):
+
+    adapter = OpenAICopilotAdapter(
+        model="gpt-5.4-mini", api_key="not-a-real-key", client=SimpleNamespace(responses=SimpleNamespace(parse=parse))
+    )
+    for message in (
+        "Replace Bixby Creek Bridge.",
+        "Move Golden Gate Bridge.",
+        "Replace Bixby Creek Bridge and shorten the visit.",
+    ):
         result = asyncio.run(adapter.interpret(context=context, history=(), message=message))
         assert result.state in {"clarification_required", "unsupported"}
     assert calls == []
@@ -103,7 +140,12 @@ def test_complete_approved_prompt_dispatches_once_but_local_blocks_do_not(tmp_pa
     projected = json.loads(json.dumps(result.as_dict()))
     assert "parameters" in projected["intents"][0] and projected["intents"][0]["parameters"] is None
     verifier._verify_approved_interpretation(parsed.model_dump(mode="json"), projected)
-    assert json.loads(re.search(r"<workspace_context>\n(.*?)\n</workspace_context>", calls[0]["input"], re.S).group(1))["schema_version"] == "copilot-context-v2"
+    assert (
+        json.loads(re.search(r"<workspace_context>\n(.*?)\n</workspace_context>", calls[0]["input"], re.S).group(1))[
+            "schema_version"
+        ]
+        == "copilot-context-v2"
+    )
 
 
 def test_historical_v1_requires_explicit_policy_and_keeps_original_bytes(recorded_runtime_inputs):
@@ -114,19 +156,40 @@ def test_historical_v1_requires_explicit_policy_and_keeps_original_bytes(recorde
     request = json.loads(request_text)
     with pytest.raises(verifier.LiveE2E1VerificationError):
         verify_request(request)
-    context, authorization = verifier._provider_request_context(request, request_text=request_text, allow_historical_schema=True)
+    context, authorization = verifier._provider_request_context(
+        request, request_text=request_text, allow_historical_schema=True
+    )
     assert context["schema_version"] == "copilot-context-v1"
     assert authorization["instructions"] == request["instructions"] != verifier.DEVELOPER_INSTRUCTIONS
     assert authorization["request_body_sha256"] == provider["records"][0]["request_body_sha256"]
     assert evidence.read_bytes() == original
 
 
-@pytest.mark.parametrize("mutation", ["missing_parameters", "extra_parameters", "wrong_candidate", "wrong_schema", "mixed_projection", "wrong_highlights"])
+@pytest.mark.parametrize(
+    "mutation",
+    [
+        "missing_parameters",
+        "extra_parameters",
+        "wrong_candidate",
+        "wrong_schema",
+        "mixed_projection",
+        "wrong_highlights",
+    ],
+)
 def test_current_v2_post_response_requires_exact_null_parameters(mutation):
-    projection = OpenAIInterpretationSchemaV2(schema_version="copilot-interpretation-v2", state="proposal_ready",
-        assistant_message="Fake approved output.", intents=[{"type": "replace_nearby", "target_stop_id": verifier.TARGET, "candidate_id": verifier.CANDIDATE}]).model_dump(mode="json")
+    projection = OpenAIInterpretationSchemaV2(
+        schema_version="copilot-interpretation-v2",
+        state="proposal_ready",
+        assistant_message="Fake approved output.",
+        intents=[{"type": "replace_nearby", "target_stop_id": verifier.TARGET, "candidate_id": verifier.CANDIDATE}],
+    ).model_dump(mode="json")
     result = deepcopy(projection)
-    result["highlights"] = {"day_ids": [5], "stop_ids": [verifier.TARGET], "segment_ids": [], "candidate_ids": [verifier.CANDIDATE]}
+    result["highlights"] = {
+        "day_ids": [5],
+        "stop_ids": [verifier.TARGET],
+        "segment_ids": [],
+        "candidate_ids": [verifier.CANDIDATE],
+    }
     verifier._verify_approved_interpretation(projection, result)
     if mutation == "missing_parameters":
         result["intents"][0].pop("parameters")
@@ -146,7 +209,24 @@ def test_current_v2_post_response_requires_exact_null_parameters(mutation):
         verifier._verify_approved_interpretation(projection, result)
 
 
-@pytest.mark.parametrize("mutation", ["hash", "memory_plan", "memory_preference", "memory_extra", "bool", "day_bool", "extra", "candidate", "duplicate", "universe", "revision_bool", "missing_alias", "extra_alias"])
+@pytest.mark.parametrize(
+    "mutation",
+    [
+        "hash",
+        "memory_plan",
+        "memory_preference",
+        "memory_extra",
+        "bool",
+        "day_bool",
+        "extra",
+        "candidate",
+        "duplicate",
+        "universe",
+        "revision_bool",
+        "missing_alias",
+        "extra_alias",
+    ],
+)
 def test_current_v2_forgery_fails_closed(current_context, mutation):
     context = deepcopy(current_context)
     if mutation == "hash":
@@ -154,7 +234,9 @@ def test_current_v2_forgery_fails_closed(current_context, mutation):
     elif mutation == "memory_plan":
         context["conversation_memory"]["plan_id"] = "plan_" + "0" * 16
     elif mutation == "memory_preference":
-        context["conversation_memory"]["proposed_preferences"] = [{"preference": "reduce_driving", "disposition": "accepted"}]
+        context["conversation_memory"]["proposed_preferences"] = [
+            {"preference": "reduce_driving", "disposition": "accepted"}
+        ]
     elif mutation == "memory_extra":
         context["conversation_memory"]["secret"] = "must-not-be-authorized"
     elif mutation == "bool":
@@ -181,9 +263,15 @@ def test_current_v2_forgery_fails_closed(current_context, mutation):
         verify_request(request_for(context))
 
 
-def test_historical_flag_cannot_authorize_rewritten_v1_context_or_v2_old_instructions(current_context, recorded_runtime_inputs):
-    old = json.loads(json.loads((recorded_runtime_inputs / OLD).read_text(encoding="utf-8"))["records"][0]["request_body_utf8"])
-    old_context = json.loads(re.search(r"<workspace_context>\n(.*?)\n</workspace_context>", old["input"], re.S).group(1))
+def test_historical_flag_cannot_authorize_rewritten_v1_context_or_v2_old_instructions(
+    current_context, recorded_runtime_inputs
+):
+    old = json.loads(
+        json.loads((recorded_runtime_inputs / OLD).read_text(encoding="utf-8"))["records"][0]["request_body_utf8"]
+    )
+    old_context = json.loads(
+        re.search(r"<workspace_context>\n(.*?)\n</workspace_context>", old["input"], re.S).group(1)
+    )
     old_context["accepted_plan_id"] = "plan_" + "0" * 16
     forged = request_for(old_context)
     forged["instructions"] = old["instructions"]

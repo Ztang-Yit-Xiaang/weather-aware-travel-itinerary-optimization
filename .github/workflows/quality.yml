@@ -21,7 +21,7 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -e .
-          pip install ruff pytest coverage vulture
+          pip install ruff==0.15.21 pytest coverage==7.17.0 vulture
 
       - name: Ruff format check
         run: ruff format --check .
@@ -30,7 +30,9 @@ jobs:
         run: ruff check .
 
       - name: Tests
-        run: coverage run -m pytest
+        env:
+          COVERAGE_CORE: sysmon
+        run: coverage run -m pytest --basetemp=tmp/p
 
       - name: Coverage report
         run: coverage report -m

@@ -41,9 +41,7 @@ def request() -> RepairRequest:
             "weather_risk_overrides": {"outdoor": 0.95},
             "weather_feasible": {"outdoor": False},
         },
-        candidate_pois=(
-            {"stop_id": "indoor", "name": "Indoor", "day": 1, "lodging_id": "hotel", "utility": 6},
-        ),
+        candidate_pois=({"stop_id": "indoor", "name": "Indoor", "day": 1, "lodging_id": "hotel", "utility": 6},),
     )
 
 

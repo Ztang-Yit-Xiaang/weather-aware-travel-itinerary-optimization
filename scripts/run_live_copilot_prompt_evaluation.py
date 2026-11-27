@@ -91,7 +91,9 @@ class _RecordingResponses:
         if not isinstance(response_id, str) or not response_id:
             raise OpenAICopilotError("openai_invalid_structured_output", 502, diagnostic_code="response_id_missing")
         if not isinstance(created_at, (int, float)) or isinstance(created_at, bool):
-            raise OpenAICopilotError("openai_invalid_structured_output", 502, diagnostic_code="response_created_at_missing")
+            raise OpenAICopilotError(
+                "openai_invalid_structured_output", 502, diagnostic_code="response_created_at_missing"
+            )
         if not isinstance(provider_model, str) or not provider_model:
             raise OpenAICopilotError("openai_invalid_structured_output", 502, diagnostic_code="response_model_missing")
         self.provider_response_id_sha256 = hashlib.sha256(response_id.encode()).hexdigest()
@@ -112,9 +114,7 @@ def _usage_value(usage: Any, field: str) -> int:
 
 
 def _provider_action_observed(response: Any) -> bool:
-    action_types = {
-        "computer_call", "file_search_call", "function_call", "tool_call", "web_search_call"
-    }
+    action_types = {"computer_call", "file_search_call", "function_call", "tool_call", "web_search_call"}
     for item in getattr(response, "output", ()) or ():
         item_type = item.get("type") if isinstance(item, dict) else getattr(item, "type", None)
         if item_type in action_types:
@@ -165,8 +165,12 @@ def build_request_controls(*, model: str, effort: ReasoningEffort, timeout_secon
 def _context(fixture: dict[str, Any]) -> CopilotContextV1:
     values = dict(fixture)
     for field in (
-        "draft_operations", "allowed_stop_ids", "allowed_candidate_ids", "allowed_days",
-        "allowed_segment_ids", "allowed_alternative_ids",
+        "draft_operations",
+        "allowed_stop_ids",
+        "allowed_candidate_ids",
+        "allowed_days",
+        "allowed_segment_ids",
+        "allowed_alternative_ids",
     ):
         values[field] = tuple(values.get(field, ()))
     return CopilotContextV1(**values)
@@ -190,8 +194,12 @@ def _empty_highlights() -> dict[str, list[Any]]:
 
 
 def _case_evidence_document(
-    *, effort: ReasoningEffort, model: str, corpus_path: Path,
-    source_snapshot: dict[str, Any], request_controls: dict[str, Any],
+    *,
+    effort: ReasoningEffort,
+    model: str,
+    corpus_path: Path,
+    source_snapshot: dict[str, Any],
+    request_controls: dict[str, Any],
     records: list[dict[str, Any]],
 ) -> dict[str, Any]:
     document = {
@@ -213,14 +221,23 @@ def _case_evidence_document(
 
 
 async def _evaluate_effort(
-    *, corpus: dict[str, Any], corpus_path: Path, model: str, api_key: str,
-    timeout_seconds: float, effort: ReasoningEffort, source_snapshot: dict[str, Any],
+    *,
+    corpus: dict[str, Any],
+    corpus_path: Path,
+    model: str,
+    api_key: str,
+    timeout_seconds: float,
+    effort: ReasoningEffort,
+    source_snapshot: dict[str, Any],
 ) -> tuple[dict[str, Any], dict[str, Any]]:
     client = AsyncOpenAI(api_key=api_key, base_url="https://api.openai.com/v1", max_retries=0, timeout=timeout_seconds)
     recording = _RecordingClient(client)
     adapter = OpenAICopilotAdapter(
-        model=model, api_key="injected-client", timeout_seconds=timeout_seconds,
-        reasoning_effort=effort, client=recording,
+        model=model,
+        api_key="injected-client",
+        timeout_seconds=timeout_seconds,
+        reasoning_effort=effort,
+        client=recording,
     )
     request_controls = build_request_controls(model=model, effort=effort, timeout_seconds=timeout_seconds)
     cases = {case["case_id"]: case for case in corpus["cases"]}
@@ -235,7 +252,9 @@ async def _evaluate_effort(
             failure_code: str | None = None
             try:
                 interpretation = await adapter.interpret(
-                    context=_context(fixtures[case["context_fixture"]]), history=(), message=case["input"],
+                    context=_context(fixtures[case["context_fixture"]]),
+                    history=(),
+                    message=case["input"],
                 )
                 state = interpretation.state
                 intents = [intent.type for intent in interpretation.intents]
@@ -247,7 +266,11 @@ async def _evaluate_effort(
                 input_tokens = recording.responses.input_tokens
                 output_tokens = recording.responses.output_tokens
             except Exception as exc:  # noqa: BLE001 - raw diagnostics must not persist
-                failure_code = exc.code if isinstance(exc, (CopilotContractError, OpenAICopilotError)) else "evaluation_unexpected_failure"
+                failure_code = (
+                    exc.code
+                    if isinstance(exc, (CopilotContractError, OpenAICopilotError))
+                    else "evaluation_unexpected_failure"
+                )
                 failure_code_counts[failure_code] = failure_code_counts.get(failure_code, 0) + 1
                 state = "failed"
                 intents = []
@@ -258,45 +281,55 @@ async def _evaluate_effort(
                 structured_valid = False
                 input_tokens = 0
                 output_tokens = 0
-            results.append({
-                "case_evidence_schema": "copilot-live-case-evidence-record-v1",
-                "case_id": case_id,
-                "state": state,
-                "intents": intents,
-                "typed_intents": typed_intents,
-                "permission": permission,
-                "highlights": highlights,
-                "referenced_ids": references,
-                "structured_valid": structured_valid,
-                "contract_valid": structured_valid,
-                "automatic_action_observed": recording.responses.automatic_action_observed,
-                "latency_ms": round((time.perf_counter() - started) * 1_000, 3),
-                "input_tokens": input_tokens,
-                "output_tokens": output_tokens,
-                "attempt_count": recording.responses.attempt_count,
-                "prompt_sha256": prompt_sha256(),
-                "provider_response_id_sha256": recording.responses.provider_response_id_sha256 if structured_valid else None,
-                "provider_created_at": recording.responses.provider_created_at if structured_valid else None,
-                "provider_model": recording.responses.provider_model or model,
-                "request_controls_sha256": request_controls["content_hash"],
-                "source_snapshot_sha256": source_snapshot["content_hash"],
-                "safe_failure_code": failure_code,
-            })
+            results.append(
+                {
+                    "case_evidence_schema": "copilot-live-case-evidence-record-v1",
+                    "case_id": case_id,
+                    "state": state,
+                    "intents": intents,
+                    "typed_intents": typed_intents,
+                    "permission": permission,
+                    "highlights": highlights,
+                    "referenced_ids": references,
+                    "structured_valid": structured_valid,
+                    "contract_valid": structured_valid,
+                    "automatic_action_observed": recording.responses.automatic_action_observed,
+                    "latency_ms": round((time.perf_counter() - started) * 1_000, 3),
+                    "input_tokens": input_tokens,
+                    "output_tokens": output_tokens,
+                    "attempt_count": recording.responses.attempt_count,
+                    "prompt_sha256": prompt_sha256(),
+                    "provider_response_id_sha256": recording.responses.provider_response_id_sha256
+                    if structured_valid
+                    else None,
+                    "provider_created_at": recording.responses.provider_created_at if structured_valid else None,
+                    "provider_model": recording.responses.provider_model or model,
+                    "request_controls_sha256": request_controls["content_hash"],
+                    "source_snapshot_sha256": source_snapshot["content_hash"],
+                    "safe_failure_code": failure_code,
+                }
+            )
             print(json.dumps({"case": index, "effort": effort, "status": "complete"}))
     finally:
         await client.close()
     assert_source_snapshot_current(source_snapshot)
     summary = evaluate_results(corpus, results, model=model)
-    summary.update({
-        "reasoning_effort": effort,
-        "safe_failure_code_counts": dict(sorted(failure_code_counts.items())),
-        "raw_provider_content_persisted": False,
-        "request_controls_sha256": request_controls["content_hash"],
-        "corpus_sha256": _file_sha256(corpus_path),
-    })
+    summary.update(
+        {
+            "reasoning_effort": effort,
+            "safe_failure_code_counts": dict(sorted(failure_code_counts.items())),
+            "raw_provider_content_persisted": False,
+            "request_controls_sha256": request_controls["content_hash"],
+            "corpus_sha256": _file_sha256(corpus_path),
+        }
+    )
     evidence = _case_evidence_document(
-        effort=effort, model=model, corpus_path=corpus_path, source_snapshot=source_snapshot,
-        request_controls=request_controls, records=results,
+        effort=effort,
+        model=model,
+        corpus_path=corpus_path,
+        source_snapshot=source_snapshot,
+        request_controls=request_controls,
+        records=results,
     )
     return summary, evidence
 
@@ -307,12 +340,15 @@ def choose_effort(summaries: dict[str, dict[str, Any]]) -> str | None:
         return None
     if len(passing) == 1:
         return passing[0]
-    return min(passing, key=lambda name: (
-        -summaries[name]["exact_state_allowed_intent_rate"],
-        summaries[name]["input_tokens_total"] + summaries[name]["output_tokens_total"],
-        summaries[name]["latency_ms_total"],
-        0 if name == "low" else 1,
-    ))
+    return min(
+        passing,
+        key=lambda name: (
+            -summaries[name]["exact_state_allowed_intent_rate"],
+            summaries[name]["input_tokens_total"] + summaries[name]["output_tokens_total"],
+            summaries[name]["latency_ms_total"],
+            0 if name == "low" else 1,
+        ),
+    )
 
 
 def parse_args() -> argparse.Namespace:
@@ -338,8 +374,13 @@ async def _main(args: argparse.Namespace) -> int:
     args.output_dir.mkdir(parents=True, exist_ok=True)
     for effort in args.reasoning_efforts:
         summary, evidence = await _evaluate_effort(
-            corpus=corpus, corpus_path=corpus_path, model=args.model, api_key=api_key,
-            timeout_seconds=args.timeout_seconds, effort=effort, source_snapshot=source_snapshot,
+            corpus=corpus,
+            corpus_path=corpus_path,
+            model=args.model,
+            api_key=api_key,
+            timeout_seconds=args.timeout_seconds,
+            effort=effort,
+            source_snapshot=source_snapshot,
         )
         evidence_path = args.output_dir / f"{effort}_cases.json"
         write_summary(evidence_path, evidence)
@@ -367,11 +408,15 @@ async def _main(args: argparse.Namespace) -> int:
         "summaries": summaries,
     }
     write_summary(args.output_dir / "reasoning_comparison.json", comparison)
-    print(json.dumps({
-        "provider_attempts_total": comparison["provider_attempts_total"],
-        "recommended_reasoning_effort": recommended,
-        "status": "written",
-    }))
+    print(
+        json.dumps(
+            {
+                "provider_attempts_total": comparison["provider_attempts_total"],
+                "recommended_reasoning_effort": recommended,
+                "status": "written",
+            }
+        )
+    )
     return 0 if recommended is not None else 2
 
 

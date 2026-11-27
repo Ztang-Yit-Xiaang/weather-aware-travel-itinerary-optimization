@@ -365,10 +365,7 @@ def _candidate_sequences(
     # A generated sequence forbidden by confirmed selection constraints does
     # not need route evidence. Required cells for admissible routes stay strict.
     excluded = set(model.metadata.get("context_excluded_stop_ids", ()))
-    return _dedupe_sequences(tuple(
-        sequence for sequence in sequences
-        if not excluded.intersection(sequence)
-    ))
+    return _dedupe_sequences(tuple(sequence for sequence in sequences if not excluded.intersection(sequence)))
 
 
 def _moved_day_sequences(
@@ -411,9 +408,7 @@ def _solution_for_sequence(
         selected.append(stop_id)
     selected.extend(sequence)
     day_assignments = {
-        str(stop_id): int(parent_day)
-        for stop_id, parent_day in parent_day_by_stop.items()
-        if stop_id in selected
+        str(stop_id): int(parent_day) for stop_id, parent_day in parent_day_by_stop.items() if stop_id in selected
     }
     for stop_id in sequence:
         day_assignments[str(stop_id)] = int(day)
@@ -459,8 +454,12 @@ def _route_sequence(
     sequence: tuple[str, ...],
     config: DayRouteSolverConfig,
 ) -> tuple[str, ...]:
-    start_anchor = config.start_anchor_by_day.get(day) or _anchor_from_day_stops(model, day, "route_start_id", "route_start_name")
-    end_anchor = config.end_anchor_by_day.get(day) or _anchor_from_day_stops(model, day, "route_end_id", "route_end_name")
+    start_anchor = config.start_anchor_by_day.get(day) or _anchor_from_day_stops(
+        model, day, "route_start_id", "route_start_name"
+    )
+    end_anchor = config.end_anchor_by_day.get(day) or _anchor_from_day_stops(
+        model, day, "route_end_id", "route_end_name"
+    )
     parts: list[str] = []
     if start_anchor:
         parts.append(str(start_anchor))
@@ -500,9 +499,7 @@ def _opening_window(stop: dict[str, Any]) -> tuple[int | None, int | None]:
     start = _parse_minutes(
         _first_nonempty(stop, "opening_start", "window_start", "start_time", "earliest_start", "open_time")
     )
-    end = _parse_minutes(
-        _first_nonempty(stop, "opening_end", "window_end", "latest_start", "close_time")
-    )
+    end = _parse_minutes(_first_nonempty(stop, "opening_end", "window_end", "latest_start", "close_time"))
     return start, end
 
 

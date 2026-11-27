@@ -264,7 +264,9 @@ def run_phase0_generation_executor(
         output_plans=plan_records,
         evaluations=evaluation_records,
         route_records=route_records,
-        request_records=_phase0_request_records(planner_records, context=context, legacy_artifact_dir=relative_legacy_dir),
+        request_records=_phase0_request_records(
+            planner_records, context=context, legacy_artifact_dir=relative_legacy_dir
+        ),
         metrics={
             "phase0_legacy_artifact_dir": relative_legacy_dir,
             "phase0_plan_artifact_count": int(export_result.get("plan_artifact_count", len(plan_records))),
@@ -541,8 +543,7 @@ def run_deterministic_context_aware_heuristic_executor(
     explanations: tuple[dict[str, Any], ...] = ()
     if result.child_plan is not None:
         resolved_evaluator_config = _evaluator_config_for_repair(
-            evaluator_config
-            or _evaluator_config_from_day_route_config(resolved_day_config, parent_plan=parent_plan),
+            evaluator_config or _evaluator_config_from_day_route_config(resolved_day_config, parent_plan=parent_plan),
             repair_request,
         )
         evaluator = PlanEvaluator(
@@ -564,9 +565,7 @@ def run_deterministic_context_aware_heuristic_executor(
                 "claims": [
                     {
                         "claim_id": "selected_from_deterministic_trace",
-                        "evidence_refs": [
-                            record.candidate_id for record in result.decision_records if record.selected
-                        ],
+                        "evidence_refs": [record.candidate_id for record in result.decision_records if record.selected],
                     }
                 ],
                 "schema_version": "baseline-explanation-v1",
@@ -672,7 +671,7 @@ def run_progressive_repair_executor(
             route_matrix=route_matrix,
             config=_evaluator_config_for_repair(
                 evaluator_config
-            or _evaluator_config_from_day_route_config(resolved_day_config, parent_plan=parent_plan),
+                or _evaluator_config_from_day_route_config(resolved_day_config, parent_plan=parent_plan),
                 repair_request,
             ),
             method_id=method_id,
@@ -695,8 +694,7 @@ def run_progressive_repair_executor(
         if matching_run is not None:
             planner_runs.append(matching_run)
     has_canonical_method_run = any(
-        run.method_requested == method_id and run.method_executed == method_id
-        for run in planner_runs
+        run.method_requested == method_id and run.method_executed == method_id for run in planner_runs
     )
     if not has_canonical_method_run:
         diagnosis = getattr(outcome, "diagnosis", None)
@@ -721,7 +719,11 @@ def run_progressive_repair_executor(
     diff_records = (outcome.diff_record,) if outcome.diff_record else ()
     evaluation_records = (outcome.evaluation_record,) if outcome.evaluation_record else ()
     explanation_records = _repair_explanation_records(outcome, route_matrix=route_matrix)
-    dashboard_record = {**outcome.to_record(), "dashboard_id": outcome.repair_outcome_id, "schema_version": "repair-outcome-dashboard-v1"}
+    dashboard_record = {
+        **outcome.to_record(),
+        "dashboard_id": outcome.repair_outcome_id,
+        "schema_version": "repair-outcome-dashboard-v1",
+    }
     return PipelineExecutionResult(
         planner_runs=tuple(planner_runs),
         output_plans=(outcome.child_plan,) if outcome.child_plan is not None else (),
@@ -772,7 +774,9 @@ def run_research_pipeline(
         overrides=config_overrides,
     )
     _write_json(output_dir / "resolved_config.redacted.json", _redacted_config_record(config))
-    _write_json(output_dir / "dataset_manifest.json", _dataset_manifest(data_bundle, catalog_snapshot_id, context_snapshot_id))
+    _write_json(
+        output_dir / "dataset_manifest.json", _dataset_manifest(data_bundle, catalog_snapshot_id, context_snapshot_id)
+    )
 
     context = PipelineRunContext(
         run_id=resolved_run_id,
@@ -941,7 +945,10 @@ def _write_execution_artifacts(output_dir: Path, result: PipelineExecutionResult
         artifacts["dashboard"].append(_write_json(output_dir / "dashboard" / f"{dashboard_id}.json", dashboard_record))
     if not artifacts["dashboard"]:
         artifacts["dashboard"].append(
-            _write_json(output_dir / "dashboard" / "manifest.json", {"status": "not_generated", "schema_version": "dashboard-manifest-v1"})
+            _write_json(
+                output_dir / "dashboard" / "manifest.json",
+                {"status": "not_generated", "schema_version": "dashboard-manifest-v1"},
+            )
         )
     return artifacts
 
@@ -984,8 +991,12 @@ def _write_manifest(
         },
         "artifacts": relative_artifacts,
         "pipeline_run": {
-            "output_plan_ids": [_record_id(_record_from_artifact(plan), "plan_id", prefix="plan") for plan in result.output_plans],
-            "planner_run_ids": [_record_id(_record_from_artifact(run), "run_id", prefix="planner_run") for run in result.planner_runs],
+            "output_plan_ids": [
+                _record_id(_record_from_artifact(plan), "plan_id", prefix="plan") for plan in result.output_plans
+            ],
+            "planner_run_ids": [
+                _record_id(_record_from_artifact(run), "run_id", prefix="planner_run") for run in result.planner_runs
+            ],
             "evaluation_ids": [
                 _record_id(_record_from_artifact(evaluation), "certificate_id", "evaluation_id", prefix="evaluation")
                 for evaluation in result.evaluations
@@ -1034,7 +1045,9 @@ def _load_pipeline_config(
     merged_overrides = _deep_merge_dicts(pipeline_overrides, overrides or {})
     config = load_trip_config(config_path, overrides=merged_overrides)
     if refresh_policy == RefreshPolicy.NEVER and config.run_live_apis:
-        config = TripConfig(data=_deep_merge_dicts(config.to_dict(), pipeline_overrides), source_path=config.source_path)
+        config = TripConfig(
+            data=_deep_merge_dicts(config.to_dict(), pipeline_overrides), source_path=config.source_path
+        )
     return config
 
 
@@ -1082,8 +1095,7 @@ def _strict_failure_count(evaluations: Iterable[PlanEvaluationCertificate | dict
 
 def _planner_failure_count(planner_runs: Iterable[PlannerRun | dict[str, Any]]) -> int:
     return sum(
-        str(_record_from_artifact(planner_run).get("execution_status", "")).upper()
-        in {"FAILED", "ERROR"}
+        str(_record_from_artifact(planner_run).get("execution_status", "")).upper() in {"FAILED", "ERROR"}
         for planner_run in planner_runs
     )
 
@@ -1288,7 +1300,9 @@ def _repair_request_record(request: Any, *, context: PipelineRunContext) -> dict
         raw = dict(vars(request))
     else:
         raw = {"request_repr": repr(request)}
-    request_id = str(raw.get("request_id") or raw.get("repair_request_id") or context.repair_request_id or "repair_request")
+    request_id = str(
+        raw.get("request_id") or raw.get("repair_request_id") or context.repair_request_id or "repair_request"
+    )
     return {
         **_jsonish(raw),
         "request_id": request_id,

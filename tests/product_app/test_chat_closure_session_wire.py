@@ -19,14 +19,30 @@ from test_chat_runtime_closure_live import _session_wire, _write_json  # noqa: E
 
 def _session(refs):
     return ProductSession(
-        session_id="session-wire-check", mutation_token_salt="not-public-salt",
-        mutation_token_verifier="not-public-verifier", trip_id="trip", run_id="run", revision=24,
-        accepted_plan_id="parent", selected_day=6, selected_stop_id="stearns_wharf",
-        selected_segment_id="directed-leg", selected_candidate_id="candidate",
-        selected_alternative_id="alternative", conversation_id="conversation",
-        draft=[DraftOperationV1(operation_id="window-operation", type="set_stop_time_window",
-            target="stearns_wharf", parameters={"earliest_arrival": "10:00", "latest_departure": None},
-            source="copilot", evidence_refs=refs, created_at="2026-09-08T12:00:00+00:00")],
+        session_id="session-wire-check",
+        mutation_token_salt="not-public-salt",
+        mutation_token_verifier="not-public-verifier",
+        trip_id="trip",
+        run_id="run",
+        revision=24,
+        accepted_plan_id="parent",
+        selected_day=6,
+        selected_stop_id="stearns_wharf",
+        selected_segment_id="directed-leg",
+        selected_candidate_id="candidate",
+        selected_alternative_id="alternative",
+        conversation_id="conversation",
+        draft=[
+            DraftOperationV1(
+                operation_id="window-operation",
+                type="set_stop_time_window",
+                target="stearns_wharf",
+                parameters={"earliest_arrival": "10:00", "latest_departure": None},
+                source="copilot",
+                evidence_refs=refs,
+                created_at="2026-09-08T12:00:00+00:00",
+            )
+        ],
         proposal={"child_plan_id": "child", "child_plan_content_hash": "child-hash", "certificate_id": "evaluation"},
         permission_decisions=[{"permission": "keep_booking", "decision": "allowed"}],
     )
@@ -52,20 +68,44 @@ def test_full_session_encoding_matches_actual_fastapi_response(tmp_path, refs):
     assert encoded == actual and set(encoded) == set(original)
     assert encoded["draft"][0]["evidence_refs"] == list(refs)
     assert session.public_dict() == original  # Observer must not mutate disk/model data.
-    assert json.dumps({"session": encoded}, ensure_ascii=False, separators=(",", ":"), allow_nan=False).encode() == response.content
+    assert (
+        json.dumps({"session": encoded}, ensure_ascii=False, separators=(",", ":"), allow_nan=False).encode()
+        == response.content
+    )
     assert "mutation_token" not in response.text
-    _write_json(tmp_path / "exact_session_wire_io.json", {
-        "scope": "unit_real_fastapi_serializer_only", "browser_execution_claimed": False, "provider_calls": 0,
-        "model_public_input": original, "model_evidence_refs_python_type": "tuple",
-        "actual_response_status": response.status_code, "actual_response_body_utf8": response.text,
-        "observer_encoded_output": encoded, "assertions_passed": True,
-    })
+    _write_json(
+        tmp_path / "exact_session_wire_io.json",
+        {
+            "scope": "unit_real_fastapi_serializer_only",
+            "browser_execution_claimed": False,
+            "provider_calls": 0,
+            "model_public_input": original,
+            "model_evidence_refs_python_type": "tuple",
+            "actual_response_status": response.status_code,
+            "actual_response_body_utf8": response.text,
+            "observer_encoded_output": encoded,
+            "assertions_passed": True,
+        },
+    )
 
 
-@pytest.mark.parametrize("field", [
-    "session_id", "revision", "accepted_plan_id", "selected_day", "conversation_id", "proposal",
-    "operation_id", "target", "parameters", "source", "evidence_refs", "created_at",
-])
+@pytest.mark.parametrize(
+    "field",
+    [
+        "session_id",
+        "revision",
+        "accepted_plan_id",
+        "selected_day",
+        "conversation_id",
+        "proposal",
+        "operation_id",
+        "target",
+        "parameters",
+        "source",
+        "evidence_refs",
+        "created_at",
+    ],
+)
 def test_json_normalization_does_not_hide_public_field_mismatch(tmp_path, field):
     session = _session(("route:directed",))
     actual = _session_wire(session)
@@ -82,11 +122,15 @@ def test_json_normalization_does_not_hide_public_field_mismatch(tmp_path, field)
     else:
         target[field] = "other"
     assert altered != _session_wire(session)
-    _write_json(tmp_path / "exact_session_wire_io.json", {
-        "scope": "offline_full_field_mismatch", "provider_calls": 0,
-        "input": {"field": field, "expected": actual, "altered": altered},
-        "output": {"strict_full_session_equality": False},
-    })
+    _write_json(
+        tmp_path / "exact_session_wire_io.json",
+        {
+            "scope": "offline_full_field_mismatch",
+            "provider_calls": 0,
+            "input": {"field": field, "expected": actual, "altered": altered},
+            "output": {"strict_full_session_equality": False},
+        },
+    )
 
 
 def test_raw_held_evidence_is_written_before_decode_and_assertions():
@@ -95,7 +139,8 @@ def test_raw_held_evidence_is_written_before_decode_and_assertions():
     end = source.index('_write_json(case / "evaluation_summary.json"', start)
     block = source[start:end]
     assert block.index('_write_json(case / "held_conversation_response.json", held)') < block.index("json.loads")
-    assert block.index('_write_json(case / "late_conversation_undo_race.json", late_conversation_race)') < block.index("assert held")
+    assert block.index('_write_json(case / "late_conversation_undo_race.json", late_conversation_race)') < block.index(
+        "assert held"
+    )
     assert 'held_payload["session"] == late_conversation_race["before_undo"]["persisted_session"]' in block
     assert "read_session().public_dict()" not in source
-

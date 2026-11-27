@@ -1,11 +1,6 @@
-name: deploy dashboard pages
+name: deploy interactive app pages
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - "results/figures/full_interactive_dashboard/**"
-      - ".github/workflows/deploy-dashboard-pages.yml"
   workflow_dispatch:
 
 permissions:
@@ -18,31 +13,50 @@ concurrency:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    environment: github-pages
 
     steps:
       - uses: actions/checkout@v4
-
-      - name: Publish dashboard to gh-pages
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: deploy/requirements-hosted.txt
+      - name: Check public deployment settings
+        env:
+          API_ORIGIN: ${{ vars.HOSTED_API_ORIGIN }}
+          SUPABASE_URL: ${{ vars.SUPABASE_URL }}
+          PUBLIC_KEY: ${{ vars.SUPABASE_PUBLISHABLE_KEY }}
+        run: |
+          test -n "$API_ORIGIN" && test -n "$SUPABASE_URL" && test -n "$PUBLIC_KEY"
+      - name: Install backend contract dependencies
+        run: python -m pip install -r deploy/requirements-hosted.txt
+      - name: Export only against the matching ready backend
+        env:
+          API_ORIGIN: ${{ vars.HOSTED_API_ORIGIN }}
+          SUPABASE_URL: ${{ vars.SUPABASE_URL }}
+          PUBLIC_KEY: ${{ vars.SUPABASE_PUBLISHABLE_KEY }}
+        run: |
+          python scripts/export_product_pages.py \
+            --api-origin "$API_ORIGIN" --supabase-url "$SUPABASE_URL" \
+            --publishable-key "$PUBLIC_KEY" --output /tmp/itinerary-pages
+      - name: Retain release receipt
+        uses: actions/upload-artifact@v4
+        with:
+          name: interactive-app-release
+          path: /tmp/itinerary-pages/release.json
+      - name: Replace gh-pages with the verified app interface
         run: |
           set -euo pipefail
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
-          rm -rf /tmp/dashboard-pages
-          mkdir -p /tmp/dashboard-pages
-          cp -R results/figures/full_interactive_dashboard/. /tmp/dashboard-pages/
-          touch /tmp/dashboard-pages/.nojekyll
-
-          git fetch origin gh-pages || true
-          if git show-ref --verify --quiet refs/remotes/origin/gh-pages; then
-            git switch --force-create gh-pages origin/gh-pages
-          else
-            git switch --orphan gh-pages
-          fi
-
+          git fetch origin gh-pages
+          git worktree add /tmp/itinerary-pages-branch origin/gh-pages
+          cd /tmp/itinerary-pages-branch
           find . -mindepth 1 -maxdepth 1 ! -name .git -exec rm -rf {} +
-          cp -R /tmp/dashboard-pages/. .
-
+          cp -R /tmp/itinerary-pages/. .
           git add .
-          git commit -m "Deploy dashboard site" || exit 0
-          git push origin gh-pages
+          if git diff --cached --quiet; then exit 0; fi
+          git commit -m "Deploy verified interactive itinerary interface"
+          git push origin HEAD:gh-pages

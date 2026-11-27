@@ -33,9 +33,7 @@ from itinerary_system.product_app.registry import ProductRunRegistry  # noqa: E4
 from itinerary_system.product_dashboard_adapter import load_product_dashboard_source  # noqa: E402
 from itinerary_system.product_dashboard_view_models import build_product_dashboard_view_model  # noqa: E402
 
-REQUIRED_LICENSES = frozenset(
-    {"BSD-3-Clause", "CC0-1.0", "OFL-1.1", "MIT", "ODbL-1.0", "Protomaps-Data-Notices"}
-)
+REQUIRED_LICENSES = frozenset({"BSD-3-Clause", "CC0-1.0", "OFL-1.1", "MIT", "ODbL-1.0", "Protomaps-Data-Notices"})
 MAP_ORIGIN = "http://127.0.0.1:8080"
 PMTILES_CLI_COMMIT = "39722fde57646c59c23e67a8cf739a59fc657590"
 
@@ -104,9 +102,7 @@ def _pmtiles_header(path: Path) -> tuple[list[float], int]:
 
 
 def _workspace_coordinates(repository_root: Path) -> list[tuple[float, float]]:
-    registry = ProductRunRegistry(
-        repository_root, repository_root / "configs" / "product_app_registry.json"
-    )
+    registry = ProductRunRegistry(repository_root, repository_root / "configs" / "product_app_registry.json")
     coordinates: list[tuple[float, float]] = []
     for record in registry.all():
         # Asset coverage concerns immutable registered plans, not accepted user
@@ -123,9 +119,7 @@ def _workspace_coordinates(repository_root: Path) -> list[tuple[float, float]]:
             for stop in plan_map["stops"]:
                 coordinates.append((float(stop["longitude"]), float(stop["latitude"])))
             for segment in plan_map["segments"]:
-                coordinates.extend(
-                    (float(item[1]), float(item[0])) for item in segment["coordinates"]
-                )
+                coordinates.extend((float(item[1]), float(item[0])) for item in segment["coordinates"])
     if not coordinates:
         raise MapAssetValidationError("workspace_coordinates_missing")
     return coordinates
@@ -159,9 +153,7 @@ def _tile_coordinate(longitude: float, latitude: float, zoom: int) -> tuple[int,
     scale = 1 << zoom
     x = int((longitude + 180.0) / 360.0 * scale)
     latitude_radians = math.radians(max(-85.05112878, min(85.05112878, latitude)))
-    y = int(
-        (1.0 - math.asinh(math.tan(latitude_radians)) / math.pi) / 2.0 * scale
-    )
+    y = int((1.0 - math.asinh(math.tan(latitude_radians)) / math.pi) / 2.0 * scale)
     return max(0, min(scale - 1, x)), max(0, min(scale - 1, y))
 
 
@@ -191,9 +183,7 @@ def validate_package(
     repository_root: Path = REPOSITORY_ROOT,
     *,
     pmtiles_cli: str = "pmtiles",
-    pmtiles_runner: Callable[
-        [str, Path, list[tuple[int, int, int]]], dict[str, bytes]
-    ] = _run_pmtiles,
+    pmtiles_runner: Callable[[str, Path, list[tuple[int, int, int]]], dict[str, bytes]] = _run_pmtiles,
 ) -> dict[str, Any]:
     root = asset_root.resolve()
     provenance_path = _safe_file(root, "provenance.json")
@@ -232,8 +222,7 @@ def validate_package(
         "verify_output": provenance["verify_output_sha256"],
     }
     if set(command_evidence) != set(expected_evidence) or any(
-        not isinstance(output, bytes)
-        or pmtiles_evidence_sha256(name, output) != expected_evidence[name]
+        not isinstance(output, bytes) or pmtiles_evidence_sha256(name, output) != expected_evidence[name]
         for name, output in command_evidence.items()
     ):
         raise MapAssetValidationError("pmtiles_evidence_mismatch")
@@ -268,9 +257,7 @@ def validate_package(
         if not isinstance(license_id, str):
             raise MapAssetValidationError("asset_license_missing")
         observed_licenses.add(license_id)
-    if not REQUIRED_LICENSES.issubset(observed_licenses) or not REQUIRED_CORE_ASSETS.issubset(
-        manifested_paths
-    ):
+    if not REQUIRED_LICENSES.issubset(observed_licenses) or not REQUIRED_CORE_ASSETS.issubset(manifested_paths):
         raise MapAssetValidationError("license_inventory_incomplete")
     actual_runtime_assets = {
         path.relative_to(root).as_posix()
@@ -309,9 +296,7 @@ def validate_package(
     fontstacks = required_fontstacks(style)
     if fontstacks is None:
         raise MapAssetValidationError("style_fontstack_invalid")
-    if not {f"fonts/{fontstack}/0-255.pbf" for fontstack in fontstacks}.issubset(
-        declared_glyphs
-    ):
+    if not {f"fonts/{fontstack}/0-255.pbf" for fontstack in fontstacks}.issubset(declared_glyphs):
         raise MapAssetValidationError("glyph_fontstack_incomplete")
     for source in sources.values():
         if not isinstance(source, dict):
@@ -332,10 +317,8 @@ def validate_package(
         for source in sources.values()
         if isinstance(source, dict)
         and urlparse(str(source.get("url", "")).removeprefix("pmtiles://")).scheme == "http"
-        and urlparse(str(source.get("url", "")).removeprefix("pmtiles://")).netloc
-        == "127.0.0.1:8080"
-        and urlparse(str(source.get("url", "")).removeprefix("pmtiles://")).path
-        == artifact_url
+        and urlparse(str(source.get("url", "")).removeprefix("pmtiles://")).netloc == "127.0.0.1:8080"
+        and urlparse(str(source.get("url", "")).removeprefix("pmtiles://")).path == artifact_url
     ]
     if len(matching_sources) != 1:
         raise MapAssetValidationError("style_artifact_mismatch")

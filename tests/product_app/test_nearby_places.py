@@ -16,12 +16,28 @@ def lookup(tmp_path, monkeypatch):
     clock = [1800000000.0]
     monkeypatch.setattr(nearby, "time", SimpleNamespace(time=lambda: clock[0]))
     search = {"coordinate": {"longitude": -122.1697, "latitude": 37.4275}, "radius_km": 2}
-    payload = {"elements": [{"type": "node", "id": 12, "lat": 37.428, "lon": -122.169,
-        "tags": {"name": "Campus Museum", "tourism": "museum", "website": "https://example.org/museum", "opening_hours": "Tu-Su 10:00-17:00"}}]}
+    payload = {
+        "elements": [
+            {
+                "type": "node",
+                "id": 12,
+                "lat": 37.428,
+                "lon": -122.169,
+                "tags": {
+                    "name": "Campus Museum",
+                    "tourism": "museum",
+                    "website": "https://example.org/museum",
+                    "opening_hours": "Tu-Su 10:00-17:00",
+                },
+            }
+        ]
+    }
     calls = []
+
     def fetch(query):
         calls.append(query)
         return deepcopy(payload)
+
     monkeypatch.setattr(nearby, "_fetch", fetch)
     return nearby.NearbyPlaceCache(tmp_path), search, payload, calls, clock
 
@@ -39,6 +55,20 @@ def test_online_data_is_reused_after_restart_and_preferences_do_not_change_cache
     assert source["fetched_at"] == data["fetched_at"]
 
 
+def test_hosted_catalog_mode_never_fetches_even_on_refresh(lookup, monkeypatch):
+    cache, search, _, calls, _ = lookup
+    hosted = nearby.NearbyPlaceCache(cache.root, online_enabled=False)
+    points, data = hosted.search(search, refresh=True)
+    assert not points and data["status"] == "bundled_fallback"
+    assert data["error_code"] == "nearby_online_disabled_for_hosting"
+    assert not calls
+    original, _ = cache.search(search)
+    monkeypatch.setattr(nearby, "_fetch", lambda _: pytest.fail("Hosted refresh must stay offline"))
+    points, data = hosted.search(search, refresh=True)
+    assert points == original and data["status"] == "fresh_cache"
+    assert data["error_code"] == "nearby_online_disabled_for_hosting"
+
+
 def test_stale_cache_survives_timeout_and_failure_backoff_survives_restart(lookup, monkeypatch):
     cache, search, _, _, clock = lookup
     original, _ = cache.search(search)
@@ -46,9 +76,11 @@ def test_stale_cache_survives_timeout_and_failure_backoff_survives_restart(looku
     before = path.read_bytes()
     clock[0] += nearby.FRESH_SECONDS + 1
     calls = []
+
     def offline(query):
         calls.append(query)
         raise TimeoutError("offline")
+
     monkeypatch.setattr(nearby, "_fetch", offline)
     points, data = nearby.NearbyPlaceCache(cache.root).search(search)
     assert points == original and data["status"] == "stale_cache"
@@ -95,12 +127,16 @@ def test_location_and_radius_cache_entries_do_not_leak_into_other_searches(looku
     assert len(calls) == 2 and "around:1000," in calls[-1]
 
 
-@pytest.mark.parametrize("corrupt", [
-    {"remark": "runtime error: Query timed out", "elements": []},
-    {"elements": "invalid"}, {"elements": [{"type": "way", "id": 1, "center": None, "tags": {"name": "bad"}}]},
-    {"elements": [{"type": "node", "id": 1, "lat": True, "lon": -122, "tags": {"name": "bad"}}]},
-    {"elements": [{}] * (nearby.MAX_PLACES + 1)},
-])
+@pytest.mark.parametrize(
+    "corrupt",
+    [
+        {"remark": "runtime error: Query timed out", "elements": []},
+        {"elements": "invalid"},
+        {"elements": [{"type": "way", "id": 1, "center": None, "tags": {"name": "bad"}}]},
+        {"elements": [{"type": "node", "id": 1, "lat": True, "lon": -122, "tags": {"name": "bad"}}]},
+        {"elements": [{}] * (nearby.MAX_PLACES + 1)},
+    ],
+)
 def test_incomplete_or_invalid_api_data_never_overwrites_the_last_success(lookup, monkeypatch, corrupt):
     cache, search, _, _, clock = lookup
     before, _ = cache.search(search)
@@ -114,9 +150,11 @@ def test_incomplete_or_invalid_api_data_never_overwrites_the_last_success(lookup
 def test_429_retry_after_is_observed_without_automatic_retry(lookup, monkeypatch):
     cache, search, _, _, clock = lookup
     calls = []
+
     def throttled(query):
         calls.append(query)
         raise urllib.error.HTTPError(nearby.ENDPOINT, 429, "rate limited", {"Retry-After": "900"}, None)
+
     monkeypatch.setattr(nearby, "_fetch", throttled)
     _, data = cache.search(search)
     assert data["error_code"] == "nearby_api_rate_limited"
@@ -131,10 +169,12 @@ def test_429_retry_after_is_observed_without_automatic_retry(lookup, monkeypatch
 def test_concurrent_queries_use_one_public_api_request_and_reuse_its_result(lookup, monkeypatch):
     cache, search, payload, _, _ = lookup
     started, release = threading.Event(), threading.Event()
+
     def slow(_):
         started.set()
         assert release.wait(5)
         return payload
+
     monkeypatch.setattr(nearby, "_fetch", slow)
     with ThreadPoolExecutor(max_workers=1) as pool:
         first = pool.submit(cache.search, search)
@@ -163,10 +203,12 @@ def test_a_failed_cache_write_does_not_claim_persistence_or_destroy_old_data(loo
     clock[0] += 11
     payload["elements"][0]["tags"]["name"] = "Unsaved new name"
     write = nearby.LocalStateLayout._atomic_json_write
+
     def save(path, record):
         if path.name != "provider.json":
             raise OSError("disk unavailable")
         write(path, record)
+
     monkeypatch.setattr(nearby.LocalStateLayout, "_atomic_json_write", staticmethod(save))
     points, data = cache.search(search, refresh=True)
     assert points[0]["name"] == "Unsaved new name"
@@ -176,9 +218,11 @@ def test_a_failed_cache_write_does_not_claim_persistence_or_destroy_old_data(loo
 
 def test_transport_sends_one_bounded_query_and_rejects_an_oversized_body(monkeypatch, offline_nearby_transport):
     seen = []
+
     def opened(request, timeout):
         seen.append((request.full_url, request.data, timeout))
         return BytesIO(json.dumps({"elements": []}).encode())
+
     monkeypatch.setattr(nearby.urllib.request, "urlopen", opened)
     assert offline_nearby_transport("[out:json];node(1);out;") == {"elements": []}
     assert len(seen) == 1 and seen[0][0].startswith(nearby.ENDPOINT + "?data=") and seen[0][2] == 8

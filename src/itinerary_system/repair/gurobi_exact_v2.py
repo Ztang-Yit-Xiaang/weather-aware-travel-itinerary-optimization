@@ -134,9 +134,7 @@ class GurobiExactModelDataV2:
         """Match the legacy preflight count without enumerating permutations."""
 
         assignment_count = prod(len(stop.assignment_values) for stop in self.stops)
-        empty_assignment_count = int(
-            bool(self.stops) and all(None in stop.assignment_values for stop in self.stops)
-        )
+        empty_assignment_count = int(bool(self.stops) and all(None in stop.assignment_values for stop in self.stops))
         lodging_count = prod(len(domain.lodging_ids) for domain in self.lodging)
         return max(0, assignment_count - empty_assignment_count) * lodging_count
 
@@ -165,10 +163,7 @@ def build_gurobi_exact_model_data_v2(
         raise ExactModelDataError("editable_day_domain_empty")
 
     stop_records = _stop_records(model)
-    day_variables = {
-        variable.target_id: variable
-        for variable in model.variables.day_assignment_variables
-    }
+    day_variables = {variable.target_id: variable for variable in model.variables.day_assignment_variables}
     stops: list[ExactStopDomainV2] = []
     for selection in sorted(model.variables.selection_variables, key=lambda row: row.target_id):
         day_variable = day_variables.get(selection.target_id)
@@ -187,9 +182,7 @@ def build_gurobi_exact_model_data_v2(
                 utility=float(stop_utility(record)),
                 contextual_burden=float(context_burden(record)),
                 estimated_cost=_stop_cost(record),
-                visit_minutes=int(
-                    _visit_duration(record, day_route_config.default_visit_minutes)
-                ),
+                visit_minutes=int(_visit_duration(record, day_route_config.default_visit_minutes)),
             )
         )
 
@@ -197,11 +190,7 @@ def build_gurobi_exact_model_data_v2(
         ExactLodgingDomainV2(
             day=int(variable.target_id),
             lodging_ids=_lodging_ids(variable),
-            fixed_lodging_id=(
-                str(variable.fixed_value)
-                if variable.fixed_value not in {None, ""}
-                else None
-            ),
+            fixed_lodging_id=(str(variable.fixed_value) if variable.fixed_value not in {None, ""} else None),
         )
         for variable in sorted(
             model.variables.lodging_variables,
@@ -250,16 +239,13 @@ def iter_structural_assignments_v2(
     lodging_domains = tuple(domain.lodging_ids for domain in data.lodging)
     for selected_days in product(*stop_domains):
         selected = tuple(
-            (stop.stop_id, int(day))
-            for stop, day in zip(data.stops, selected_days, strict=True)
-            if day is not None
+            (stop.stop_id, int(day)) for stop, day in zip(data.stops, selected_days, strict=True) if day is not None
         )
         if not selected:
             continue
         for lodging_ids in product(*lodging_domains):
             lodging = tuple(
-                (domain.day, lodging_id)
-                for domain, lodging_id in zip(data.lodging, lodging_ids, strict=True)
+                (domain.day, lodging_id) for domain, lodging_id in zip(data.lodging, lodging_ids, strict=True)
             )
             yield ExactStructuralAssignmentV2(selected, lodging)
 
@@ -270,28 +256,13 @@ def _build_variable_index(
     lodging: tuple[ExactLodgingDomainV2, ...],
     arcs: tuple[ExactRouteArcV2, ...],
 ) -> ExactVariableIndexV2:
-    assign_day = tuple(
-        (stop.stop_id, day)
-        for stop in stops
-        for day in stop.allowed_days
-    )
-    day_stops = tuple(
-        (day, stop.stop_id)
-        for day in days
-        for stop in stops
-        if day in stop.allowed_days
-    )
+    assign_day = tuple((stop.stop_id, day) for stop in stops for day in stop.allowed_days)
+    day_stops = tuple((day, stop.stop_id) for day in days for stop in stops if day in stop.allowed_days)
     return ExactVariableIndexV2(
         select=tuple(stop.stop_id for stop in stops),
         assign_day=assign_day,
-        assign_lodging=tuple(
-            (domain.day, lodging_id)
-            for domain in lodging
-            for lodging_id in domain.lodging_ids
-        ),
-        route_arc=tuple(
-            (arc.day, arc.origin_id, arc.destination_id) for arc in arcs
-        ),
+        assign_lodging=tuple((domain.day, lodging_id) for domain in lodging for lodging_id in domain.lodging_ids),
+        route_arc=tuple((arc.day, arc.origin_id, arc.destination_id) for arc in arcs),
         first_stop=day_stops,
         last_stop=day_stops,
         order=day_stops,
@@ -321,9 +292,7 @@ def _build_route_arcs(
                 cell = route_matrix.cell(origin_id, destination_id)
                 cell.require_publication_eligible()
             except (RouteMatrixError, ValueError) as exc:
-                raise ExactModelDataError(
-                    f"publication_route_arc_unavailable:{origin_id}->{destination_id}"
-                ) from exc
+                raise ExactModelDataError(f"publication_route_arc_unavailable:{origin_id}->{destination_id}") from exc
             rows.append(
                 ExactRouteArcV2(
                     day=day,
@@ -342,15 +311,7 @@ def _allowed_days(variable: Any, days: tuple[int, ...]) -> tuple[int, ...]:
     if variable.fixed_value not in {None, 0, ""}:
         fixed = int(variable.fixed_value)
         return (fixed,) if fixed in days else ()
-    return tuple(
-        sorted(
-            {
-                int(value)
-                for value in variable.allowed_values
-                if str(value).strip() and int(value) in days
-            }
-        )
-    )
+    return tuple(sorted({int(value) for value in variable.allowed_values if str(value).strip() and int(value) in days}))
 
 
 def _lodging_ids(variable: Any) -> tuple[str, ...]:
@@ -380,12 +341,7 @@ def _stop_records(model: RepairModel) -> dict[str, dict[str, Any]]:
         *model.metadata.get("candidate_stops", ()),
     ):
         record = dict(raw)
-        stop_id = str(
-            record.get("stop_id")
-            or record.get("poi_id")
-            or record.get("name")
-            or ""
-        ).strip()
+        stop_id = str(record.get("stop_id") or record.get("poi_id") or record.get("name") or "").strip()
         if stop_id:
             records[stop_id] = record
     return records

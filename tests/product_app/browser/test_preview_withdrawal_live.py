@@ -1,4 +1,5 @@
 """Real website replacement/Undo gate; attach only with explicit live settings."""
+
 from __future__ import annotations
 
 import json
@@ -42,13 +43,20 @@ def test_replacement_and_undo_keep_copilot_map_and_itinerary_consistent():
         if CHROME.is_file():
             launch["executable_path"] = str(CHROME)
         browser = runtime.chromium.launch(**launch)
-        context = browser.new_context(viewport={"width": 1440, "height": 900},
-            record_video_dir=str(evidence), record_video_size={"width": 1440, "height": 900})
+        context = browser.new_context(
+            viewport={"width": 1440, "height": 900},
+            record_video_dir=str(evidence),
+            record_video_size={"width": 1440, "height": 900},
+        )
         page = context.new_page()
         page.add_init_script(OBSERVE_REAL_MAPS)
+
         def drawn_scope():
-            return page.evaluate("""() => {
-              const map = """ + CURRENT_MAP + """;
+            return page.evaluate(
+                """() => {
+              const map = """
+                + CURRENT_MAP
+                + """;
               const stops = map.getStyle().sources['v2-stops'].data.features;
               const drawn = map.queryRenderedFeatures({layers:['v2-stops-active','v2-stops-original','v2-stops-selected-day']});
               const highlights = map.queryRenderedFeatures({layers:['v2-route-selected-day']});
@@ -56,13 +64,32 @@ def test_replacement_and_undo_keep_copilot_map_and_itinerary_consistent():
                 source_plan_ids:[...new Set(stops.map(row=>row.properties.plan_id))],
                 drawn_stop_plan_ids:[...new Set(drawn.map(row=>row.properties.plan_id))],
                 highlighted_route_plan_ids:[...new Set(highlights.map(row=>row.properties.plan_id))]};
-            }""")
+            }"""
+            )
+
         page.on("pageerror", lambda error: errors["console_errors"].append(str(error)))
-        page.on("console", lambda message: errors["console_errors"].append(message.text) if message.type == "error" else None)
-        page.on("requestfailed", lambda request: errors["request_failures"].append(f"{request.method} {request.url}: {request.failure}"))
-        page.on("response", lambda response: errors["http_errors"].append(f"{response.status} {response.url}") if response.status >= 400 else None)
-        page.on("request", lambda request: mutations.append({"method": request.method, "url": request.url})
-            if request.method == "POST" and request.url.startswith(f"{BASE_URL}/api/") else None)
+        page.on(
+            "console",
+            lambda message: errors["console_errors"].append(message.text) if message.type == "error" else None,
+        )
+        page.on(
+            "requestfailed",
+            lambda request: errors["request_failures"].append(f"{request.method} {request.url}: {request.failure}"),
+        )
+        page.on(
+            "response",
+            lambda response: (
+                errors["http_errors"].append(f"{response.status} {response.url}") if response.status >= 400 else None
+            ),
+        )
+        page.on(
+            "request",
+            lambda request: (
+                mutations.append({"method": request.method, "url": request.url})
+                if request.method == "POST" and request.url.startswith(f"{BASE_URL}/api/")
+                else None
+            ),
+        )
         with _preserve_browser_evidence(context, page, evidence, errors):
             page.goto(f"{BASE_URL}/app/itinerary", wait_until="domcontentloaded")
             expect(page.locator("#app-shell")).to_be_visible(timeout=30_000)
@@ -95,10 +122,14 @@ def test_replacement_and_undo_keep_copilot_map_and_itinerary_consistent():
               };
             }""")
             page.locator("#copilot-input").fill(APPROVED_PROMPT)
-            with page.expect_response(lambda response: response.request.method == "POST"
-                    and response.url.endswith("/copilot/messages"), timeout=90_000) as sent:
+            with page.expect_response(
+                lambda response: response.request.method == "POST" and response.url.endswith("/copilot/messages"),
+                timeout=90_000,
+            ) as sent:
                 page.locator("#copilot-form button[type='submit']").click()
-            page.wait_for_function("() => window.__withdrawalChat.complete || window.__withdrawalChat.error", timeout=90_000)
+            page.wait_for_function(
+                "() => window.__withdrawalChat.complete || window.__withdrawalChat.error", timeout=90_000
+            )
             captured = page.evaluate("window.__withdrawalChat")
             assert captured["complete"] is True and captured["error"] is None
             chat_io = _http_record(sent.value, response_body=captured["raw"])
@@ -107,18 +138,27 @@ def test_replacement_and_undo_keep_copilot_map_and_itinerary_consistent():
             turn = _sse_events(chat_io["response_body_utf8"])[-1]["payload"]["turn"]
             _write_json(evidence / "copilot_turn.json", turn)
             assert turn["user_message"] == APPROVED_PROMPT and turn["provider"] == "openai"
-            assert [item["type"] for item in turn["interpretation"]["intents"]] == ["replace_nearby", "set_stop_duration"]
+            assert [item["type"] for item in turn["interpretation"]["intents"]] == [
+                "replace_nearby",
+                "set_stop_duration",
+            ]
             assert _map_ack(page) == initial, "Chat must not silently execute a repair"
-            with page.expect_response(lambda response: response.request.method == "POST"
-                    and response.url.endswith("/draft/operations")) as added:
-                page.locator(".copilot-proposal-actions").last.get_by_role("button", name="Add all to draft", exact=True).click()
+            with page.expect_response(
+                lambda response: response.request.method == "POST" and response.url.endswith("/draft/operations")
+            ) as added:
+                page.locator(".copilot-proposal-actions").last.get_by_role(
+                    "button", name="Add all to draft", exact=True
+                ).click()
             _write_json(evidence / "stage_http_io.json", _http_record(added.value))
             assert added.value.status == 200
             expect(page.locator("#copilot-lifecycle")).to_contain_text("Draft staged")
             assert _map_ack(page) == initial, "Staging must preserve the accepted parent"
-            with page.expect_response(lambda response: response.request.method == "POST"
-                    and response.url.endswith("/preview"), timeout=90_000) as previewed:
-                page.locator(".copilot-proposal-actions").last.get_by_role("button", name="Preview combined repair", exact=True).click()
+            with page.expect_response(
+                lambda response: response.request.method == "POST" and response.url.endswith("/preview"), timeout=90_000
+            ) as previewed:
+                page.locator(".copilot-proposal-actions").last.get_by_role(
+                    "button", name="Preview combined repair", exact=True
+                ).click()
             preview_io = _http_record(previewed.value)
             _write_json(evidence / "preview_http_io.json", preview_io)
             assert previewed.value.status == 200
@@ -128,15 +168,24 @@ def test_replacement_and_undo_keep_copilot_map_and_itinerary_consistent():
             assert execution["evaluation_executed"] is True
             assert execution["child_plan_id"] == proposal["child_plan_id"]
             assert execution["evaluation_id"] == proposal["certificate_id"]
-            assert next(stop for stop in execution["child_plan"]["selected_stops"]
-                if stop["stop_id"] == "griffith_observatory")["visit_duration_minutes"] == 90
+            assert (
+                next(
+                    stop
+                    for stop in execution["child_plan"]["selected_stops"]
+                    if stop["stop_id"] == "griffith_observatory"
+                )["visit_duration_minutes"]
+                == 90
+            )
             expect(stage).to_have_attribute("data-preview-state", "PREVIEW_RENDERED", timeout=30_000)
             rendered = _map_ack(page)
             assert rendered["active_plan_id"] == rendered["rendered_map_plan_id"] == proposal["child_plan_id"]
             assert rendered["active_plan_content_hash"] == proposal["child_plan_content_hash"]
             assert rendered["rendered_geometry_hash"] == _independent_geometry_hash(page, proposal["geography_plan"])
             assert rendered["rendered_geometry_hash"] != initial["rendered_geometry_hash"]
-            assert CANDIDATE_ID in rendered["rendered_marker_ids"] and TARGET_STOP_ID not in rendered["rendered_marker_ids"]
+            assert (
+                CANDIDATE_ID in rendered["rendered_marker_ids"]
+                and TARGET_STOP_ID not in rendered["rendered_marker_ids"]
+            )
             expect(day).to_contain_text("Pfeiffer Big Sur State Park")
             expect(page.locator("#metric-strip")).to_have_attribute("data-plan-id", proposal["child_plan_id"])
             expect(page.locator("#metric-strip")).to_have_attribute("data-evaluation-id", proposal["certificate_id"])
@@ -145,11 +194,19 @@ def test_replacement_and_undo_keep_copilot_map_and_itinerary_consistent():
             drawn = drawn_scope()
             _write_json(evidence / "renderer_preview.json", drawn)
             assert drawn["source_stop_ids"] == sorted(rendered["rendered_marker_ids"])
-            assert drawn["source_plan_ids"] == drawn["drawn_stop_plan_ids"] == drawn["highlighted_route_plan_ids"] == [proposal["child_plan_id"]]
-            checkpoints.append({"step": "preview", "map": rendered, "copilot": page.locator("#copilot-lifecycle").inner_text()})
+            assert (
+                drawn["source_plan_ids"]
+                == drawn["drawn_stop_plan_ids"]
+                == drawn["highlighted_route_plan_ids"]
+                == [proposal["child_plan_id"]]
+            )
+            checkpoints.append(
+                {"step": "preview", "map": rendered, "copilot": page.locator("#copilot-lifecycle").inner_text()}
+            )
             for remaining in (1, 0):
-                with page.expect_response(lambda response: response.request.method == "POST"
-                        and response.url.endswith("/draft/undo")) as undone:
+                with page.expect_response(
+                    lambda response: response.request.method == "POST" and response.url.endswith("/draft/undo")
+                ) as undone:
                     page.locator("#inline-undo").click()
                 undo_io = _http_record(undone.value)
                 _write_json(evidence / f"undo_{remaining}_http_io.json", undo_io)
@@ -161,18 +218,33 @@ def test_replacement_and_undo_keep_copilot_map_and_itinerary_consistent():
                 assert _map_ack(page) == initial
                 expect(day).to_contain_text("Bixby Creek Bridge")
                 expect(page.locator("#copilot-lifecycle")).to_contain_text(
-                    "Draft changed. Run Preview repair" if remaining else "No evaluated preview is active")
+                    "Draft changed. Run Preview repair" if remaining else "No evaluated preview is active"
+                )
                 expect(page.locator(".copilot-preview-result")).to_have_count(0)
                 expect(page.locator("#metric-strip")).to_have_attribute("data-plan-id", initial["active_plan_id"])
-                checkpoints.append({"step": f"undo_{remaining}", "map": _map_ack(page),
-                    "copilot": page.locator("#copilot-lifecycle").inner_text(), "remaining_drafts": remaining})
+                checkpoints.append(
+                    {
+                        "step": f"undo_{remaining}",
+                        "map": _map_ack(page),
+                        "copilot": page.locator("#copilot-lifecycle").inner_text(),
+                        "remaining_drafts": remaining,
+                    }
+                )
                 _capture_ready(page, evidence / f"undo_{remaining}.png")
                 drawn = drawn_scope()
                 _write_json(evidence / f"renderer_undo_{remaining}.json", drawn)
                 assert drawn["source_stop_ids"] == sorted(initial["rendered_marker_ids"])
-                assert drawn["source_plan_ids"] == drawn["drawn_stop_plan_ids"] == drawn["highlighted_route_plan_ids"] == [initial["active_plan_id"]]
-            with page.expect_response(lambda response: response.request.method == "GET"
-                    and response.url.endswith(f"/api/sessions/{session['session_id']}")) as reloaded:
+                assert (
+                    drawn["source_plan_ids"]
+                    == drawn["drawn_stop_plan_ids"]
+                    == drawn["highlighted_route_plan_ids"]
+                    == [initial["active_plan_id"]]
+                )
+            with page.expect_response(
+                lambda response: (
+                    response.request.method == "GET" and response.url.endswith(f"/api/sessions/{session['session_id']}")
+                )
+            ) as reloaded:
                 page.reload(wait_until="domcontentloaded")
             _write_json(evidence / "reload_http_io.json", _http_record(reloaded.value))
             assert reloaded.value.status == 200 and _map_ack(page) == initial
@@ -182,13 +254,28 @@ def test_replacement_and_undo_keep_copilot_map_and_itinerary_consistent():
             _capture_ready(page, evidence / "after_reload.png")
             assert not [item for item in mutations if re.search(r"/(accept|keep-original)(?:/|$)", item["url"])]
             assert not any(errors.values()), errors
-            _write_json(evidence / "trace.json", {"schema_version": "copilot-map-withdrawal-browser-v1",
-                "assertions_passed": True, "request_id": execution["request_id"],
-                "session_id": session["session_id"], "parent_plan_id": initial["active_plan_id"],
-                "child_plan_id": proposal["child_plan_id"], "child_plan_content_hash": proposal["child_plan_content_hash"],
-                "evaluation_id": proposal["certificate_id"], "geometry_hash": rendered["rendered_geometry_hash"],
-                "rendered_map_plan_id": rendered["rendered_map_plan_id"], "rendered_marker_ids": rendered["rendered_marker_ids"],
-                "checkpoints": checkpoints, "mutation_requests": mutations, "errors": errors,
-                "provider": turn["provider"], "model": turn["model"], "chat_submission_count": 1,
-                "raw_provider_transport_io_captured": False, "accepted": False})
+            _write_json(
+                evidence / "trace.json",
+                {
+                    "schema_version": "copilot-map-withdrawal-browser-v1",
+                    "assertions_passed": True,
+                    "request_id": execution["request_id"],
+                    "session_id": session["session_id"],
+                    "parent_plan_id": initial["active_plan_id"],
+                    "child_plan_id": proposal["child_plan_id"],
+                    "child_plan_content_hash": proposal["child_plan_content_hash"],
+                    "evaluation_id": proposal["certificate_id"],
+                    "geometry_hash": rendered["rendered_geometry_hash"],
+                    "rendered_map_plan_id": rendered["rendered_map_plan_id"],
+                    "rendered_marker_ids": rendered["rendered_marker_ids"],
+                    "checkpoints": checkpoints,
+                    "mutation_requests": mutations,
+                    "errors": errors,
+                    "provider": turn["provider"],
+                    "model": turn["model"],
+                    "chat_submission_count": 1,
+                    "raw_provider_transport_io_captured": False,
+                    "accepted": False,
+                },
+            )
         browser.close()

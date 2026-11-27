@@ -35,7 +35,7 @@ def inputs():
         "sources": {
             "protomaps": {"type": "vector", "url": "pmtiles://" + ARCHIVE},
             "v2-draft-routes": {"type": "geojson", "data": {"type": "FeatureCollection", "features": []}},
-        }
+        },
     }
 
 
@@ -59,13 +59,28 @@ def test_policy_uses_observed_urls_not_a_hardcoded_archive_name():
     config["style_url"] = BASE + "/styles/other-pinned.json"
     style["sources"]["protomaps"]["url"] = "pmtiles://" + BASE + "/data/other-pinned.pmtiles"
     policy = map_cancellation_policy(config, style)
-    assert policy["allowlisted_urls"] == sorted([BASE + "/data/other-pinned.pmtiles",
-        BASE + "/styles/other-pinned.json",SPRITE+".json",SPRITE+".png",SPRITE+"@2x.json",SPRITE+"@2x.png"])
+    assert policy["allowlisted_urls"] == sorted(
+        [
+            BASE + "/data/other-pinned.pmtiles",
+            BASE + "/styles/other-pinned.json",
+            SPRITE + ".json",
+            SPRITE + ".png",
+            SPRITE + "@2x.json",
+            SPRITE + "@2x.png",
+        ]
+    )
     assert classify_browser_network([record()], policy)["blocking_failure_indexes"] == [0]
 
 
-@pytest.mark.parametrize("url,resource_type,byte_range", [(ARCHIVE, "fetch", "bytes=0-16383"),
-    (STYLE, "xhr", None),(SPRITE+".json","fetch",None),(SPRITE+".png","fetch",None)])
+@pytest.mark.parametrize(
+    "url,resource_type,byte_range",
+    [
+        (ARCHIVE, "fetch", "bytes=0-16383"),
+        (STYLE, "xhr", None),
+        (SPRITE + ".json", "fetch", None),
+        (SPRITE + ".png", "fetch", None),
+    ],
+)
 def test_exact_local_asset_cancellation_is_retained_and_nonblocking(url, resource_type, byte_range):
     raw = [record(url=url, resource_type=resource_type, range=byte_range)]
     original = deepcopy(raw)

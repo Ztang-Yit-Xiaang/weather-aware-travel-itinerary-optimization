@@ -149,7 +149,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--port", type=_port_number, default=8127)
     parser.add_argument("--open", action="store_true", help="Open /app after the health check passes.")
     parser.add_argument("--enable-legacy", action="store_true", help="Enable labeled debug-only legacy routes.")
-    parser.add_argument("--state-root", type=Path, default=Path(os.environ.get("PRODUCT_STATE_ROOT") or REPOSITORY_ROOT / ".product_app_state"))
+    parser.add_argument(
+        "--state-root",
+        type=Path,
+        default=Path(os.environ.get("PRODUCT_STATE_ROOT") or REPOSITORY_ROOT / ".product_app_state"),
+    )
     parser.add_argument("--registry", type=Path, default=None, help="Use an explicit local run registry.")
     return parser.parse_args()
 
@@ -236,16 +240,12 @@ def _limited_component_codes(payload: dict) -> str:
 def _report_health(url: str, payload: dict) -> None:
     if payload["core_ready"]:
         if payload["status"] == "degraded":
-            print(
-                "Itinerary Repair Copilot is running in degraded mode: "
-                f"{_limited_component_codes(payload)}"
-            )
+            print(f"Itinerary Repair Copilot is running in degraded mode: {_limited_component_codes(payload)}")
         else:
             print(f"Itinerary Repair Copilot is ready at {url}/app")
         return
     print(
-        "Itinerary Repair Copilot requires recovery: "
-        f"{_limited_component_codes(payload)}",
+        f"Itinerary Repair Copilot requires recovery: {_limited_component_codes(payload)}",
         file=sys.stderr,
     )
     print(f"Recovery page: {url}/app", file=sys.stderr)

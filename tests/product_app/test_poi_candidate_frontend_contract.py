@@ -31,9 +31,9 @@ def test_candidate_discovery_uses_exact_route_context_and_bounded_filters() -> N
 
 def test_candidate_selection_has_no_fallback_and_replacement_is_explicitly_mapped() -> None:
     source = APP.read_text(encoding="utf-8")
-    selection = source[source.index("async function selectPoiCandidate"):]
+    selection = source[source.index("async function selectPoiCandidate") :]
     selection = selection[: selection.index("async function useSelectedCandidateReplacement")]
-    replacement = source[source.index("async function useSelectedCandidateReplacement"):]
+    replacement = source[source.index("async function useSelectedCandidateReplacement") :]
     replacement = replacement[: replacement.index("async function closePoiDiscovery")]
 
     assert "row.candidate_id === candidateId" in selection
@@ -61,7 +61,7 @@ def test_null_metrics_and_distinct_candidate_states_are_rendered_truthfully() ->
         "Unavailable / insufficient evidence",
     ):
         assert label in source
-    assert 'burden.recommended === true && burden.ranking_eligible === true' in source
+    assert "burden.recommended === true && burden.ranking_eligible === true" in source
     for field in (
         "marginal_travel_minutes",
         "marginal_travel_distance_m",
@@ -78,7 +78,7 @@ def test_null_metrics_and_distinct_candidate_states_are_rendered_truthfully() ->
 
 def test_external_links_are_scheme_checked_noopener_and_host_visible() -> None:
     source = APP.read_text(encoding="utf-8")
-    helper = source[source.index("function safeExternalLink"):]
+    helper = source[source.index("function safeExternalLink") :]
     helper = helper[: helper.index("function candidateStateLabel")]
 
     assert '["http:", "https:"]' in helper
@@ -92,7 +92,7 @@ def test_candidate_layer_is_separate_bounded_and_has_keyboard_equivalent() -> No
     controller = CONTROLLER.read_text(encoding="utf-8")
     css = CSS.read_text(encoding="utf-8")
 
-    assert 'candidates.length > 10' in controller
+    assert "candidates.length > 10" in controller
     assert "FROZEN_ROUTE_QUERY_HASH_PATTERN = /^[0-9a-f]{16}$/" in MAP.read_text(encoding="utf-8")
     assert 'map.addSource("v2-poi-candidates"' in controller
     assert 'id: "v2-poi-access-points"' in controller
@@ -103,7 +103,7 @@ def test_candidate_layer_is_separate_bounded_and_has_keyboard_equivalent() -> No
     assert 'aria-pressed="${selectedRow}"' in app
     assert 'id="poi-layer-toggle"' in app
     assert ".poi-candidate-list button { width: 100%; min-height: 52px;" in css
-    assert '.poi-candidate-card button { width: 100%; min-height: 44px;' in css
+    assert ".poi-candidate-card button { width: 100%; min-height: 44px;" in css
     assert "@media (max-width: 430px)" in css
 
 

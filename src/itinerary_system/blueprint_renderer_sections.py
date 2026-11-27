@@ -191,15 +191,28 @@ def _prepare_renderer_state(context, output_path=None, run_live_routing=None):
     _add_route_panes(trip_map)
     plugins.Fullscreen(position="topleft", title="Expand map", title_cancel="Exit full screen").add_to(trip_map)
     return RendererBuildState(
-        context=context, output_path=output_path, output_dir=output_dir, cache_path=cache_path,
-        route_cache=route_cache, run_live=run_live, route_debug_rows=route_debug_rows,
-        route_debug_registry=route_debug_registry, trip=trip, city_sequence=city_sequence,
-        main_trip_days=main_trip_days, profile_day_plans=profile_day_plans,
-        day_plan_df=day_plan_df, profile_day_plan_df=profile_day_plan_df,
-        use_route_matrix=use_route_matrix, fastest_sequence=fastest_sequence,
+        context=context,
+        output_path=output_path,
+        output_dir=output_dir,
+        cache_path=cache_path,
+        route_cache=route_cache,
+        run_live=run_live,
+        route_debug_rows=route_debug_rows,
+        route_debug_registry=route_debug_registry,
+        trip=trip,
+        city_sequence=city_sequence,
+        main_trip_days=main_trip_days,
+        profile_day_plans=profile_day_plans,
+        day_plan_df=day_plan_df,
+        profile_day_plan_df=profile_day_plan_df,
+        use_route_matrix=use_route_matrix,
+        fastest_sequence=fastest_sequence,
         scenic_sequence=scenic_sequence,
-        fit_points=fit_points, all_points=all_points, trip_map=trip_map,
+        fit_points=fit_points,
+        all_points=all_points,
+        trip_map=trip_map,
     )
+
 
 def _add_context_route_section(state: RendererBuildState):
     context = state.context
@@ -295,6 +308,7 @@ def _add_context_route_section(state: RendererBuildState):
     state.fastest_layer = fastest_layer
     state.scenic_layer = scenic_layer
     state.intercity_legs_df = intercity_legs_df
+
 
 def _add_hotel_layer_section(state: RendererBuildState):
     context = state.context
@@ -415,6 +429,7 @@ def _add_hotel_layer_section(state: RendererBuildState):
     state.selected_hotel_layer = selected_hotel_layer
     state.candidate_hotel_layer = candidate_hotel_layer
 
+
 def _add_must_go_layer_section(renderer_state: RendererBuildState):
     context = renderer_state.context
     trip_map = renderer_state.trip_map
@@ -516,6 +531,7 @@ def _add_must_go_layer_section(renderer_state: RendererBuildState):
     renderer_state.social_layer = social_layer
     renderer_state.enriched_catalog = enriched_catalog
 
+
 def _add_nature_layer_section(state: RendererBuildState):
     context = state.context
     trip_map = state.trip_map
@@ -610,6 +626,7 @@ def _add_nature_layer_section(state: RendererBuildState):
         }
     )
     state.nature_layer = nature_layer
+
 
 def _add_profile_route_section(state: RendererBuildState):
     trip_map = state.trip_map
@@ -782,6 +799,7 @@ def _add_profile_route_section(state: RendererBuildState):
             profile_layer_groups[config["label"]].append(day_layer)
     state.profile_layer_groups = profile_layer_groups
 
+
 def _add_comparison_layer_section(state: RendererBuildState):
     context = state.context
     output_dir = state.output_dir
@@ -899,6 +917,7 @@ def _add_comparison_layer_section(state: RendererBuildState):
     state.transition_layers = transition_layers
     state.bandit_strategy = bandit_strategy
     state.bandit_reward = bandit_reward
+
 
 def _add_dashboard_section(state: RendererBuildState):
     output_dir = state.output_dir
@@ -1072,6 +1091,7 @@ def _add_dashboard_section(state: RendererBuildState):
     """
     trip_map.get_root().html.add_child(folium.Element(panel_html))
     _add_interest_bar_preview_panel(trip_map, output_dir)
+
 
 def _finalize_renderer(state: RendererBuildState):
     trip_map = state.trip_map

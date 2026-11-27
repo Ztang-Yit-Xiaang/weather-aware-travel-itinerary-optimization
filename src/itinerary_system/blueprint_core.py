@@ -212,6 +212,7 @@ CALIFORNIA_ROAD_CORRIDOR = [
 
 CORRIDOR_INDEX = {name: idx for idx, (name, _, _) in enumerate(CALIFORNIA_ROAD_CORRIDOR)}
 
+
 def _load_csv(path):
     path = Path(path)
     if path.exists() and path.stat().st_size > 0:
@@ -221,13 +222,16 @@ def _load_csv(path):
             return pd.DataFrame()
     return pd.DataFrame()
 
+
 def _catalog_series(output, column, default):
     if column in output.columns:
         return output[column]
     return pd.Series(default, index=output.index)
 
+
 def _numeric_catalog_series(output, column, default):
     return pd.to_numeric(_catalog_series(output, column, default), errors="coerce").fillna(default)
+
 
 def _coerce_optional_poi_columns(output):
     for column in OPTIONAL_POI_COLUMNS:
@@ -245,6 +249,7 @@ def _coerce_optional_poi_columns(output):
         else:
             output[column] = pd.to_numeric(output[column], errors="coerce").fillna(0.0)
     return output
+
 
 def _normalize_catalog_columns(df, city, source_name):
     if df.empty:
@@ -329,17 +334,20 @@ def _normalize_catalog_columns(df, city, source_name):
     ]
     return output[base_columns + OPTIONAL_POI_COLUMNS]
 
+
 def _social_must_go_catalog(city=None):
     frame = pd.DataFrame(SOCIAL_MUST_GO_PLACES)
     if city is not None:
         frame = frame[frame["city"].astype(str).str.lower().eq(str(city).lower())]
     return frame.reset_index(drop=True)
 
+
 def _distance_to_city_center(city, latitudes, longitudes):
     city_lat, city_lon = CITY_COORDS[city]
     latitudes = pd.to_numeric(latitudes, errors="coerce")
     longitudes = pd.to_numeric(longitudes, errors="coerce")
     return np.sqrt((latitudes - city_lat) ** 2 + (longitudes - city_lon) ** 2) * 111.0
+
 
 def _point_distance_km(left_lat, left_lon, right_lat, right_lon):
     lat_scale = 111.0
@@ -350,6 +358,7 @@ def _point_distance_km(left_lat, left_lon, right_lat, right_lon):
             + ((float(left_lon) - float(right_lon)) * lon_scale) ** 2
         )
     )
+
 
 def _order_stops_from_hotel(stops, hotel_lat, hotel_lon):
     if stops.empty:
@@ -376,11 +385,13 @@ def _order_stops_from_hotel(stops, hotel_lat, hotel_lon):
 
     return pd.DataFrame(ordered_rows).reset_index(drop=True)
 
+
 def _profile_config(profile_name="balanced", stops_per_day=None):
     config = PROFILE_CONFIGS.get(str(profile_name).lower(), PROFILE_CONFIGS["balanced"]).copy()
     if stops_per_day is not None:
         config["stops_per_day"] = int(stops_per_day)
     return config
+
 
 def _select_compact_day_stops(poi_catalog, hotel, used_names, stops_per_day=3, profile_config=None):
     profile_config = profile_config or _profile_config("balanced", stops_per_day=stops_per_day)
@@ -402,9 +413,9 @@ def _select_compact_day_stops(poi_catalog, hotel, used_names, stops_per_day=3, p
     available["must_go_weight"] = pd.to_numeric(
         _catalog_series(available, "must_go_weight", 0.0), errors="coerce"
     ).fillna(0.0)
-    available["corridor_fit"] = pd.to_numeric(
-        _catalog_series(available, "corridor_fit", 0.0), errors="coerce"
-    ).fillna(0.0)
+    available["corridor_fit"] = pd.to_numeric(_catalog_series(available, "corridor_fit", 0.0), errors="coerce").fillna(
+        0.0
+    )
     available["route_fit"] = pd.to_numeric(_catalog_series(available, "route_fit", 0.0), errors="coerce").fillna(0.0)
     available["route_context_fit"] = np.maximum(available["corridor_fit"], available["route_fit"])
     available["detour_minutes"] = pd.to_numeric(
@@ -518,6 +529,7 @@ def _select_compact_day_stops(poi_catalog, hotel, used_names, stops_per_day=3, p
     ordered = _coerce_optional_poi_columns(ordered)
     return ordered[output_columns]
 
+
 def _select_hotel_for_city_plan(hotel_catalog, poi_catalog, used_names, stops_per_day=3, profile_config=None):
     profile_config = profile_config or _profile_config("balanced", stops_per_day=stops_per_day)
     if hotel_catalog.empty:
@@ -567,6 +579,7 @@ def _select_hotel_for_city_plan(hotel_catalog, poi_catalog, used_names, stops_pe
             best_idx = idx
 
     return hotels.loc[best_idx]
+
 
 def _city_poi_catalog(context, city):
     output_dir = Path(context["OUTPUT_DIR"])
@@ -644,6 +657,7 @@ def _city_poi_catalog(context, city):
         ["ranking_score", "source_score", "name"], ascending=[False, False, True]
     ).drop_duplicates("name")
 
+
 def _city_hotel_catalog(context, city):
     output_dir = Path(context["OUTPUT_DIR"])
     cached_osm = _load_csv(output_dir / "production_city_hotel_catalog.csv")
@@ -719,6 +733,7 @@ def _city_hotel_catalog(context, city):
         ]
     )
 
+
 def _unique_in_order(values):
     seen = set()
     output = []
@@ -727,6 +742,7 @@ def _unique_in_order(values):
             output.append(value)
             seen.add(value)
     return output
+
 
 def _coerce_name_list(value):
     if isinstance(value, (list, tuple)):
@@ -747,6 +763,7 @@ def _coerce_name_list(value):
             return [part.strip().strip("'\"") for part in text.split(separator) if part.strip().strip("'\"")]
     return [text.strip("'\"")]
 
+
 def _coerce_days_by_city(value):
     if isinstance(value, dict):
         return {str(key): int(val) for key, val in value.items()}
@@ -759,6 +776,7 @@ def _coerce_days_by_city(value):
     except Exception:
         pass
     return {}
+
 
 def _trip_sequence_with_pass_through(trip):
     sequence = _coerce_name_list(trip.get("city_sequence", []))
@@ -775,6 +793,7 @@ def _trip_sequence_with_pass_through(trip):
     days_by_city = _coerce_days_by_city(trip.get("days_by_city", {}))
     return _unique_in_order(list(days_by_city.keys()))
 
+
 def _sequence_between(sequence, origin_city, destination_city):
     try:
         origin_idx = sequence.index(origin_city)
@@ -784,6 +803,7 @@ def _sequence_between(sequence, origin_city, destination_city):
     if origin_idx <= destination_idx:
         return sequence[origin_idx : destination_idx + 1]
     return list(reversed(sequence[destination_idx : origin_idx + 1]))
+
 
 def _transition_drive_minutes(context, origin_city, destination_city, through_cities):
     output_dir = Path(context.get("OUTPUT_DIR", "results/outputs"))
@@ -817,6 +837,7 @@ def _transition_drive_minutes(context, origin_city, destination_city, through_ci
         total += _estimate_drive_minutes(waypoints, classification)
     return total, "curated_waypoint_speed_limit_proxy"
 
+
 def _stanford_transition_stop(context, used_names_by_city):
     used_names = used_names_by_city.setdefault("Palo Alto / Stanford", set())
     if STANFORD_WAYPOINT_NAME in used_names:
@@ -836,6 +857,7 @@ def _stanford_transition_stop(context, used_names_by_city):
     used_names.add(STANFORD_WAYPOINT_NAME)
     return _normalize_catalog_columns(stanford_rows, "Palo Alto / Stanford", "curated_social_must_go")
 
+
 def _coord_for_place(name):
     if name in CITY_COORDS:
         lat, lon = CITY_COORDS[name]
@@ -853,6 +875,7 @@ def _coord_for_place(name):
 
     raise KeyError(f"No coordinate available for route waypoint: {name}")
 
+
 def _insert_stanford_waypoint(sequence):
     sequence = _unique_in_order(sequence)
     if STANFORD_WAYPOINT_NAME in sequence or "San Francisco" not in sequence:
@@ -865,6 +888,7 @@ def _insert_stanford_waypoint(sequence):
     else:
         output.insert(sf_idx + 1, STANFORD_WAYPOINT_NAME)
     return output
+
 
 def _scenic_route_sequence(city_sequence):
     sequence = _unique_in_order(city_sequence)
@@ -884,6 +908,7 @@ def _scenic_route_sequence(city_sequence):
         return [name for name in canonical_northbound if name == STANFORD_WAYPOINT_NAME or name in sequence]
     return _insert_stanford_waypoint(sequence)
 
+
 def _corridor_segment_points(left_name, right_name):
     if left_name not in CORRIDOR_INDEX or right_name not in CORRIDOR_INDEX:
         return [_coord_for_place(left_name), _coord_for_place(right_name)]
@@ -893,10 +918,12 @@ def _corridor_segment_points(left_name, right_name):
     segment = CALIFORNIA_ROAD_CORRIDOR[left_idx : right_idx + step : step]
     return [[float(lat), float(lon)] for _, lat, lon in segment]
 
+
 def _scenic_leg_waypoints(left_name, right_name):
     if STANFORD_WAYPOINT_NAME in {left_name, right_name}:
         return [_coord_for_place(left_name), _coord_for_place(right_name)]
     return _corridor_segment_points(left_name, right_name)
+
 
 def _route_distance_km(points):
     if len(points) < 2:
@@ -905,6 +932,7 @@ def _route_distance_km(points):
         _point_distance_km(left[0], left[1], right[0], right[1])
         for left, right in zip(points[:-1], points[1:], strict=False)
     )
+
 
 def _estimate_drive_minutes(points, classification):
     distance_km = _route_distance_km(points)
@@ -918,6 +946,7 @@ def _estimate_drive_minutes(points, classification):
         speed_kmh = 78.0
         road_factor = 1.08
     return round((distance_km * road_factor / speed_kmh) * 60.0, 1)
+
 
 def _leg_classification(left_name, right_name, scenic):
     if not scenic:

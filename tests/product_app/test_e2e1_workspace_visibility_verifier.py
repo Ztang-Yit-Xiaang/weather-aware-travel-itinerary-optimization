@@ -1,4 +1,5 @@
 """Prospective synthetic counterexamples; not browser acceptance evidence."""
+
 from __future__ import annotations
 
 import hashlib
@@ -15,31 +16,99 @@ import verify_e2e1_vertical_slice as verifier  # noqa: E402
 
 def visibility_case():
     rect = {"left": 20, "top": 20, "right": 120, "bottom": 60, "width": 100, "height": 40}
-    ancestor = {"rect": {"left": 0, "top": 0, "right": 390, "bottom": 844, "width": 390, "height": 844},
-        "overflow_x": "hidden", "overflow_y": "auto", "client_left": 0, "client_top": 0,
-        "client_width": 390, "client_height": 844, "scroll_top": 0, "scroll_left": 0,
-        "display": "block", "visibility": "visible", "opacity": 1}
-    texts = {"#inline-undo": "Undo latest draft", "#inline-preview": "Preview repair",
-             ".textual-map-alternative > summary": "Text route description",
-             ".text-route-summary > h3:first-child": "Day 5 route",
-             ".text-route-summary dd:first-of-type": "1. Bixby Creek Bridge"}
+    ancestor = {
+        "rect": {"left": 0, "top": 0, "right": 390, "bottom": 844, "width": 390, "height": 844},
+        "overflow_x": "hidden",
+        "overflow_y": "auto",
+        "client_left": 0,
+        "client_top": 0,
+        "client_width": 390,
+        "client_height": 844,
+        "scroll_top": 0,
+        "scroll_left": 0,
+        "display": "block",
+        "visibility": "visible",
+        "opacity": 1,
+    }
+    texts = {
+        "#inline-undo": "Undo latest draft",
+        "#inline-preview": "Preview repair",
+        ".textual-map-alternative > summary": "Text route description",
+        ".text-route-summary > h3:first-child": "Day 5 route",
+        ".text-route-summary dd:first-of-type": "1. Bixby Creek Bridge",
+    }
     rows = []
     for selector, text in texts.items():
-        rows.append({"selector": selector, "present": True, "text": text, "disabled": True if selector.startswith("#") else None,
-            "rect": deepcopy(rect), "clip": {key: rect[key] for key in ("left", "top", "right", "bottom")}, "visible_ratio": 1,
-            "display": "block", "visibility": "visible", "opacity": 1, "ancestors": [deepcopy(ancestor)],
-            "points": [{"x": 20 + 100 * dx, "y": 20 + 40 * dy, "unoccluded": True,
-                        "hit": {"tag": "BUTTON" if selector.startswith("#") else "H3", "id": selector[1:] if selector.startswith("#") else ""}}
-                       for dx, dy in ((.5, .5), (.1, .1), (.9, .1), (.1, .9), (.9, .9))]})
-    value = {"at": "2026-09-08T10:00:03+00:00", "viewport": {"width": 390, "height": 844}, "elements": rows,
-        "scroll_owners": [{"tag": "HTML", "class_name": "", "scroll_top": 0, "scroll_left": 0, "client_height": 844, "scroll_height": 844}]}
+        rows.append(
+            {
+                "selector": selector,
+                "present": True,
+                "text": text,
+                "disabled": True if selector.startswith("#") else None,
+                "rect": deepcopy(rect),
+                "clip": {key: rect[key] for key in ("left", "top", "right", "bottom")},
+                "visible_ratio": 1,
+                "display": "block",
+                "visibility": "visible",
+                "opacity": 1,
+                "ancestors": [deepcopy(ancestor)],
+                "points": [
+                    {
+                        "x": 20 + 100 * dx,
+                        "y": 20 + 40 * dy,
+                        "unoccluded": True,
+                        "hit": {
+                            "tag": "BUTTON" if selector.startswith("#") else "H3",
+                            "id": selector[1:] if selector.startswith("#") else "",
+                        },
+                    }
+                    for dx, dy in ((0.5, 0.5), (0.1, 0.1), (0.9, 0.1), (0.1, 0.9), (0.9, 0.9))
+                ],
+            }
+        )
+    value = {
+        "at": "2026-09-08T10:00:03+00:00",
+        "viewport": {"width": 390, "height": 844},
+        "elements": rows,
+        "scroll_owners": [
+            {
+                "tag": "HTML",
+                "class_name": "",
+                "scroll_top": 0,
+                "scroll_left": 0,
+                "client_height": 844,
+                "scroll_height": 844,
+            }
+        ],
+    }
     checkpoint = {"captured_at": "2026-09-08T10:00:02+00:00", "readiness": {"viewport": value["viewport"]}}
     return value, checkpoint, "2026-09-08T10:00:04+00:00", texts
 
 
-@pytest.mark.parametrize("fault", [None, "missing", "hidden", "transparent", "ancestor_hidden", "clipped", "fake_ratio",
-    "offscreen", "occluded", "missing_hit", "wrong_point", "nan", "wrong_heading", "wrong_order", "enabled",
-    "different_control", "stale_capture", "wrong_viewport", "missing_scroll"])
+@pytest.mark.parametrize(
+    "fault",
+    [
+        None,
+        "missing",
+        "hidden",
+        "transparent",
+        "ancestor_hidden",
+        "clipped",
+        "fake_ratio",
+        "offscreen",
+        "occluded",
+        "missing_hit",
+        "wrong_point",
+        "nan",
+        "wrong_heading",
+        "wrong_order",
+        "enabled",
+        "different_control",
+        "stale_capture",
+        "wrong_viewport",
+        "missing_scroll",
+    ],
+)
 def test_workspace_controls_require_visible_canonical_text_and_real_hit_testing(fault):
     value, checkpoint, completed, texts = visibility_case()
     row = value["elements"][0]
@@ -54,7 +123,7 @@ def test_workspace_controls_require_visible_canonical_text_and_real_hit_testing(
     elif fault == "clipped":
         row["ancestors"][0]["client_height"] = 25
     elif fault == "fake_ratio":
-        row["visible_ratio"] = .99
+        row["visible_ratio"] = 0.99
     elif fault == "offscreen":
         row["rect"]["left"] = -100
     elif fault == "occluded":
@@ -87,10 +156,18 @@ def test_workspace_controls_require_visible_canonical_text_and_real_hit_testing(
 
 
 def wire(payload, url, request):
-    row = {"schema_version": "e2e1-product-http-io-v1", "method": "POST", "url": url, "response_status_code": 200,
-        "body_capture": "exact_utf8", "credential_redactions": {"request": [], "response": []},
-        "request_headers_persisted": False, "response_headers_persisted": False, "authorization_persisted": False,
-        "session_token_persisted": False}
+    row = {
+        "schema_version": "e2e1-product-http-io-v1",
+        "method": "POST",
+        "url": url,
+        "response_status_code": 200,
+        "body_capture": "exact_utf8",
+        "credential_redactions": {"request": [], "response": []},
+        "request_headers_persisted": False,
+        "response_headers_persisted": False,
+        "authorization_persisted": False,
+        "session_token_persisted": False,
+    }
     for side, data in (("request", request), ("response", payload)):
         body = json.dumps(data)
         row[side + "_body_utf8"] = body
@@ -99,32 +176,82 @@ def wire(payload, url, request):
 
 
 def selection_case():
-    initial = {"session_id": "s", "trip_id": "trip", "run_id": "run", "revision": 0, "accepted_plan_id": "parent", "draft": []}
+    initial = {
+        "session_id": "s",
+        "trip_id": "trip",
+        "run_id": "run",
+        "revision": 0,
+        "accepted_plan_id": "parent",
+        "draft": [],
+    }
     created, plan = {"session": initial}, {"plan_id": "parent", "content_hash": "a" * 16}
     fields = {"selected_stop_id": "bixby_creek_bridge_viewpoint", "selected_day": 5, "selected_segment_id": None}
-    selection = wire({"session": {**initial, **fields, "revision": 1}}, "http://127.0.0.1:8127/api/sessions/s/selection",
-                     {"expected_revision": 0, **fields})
-    impact = wire({"schema_version": "product-draft-impact-preview-v1", "session_id": "s", "session_revision": 1,
-        "parent_plan_id": "parent", "parent_plan_content_hash": plan["content_hash"], "operations": [], "is_certified": False,
-        "summary": {"operation_count": 0, "can_run_evaluated_preview": False}},
-        "http://127.0.0.1:8127/api/sessions/s/draft/impact-preview", {"expected_revision": 1})
-    records = [{"url": "http://127.0.0.1:8127/api/sessions", "response_body_utf8": json.dumps(created)},
-        {**selection, "observed_at": "2026-09-08T10:00:01+00:00"}, {**impact, "observed_at": "2026-09-08T10:00:02+00:00"}]
-    checkpoint = {"selected_stop": fields["selected_stop_id"], "selected_day": "5",
+    selection = wire(
+        {"session": {**initial, **fields, "revision": 1}},
+        "http://127.0.0.1:8127/api/sessions/s/selection",
+        {"expected_revision": 0, **fields},
+    )
+    impact = wire(
+        {
+            "schema_version": "product-draft-impact-preview-v1",
+            "session_id": "s",
+            "session_revision": 1,
+            "parent_plan_id": "parent",
+            "parent_plan_content_hash": plan["content_hash"],
+            "operations": [],
+            "is_certified": False,
+            "summary": {"operation_count": 0, "can_run_evaluated_preview": False},
+        },
+        "http://127.0.0.1:8127/api/sessions/s/draft/impact-preview",
+        {"expected_revision": 1},
+    )
+    records = [
+        {"url": "http://127.0.0.1:8127/api/sessions", "response_body_utf8": json.dumps(created)},
+        {**selection, "observed_at": "2026-09-08T10:00:01+00:00"},
+        {**impact, "observed_at": "2026-09-08T10:00:02+00:00"},
+    ]
+    checkpoint = {
+        "selected_stop": fields["selected_stop_id"],
+        "selected_day": "5",
         "text_scope": {"planId": "parent", "planContentHash": plan["content_hash"]},
-        "readiness": {"screenshot_started_at": "2026-09-08T10:00:03+00:00"}}
+        "readiness": {"screenshot_started_at": "2026-09-08T10:00:03+00:00"},
+    }
     return selection, impact, records, created, plan, checkpoint, "2026-09-08T10:00:00+00:00"
 
 
-@pytest.mark.parametrize("fault", [None, "not_captured", "duplicate", "out_of_order", "late_impact", "wrong_revision",
-    "foreign_owner", "changed_plan", "staged_draft", "wrong_stop", "wrong_day", "wrong_hash", "certified",
-    "executable", "stale_dom", "stale_text", "selection_between"])
+@pytest.mark.parametrize(
+    "fault",
+    [
+        None,
+        "not_captured",
+        "duplicate",
+        "out_of_order",
+        "late_impact",
+        "wrong_revision",
+        "foreign_owner",
+        "changed_plan",
+        "staged_draft",
+        "wrong_stop",
+        "wrong_day",
+        "wrong_hash",
+        "certified",
+        "executable",
+        "stale_dom",
+        "stale_text",
+        "selection_between",
+    ],
+)
 def test_text_route_capture_requires_exact_completed_selection_and_empty_impact(fault):
     selection, impact, records, created, plan, checkpoint, before = selection_case()
     if fault in {"wrong_revision", "foreign_owner", "changed_plan", "staged_draft", "wrong_stop"}:
         payload = json.loads(selection["response_body_utf8"])
-        key, value = {"wrong_revision": ("revision", 2), "foreign_owner": ("trip_id", "foreign"),
-            "changed_plan": ("accepted_plan_id", "child"), "staged_draft": ("draft", [{}]), "wrong_stop": ("selected_stop_id", "pfeiffer")}[fault]
+        key, value = {
+            "wrong_revision": ("revision", 2),
+            "foreign_owner": ("trip_id", "foreign"),
+            "changed_plan": ("accepted_plan_id", "child"),
+            "staged_draft": ("draft", [{}]),
+            "wrong_stop": ("selected_stop_id", "pfeiffer"),
+        }[fault]
         payload["session"][key] = value
         selection = wire(payload, selection["url"], json.loads(selection["request_body_utf8"]))
         records[1].update(selection)
@@ -163,43 +290,90 @@ def test_text_route_capture_requires_exact_completed_selection_and_empty_impact(
 
 def metric_scroll_case(axis="y"):
     visible, checkpoint, _, _ = visibility_case()
-    plan = {"plan_id":"parent","content_hash":"a" * 16}
-    scope = {"planId":plan["plan_id"],"planContentHash":plan["content_hash"],"evaluationId":""}
-    metrics = [{"scope":{key:scope[key] for key in ("planId","planContentHash")},
-        "label":label,"value":"Unavailable","note":"Exact displayed-plan evidence"}
-        for label in ("Route time","Contextual risk","Preservation","Edit cost","Certificate")]
+    plan = {"plan_id": "parent", "content_hash": "a" * 16}
+    scope = {"planId": plan["plan_id"], "planContentHash": plan["content_hash"], "evaluationId": ""}
+    metrics = [
+        {
+            "scope": {key: scope[key] for key in ("planId", "planContentHash")},
+            "label": label,
+            "value": "Unavailable",
+            "note": "Exact displayed-plan evidence",
+        }
+        for label in ("Route time", "Contextual risk", "Preservation", "Edit cost", "Certificate")
+    ]
+
     def at(second):
         return f"2026-09-08T10:00:{second:02d}+00:00"
-    snapshot = {"at":at(3),"scope":scope,"metrics":metrics,"scroll_top":0,"scroll_left":0,
-        "client_height":60,"client_width":200,"scroll_height":100 if "y" in axis else 60,
-        "scroll_width":600 if "x" in axis else 200,"overflow_x":"auto","overflow_y":"auto",
-        "page_scroll":{"top":0,"left":0},"workspace_scroll":{"top":0,"left":0}}
-    initial = {"rendered_map_plan_id":"parent","rendered_geometry_hash":"geometry"}
-    record = {"schema_version":"workspace-metric-scroll-v1","setup":"locator_scroll_into_view_if_needed",
-        "restoration":"native_reverse_wheel_then_Control+Home","map_before":initial,"map_after":deepcopy(initial),
-        "before":deepcopy(snapshot),"onscreen":{**deepcopy(snapshot),"at":at(4)},
-        "end":{**deepcopy(snapshot),"at":at(6),"scroll_top":snapshot["scroll_height"]-60,
-            "scroll_left":snapshot["scroll_width"]-200},
-        "restored":{**deepcopy(snapshot),"at":at(9)},"completed_at":at(10),
-        "overflow_axes":{"x":"x" in axis,"y":"y" in axis},"commands":[],"events":[]}
+
+    snapshot = {
+        "at": at(3),
+        "scope": scope,
+        "metrics": metrics,
+        "scroll_top": 0,
+        "scroll_left": 0,
+        "client_height": 60,
+        "client_width": 200,
+        "scroll_height": 100 if "y" in axis else 60,
+        "scroll_width": 600 if "x" in axis else 200,
+        "overflow_x": "auto",
+        "overflow_y": "auto",
+        "page_scroll": {"top": 0, "left": 0},
+        "workspace_scroll": {"top": 0, "left": 0},
+    }
+    initial = {"rendered_map_plan_id": "parent", "rendered_geometry_hash": "geometry"}
+    record = {
+        "schema_version": "workspace-metric-scroll-v1",
+        "setup": "locator_scroll_into_view_if_needed",
+        "restoration": "native_reverse_wheel_then_Control+Home",
+        "map_before": initial,
+        "map_after": deepcopy(initial),
+        "before": deepcopy(snapshot),
+        "onscreen": {**deepcopy(snapshot), "at": at(4)},
+        "end": {
+            **deepcopy(snapshot),
+            "at": at(6),
+            "scroll_top": snapshot["scroll_height"] - 60,
+            "scroll_left": snapshot["scroll_width"] - 200,
+        },
+        "restored": {**deepcopy(snapshot), "at": at(9)},
+        "completed_at": at(10),
+        "overflow_axes": {"x": "x" in axis, "y": "y" in axis},
+        "commands": [],
+        "events": [],
+    }
     if axis:
         dx, dy = snapshot["scroll_width"] if "x" in axis else 0, snapshot["scroll_height"] if "y" in axis else 0
-        for action, sign, time in (("wheel_to_end",1,5),("wheel_restore",-1,8)):
-            record["commands"].append({"action":action,"delta_x":sign*dx,"delta_y":sign*dy,"at":at(time)})
-            record["events"].append({"type":"wheel","delta_x":sign*dx,"delta_y":sign*dy,"trusted":True,"at":at(time)})
-            record["events"].append({"type":"scroll","trusted":True,"at":at(time),
-                "scroll_top":record["end"]["scroll_top"] if sign==1 else 0,
-                "scroll_left":record["end"]["scroll_left"] if sign==1 else 0})
-    record["commands"].append({"action":"keyboard_home","key":"Control+Home","at":at(8)})
-    record["events"].append({"type":"keydown","trusted":True,"key":"Home","ctrl_key":True,"at":at(8)})
+        for action, sign, time in (("wheel_to_end", 1, 5), ("wheel_restore", -1, 8)):
+            record["commands"].append({"action": action, "delta_x": sign * dx, "delta_y": sign * dy, "at": at(time)})
+            record["events"].append(
+                {"type": "wheel", "delta_x": sign * dx, "delta_y": sign * dy, "trusted": True, "at": at(time)}
+            )
+            record["events"].append(
+                {
+                    "type": "scroll",
+                    "trusted": True,
+                    "at": at(time),
+                    "scroll_top": record["end"]["scroll_top"] if sign == 1 else 0,
+                    "scroll_left": record["end"]["scroll_left"] if sign == 1 else 0,
+                }
+            )
+    record["commands"].append({"action": "keyboard_home", "key": "Control+Home", "at": at(8)})
+    record["events"].append({"type": "keydown", "trusted": True, "key": "Home", "ctrl_key": True, "at": at(8)})
     detail = deepcopy(visible["elements"][0])
-    detail.update(selector="#metric-strip .metric:last-child small",text=metrics[-1]["note"],disabled=None)
+    detail.update(selector="#metric-strip .metric:last-child small", text=metrics[-1]["note"], disabled=None)
     for point in detail["points"]:
-        point["hit"] = {"tag":"SMALL","id":"","class_name":""}
-    visible.update(at=at(7),elements=[detail])
+        point["hit"] = {"tag": "SMALL", "id": "", "class_name": ""}
+    visible.update(at=at(7), elements=[detail])
     record["detail_visibility"] = visible
-    checkpoint.update(metric_scope=scope,scroll_owners=[{"class_name":"metric-strip",
-        **{key:snapshot[key] for key in ("client_height","client_width","scroll_height","scroll_width")}}])
+    checkpoint.update(
+        metric_scope=scope,
+        scroll_owners=[
+            {
+                "class_name": "metric-strip",
+                **{key: snapshot[key] for key in ("client_height", "client_width", "scroll_height", "scroll_width")},
+            }
+        ],
+    )
     return record, checkpoint, initial, plan, at(11)
 
 
@@ -208,10 +382,32 @@ def test_footer_reachability_accepts_native_scroll_or_truthful_no_overflow(axis)
     verifier._verify_workspace_metric_scroll(*metric_scroll_case(axis))
 
 
-@pytest.mark.parametrize("fault", ["missing_owner","changed_owner_extent","fake_no_overflow","not_at_end",
-    "not_restored","page_not_restored","wrong_parent","changed_metrics","missing_metric","no_native_wheel",
-    "synthetic_wheel","no_scroll_event","no_home","wrong_wheel_delta","late_event","late_capture",
-    "covered_detail","wrong_detail","nan_extent","stale_map","only_programmatic_scroll"])
+@pytest.mark.parametrize(
+    "fault",
+    [
+        "missing_owner",
+        "changed_owner_extent",
+        "fake_no_overflow",
+        "not_at_end",
+        "not_restored",
+        "page_not_restored",
+        "wrong_parent",
+        "changed_metrics",
+        "missing_metric",
+        "no_native_wheel",
+        "synthetic_wheel",
+        "no_scroll_event",
+        "no_home",
+        "wrong_wheel_delta",
+        "late_event",
+        "late_capture",
+        "covered_detail",
+        "wrong_detail",
+        "nan_extent",
+        "stale_map",
+        "only_programmatic_scroll",
+    ],
+)
 def test_footer_reachability_rejects_fabricated_or_incomplete_proof(fault):
     record, checkpoint, initial, plan, completed = metric_scroll_case()
     if fault == "missing_owner":

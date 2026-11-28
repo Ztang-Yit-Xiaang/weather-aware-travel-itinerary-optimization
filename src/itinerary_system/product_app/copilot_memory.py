@@ -13,12 +13,14 @@ from .models import CopilotContextV2, CopilotIntentV1, CopilotIntentV2, CopilotI
 
 _REQUIRED = {
     "keep_stop": ("target_stop_id",),
+    "remove_stop": ("target_stop_id",),
     "lock_stop": ("target_stop_id",),
     "mark_flexible": ("target_stop_id",),
     "move_day": ("target_stop_id", "destination_day"),
     "replace_nearby": ("target_stop_id", "candidate_id"),
     "add_candidate": ("candidate_id", "destination_day"),
 }
+_SLOTS = ("intent_type", "target_stop_id", "candidate_id", "destination_day")
 _CAPABILITY_TYPES = frozenset((*_REQUIRED, "route_feedback", "replan_trip")) | TYPED_CHAT_OPERATIONS
 _PREFERENCE_PATTERNS = {
     "reduce_driving": r"(?:less|reduce|reduced|minimal|shorter)\s+driving",
@@ -176,10 +178,21 @@ def _request_spec(context: CopilotContextV2, message: str) -> dict[str, Any] | N
         re.IGNORECASE,
     )
     pending = context.conversation_memory["pending_clarification"]
+    delegated = _DELEGATION.search(message) is not None
+    weather_target = None
+    if not kinds and not stop and _WEATHER_CHANGE.search(message):
+        # "The coast looks stormy on day 5, can we do something safer?" The stops
+        # with registered replacements are the weather-repair targets.
+        named = re.search(r"\bday\s+(\d+)\b", message, re.IGNORECASE)
+        day = int(named.group(1)) if named else context.selected_day
+        positions = {row["stop_id"]: row["day"] for row in context.capabilities.get("stop_positions", ())}
+        targets = [stop_id for stop_id in _replaceable_stops(context) if day is None or positions.get(stop_id) == day]
+        if len(targets) == 1:
+            kinds, weather_target = ["replace_nearby"], targets[0]
     if len(kinds) == 1:
         spec = {"intent_type": kinds[0], "target_stop_id": None, "candidate_id": None, "destination_day": None}
-    elif not kinds and pending and (stop or candidate or day_match):
-        spec = {key: pending[key] for key in ("intent_type", "target_stop_id", "candidate_id", "destination_day")}
+    elif not kinds and pending and (stop or candidate or day_match or delegated):
+        spec = {key: pending[key] for key in _SLOTS}
     elif not kinds and re.search(r"\bsame\b.*\bother\s+stop\b", message, re.IGNORECASE):
         previous = (context.conversation_memory["last_proposal"] or {}).get("intents", ())
         if (
@@ -193,11 +206,15 @@ def _request_spec(context: CopilotContextV2, message: str) -> dict[str, Any] | N
             "target_stop_id": None,
             "candidate_id": previous[0].get("candidate_id"),
             "destination_day": previous[0].get("destination_day"),
+            # "the other stop" excludes the previous target, so never infer it back.
+            "other_stop": True,
         }
     else:
         return None
     if stop:
         spec["target_stop_id"] = str(stop["place_id"])
+    elif weather_target:
+        spec["target_stop_id"] = weather_target
     elif re.search(r"\b(?:this|selected)\s+stop\b", message, re.IGNORECASE):
         spec["target_stop_id"] = context.selected_stop_id
     if candidate:
@@ -208,8 +225,71 @@ def _request_spec(context: CopilotContextV2, message: str) -> dict[str, Any] | N
         spec["destination_day"] = int(day_match.group(1))
     elif re.search(r"\b(?:this|selected)\s+day\b", message, re.IGNORECASE):
         spec["destination_day"] = context.selected_day
+    spec["delegated_choice"] = None
+    if spec["intent_type"] == "replace_nearby" and not spec.get("other_stop"):
+        _fill_replacement(context, message, spec, delegated)
     spec["missing_slots"] = tuple(name for name in _REQUIRED[spec["intent_type"]] if spec[name] is None)
     return spec
+
+
+# The traveler hands the open choice back: "yes do it", "propose this change",
+# "you choose", "whatever you think is best", "something nearby".
+_DELEGATION = re.compile(
+    r"^\s*(?:(?:ok(?:ay)?|yes|yeah|yep|sure|fine|alright|sounds good)\b[\s,.!]*)?"
+    r"(?:(?:please\s+)?(?:propose|suggest|make|do|apply|go\s+with|pick)\s+(?:it|this|that|one|the)?\s*"
+    r"(?:change|chage|chnage|edit|one|option)?|go\s+ahead|do\s+it|you\s+(?:choose|pick|decide)|"
+    r"whatever\s+you\s+think(?:\s+is\s+best)?|your\s+call|up\s+to\s+you|surprise\s+me)\b|"
+    r"\b(?:something|anything|somewhere|any\s+place)\s+(?:nearby|close\s*by|close|similar|near\s+there)\b",
+    re.IGNORECASE,
+)
+_WEATHER_CHANGE = re.compile(
+    r"(?=.*\b(?:storm|stormy|rain|rainy|weather|wind|windy|fog|foggy|flood|unsafe|risky|dangerous)\b)"
+    r"(?=.*\b(?:safer|safe\s+option|avoid|alternative|instead|something\s+else|change|switch|swap)\b)",
+    re.IGNORECASE,
+)
+_GENERIC_WORDS = frozenset(
+    "that this the a an for with to of on in at stop place something nearby swap replace substitute "
+    "it please can we could you i want".split()
+)
+
+
+def _replaceable_stops(context: CopilotContextV2) -> list[str]:
+    return list(dict.fromkeys(row["replaces_stop_id"] for row in context.capabilities["candidate_replacements"]))
+
+
+def _fill_replacement(context: CopilotContextV2, message: str, spec: dict[str, Any], delegated: bool) -> None:
+    """Infer the slots a replacement leaves open when the registered choices settle them."""
+    replaceable = _replaceable_stops(context)
+    if spec["target_stop_id"] is None and spec["candidate_id"] is not None:
+        # A named replacement that replaces exactly one stop names that stop too.
+        owners = [
+            row["replaces_stop_id"]
+            for row in context.capabilities["candidate_replacements"]
+            if row["candidate_id"] == spec["candidate_id"]
+        ]
+        if len(owners) == 1:
+            spec["target_stop_id"] = owners[0]
+            spec["inferred"] = True
+    if spec["target_stop_id"] is None:
+        spec["inferred"] = True
+        if context.selected_stop_id in replaceable:
+            spec["target_stop_id"] = context.selected_stop_id
+        else:
+            # "that bridge": a word of the message names exactly one stop that has replacements.
+            words = {word for word in re.findall(r"[a-z]+", message.lower()) if word not in _GENERIC_WORDS}
+            names = {str(row["place_id"]): str(row["name"]).lower() for row in context.known_places}
+            matches = [stop_id for stop_id in replaceable if words & set(re.findall(r"[a-z]+", names.get(stop_id, "")))]
+            if len(matches) == 1:
+                spec["target_stop_id"] = matches[0]
+    if spec["candidate_id"] is None and spec["target_stop_id"] is not None and delegated:
+        choices = [
+            row["candidate_id"]
+            for row in context.capabilities["candidate_replacements"]
+            if row["replaces_stop_id"] == spec["target_stop_id"]
+        ]
+        if choices:
+            spec["candidate_id"] = choices[0]
+            spec["delegated_choice"] = tuple(choices)
 
 
 def _blocked(context: CopilotContextV2, spec: dict[str, Any]) -> str | None:
@@ -223,6 +303,21 @@ def _blocked(context: CopilotContextV2, spec: dict[str, Any]) -> str | None:
         return "This edit is not enabled in the current optimizer workflow."
     if spec["destination_day"] is not None and spec["destination_day"] not in context.allowed_days:
         return "That destination day is not in the accepted itinerary."
+    if kind == "move_day" and spec["target_stop_id"] and spec["destination_day"] is not None:
+        current = next(
+            (
+                row["day"]
+                for row in context.capabilities.get("stop_positions", ())
+                if row["stop_id"] == spec["target_stop_id"]
+            ),
+            None,
+        )
+        if current == spec["destination_day"]:
+            name = next(
+                (str(row["name"]) for row in context.known_places if row["place_id"] == spec["target_stop_id"]),
+                "This stop",
+            )
+            return f"{name} is already on Day {current}, so moving it there changes nothing. Name a different day."
     if spec["intent_type"] != "move_day" and spec["target_stop_id"] and spec["destination_day"] is not None:
         accepted_day = next(
             (
@@ -274,10 +369,28 @@ def _question(context: CopilotContextV2, spec: dict[str, Any]) -> str:
             for row in context.capabilities["candidate_replacements"]
             if row["replaces_stop_id"] == spec["target_stop_id"] and row["candidate_id"] in names
         ]
+        if len(choices) > 1:
+            listed =", ".join(choices[: min(len(choices), 5) - 1]) + f" or {choices[min(len(choices), 5) - 1]}"
+            return f"Which nearby place should replace {name}: {listed}? Say \"you choose\" and I will pick one."
         if choices:
-            return f"Which registered candidate should replace {name}: {', '.join(choices[:5])}?"
+            return f"Which registered candidate should replace {name}: {choices[0]}?"
         return f"Which registered candidate should replace {name}?"
     return f"Which destination day should I use for {name}?"
+
+
+def is_local_choice(context: Any, message: str) -> bool:
+    """True when the local reader filled a slot from the registered choices.
+
+    The traveler delegated the choice ("you choose", "something nearby") or
+    named only the replacement. The registry settles the open slot, so a
+    provider cross-check could only disagree on a choice it was not asked to make.
+    """
+    if not isinstance(context, CopilotContextV2):
+        return False
+    from .copilot import request_edit_text
+
+    spec = _request_spec(context, request_edit_text(message))
+    return bool(spec and not spec["missing_slots"] and (spec.get("delegated_choice") or spec.get("inferred")))
 
 
 def interpret_context_request(context: Any, message: str) -> CopilotInterpretationV1 | None:
@@ -346,10 +459,20 @@ def interpret_context_request(context: Any, message: str) -> CopilotInterpretati
         )
     intent = CopilotIntentV1(type=spec["intent_type"], **{key: spec[key] for key in _REQUIRED[spec["intent_type"]]})
     from .copilot import DeterministicCopilotAdapter
+    from .copilot_copy import describe_proposal
 
+    message_copy = describe_proposal(context, (intent,))
+    if message_copy and spec["delegated_choice"] and len(spec["delegated_choice"]) > 1:
+        names = {str(row["place_id"]): str(row["name"]) for row in context.known_places}
+        others = [names.get(choice, choice) for choice in spec["delegated_choice"][1:]]
+        message_copy = (
+            f"You left the choice to me, so I picked {names.get(spec['candidate_id'], spec['candidate_id'])}. "
+            + message_copy
+            + f" If you prefer, ask for {' or '.join(others)} instead."
+        )
     return CopilotInterpretationV1(
         state="proposal_ready",
-        assistant_message="I prepared this typed suggestion for review. Nothing was staged or changed.",
+        assistant_message=message_copy or "I prepared this typed suggestion for review. Nothing was staged or changed.",
         intents=(intent,),
         highlights=DeterministicCopilotAdapter._operation_highlights(context, intent),
     )
@@ -412,6 +535,7 @@ def guard_contextual_output(context: Any, interpretation: CopilotInterpretationV
                     "draft_duplicate_operation": "The same edit was requested more than once. Should I keep just one copy?",
                     "draft_conflicting_attribute_edits": "Different values were requested for the same stop attribute. Which value should I use?",
                     "draft_conflicts_with_replacement": "A stop cannot be preserved or edited and replaced in the same request. Which change should I keep?",
+                    "draft_conflicts_with_removal": "A stop cannot be removed and also kept, moved or edited in the same request. Which change should I keep?",
                     "draft_conflicting_candidates": "These destination candidates cannot be evaluated together. Which candidate should I use?",
                 }.get(error.code, "These edits conflict with each other. Which change should I handle first?")
                 return CopilotInterpretationV1(
@@ -458,7 +582,7 @@ def derive_memory(context: CopilotContextV2, records: tuple[dict[str, Any], ...]
         if state == "clarification_required" and spec and spec["missing_slots"] and _blocked(local, spec) is None:
             memory["pending_clarification"] = {
                 "source_turn_id": turn["turn_id"],
-                **spec,
+                **{key: spec[key] for key in (*_SLOTS, "missing_slots")},
                 "question": _question(local, spec),
             }
             memory["resolved_ids"] = {
@@ -523,7 +647,7 @@ def _intent_is_staged(intent: dict[str, Any], draft: tuple[dict[str, Any], ...])
                 return parameters.get("candidate_id") == intent["candidate_id"]
             if intent["type"] == "move_day":
                 return parameters.get("day") == intent["destination_day"]
-            return intent["type"] in {"keep_stop", "lock_stop", "mark_flexible"}
+            return intent["type"] in {"keep_stop", "lock_stop", "mark_flexible", "remove_stop"}
     return False
 
 

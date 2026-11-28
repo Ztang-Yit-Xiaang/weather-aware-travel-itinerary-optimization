@@ -100,6 +100,11 @@ def looks_like_plan_question(message: str) -> bool:
         return not _ZH_EDIT.search(text) and bool(_ZH_QUESTION.search(text))
     if _EDIT_COMMAND.search(text):
         return False
+    from .copilot_memory import _WEATHER_CHANGE
+
+    # "The coast looks stormy on day 5, can we do something safer?" asks for a change.
+    if _WEATHER_CHANGE.search(text):
+        return False
     if _WORKFLOW_TOPIC.search(text) and not _ALTERNATIVES_QUESTION.search(text):
         return False
     return bool(_QUESTION_START.search(text) or text.endswith("?"))

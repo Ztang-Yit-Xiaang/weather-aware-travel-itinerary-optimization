@@ -21,6 +21,7 @@ const EDIT_INTENT_TYPES = new Set([
   "route_feedback",
   "replace_nearby",
   "add_candidate",
+  "remove_stop",
 ]);
 
 const PARENT_TARGET_INTENT_TYPES = new Set([
@@ -29,6 +30,7 @@ const PARENT_TARGET_INTENT_TYPES = new Set([
   "lock_stop",
   "mark_flexible",
   "move_day",
+  "remove_stop",
 ]);
 
 export function copilotDraftability(intent, workspace) {
@@ -120,7 +122,7 @@ export function copilotOperationForIntent(intent, selectedStopId = null, selecte
       parameters: { day: intent.destination_day || selectedDay },
     };
   }
-  if (["keep_stop", "lock_stop", "mark_flexible"].includes(intent?.type)) {
+  if (["keep_stop", "lock_stop", "mark_flexible", "remove_stop"].includes(intent?.type)) {
     return { type: intent.type, target, parameters: {} };
   }
   return null;
@@ -467,8 +469,8 @@ export function createCopilotController({
   function renderEmptyConversation() {
     const provider = providerName();
     const message = interaction().provider === "openai"
-      ? "I can interpret this itinerary and return typed, reviewable suggestions. I cannot change the trip without your explicit action."
-      : "I can demonstrate typed itinerary requests locally. No message is sent to an external provider, and I cannot change the trip without your explicit action.";
+      ? "Ask me about your trip, or tell me what to change, for example \"Move Griffith Observatory to day 6\". I check every change on the map first; nothing is saved until you accept it."
+      : "Demo mode: try a request such as \"Move Griffith Observatory to day 6\". Nothing leaves this computer, and nothing is saved until you accept it.";
     appendMessage("assistant", message, provider);
   }
 
@@ -567,6 +569,7 @@ export function createCopilotController({
       return `Move ${stopName(intent.target_stop_id)} to Day ${intent.destination_day}.`;
     }
     if (intent.type === "keep_stop") return `Keep ${stopName(intent.target_stop_id)} in the itinerary.`;
+    if (intent.type === "remove_stop") return `Remove ${stopName(intent.target_stop_id)} from the trip, with no replacement.`;
     if (intent.type === "lock_stop") return `Preserve ${stopName(intent.target_stop_id)} as a locked commitment.`;
     if (intent.type === "mark_flexible") return `Mark ${stopName(intent.target_stop_id)} as flexible.`;
     if (intent.type === "set_stop_duration") {
@@ -1067,16 +1070,17 @@ export function createCopilotController({
       .find((candidate) => (candidate.candidate_id || candidate.stop_id || candidate.id) === state.session.selected_candidate_id);
     const selectedAlternative = (state.workspace.alternatives || [])
       .find((alternative) => (alternative.plan_id || alternative.id) === state.session.selected_alternative_id);
+    // Chips say what the Copilot will look at. The run and revision are
+    // debugging details; keep them in the tooltip instead of the chip row.
     const values = [
-      `Run: ${state.registry.label}`,
       state.session.selected_day ? `Day ${state.session.selected_day}` : "No day selected",
       selected?.name || "No stop selected",
       ...(state.session.selected_segment_id ? [`Segment: ${state.session.selected_segment_id}`] : []),
       ...(state.session.selected_candidate_id ? [`Candidate: ${selectedCandidate?.label || selectedCandidate?.name || state.session.selected_candidate_id}`] : []),
       ...(state.session.selected_alternative_id ? [`Alternative: ${selectedAlternative?.method_label || selectedAlternative?.label || selectedAlternative?.name || "Selected repair"}`] : []),
-      `Revision ${state.session.revision}`,
     ];
     const chips = $("#context-chips");
+    chips.title = `Run: ${state.registry.label} · Revision ${state.session.revision}`;
     chips.replaceChildren(...values.map((value) => {
       const chip = document.createElement("span");
       chip.textContent = value;

@@ -97,8 +97,8 @@ def plan_deterministic_context_aware_heuristic(
             planner_context_mode=PlannerContextMode.AWARE,
         )
         selected_by_day: dict[int, DayRouteCandidate] = {}
-        if model.metadata.get("move_stops"):
-            # A cross-day move changes two or more days together, so each day's
+        if model.metadata.get("move_stops") or model.metadata.get("remove_stops"):
+            # A cross-day move (or a removal next to another edit) changes two or more days together, so each day's
             # partial plan cannot pass the trip-wide checks alone. Keep the
             # candidates that are feasible within their own day, then check
             # every combination once as a whole plan.

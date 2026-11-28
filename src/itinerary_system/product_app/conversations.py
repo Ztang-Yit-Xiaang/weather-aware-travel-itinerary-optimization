@@ -45,6 +45,7 @@ _HEX_SHA256 = re.compile(r"[0-9a-f]{64}\Z")
 _DISPATCH_ID = re.compile(r"dispatch_([0-9a-f]{32})\Z")
 
 _INTENT_TYPES = {
+    "remove_stop",
     "review_registered_repair",
     "keep_original",
     "keep_stop",

@@ -55,13 +55,36 @@ def test_negated_removal_alone_still_proposes_keep_stop(context):
     assert [intent.type for intent in guarded.intents] == ["keep_stop"]
 
 
-def test_real_removal_next_to_another_edit_is_still_refused(context):
-    guarded = request_semantic_guard(
+def test_real_removal_next_to_another_edit_is_resolved_per_clause(context):
+    combined = request_semantic_guard(
         context,
-        "Remove Stanford University Main Quad and make Kings Canyon shorter",
+        "Remove Stanford University Main Quad and move Kings Canyon National Park to day 5",
     )
-    assert guarded is not None and guarded.state == "unsupported"
-    assert "Removing" in guarded.assistant_message
+    assert combined is not None and combined.state == "proposal_ready", combined
+    assert [intent.type for intent in combined.intents] == ["remove_stop", "move_day"]
+    assert combined.intents[0].target_stop_id == "stanford_university_main_quad"
+    # A clause that is still missing a value asks; the removal is not refused.
+    vague = request_semantic_guard(context, "Remove Stanford University Main Quad and make Kings Canyon shorter")
+    assert vague is not None and vague.state == "clarification_required"
+    assert "not enabled" not in vague.assistant_message
+
+
+@pytest.mark.parametrize(
+    "message",
+    (
+        "Remove Stanford University Main Quad",
+        "I do not want to visit Stanford University Main Quad",
+        "Drop Stanford University Main Quad from the trip",
+        "Skip Stanford University Main Quad",
+    ),
+)
+def test_single_removal_becomes_one_remove_stop_intent(context, message):
+    guarded = request_semantic_guard(context, message)
+    assert guarded is not None and guarded.state == "proposal_ready", guarded
+    assert [(intent.type, intent.target_stop_id) for intent in guarded.intents] == [
+        ("remove_stop", "stanford_university_main_quad")
+    ]
+    assert "nothing is saved until you accept" in guarded.assistant_message
 
 
 @pytest.mark.parametrize(

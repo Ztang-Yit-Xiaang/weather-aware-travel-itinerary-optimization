@@ -105,7 +105,11 @@ def test_capabilities_are_explicit_and_keep_parent_and_candidate_inventories_sep
         "route_feedback",
         "replace_nearby",
         "add_candidate",
+        "remove_stop",
     }
+    # The legacy fixture has no removal path; removal runs only in the coherent product.
+    removal = capabilities["operations"].pop("remove_stop")
+    assert removal == {"enabled": False, "preview_executable": False, "status": "unsupported_optimizer_mapping"}
     assert all(row["enabled"] for row in capabilities["operations"].values())
     assert all(row["preview_executable"] for row in capabilities["operations"].values())
     assert all(row["status"] == "deterministic_pipeline" for row in capabilities["operations"].values())

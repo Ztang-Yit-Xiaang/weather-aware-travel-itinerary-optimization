@@ -381,6 +381,7 @@ def build_repair_master_model(
         ),
         "parent_plan": parent,
         "move_stops": _move_targets(request, index),
+        "remove_stops": _remove_targets(request, index),
     }
     model_seed = {
         "ownership_policy": asdict(policy),
@@ -921,6 +922,17 @@ def _move_targets(request: Any, index: Any) -> dict[str, int]:
         if str(stop_id) in stop_ids and day in days and index.stop_day.get(str(stop_id)) != day:
             targets[str(stop_id)] = int(day)
     return dict(sorted(targets.items()))
+
+
+def _remove_targets(request: Any, index: Any) -> tuple[str, ...]:
+    """Confirmed removals: accepted stops the user asked to drop with no replacement."""
+    raw = getattr(request, "confirmed_constraints", {})
+    removals = raw.get("remove_stops", ()) if isinstance(raw, dict) else ()
+    if not isinstance(removals, (list, tuple)):
+        return ()
+    stop_ids = set(index.stop_ids)
+    found = (_lookup_stop_id(stop_id, index) for stop_id in removals)
+    return tuple(sorted({str(stop_id) for stop_id in found if stop_id and str(stop_id) in stop_ids}))
 
 
 def _candidate_stops(request: Any) -> tuple[dict[str, Any], ...]:

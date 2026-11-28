@@ -200,8 +200,11 @@ function renderMutationRecovery() {
       <button type="button" class="secondary" data-repair-pending-mutation ${checking ? "disabled" : ""}>Refresh protected workspace</button>`;
     banner.querySelector("[data-repair-pending-mutation]").addEventListener("click", () => recoverPendingMutation(false, false, true));
   } else {
-    banner.innerHTML = `<strong>${checking ? "Confirming saved action" : "Action awaiting confirmation"}</strong>
-      <span>${escapeHtml(recovery.message || "Check the saved action before making another edit. Your message has not been sent.")} Cancellation leaves any already saved changes in place.</span>
+    // While the app checks a just-sent action on its own, say so calmly; the
+    // recovery buttons only matter once that check needs the traveler.
+    banner.classList.toggle("is-checking", checking);
+    banner.innerHTML = `<strong>${checking ? "Saving your change…" : "Action awaiting confirmation"}</strong>
+      <span>${checking ? "This usually takes a few seconds. Please wait before making another edit." : `${escapeHtml(recovery.message || "Check the saved action before making another edit. Your message has not been sent.")} Cancellation leaves any already saved changes in place.`}</span>
       <button type="button" class="secondary" data-check-pending-mutation ${checking ? "disabled" : ""}>Check saved action</button>
       <button type="button" class="secondary" data-retry-pending-mutation ${checking ? "disabled" : ""}>Retry saved action</button>
       <button type="button" class="secondary" data-cancel-pending-mutation ${checking ? "disabled" : ""}>Cancel pending action</button>`;
@@ -2779,6 +2782,10 @@ function normalizePreviewGeography(value, proposal, routeValidation, draft) {
       const order = [...acceptedByDay.values()].find((ids) => ids.includes(operation.target));
       if (!order) return null;
       order.splice(order.indexOf(operation.target), 1, operation.parameters.candidate_id);
+    } else if (operation.type === "remove_stop") {
+      const order = [...acceptedByDay.values()].find((ids) => ids.includes(operation.target));
+      if (!order) return null;
+      order.splice(order.indexOf(operation.target), 1);
     } else if (operation.type === "add_candidate") {
       const order = acceptedByDay.get(operation.parameters.day);
       if (!order) return null;
@@ -2898,6 +2905,9 @@ function normalizeRuntimeExecution(value, proposal) {
           || !constraints.must_include.includes(operation.parameters.candidate_id))) return null;
     if (operation.type === "add_candidate"
         && !constraints.must_include.includes(operation.target)) return null;
+    if (operation.type === "remove_stop"
+        && (!constraints.must_delete.includes(operation.target)
+          || constraints.must_include.includes(operation.target))) return null;
     if (operation.type === "keep_stop" && !constraints.must_include.includes(operation.target)
         && !constraints.preserved_stop_ids?.includes(operation.target)) return null;
   }
@@ -3079,7 +3089,7 @@ async function normalizeCombinedRuntimeExecution(value, proposal, draft) {
       || request.user_intent !== "Review the complete staged draft as one independently evaluated child."
       || !sameJson(request.operations, value.operations) || !exactKeys(request.confirmed_constraints, [])
       || await computedStableContentHash(request) !== value.request_content_hash) return null;
-  const selection = draft.filter(operation => ["keep_stop", "replace_nearby", "add_candidate"].includes(operation.type));
+  const selection = draft.filter(operation => ["keep_stop", "replace_nearby", "add_candidate", "remove_stop"].includes(operation.type));
   const optimizer = value.optimizer_execution;
   if (selection.length) {
     const certificate = optimizer?.evaluation_certificate;
@@ -3161,6 +3171,10 @@ async function normalizeCombinedRuntimeExecution(value, proposal, draft) {
       const order = [...expectedDays.values()].find(ids => ids.includes(operation.target));
       if (!order) return null;
       order.splice(order.indexOf(operation.target), 1, operation.parameters.candidate_id);
+    } else if (operation.type === "remove_stop") {
+      const order = [...expectedDays.values()].find(ids => ids.includes(operation.target));
+      if (!order) return null;
+      order.splice(order.indexOf(operation.target), 1);
     } else if (operation.type === "add_candidate") {
       const order = expectedDays.get(operation.parameters.day);
       if (!order || order.includes(operation.target)) return null;
@@ -3219,8 +3233,8 @@ async function normalizeCombinedRuntimeExecution(value, proposal, draft) {
           || change.to_role !== stop.itinerary_role || change.to_source !== stop.itinerary_role_source) return null;
     }
   }
-  const added = selection.filter(row => row.type !== "keep_stop").map(row => row.type === "replace_nearby" ? row.parameters.candidate_id : row.target).sort();
-  const deleted = selection.filter(row => row.type === "replace_nearby").map(row => row.target).sort();
+  const added = selection.filter(row => !["keep_stop", "remove_stop"].includes(row.type)).map(row => row.type === "replace_nearby" ? row.parameters.candidate_id : row.target).sort();
+  const deleted = selection.filter(row => ["replace_nearby", "remove_stop"].includes(row.type)).map(row => row.target).sort();
   const changedDays = diffChangedDays(diff);
   if (!sameJson(diff.added_stops.map(row => row.stop_id).sort(), added)
       || !sameJson(diff.deleted_stops.map(row => row.stop_id).sort(), deleted)
@@ -3985,6 +3999,7 @@ function bindEvents() {
   $("#draft-move").addEventListener("click", () => addDraft("move_day", { day: Number($("#destination-day").value) }));
   $("#draft-keep").addEventListener("click", () => addDraft("keep_stop", {}));
   $("#draft-lock").addEventListener("click", () => addDraft("lock_stop", {}));
+  $("#draft-remove").addEventListener("click", () => addDraft("remove_stop", {}));
   $("#draft-flexible").addEventListener("click", () => addDraft("mark_flexible", {}));
   $("#draft-feedback").addEventListener("click", () => addDraft(
     "route_feedback",
@@ -4790,6 +4805,7 @@ function operationDisplayName(type) {
     replan_trip: "Trip replan",
     route_feedback: "Route feedback",
     replace_nearby: "Replacement",
+    remove_stop: "Removed stop",
     add_candidate: "Added candidate",
     add_custom_waypoint: "Custom stop",
     add_route_waypoint: "Route waypoint",
@@ -4964,11 +4980,13 @@ function mapInspectorHtml(geography, displayedPlan) {
         <dt>Place link</dt><dd>${placeLink}</dd></dl>${information.sources}`,
     };
     const labels = {overview: "Overview", visit: "Visit details", photos: "Photos", reviews: "Reviews", sources: "Sources"};
-    return `<section class="map-context-card destination-details ${state.destinationDetails.expanded ? "is-expanded" : ""}" aria-labelledby="map-context-title">
+    const collapsed = state.destinationCollapsed === true && !state.destinationDetails.expanded;
+    return `<section class="map-context-card destination-details ${state.destinationDetails.expanded ? "is-expanded" : ""}${collapsed ? " is-collapsed" : ""}" aria-labelledby="map-context-title">
       <header class="destination-heading"><div>
       <span class="status-pill">${selectedPlanId === displayedPlan?.plan_id ? "Selected stop" : "Original plan stop"}</span>
       <h3 id="map-context-title">${escapeHtml(stop.name)}</h3></div>
-      <button type="button" id="expand-destination-details" aria-expanded="${state.destinationDetails.expanded}" aria-controls="destination-content">${state.destinationDetails.expanded ? "Compact view" : "Expand details"}</button></header>
+      <div class="destination-heading-actions"><button type="button" id="expand-destination-details" aria-expanded="${state.destinationDetails.expanded}" aria-controls="destination-content">${state.destinationDetails.expanded ? "Compact view" : "Expand details"}</button>
+      <button type="button" id="collapse-destination-details" aria-expanded="${!collapsed}" aria-controls="destination-content" title="${collapsed ? "Show the stop details" : "Hide the details to see more of the map"}">${collapsed ? "Show" : "Hide"}</button></div></header>
       <div class="destination-tabs" role="tablist" aria-label="Destination details">${Object.keys(panels).map(key => `<button type="button" role="tab" id="destination-tab-${key}" data-destination-tab="${key}" aria-controls="destination-panel-${key}" aria-selected="${state.destinationDetails.tab === key}" tabindex="${state.destinationDetails.tab === key ? "0" : "-1"}">${labels[key]}</button>`).join("")}</div>
       <div class="destination-content" id="destination-content">${Object.entries(panels).map(([key, html]) => `<section role="tabpanel" id="destination-panel-${key}" aria-labelledby="destination-tab-${key}" tabindex="0" ${state.destinationDetails.tab === key ? "" : "hidden"}>${html}</section>`).join("")}</div>
     </section>`;
@@ -5122,6 +5140,10 @@ function renderMap() {
   const proposalEligible = state.session.proposal?.schema_version === "draft-preview-v1"
     && state.session.proposal?.state === "eligible"
     && Boolean(state.session.proposal?.child_plan_id);
+  // Show the next step where the traveler is looking. The button stays
+  // disabled until the map has drawn this exact preview; acceptance still
+  // asks for explicit confirmation.
+  const inlineAcceptReady = proposalEligible && state.session.proposal?.acceptance_eligible === true;
   const selectedAlternative = geographyReady ? geography.plans?.find(
     (plan) => plan.plan_id === activeAlternativeId() && plan.plan_id !== accepted?.plan_id,
   ) : null;
@@ -5214,11 +5236,12 @@ function renderMap() {
       <span><i class="marker-swatch changed"></i>Selected-day stop</span>
     </div>
     ${mapAttribution(geography)}
-    <div class="draft-bar">
+    <div class="draft-bar${draftCount || state.previewRuntime.status === "PREVIEW_RUNNING" ? "" : " is-idle"}">
       <strong>${draftCount} draft ${draftCount === 1 ? "change" : "changes"}</strong>
-      <span>${state.previewRuntime.status === "PREVIEW_RUNNING" ? "Preview running. The accepted parent remains rendered until an eligible child and matching map acknowledgement are ready." : routeCheckedOnly ? "Route-checked draft; evaluated repair is not enabled for arbitrary waypoints yet." : proposalEligible ? `Evaluated ${escapeHtml(state.session.proposal.evaluation_status || state.session.proposal.eligibility || "proposal")} certificate is current for this draft.` : draftCount && impactCurrent ? impactBlockerLabel ? escapeHtml(impactBlockerLabel) : `${impactSummary.evaluated_executable_count} evaluated-preview capable · ${impactSummary.draft_only_count} draft only · not certified.` : draftCount ? "Checking server-owned draft impact; evaluation is disabled until it resolves." : state.mapInteraction.mode === "edit" ? "Map clicks remain exploratory until road checking and explicit confirmation." : "Select a stop or road-validated route leg."}</span>
+      <span>${state.previewRuntime.status === "PREVIEW_RUNNING" ? "Checking the change on real roads and the weather. Your current trip stays on the map until the check finishes." : routeCheckedOnly ? "Route-checked draft; evaluated repair is not enabled for arbitrary waypoints yet." : proposalEligible ? (inlineAcceptReady ? "The change passed every check and is shown on the map. Accept it to update your trip." : "The change passed every check and is shown on the map.") : draftCount && impactCurrent ? impactBlockerLabel ? escapeHtml(impactBlockerLabel) : `${impactSummary.evaluated_executable_count} evaluated-preview capable · ${impactSummary.draft_only_count} draft only · not certified.` : draftCount ? "Checking what this change affects…" : state.mapInteraction.mode === "edit" ? "Map clicks remain exploratory until road checking and explicit confirmation." : "Pick a stop or route on the map, or ask the Copilot for a change."}</span>
       <button type="button" id="inline-undo" ${draftCount ? "" : "disabled"}>Undo latest draft</button>
-      <button type="button" id="inline-preview" class="primary" ${draftCount && evaluatedPreviewReady && state.previewRuntime.status !== "PREVIEW_RUNNING" ? "" : `disabled title="${state.previewRuntime.status === "PREVIEW_RUNNING" ? "Preview request in progress" : draftCount ? escapeHtml(impactBlockerLabel || "This draft includes non-executable or not-yet-classified operations") : "Add a draft before preview"}"`}>${state.previewRuntime.status === "PREVIEW_RUNNING" ? "Preview running…" : "Preview repair"}</button>
+      <button type="button" id="inline-preview" class="${inlineAcceptReady ? "" : "primary"}" ${draftCount && evaluatedPreviewReady && state.previewRuntime.status !== "PREVIEW_RUNNING" ? "" : `disabled title="${state.previewRuntime.status === "PREVIEW_RUNNING" ? "Preview request in progress" : draftCount ? escapeHtml(impactBlockerLabel || "This draft includes non-executable or not-yet-classified operations") : "Add a draft before preview"}"`}>${state.previewRuntime.status === "PREVIEW_RUNNING" ? "Preview running…" : "Preview repair"}</button>
+      ${inlineAcceptReady ? `<button type="button" id="inline-accept" class="primary" ${previewCanBeAccepted() ? "" : 'disabled title="Waiting for the map to show this change"'}>Accept change…</button>` : ""}
     </div>
   </div>${yosemiteGuide}${interestExplorerHtml()}`;
   $("#open-yosemite-guide")?.addEventListener("click",()=>$("#yosemite-guide")?.scrollIntoView({block:"start"}));
@@ -5269,6 +5292,13 @@ function renderMap() {
     $(".destination-details").classList.toggle("is-expanded", state.destinationDetails.expanded);
     event.currentTarget.setAttribute("aria-expanded", String(state.destinationDetails.expanded));
     event.currentTarget.textContent = state.destinationDetails.expanded ? "Compact view" : "Expand details";
+  });
+  $("#collapse-destination-details")?.addEventListener("click", event => {
+    // The choice carries over to the next selected stop, so the map stays clear.
+    state.destinationCollapsed = state.destinationCollapsed !== true;
+    $(".destination-details").classList.toggle("is-collapsed", state.destinationCollapsed);
+    event.currentTarget.setAttribute("aria-expanded", String(!state.destinationCollapsed));
+    event.currentTarget.textContent = state.destinationCollapsed ? "Show" : "Hide";
   });
   $("#prepare-replacement-candidates")?.addEventListener("click", prepareReplacementDiscovery);
   $("#find-route-candidates")?.addEventListener("click", fetchPoiCandidates);
@@ -5351,6 +5381,7 @@ function renderMap() {
   $("#use-candidate-replacement")?.addEventListener("click", useSelectedCandidateReplacement);
   $("#inline-undo").addEventListener("click", undoDraft);
   $("#inline-preview").addEventListener("click", previewDraft);
+  $("#inline-accept")?.addEventListener("click", () => submitAcceptance("accept_repair"));
 
   if (proposalEligible && !selectedAlternative) {
     updateGeographicMapStatus({ state: "failed", code: "evaluated_preview_geography_unavailable" });
@@ -5404,7 +5435,7 @@ function updateGeographicMapStatus(status) {
   const element = $("#map-render-status");
   if (!element) return;
   element.dataset.mapStatusCode = status.code || "unknown";
-  element.classList.remove("is-warning", "is-error");
+  element.classList.remove("is-warning", "is-error", "is-info");
   const renderedPlan = activeRenderPlan();
   const stage = element.closest(".map-stage");
   if (stage) {
@@ -5461,17 +5492,23 @@ function updateGeographicMapStatus(status) {
     }
     if (activeProposalPlan() && state.acknowledgedPreviewPlanId !== renderedPlan.plan_id) {
       state.acknowledgedPreviewPlanId = renderedPlan.plan_id;
-      toast("Preview ready. The itinerary and map now show the same evaluated child plan.");
+      toast("Preview ready. The map shows the proposed change; accept it if it looks right.");
       copilot.previewStateChanged();
     }
     renderContextPanel();
     const notices = [];
-    if (status.basemapOverviewOnly) notices.push("Overview basemap: this route extends beyond local detailed map coverage. Roads and stop positions are verified; local street detail is limited.");
     if (status.gapCount) notices.push(`${status.gapCount} required route connection${status.gapCount === 1 ? " is" : "s are"} shown as an explicit unvalidated gap.`);
-    if (!notices.length) {
+    if (!notices.length && status.basemapOverviewOnly) {
+      // Coverage is a caveat, not a problem: keep it as a small note so the
+      // route stays visible. Roads and stop positions are still verified.
+      element.hidden = false;
+      element.classList.add("is-info");
+      element.textContent = "Overview map: street detail is limited here. Roads and stops are verified.";
+    } else if (!notices.length) {
       element.textContent = "Map ready with loaded local tiles and road-validated route layers.";
       element.hidden = true;
     } else {
+      if (status.basemapOverviewOnly) notices.push("Street detail is limited outside the local map area.");
       element.hidden = false;
       element.classList.add("is-warning");
       element.textContent = notices.join(" ");
@@ -5768,13 +5805,13 @@ function renderRepair() {
     && displayed?.content_hash === proposal.child_plan_content_hash);
   const canAccept = eligible && previewCanBeAccepted();
   const repair = evaluated || registered ? proposal.repair : state.workspace.repair;
-  const statusLabel = eligible ? "Evaluated eligible proposal" : evaluated ? "Evaluated ineligible proposal" : unevaluated ? "No independent evaluation" : acceptedChild ? "Accepted evaluated itinerary" : registered ? "Registered fixture proposal" : "Preview required";
+  const statusLabel = eligible ? "Checked · ready to accept" : evaluated ? "Checked · cannot be accepted" : unevaluated ? "Not checked" : acceptedChild ? "Your accepted trip" : registered ? "Registered fixture proposal" : "Preview needed";
   const repairTitle = eligible ? "Evaluated draft repair" : evaluated ? "No eligible draft repair" : unevaluated ? "Preview did not produce an evaluated child" : acceptedChild ? "Accepted repair is displayed" : registered ? "Registered repair fixture" : "Recommendation — not applied";
   const repairBody = unevaluated
     ? `<ul>${(proposal.blocking_findings || []).map((finding) => `<li>${escapeHtml(humanLabel(finding.code))}: ${escapeHtml(finding.origin_id || "")} ${finding.destination_id ? `→ ${escapeHtml(finding.destination_id)}` : ""}. ${escapeHtml(finding.corrective_action)}</li>`).join("")}</ul><p>The staged draft is retained. The accepted itinerary and map have not been replaced.</p>`
-    : acceptedChild ? `<p>The saved accepted child is the displayed itinerary. Its metrics and certificate come from the immutable acceptance snapshot.</p>`
+    : acceptedChild ? `<p>This is your accepted trip. Its numbers come from the saved check that was done when you accepted it.</p>`
     : !evaluated && !registered
-    ? `<p>This registered recommendation is not the displayed itinerary. Run Preview repair to generate and evaluate your draft before accepting any changes.</p>`
+    ? `<p>This suggested fix is not on your trip yet. Ask the Copilot for a change, or use Preview repair, to check it on the map before you accept anything.</p>`
     : repair ? `
       <p>${escapeHtml(repair.result)}</p>
       <ul class="change-list">
@@ -5784,16 +5821,17 @@ function renderRepair() {
         <li>Contextual risk delta: ${formatMetric(repair.tradeoffs.weather_risk_delta)}</li>
       </ul>` : `<p>The evaluated draft produced no eligible child. Reason: ${escapeHtml(proposal?.reason || "Unavailable")}</p>`;
   $("#repair-panel").innerHTML = `
-    <span class="eyebrow">Repair review</span>
-    <h2 id="repair-heading">Decision workspace</h2>
+    <span class="eyebrow">Trip changes</span>
+    <h2 id="repair-heading">Review the change</h2>
     <span class="status-pill ${eligible || registered ? "success" : "warning"}">${escapeHtml(statusLabel)}</span>
     <article class="issue-card">
-      <h3>${hasRenderedRepair ? "Original repair context" : "Issue detected · Registered weather disruption"}</h3>
+      <h3>${hasRenderedRepair ? "Original repair context" : "Issue detected"}</h3>
       <p>${escapeHtml(issue.summary)}</p>
     </article>
     <article class="repair-card">
       <h3>${repairTitle}</h3>
-      ${proposal?.message ? `<p class="truth-note">${escapeHtml(proposal.message)}</p>` : ""}
+      ${proposal?.message && !eligible ? `<p class="truth-note">${escapeHtml(proposal.message)}</p>` : ""}
+      ${eligible ? "<p>The proposed trip passed the road, weather and schedule checks. The map shows it now.</p>" : ""}
       ${repairBody}
       ${evaluatedEditEvidenceHtml(proposal)}
     </article>
@@ -5803,14 +5841,25 @@ function renderRepair() {
       <button id="review-evidence">Review evidence</button>
       <button id="keep-original">Keep original</button>
     </div>
-    <p class="truth-note">Accept and Keep original require explicit confirmation. Decisions append to the durable ledger and atomically update the accepted-plan pointer; immutable plan artifacts are never overwritten. Rollback remains a separate audited action.</p>`;
+    <p class="truth-note">Accepting a change or keeping the original always asks you to confirm first, and you can roll a decision back later.</p>
+    <details class="decision-detail"><summary>How decisions are saved</summary><p>Decisions append to the durable ledger and atomically update the accepted-plan pointer; immutable plan artifacts are never overwritten. Rollback remains a separate audited action.</p></details>`;
   $("#compare-repair").addEventListener("click", () => navigate("/app/compare"));
   $("#review-evidence").addEventListener("click", () => navigate("/app/evidence"));
   $("#accept-repair").addEventListener("click", () => submitAcceptance("accept_repair"));
   $("#keep-original").addEventListener("click", () => submitAcceptance("keep_original"));
 }
 
+// The draft-bar Accept follows the same readiness as the panel's Accept: it
+// is enabled only while the map shows this exact eligible preview.
+function syncInlineAccept() {
+  const inlineAccept = $("#inline-accept");
+  if (!inlineAccept) return;
+  inlineAccept.disabled = !previewCanBeAccepted();
+  inlineAccept.title = inlineAccept.disabled ? "Waiting for the map to show this change" : "";
+}
+
 function renderContextPanel() {
+  syncInlineAccept();
   if (state.route === "/app/map") return renderMapContextPanel();
   if (state.route === "/app/repairs") return renderDraftContextPanel();
   if (state.route === "/app/compare") return renderCompareContextPanel();
@@ -7288,6 +7337,7 @@ function refreshMapEditDialog() {
   $("#draft-keep").disabled = !selectedParent || !operationEnabled("keep_stop");
   $("#draft-move").disabled = !selectedParent || !operationEnabled("move_day");
   $("#draft-lock").disabled = !selectedParent || !operationEnabled("lock_stop");
+  $("#draft-remove").disabled = !selectedParent || !operationEnabled("remove_stop");
   $("#draft-flexible").disabled = !selectedParent || !operationEnabled("mark_flexible");
   $("#draft-feedback").disabled = !operationEnabled("route_feedback");
   $("#draft-replace").disabled = !selectedParent || !candidateSelect.value
@@ -7295,7 +7345,7 @@ function refreshMapEditDialog() {
   refreshCandidateAdditionAvailability();
   for (const [id, type] of Object.entries({ "draft-keep":"keep_stop", "draft-move":"move_day",
     "draft-lock":"lock_stop", "draft-flexible":"mark_flexible", "draft-feedback":"route_feedback",
-    "draft-replace":"replace_nearby", "draft-add":"add_candidate" })) {
+    "draft-replace":"replace_nearby", "draft-add":"add_candidate", "draft-remove":"remove_stop" })) {
     if (draftCombinationBlocker([...state.session.draft, { type }])) {
       $(`#${id}`).disabled = true;
       $(`#${id}`).title = "This action cannot be combined with the staged direct edit. Preview and accept, or undo, that edit first.";

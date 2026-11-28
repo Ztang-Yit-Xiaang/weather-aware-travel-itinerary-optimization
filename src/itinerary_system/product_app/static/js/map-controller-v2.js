@@ -717,6 +717,9 @@ function addDraftWaypointMarkers({
 }
 
 function addRouteLayers(map, routes, selectedRouteLegId, selectedDay, activePlanId) {
+  // Line widths follow the zoom: a whole-state view stays readable instead of
+  // drawing thick ribbons over the basemap, and a close view still shows roads.
+  const zoomWidth = (atState, atRegion, atCity) => ["interpolate", ["linear"], ["zoom"], 5, atState, 8, atRegion, 12, atCity];
   map.addSource("v2-routes", { type: "geojson", data: routes });
   map.addLayer({
     id: "v2-route-original",
@@ -725,10 +728,10 @@ function addRouteLayers(map, routes, selectedRouteLegId, selectedDay, activePlan
     filter: roleFilter("original"),
     layout: { "line-cap": "round", "line-join": "round" },
     paint: {
-      "line-color": "#294a59",
-      "line-width": 4,
-      "line-opacity": 0.76,
-      "line-dasharray": [1.5, 2.2],
+      "line-color": "#475569",
+      "line-width": zoomWidth(1.2, 2, 3.2),
+      "line-opacity": 0.62,
+      "line-dasharray": [2, 2.2],
       "line-offset": -2,
     },
   });
@@ -738,7 +741,7 @@ function addRouteLayers(map, routes, selectedRouteLegId, selectedDay, activePlan
     source: "v2-routes",
     filter: roleFilter("active"),
     layout: { "line-cap": "round", "line-join": "round" },
-    paint: { "line-color": "#ffffff", "line-width": 9, "line-opacity": 0.86 },
+    paint: { "line-color": "#ffffff", "line-width": zoomWidth(3.6, 6, 9.5), "line-opacity": 0.92 },
   });
   map.addLayer({
     id: "v2-route-active",
@@ -746,7 +749,14 @@ function addRouteLayers(map, routes, selectedRouteLegId, selectedDay, activePlan
     source: "v2-routes",
     filter: roleFilter("active"),
     layout: { "line-cap": "round", "line-join": "round" },
-    paint: { "line-color": "#007f78", "line-width": 6, "line-opacity": 0.98 },
+    paint: {
+      "line-color": "#0f766e",
+      "line-width": zoomWidth(1.8, 3.4, 6),
+      // The selected day carries the highlight; other days recede a little.
+      "line-opacity": Number.isInteger(selectedDay)
+        ? ["case", ["==", ["get", "day"], selectedDay], 1, 0.62]
+        : 0.95,
+    },
   });
   map.addLayer({
     id: "v2-route-selected-day",
@@ -756,7 +766,7 @@ function addRouteLayers(map, routes, selectedRouteLegId, selectedDay, activePlan
       ? ["all", ["==", ["get", "day"], selectedDay], ["==", ["get", "plan_id"], activePlanId]]
       : ["==", ["get", "day"], -1],
     layout: { "line-cap": "round", "line-join": "round" },
-    paint: { "line-color": "#eb6a27", "line-width": 7, "line-opacity": 0.72 },
+    paint: { "line-color": "#f97316", "line-width": zoomWidth(2.6, 4.4, 7), "line-opacity": 0.95 },
   });
   map.addLayer({
     id: "v2-route-selected",
@@ -766,7 +776,7 @@ function addRouteLayers(map, routes, selectedRouteLegId, selectedDay, activePlan
       ? ["==", ["get", "route_leg_id"], selectedRouteLegId]
       : ["==", ["get", "route_leg_id"], ""],
     layout: { "line-cap": "round", "line-join": "round" },
-    paint: { "line-color": "#f06423", "line-width": 8, "line-opacity": 1 },
+    paint: { "line-color": "#c2410c", "line-width": zoomWidth(3.6, 5.6, 8.5), "line-opacity": 1 },
   });
 }
 
@@ -880,6 +890,8 @@ function exactCandidateSelection(event, onCandidateSelect) {
 }
 
 function addPointLayers(map, stops, anchors, gaps, exploratoryPin, selectedDay) {
+  // Marker sizes follow the zoom (kept local so this function stands alone).
+  const bySize = (atState, atRegion, atCity) => ["interpolate", ["linear"], ["zoom"], 5, atState, 8, atRegion, 12, atCity];
   map.addSource("v2-stops", { type: "geojson", data: stops });
   map.addLayer({
     id: "v2-stops-original",
@@ -887,10 +899,10 @@ function addPointLayers(map, stops, anchors, gaps, exploratoryPin, selectedDay) 
     source: "v2-stops",
     filter: roleFilter("original"),
     paint: {
-      "circle-radius": 5,
+      "circle-radius": bySize(3.2, 4.4, 6),
       "circle-color": "#ffffff",
-      "circle-stroke-color": "#294a59",
-      "circle-stroke-width": 2,
+      "circle-stroke-color": "#475569",
+      "circle-stroke-width": 1.5,
     },
   });
   map.addLayer({
@@ -899,10 +911,10 @@ function addPointLayers(map, stops, anchors, gaps, exploratoryPin, selectedDay) 
     source: "v2-stops",
     filter: roleFilter("active"),
     paint: {
-      "circle-radius": 7,
-      "circle-color": "#ffffff",
-      "circle-stroke-color": "#007f78",
-      "circle-stroke-width": 3,
+      "circle-radius": bySize(6.5, 8, 10),
+      "circle-color": "#0f766e",
+      "circle-stroke-color": "#ffffff",
+      "circle-stroke-width": 2,
     },
   });
   map.addLayer({
@@ -913,11 +925,26 @@ function addPointLayers(map, stops, anchors, gaps, exploratoryPin, selectedDay) 
       ? ["==", ["get", "day"], selectedDay]
       : ["==", ["get", "day"], -1],
     paint: {
-      "circle-radius": 9,
-      "circle-color": "#ffffff",
-      "circle-stroke-color": "#eb6a27",
-      "circle-stroke-width": 4,
+      "circle-radius": bySize(7.5, 9, 11.5),
+      "circle-color": "#f97316",
+      "circle-stroke-color": "#ffffff",
+      "circle-stroke-width": 2.5,
     },
+  });
+  // Day number inside each stop marker, so the itinerary reads off the map.
+  map.addLayer({
+    id: "v2-stop-day-labels",
+    type: "symbol",
+    source: "v2-stops",
+    filter: roleFilter("active"),
+    layout: {
+      "text-field": ["to-string", ["get", "day"]],
+      "text-font": ["Noto Sans Regular"],
+      "text-size": bySize(9, 10.5, 12),
+      "text-allow-overlap": true,
+      "text-ignore-placement": true,
+    },
+    paint: { "text-color": "#ffffff" },
   });
   map.addSource("v2-route-anchors", { type: "geojson", data: anchors });
   map.addLayer({

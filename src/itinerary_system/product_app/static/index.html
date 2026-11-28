@@ -16,7 +16,7 @@
     <a class="skip-link" href="#main-workspace">Skip to workspace</a>
     <div id="loading-screen" class="loading-screen" role="status">
       <span class="spinner" aria-hidden="true"></span>
-      <p>Validating local product readiness…</p>
+      <p>Loading your trip…</p>
       <div class="direct-file-help">
         <strong>This HTML file is not the application launcher.</strong>
         <p>Close this tab, then double-click <code>OPEN_ITINERARY_COPILOT.cmd</code> in the repository root and keep its terminal open.</p>
@@ -30,7 +30,7 @@
           <span class="brand-mark" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19c3-1 4-5 8-5s5 4 8 5"/><circle cx="12" cy="8" r="3"/></svg></span>
           <div>
             <strong>Itinerary Repair Copilot</strong>
-            <span>Context-aware, inspectable itinerary repair</span>
+            <span>Weather-aware trip planning you can check</span>
           </div>
         </div>
         <ol class="flow" aria-label="Repair workflow">
@@ -102,7 +102,7 @@
           </div>
         </header>
         <div id="context-chips" class="context-chips" aria-label="Visible Copilot context"></div>
-        <p id="copilot-disclosure" class="copilot-disclosure"></p>
+        <p id="copilot-disclosure" class="copilot-disclosure" tabindex="0"></p>
         <div id="copilot-lifecycle" class="copilot-lifecycle" role="status" aria-live="polite" aria-atomic="true">Idle</div>
         <div id="conversation" class="conversation" role="log" aria-live="polite" aria-relevant="additions text" aria-label="Copilot conversation"></div>
         <div class="quick-prompts" aria-label="Example requests">
@@ -161,6 +161,7 @@
           <button id="draft-keep" value="none" type="button">Keep stop</button>
           <button id="draft-move" value="none" type="button">Move day</button>
           <button id="draft-lock" value="none" type="button">Lock stop</button>
+          <button id="draft-remove" value="none" type="button">Remove stop</button>
           <button id="draft-flexible" value="none" type="button">Mark flexible</button>
           <button id="draft-feedback" value="none" type="button">Reduce route risk</button>
           <button id="draft-replace" value="none" type="button">Replace nearby</button>

@@ -5935,8 +5935,8 @@ function renderMetrics() {
   const routeMinutes = planRouteMinutes(plan);
   const scope = facts.certificateId ? "Exact displayed-plan evidence" : "Not evaluated for this plan";
   const metrics = [
-    ["Route time", routeMinutes === null ? "Unavailable" : routeMinutes >= 60
-      ? `${Math.floor(routeMinutes / 60)} h ${String(Math.round(routeMinutes % 60)).padStart(2, "0")} min` : `${formatMetric(routeMinutes)} min`, "Exact road-evidence duration"],
+    ["Route time", routeMinutes === null ? "Unavailable" : Math.round(routeMinutes) >= 60
+      ? `${Math.floor(Math.round(routeMinutes) / 60)} h ${String(Math.round(routeMinutes) % 60).padStart(2, "0")} min` : `${formatMetric(routeMinutes)} min`, "Exact road-evidence duration"],
     ["Contextual risk", risk == null ? "Unavailable" : formatMetric(risk), scope],
     ["Preservation", preservation == null ? "Unavailable" : `${Math.round(preservation * 100)}%`, scope],
     ["Edit cost", facts.weightedEditCost == null ? "Unavailable" : formatMetric(facts.weightedEditCost), scope],

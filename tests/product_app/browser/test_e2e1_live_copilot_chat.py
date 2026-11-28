@@ -261,6 +261,11 @@ def _http_record(response, *, response_body: str | None = None) -> dict[str, obj
     }
 
 
+def _action_name(label: str) -> re.Pattern[str]:
+    """A proposal button's accessible name is its label, optionally followed by ": <the change>"."""
+    return re.compile(rf"^{re.escape(label)}(?::\s.*)?$")
+
+
 def _sse_events(raw: str) -> list[dict[str, object]]:
     events: list[dict[str, object]] = []
     for frame in raw.replace("\r\n", "\n").split("\n\n"):
@@ -395,6 +400,10 @@ def test_live_website_copilot_stages_and_renders_exact_evaluated_child() -> None
                 record_video_size={"width": 1440, "height": 900},
             )
         context = browser.new_context(**context_options)
+        # The app stages and previews a chat proposal on its own by default.
+        # This evidence records each step as a trusted click with its exact
+        # HTTP exchange, so it uses the app's own switch for the manual path.
+        context.add_init_script("try { localStorage.setItem('copilot.autoPreview', 'off'); } catch {}")
         page = context.new_page()
         page.on("console", lambda message: console_errors.append(message.text) if message.type == "error" else None)
         page.on("pageerror", lambda error: console_errors.append(str(error)))
@@ -555,7 +564,7 @@ def test_live_website_copilot_stages_and_renders_exact_evaluated_child() -> None
             expect(page.locator("#copilot-lifecycle")).to_have_attribute("data-state", "proposal_ready")
             actions = page.locator(".copilot-proposal-actions").last
             add_label = "Add all to draft" if combined else "Add to draft"
-            expect(actions.get_by_role("button", name=add_label, exact=True)).to_be_enabled()
+            expect(actions.get_by_role("button", name=_action_name(add_label))).to_be_enabled()
             _write_json(
                 evidence_dir / "browser_context.json",
                 {
@@ -575,7 +584,7 @@ def test_live_website_copilot_stages_and_renders_exact_evaluated_child() -> None
             with page.expect_response(
                 lambda item: item.url.endswith("/draft/operations") and item.request.method == "POST"
             ) as draft_info:
-                actions.get_by_role("button", name=add_label, exact=True).click()
+                actions.get_by_role("button", name=_action_name(add_label)).click()
             draft_response = draft_info.value
             draft_http = _http_record(draft_response)
             _write_json(evidence_dir / "product_draft_http_io.json", draft_http)
@@ -608,7 +617,7 @@ def test_live_website_copilot_stages_and_renders_exact_evaluated_child() -> None
 
             actions = page.locator(".copilot-proposal-actions").last
             preview_button = actions.get_by_role(
-                "button", name="Preview combined repair" if combined else "Preview this repair", exact=True
+                "button", name=_action_name("Preview combined repair" if combined else "Preview this repair")
             )
             expect(preview_button).to_be_enabled(timeout=15_000)
             preview_started_at = datetime.now(UTC).isoformat()

@@ -11,7 +11,7 @@ import subprocess
 import sys
 import xml.etree.ElementTree as ET
 from datetime import datetime
-from decimal import Decimal
+from decimal import ROUND_HALF_UP, Decimal
 from pathlib import Path, PurePosixPath
 from typing import Any
 from urllib.parse import urlparse
@@ -119,7 +119,7 @@ HISTORICAL_CONTEXT_KEYS = {
     "evaluated_proposal",
 }
 CONTEXT_KEYS = HISTORICAL_CONTEXT_KEYS | {"accepted_plan_content_hash", "capabilities", "conversation_memory"}
-EXPECTED_NORMALIZED_CONTEXT_SHA256 = "73b525fc3be72b8450bc325545492a28508ba942fd07e92608efba0a6592fcde"
+EXPECTED_NORMALIZED_CONTEXT_SHA256 = "fa19a06539d4a374b7ac0e52d9a2cd7b76e4b74ce8baf6726002e953d510bf51"
 AUTHORIZED_HISTORICAL_NORMALIZED_CONTEXT_SHA256 = {
     "9e11b56b6d6e61481f9f4cc55ef6210d7303fa25dd6ea124ae2579ad79f3eb62",
 }
@@ -942,16 +942,27 @@ def _verify_visible_metrics(snapshot: dict[str, Any], proposal: dict[str, Any]) 
     def display(value: float | None) -> str:
         return "Unavailable" if value is None else f"{value:.2f}".rstrip("0").rstrip(".")
 
+    def hours_and_minutes(minutes: float) -> str:
+        # Same rule as renderMetrics: round to whole minutes, then split.
+        whole = int(Decimal(str(minutes)).quantize(Decimal(1), rounding=ROUND_HALF_UP))
+        if whole < 60:
+            return display(minutes) + " min"
+        return f"{whole // 60} h {whole % 60:02d} min"
+
     preservation = tradeoffs["preservation_rate"]
     expected = {
-        "Route time": display(route_minutes) + " min",
         "Contextual risk": display(tradeoffs["weather_risk_delta"]),
         "Preservation": "Unavailable" if preservation is None else f"{int(preservation * 100 + 0.5)}%",
         "Edit cost": display(tradeoffs["weighted_edit_cost"]),
         "Certificate": proposal["eligibility"],
     }
+    visible = {row.get("label"): row.get("value") for row in rows}
+    # Bundles recorded before 2026-11-26 show route time in minutes only;
+    # later pages show hours and minutes. Both encode the same evaluated legs.
+    route_formats = {hours_and_minutes(route_minutes), display(route_minutes) + " min"}
     _require(
-        {row.get("label"): row.get("value") for row in rows} == expected, "e2e1_live_visible_metrics_values_mismatch"
+        visible.pop("Route time", None) in route_formats and visible == expected,
+        "e2e1_live_visible_metrics_values_mismatch",
     )
 
 

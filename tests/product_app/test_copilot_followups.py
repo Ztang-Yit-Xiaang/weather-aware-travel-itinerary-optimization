@@ -62,9 +62,7 @@ def _intents(turn: dict) -> list[tuple]:
 
 @pytest.mark.parametrize("follow_up", ["propose this chage", "you choose", "yes do it", "whatever you think is best"])
 def test_weather_request_then_handing_back_the_choice_proposes_one_replacement(client, follow_up):
-    asked, proposed = _conversation(
-        client, ["The coast looks stormy on day 5, can we do something safer?", follow_up]
-    )
+    asked, proposed = _conversation(client, ["The coast looks stormy on day 5, can we do something safer?", follow_up])
     assert asked["state"] == "clarification_required"
     assert "Bixby Creek Bridge Viewpoint" in asked["assistant_message"]
     assert proposed["state"] == "proposal_ready", proposed["assistant_message"]

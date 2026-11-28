@@ -370,8 +370,8 @@ def _question(context: CopilotContextV2, spec: dict[str, Any]) -> str:
             if row["replaces_stop_id"] == spec["target_stop_id"] and row["candidate_id"] in names
         ]
         if len(choices) > 1:
-            listed =", ".join(choices[: min(len(choices), 5) - 1]) + f" or {choices[min(len(choices), 5) - 1]}"
-            return f"Which nearby place should replace {name}: {listed}? Say \"you choose\" and I will pick one."
+            listed = ", ".join(choices[: min(len(choices), 5) - 1]) + f" or {choices[min(len(choices), 5) - 1]}"
+            return f'Which nearby place should replace {name}: {listed}? Say "you choose" and I will pick one.'
         if choices:
             return f"Which registered candidate should replace {name}: {choices[0]}?"
         return f"Which registered candidate should replace {name}?"

@@ -164,9 +164,10 @@ test("interest exploration works in Select mode without staging or acceptance",a
 test("map summary makes loading, failure and empty results visible without scrolling",()=>{
   const app=readFileSync(new URL("../../src/itinerary_system/product_app/static/js/app.js",import.meta.url),"utf8");
   const body=app.slice(app.indexOf("function interestMapSummaryHtml("),app.indexOf("function interestExplorerHtml("));
-  const state={interestRegions:{enabled:false,status:"idle",error:null,selectedId:null}};
-  const render=new Function("state","escapeHtml",body+";return interestMapSummaryHtml;")(
-    state,s=>String(s).replaceAll("<","&lt;"));
+  const state={route:"/app/map",interestRegions:{enabled:false,status:"idle",error:null,selectedId:null}};
+  const visible=()=>state.interestRegions.enabled&&state.route==="/app/map";
+  const render=new Function("state","escapeHtml","interestLayerVisible",body+";return interestMapSummaryHtml;")(
+    state,s=>String(s).replaceAll("<","&lt;"),visible);
   assert.equal(render(null),"");
   Object.assign(state.interestRegions,{enabled:true,status:"loading"});
   assert.match(render(null),/Loading interest region/);
@@ -199,9 +200,10 @@ test("must-go details are keyboard reachable and preserve the model probability"
   const response=example();
   response.required_points[0].interest_probability_mean=.2;
   response.candidate_universe.route_checked_candidate_count=0;
-  const state={mapInteraction:{mode:"select"},interestRegions:{enabled:true,selectedId:"required",massLevel:.8}};
-  const render=new Function("state","currentInterestResponse","escapeHtml","humanLabel","interestPlaceListHtml","safeExternalLink",body+";return interestExplorerHtml;")(
-    state,()=>response,s=>String(s),s=>s,()=>"",()=>"");
+  const state={route:"/app/map",mapInteraction:{mode:"select"},interestRegions:{enabled:true,selectedId:"required",massLevel:.8}};
+  const visible=()=>state.interestRegions.enabled&&state.route==="/app/map";
+  const render=new Function("state","currentInterestResponse","escapeHtml","humanLabel","interestPlaceListHtml","safeExternalLink","interestLayerVisible",body+";return interestExplorerHtml;")(
+    state,()=>response,s=>String(s),s=>s,()=>"",()=>"",visible);
   const html=render();
   assert.match(html,/<details open>/);
   assert.match(html,/<button type="button" data-interest-place="required" aria-pressed="true">Must-go: Required<\/button>/);
@@ -277,4 +279,18 @@ test("place source shows live, cached and offline freshness without pretending a
   assert.match(render({status:"live",error_code:"nearby_cache_write_failed"}),/could not be saved/);
   assert.match(app,/Refresh online places/);
   assert.match(app,/query.set\("refresh_places", "true"\)/);
+});
+
+test("interest layer UI is limited to the Map view, where its refresh can run",()=>{
+  const app=readFileSync(new URL("../../src/itinerary_system/product_app/static/js/app.js",import.meta.url),"utf8");
+  const body=app.slice(app.indexOf("function interestLayerVisible("),app.indexOf("function interestExplorerHtml("));
+  const state={route:"/app/itinerary",interestRegions:{enabled:true,status:"idle",error:null,selectedId:null}};
+  const render=new Function("state","escapeHtml",body+";return interestMapSummaryHtml;")(state,s=>String(s));
+  // The Itinerary view shares the map but never requests estimates; an enabled
+  // layer there must not show a loading card that can never finish.
+  assert.equal(render(null),"");
+  state.route="/app/map";
+  assert.match(render(null),/Loading interest region/);
+  const refresh=app.slice(app.indexOf("function scheduleInterestRefresh("),app.indexOf("const $ ="));
+  assert.match(refresh,/state\.route !== "\/app\/map"/);
 });

@@ -353,6 +353,7 @@ test("boot restores the selected child stop inspector before the first render", 
     api: async (path) => path === "/api/health"
       ? { schema_version: "product-health-v2", product_id: "itinerary-repair-copilot", core_ready: true }
       : { schema_version: "product-map-configuration-v2" },
+    restoreInterestPreferences: () => ({}), workspaceStorage: {}, interestPreferencesKey: () => "interest",
     restorePendingMutationInput() {},
     restoreInterestPreferences, workspaceStorage: { getItem: () => null },
     interestPreferencesKey: () => `itinerary-repair-copilot.interest.v1:${state.session.trip_id}`,

@@ -3,22 +3,6 @@
   "dashboard_id": "baseline_561005e4ba95",
   "decision_records": [
     {
-      "candidate_id": "day_route:7:08f78a187eb2a3ac",
-      "contextual_burden": null,
-      "day": 7,
-      "feasible": false,
-      "selected": false,
-      "stop_sequence": [
-        "golden_gate_bridge"
-      ],
-      "travel_minutes": 437.64,
-      "utility": null,
-      "violations": [
-        "fix_select_stop[golden_gate_bridge]:golden_gate_bridge",
-        "context_excluded_stop_selected:golden_gate_bridge"
-      ]
-    },
-    {
       "candidate_id": "day_route:7:39f52a34f8994522",
       "contextual_burden": 0.1,
       "day": 7,
@@ -30,24 +14,6 @@
       "travel_minutes": 378.56666666666666,
       "utility": 0.6613132306435597,
       "violations": []
-    },
-    {
-      "candidate_id": "day_route:7:16b5e96763b02ed3",
-      "contextual_burden": null,
-      "day": 7,
-      "feasible": false,
-      "selected": false,
-      "stop_sequence": [
-        "golden_gate_bridge",
-        "santa_barbara_museum_of_natural_history_sea_center"
-      ],
-      "travel_minutes": 1183.3533333333335,
-      "utility": null,
-      "violations": [
-        "day_time_exceeded:7",
-        "fix_select_stop[golden_gate_bridge]:golden_gate_bridge",
-        "context_excluded_stop_selected:golden_gate_bridge"
-      ]
     }
   ],
   "diff_id": "diff_ea97896a586cb3af",

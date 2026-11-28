@@ -33,6 +33,8 @@ COPY ["runs/e3ux-weather-repair-demo-v6/", "./runs/e3ux-weather-repair-demo-v6/"
 COPY ["runs/california-coast-product-demo-v2/", "./runs/california-coast-product-demo-v2/"]
 COPY ["runs/california-coast-coherent-demo-v1/", "./runs/california-coast-coherent-demo-v1/"]
 COPY ["results/route_deltas/product_pfeiffer_point_lobos_20260908_v1/", "./results/route_deltas/product_pfeiffer_point_lobos_20260908_v1/"]
+# Frozen move legs for cross-day moves; the loader checks the raw response hash.
+COPY ["results/route_deltas/product_move_legs_20261126_v1/", "./results/route_deltas/product_move_legs_20261126_v1/"]
 
 USER 10001:10001
 # Verify the actual slim dependency set without creating an app or contacting DB/providers.

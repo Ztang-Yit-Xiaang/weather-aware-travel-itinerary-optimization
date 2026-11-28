@@ -45,6 +45,7 @@ _HEX_SHA256 = re.compile(r"[0-9a-f]{64}\Z")
 _DISPATCH_ID = re.compile(r"dispatch_([0-9a-f]{32})\Z")
 
 _INTENT_TYPES = {
+    "remove_stop",
     "review_registered_repair",
     "keep_original",
     "keep_stop",
@@ -57,6 +58,7 @@ _INTENT_TYPES = {
     "request_clarification",
     "unsupported_request",
     "external_action_not_supported",
+    "answer_question",
 }
 _PREFERENCES = {
     "reduce_contextual_risk",
@@ -70,6 +72,7 @@ _INTERPRETATION_STATES = {
     "unsupported",
     "refused",
     "failed",
+    "answered",
 }
 
 

@@ -21,6 +21,7 @@ const EDIT_INTENT_TYPES = new Set([
   "route_feedback",
   "replace_nearby",
   "add_candidate",
+  "remove_stop",
 ]);
 
 const PARENT_TARGET_INTENT_TYPES = new Set([
@@ -29,6 +30,7 @@ const PARENT_TARGET_INTENT_TYPES = new Set([
   "lock_stop",
   "mark_flexible",
   "move_day",
+  "remove_stop",
 ]);
 
 export function copilotDraftability(intent, workspace) {
@@ -120,7 +122,7 @@ export function copilotOperationForIntent(intent, selectedStopId = null, selecte
       parameters: { day: intent.destination_day || selectedDay },
     };
   }
-  if (["keep_stop", "lock_stop", "mark_flexible"].includes(intent?.type)) {
+  if (["keep_stop", "lock_stop", "mark_flexible", "remove_stop"].includes(intent?.type)) {
     return { type: intent.type, target, parameters: {} };
   }
   return null;
@@ -227,6 +229,7 @@ const LIFECYCLE_COPY = {
   clarification_required: "Clarification required",
   permission_required: "Permission required",
   proposal_ready: "Proposal ready",
+  answered: "Answered",
   awaiting_confirmation: "Awaiting confirmation",
   refused: "Refused",
   failed: "Failed",
@@ -238,6 +241,8 @@ export function createCopilotController({
   streamMessage,
   selectContext,
   addDraft,
+  clearCopilotDraft = null,
+  settleSelection = null,
   previewDraft,
   getPreviewState,
   getSelectedStop,
@@ -261,6 +266,7 @@ export function createCopilotController({
   let conversationId = null;
   let pendingConversationReset = null;
   let previewActionActive = false;
+  let pendingAutoPreview = null;
   let stagedLifecycle = null;
 
   const $ = (selector, root = document) => root.querySelector(selector);
@@ -438,6 +444,11 @@ export function createCopilotController({
       copy.append(buildProposalSummary(turn.interpretation));
       copy.append(buildProposalActions(turn));
     }
+    if (role === "assistant" && turn?.interpretation?.state === "answered") {
+      article.classList.add("message-answer");
+      const answerActions = buildAnswerActions(turn.interpretation);
+      if (answerActions) copy.append(answerActions);
+    }
     if (interactive && ["failed", "cancelled"].includes(turn?.state)) {
       copy.append(buildRecoveryActions(turn));
     }
@@ -458,8 +469,8 @@ export function createCopilotController({
   function renderEmptyConversation() {
     const provider = providerName();
     const message = interaction().provider === "openai"
-      ? "I can interpret this itinerary and return typed, reviewable suggestions. I cannot change the trip without your explicit action."
-      : "I can demonstrate typed itinerary requests locally. No message is sent to an external provider, and I cannot change the trip without your explicit action.";
+      ? "Ask me about your trip, or tell me what to change, for example \"Move Griffith Observatory to day 6\". I check every change on the map first; nothing is saved until you accept it."
+      : "Demo mode: try a request such as \"Move Griffith Observatory to day 6\". Nothing leaves this computer, and nothing is saved until you accept it.";
     appendMessage("assistant", message, provider);
   }
 
@@ -558,6 +569,7 @@ export function createCopilotController({
       return `Move ${stopName(intent.target_stop_id)} to Day ${intent.destination_day}.`;
     }
     if (intent.type === "keep_stop") return `Keep ${stopName(intent.target_stop_id)} in the itinerary.`;
+    if (intent.type === "remove_stop") return `Remove ${stopName(intent.target_stop_id)} from the trip, with no replacement.`;
     if (intent.type === "lock_stop") return `Preserve ${stopName(intent.target_stop_id)} as a locked commitment.`;
     if (intent.type === "mark_flexible") return `Mark ${stopName(intent.target_stop_id)} as flexible.`;
     if (intent.type === "set_stop_duration") {
@@ -633,6 +645,77 @@ export function createCopilotController({
     return Boolean(operation) && state.session.draft.some(
       (candidate) => sameCopilotDraftOperation(candidate, operation),
     );
+  }
+
+  function buildAnswerActions(interpretation) {
+    const highlights = interpretation.highlights || {};
+    const hasTarget = ["day_ids", "stop_ids"].some(field => Array.isArray(highlights[field]) && highlights[field].length);
+    if (!hasTarget) return null;
+    const actions = document.createElement("div");
+    actions.className = "copilot-answer-actions";
+    actions.append(button("Show on map", () => showOnMap(highlights), previewActionActive));
+    return actions;
+  }
+
+  // A fresh, fully executable proposal runs straight through stage -> optimizer ->
+  // independent evaluation, so a request in chat ends with the evaluated route on
+  // the map. Anything not one-click eligible keeps its manual buttons and reason.
+  function autoPreviewTarget(turn, session = getState().session) {
+    const interpretation = turn?.interpretation;
+    if (interpretation?.state !== "proposal_ready" || !copilotTurnIsCurrent(turn, session)) return null;
+    const edits = (interpretation.intents || []).filter(intent => EDIT_INTENT_TYPES.has(intent.type));
+    if (!edits.length) return null;
+    if (edits.length > 1) {
+      const intents = interpretation.intents;
+      const combined = copilotCombinedEligibility(intents, getState().workspace, session);
+      return combined.allowed ? intents : null;
+    }
+    const [intent] = edits;
+    if (!copilotDraftability(intent, getState().workspace).allowed) return null;
+    return copilotOneClickEligibility(intent, getState().workspace, session).allowed ? intent : null;
+  }
+
+  async function autoPreview(turn) {
+    if (previewActionActive || requestActive || !autoPreviewEnabled()) return;
+    const origin = conversationOrigin();
+    let target = autoPreviewTarget(turn);
+    const session = getState().session;
+    if (!target && session?.draft?.length && clearCopilotDraft) {
+      // Only an earlier chat-staged draft may be replaced, and only when this
+      // request would be executable on an empty draft.
+      target = autoPreviewTarget(turn, { ...session, draft: [] });
+      if (!target) return;
+      setLifecycle("preview_running", "Replacing the earlier chat suggestion with this request");
+      // Hold the composer and proposal buttons while the old draft is undone,
+      // so no message or click is sent at the pre-undo revision.
+      previewActionActive = true;
+      setSubmitting(requestActive);
+      let cleared = false;
+      try {
+        cleared = await clearCopilotDraft();
+      } finally {
+        previewActionActive = false;
+        setSubmitting(requestActive);
+      }
+      if (!originIsCurrent(origin)) return;
+      if (!cleared) {
+        setLifecycle("proposal_ready", "The existing draft was kept. Review it before previewing this suggestion.");
+        return;
+      }
+    }
+    if (!target) return;
+    await previewIntentFromCopilot(target);
+    if (!originIsCurrent(origin)) return;
+    const preview = getPreviewState();
+    if (preview?.status === "PREVIEW_RENDERED" || preview?.status === "PREVIEW_DATA_READY") {
+      const route = getState().route;
+      if (route !== "/app/map" && route !== "/app/itinerary") navigate("/app/map");
+      if (window.matchMedia("(max-width: 820px)").matches) close();
+    }
+  }
+
+  function autoPreviewEnabled() {
+    try { return localStorage.getItem("copilot.autoPreview") !== "off"; } catch { return true; }
   }
 
   function buildProposalActions(turn) {
@@ -987,16 +1070,17 @@ export function createCopilotController({
       .find((candidate) => (candidate.candidate_id || candidate.stop_id || candidate.id) === state.session.selected_candidate_id);
     const selectedAlternative = (state.workspace.alternatives || [])
       .find((alternative) => (alternative.plan_id || alternative.id) === state.session.selected_alternative_id);
+    // Chips say what the Copilot will look at. The run and revision are
+    // debugging details; keep them in the tooltip instead of the chip row.
     const values = [
-      `Run: ${state.registry.label}`,
       state.session.selected_day ? `Day ${state.session.selected_day}` : "No day selected",
       selected?.name || "No stop selected",
       ...(state.session.selected_segment_id ? [`Segment: ${state.session.selected_segment_id}`] : []),
       ...(state.session.selected_candidate_id ? [`Candidate: ${selectedCandidate?.label || selectedCandidate?.name || state.session.selected_candidate_id}`] : []),
       ...(state.session.selected_alternative_id ? [`Alternative: ${selectedAlternative?.method_label || selectedAlternative?.label || selectedAlternative?.name || "Selected repair"}`] : []),
-      `Revision ${state.session.revision}`,
     ];
     const chips = $("#context-chips");
+    chips.title = `Run: ${state.registry.label} · Revision ${state.session.revision}`;
     chips.replaceChildren(...values.map((value) => {
       const chip = document.createElement("span");
       chip.textContent = value;
@@ -1097,6 +1181,12 @@ export function createCopilotController({
     if (requestActive || !available()) return;
     const message = rawMessage.trim();
     if (!message) return;
+    // A map/day click may still be saving; its revision must land first, or the
+    // message is sent at a stale revision and rejected.
+    if (settleSelection) {
+      if (!(await settleSelection())) return toast("The map selection could not be saved. Your message has not been sent.", true);
+      if (requestActive || previewActionActive || !originIsCurrent(origin)) return;
+    }
     const state = getState();
     const envelope = {
       expected_revision: state.session.revision,
@@ -1152,8 +1242,10 @@ export function createCopilotController({
         toast("The response completed, but the transcript could not be refreshed. No retry was sent.", true);
       }
       const lifecycle = payload.turn.interpretation?.state || payload.turn.state;
-      setLifecycle(lifecycle, payload.turn.assistant_message);
+      setLifecycle(lifecycle, lifecycle === "answered" ? "From your current plan; nothing was changed" : payload.turn.assistant_message);
       renderAll();
+      // Only a turn confirmed by a fresh transcript may start an evaluated preview.
+      if (refreshed.status === "restored" && payload.turn.interpretation?.state === "proposal_ready") pendingAutoPreview = payload.turn;
     } catch (error) {
       if (!requestIsCurrent(epoch)) return;
       const capacityBlock = copilotCapacityBlock(error);
@@ -1198,6 +1290,11 @@ export function createCopilotController({
         setSubmitting(false);
         resizeInput();
         input.focus();
+        if (pendingAutoPreview) {
+          const turn = pendingAutoPreview;
+          pendingAutoPreview = null;
+          queueMicrotask(() => { autoPreview(turn); });
+        }
       }
     }
   }

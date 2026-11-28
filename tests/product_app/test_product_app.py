@@ -262,7 +262,10 @@ def test_session_token_revision_replacement_preview_and_acceptance_persists(tmp_
     assert sha256(parent_path.read_bytes()).hexdigest() == parent_hash_before
 
 
-def test_unsupported_legacy_move_day_cannot_preview_or_be_accepted(tmp_path: Path) -> None:
+def test_ineligible_move_day_preview_cannot_be_accepted(tmp_path: Path) -> None:
+    # Cross-day moves run through repair since 2026-11-26. In a fresh session
+    # the weather-unsafe Bixby stop is still in the trip, so the moved child is
+    # evaluated but not eligible, and acceptance stays closed.
     with client(tmp_path) as test_client:
         session, headers = create_session(test_client)
         session_id = session["session_id"]
@@ -282,9 +285,8 @@ def test_unsupported_legacy_move_day_cannot_preview_or_be_accepted(tmp_path: Pat
             headers=headers,
             json={"expected_revision": drafted["revision"]},
         )
-        assert previewed.status_code == 409
-        assert previewed.json()["detail"] == "draft_optimizer_mapping_unsupported"
-        assert "proposal" not in previewed.json()
+        assert previewed.status_code == 200, previewed.text
+        assert previewed.json()["proposal"]["acceptance_eligible"] is False
 
         rejected = test_client.post(
             f"/api/sessions/{session_id}/accept",
@@ -298,7 +300,6 @@ def test_unsupported_legacy_move_day_cannot_preview_or_be_accepted(tmp_path: Pat
         assert rejected.status_code == 409
         restored = test_client.get(f"/api/sessions/{session_id}", headers=headers).json()["session"]
         assert restored["accepted_plan_id"] == session["accepted_plan_id"]
-        assert restored["proposal"] is None
 
 
 def test_origin_guard_evidence_allowlist_and_keep_original(tmp_path: Path) -> None:

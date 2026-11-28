@@ -6,6 +6,7 @@ import re
 from dataclasses import replace
 from typing import Protocol
 
+from .copilot_copy import describe_proposal
 from .copilot_typed_edits import TYPED_CHAT_OPERATIONS, validate_parameters
 from .models import (
     CopilotContextV1,
@@ -36,6 +37,7 @@ ALLOWED_INTENT_TYPES = frozenset(
         "request_clarification",
         "unsupported_request",
         "external_action_not_supported",
+        "answer_question",
     }
 )
 ALLOWED_PREFERENCES = frozenset({"reduce_contextual_risk", "reduce_driving", "preserve_experience"})
@@ -55,6 +57,7 @@ ALLOWED_STATES = frozenset(
         "unsupported",
         "refused",
         "failed",
+        "answered",
     }
 )
 
@@ -71,8 +74,8 @@ _PROPOSAL_INTENTS = frozenset(
         "add_candidate",
     }
 )
-ALLOWED_INTENT_TYPES |= TYPED_CHAT_OPERATIONS | {"replan_trip"}
-_PROPOSAL_INTENTS |= TYPED_CHAT_OPERATIONS | {"replan_trip"}
+ALLOWED_INTENT_TYPES |= TYPED_CHAT_OPERATIONS | {"replan_trip", "remove_stop"}
+_PROPOSAL_INTENTS |= TYPED_CHAT_OPERATIONS | {"replan_trip", "remove_stop"}
 
 _FALSE_EXECUTION_CLAIMS = (
     re.compile(
@@ -89,7 +92,22 @@ _FALSE_EXECUTION_CLAIMS = (
     ),
 )
 _STOP_REMOVAL_REQUEST = re.compile(
-    r"\b(?:remove|delete|exclude|skip)\b|\b(?:do not|don't|dont)\s+want\s+to\s+(?:go\s+to|visit|include)\b",
+    r"\b(?:remove|delete|exclude|skip|drop)\b|\b(?:do not|don't|dont)\s+want\s+to\s+(?:go\s+to|visit|include)\b",
+    re.IGNORECASE,
+)
+# One removal of one named stop, after place names are masked as copilotplaceN.
+_REMOVE_PLACE = re.compile(
+    r"\b(?:remove|delete|drop|skip|exclude|cancel|cut|take\s+out|get\s+rid\s+of)\s+"
+    r"(?:the\s+)?(?:(?:visit|trip|stop)\s+(?:to|at)\s+)?copilotplace(?P<index>\d+)\b",
+    re.IGNORECASE,
+)
+_DO_NOT_VISIT_PLACE = re.compile(
+    r"\b(?:do\s+not|don['’]?t|dont|no\s+longer|never)\s+(?:really\s+)?(?:want|wanna|need|like)\s+"
+    r"(?:to\s+)?(?:go\s+to|visit|see|stop\s+at|include|keep|do)\s+(?:the\s+)?copilotplace(?P<index>\d+)\b",
+    re.IGNORECASE,
+)
+_NEGATED_REMOVAL = re.compile(
+    r"\b(?:do\s+not|don['’]?t|dont|never|not)\s+(?:want\s+to\s+)?(?:remove|delete|drop|skip|exclude|cancel|cut)\b",
     re.IGNORECASE,
 )
 _STOP_REPLACEMENT_REQUEST = re.compile(
@@ -110,6 +128,33 @@ _NEGATED_EDIT = re.compile(
 _EDIT_ACTION = re.compile(
     r"\b(?:keep|retain|lock|flexible|move|replace|swap|substitute|add|include|"
     r"remove|delete|exclude|skip|shorten|extend|reschedule|set|change|spend|stay|visit|give|treat|classify|reorder|arrive|leave|I(?:'d| would) like)\b",
+    re.IGNORECASE,
+)
+_RATIONALE_SENTENCE = re.compile(
+    r"[^.!?;]*\b(?:is|are|was|were|be|been|seems?|looks?|feels?|sounds?|has|have|had|gets?|got|"
+    r"might|may|could|would|will|can|should|"
+    r"wants?|wanted|hates?|hated|loves?|loved|prefers?|preferred|needs?|needed|"
+    r"think|thinks|worried|heard|hear)\b[^.!?;]*[.!]",
+    re.IGNORECASE,
+)
+# A reason sentence that states a condition is not just a reason: keep it so the
+# condition guard below still sees it.
+_RATIONALE_CONDITION = re.compile(
+    r"\b(?:if|unless|when|whenever|provided|as long as|in case|assuming|once|only)\b",
+    re.IGNORECASE,
+)
+_NEGATED_REMOVAL_THEN_EDIT = re.compile(
+    r"\s*(?:i\s+)?(?:do\s+not|don['’]?t|dont)\s+(?:want\s+to\s+)?(?:remove|delete|drop|skip|exclude)\s+"
+    r"(?P<token>copilotplace\d+)\s*[,;:-]?\s*(?:(?:but|just|only|instead|rather)\s+)+"
+    r"(?P<rest>[^.!?;]+?)\s*[.!]?\s*",
+    re.IGNORECASE,
+)
+# "Visit B instead of A" names two places but asks for one swap.
+_INSTEAD_OF = re.compile(r"\b(?:instead\s+of|rather\s+than)\b", re.IGNORECASE)
+_COURTESY_EDIT_PREFIX = re.compile(
+    r"\bI(?:'d|\u2019d| would) like to\s+(?=(?:keep|retain|lock|move|replace|swap|substitute|add|include|"
+    r"remove|delete|exclude|skip|shorten|extend|reschedule|set|change|spend|stay|visit|give|treat|"
+    r"classify|reorder|arrive|leave)\b)",
     re.IGNORECASE,
 )
 
@@ -143,13 +188,81 @@ def is_stop_replacement_request(message: str) -> bool:
     return bool(_STOP_REPLACEMENT_REQUEST.search(message))
 
 
-def unsupported_stop_removal() -> CopilotInterpretationV1:
+def unsupported_stop_removal(context: CopilotContextV1 | None = None) -> CopilotInterpretationV1:
+    """A removal whose stop could not be resolved.
+
+    The current (v2) workspace can remove a stop, so it asks which one. Legacy
+    v1 contexts have no removal path and keep the honest refusal.
+    """
+    if not isinstance(context, CopilotContextV2):
+        return CopilotInterpretationV1(
+            state="unsupported",
+            assistant_message=(
+                "Removing or excluding an accepted stop is not enabled in this repair workflow. Nothing was changed."
+            ),
+            intents=(CopilotIntentV1(type="unsupported_request"),),
+        )
+    question = 'Which stop should I remove? Name it as it appears in your trip, for example "Remove Stearns Wharf".'
     return CopilotInterpretationV1(
-        state="unsupported",
+        state="clarification_required",
+        assistant_message=question + " Nothing was changed.",
+        intents=(CopilotIntentV1(type="request_clarification", clarification_question=question),),
+    )
+
+
+def _stop_removal_proposal(
+    context: CopilotContextV1, instruction_text: str, places: list
+) -> CopilotInterpretationV1 | None:
+    """Resolve "remove X" / "I don't want to visit X" to one remove_stop intent.
+
+    Only a single clause that names one place is resolved here; a compound
+    request goes through the per-clause path, and a replacement stays a
+    replacement. The optimizer and the evaluator still decide whether the trip
+    without the stop is feasible.
+    """
+    if not isinstance(context, CopilotContextV2) or is_stop_replacement_request(instruction_text):
+        return None
+    if _INSTEAD_OF.search(instruction_text) or _NEGATED_REMOVAL.search(instruction_text):
+        return None
+    match = _REMOVE_PLACE.search(instruction_text) or _DO_NOT_VISIT_PLACE.search(instruction_text)
+    if match is None or len(set(re.findall(r"copilotplace\d+", instruction_text, re.I))) != 1:
+        return None
+    rest = instruction_text[: match.start()] + " " + instruction_text[match.end() :]
+    if _EDIT_ACTION.search(re.sub(r"\bI(?:'d|’d| would) like\b|\bplease\b", " ", rest, flags=re.I)):
+        return None
+    # "Do not want to visit X for 75 minutes" rejects a length or a time, not the stop.
+    if re.search(
+        r"\b\d+\s*(?:min(?:ute)?s?|h(?:ou)?rs?)\b|\b(?:on|for)\s+day\s*\d|\b\d{1,2}(?::\d{2})?\s*(?:a\.?m|p\.?m)\b|\b(?:morning|afternoon|evening|tonight|today|tomorrow)\b",
+        instruction_text,
+        re.I,
+    ):
+        return None
+    index = int(match["index"])
+    if index >= len(places):
+        return None
+    place = places[index]
+    name = str(place["name"])
+    stop_id = str(place["place_id"])
+    if place["route_status"] != "accepted_stop" or stop_id not in context.allowed_stop_ids:
+        question = f"{name} is not in your current trip, so there is nothing to remove. Did you mean another stop?"
+        return CopilotInterpretationV1(
+            state="clarification_required",
+            assistant_message=question + " Nothing was changed.",
+            intents=(CopilotIntentV1(type="request_clarification", clarification_question=question),),
+        )
+    day = next(
+        (row["day"] for row in context.capabilities.get("stop_positions", ()) if row["stop_id"] == stop_id),
+        None,
+    )
+    where = f" from Day {day}" if day is not None else ""
+    return CopilotInterpretationV1(
+        state="proposal_ready",
         assistant_message=(
-            "Removing or excluding an accepted stop is not enabled in this repair workflow. Nothing was changed."
+            f"I prepared a change that removes {name}{where} with no replacement. "
+            "I will check the new route and schedule on the map; nothing is saved until you accept it."
         ),
-        intents=(CopilotIntentV1(type="unsupported_request"),),
+        intents=(CopilotIntentV1(type="remove_stop", target_stop_id=stop_id),),
+        highlights=CopilotHighlightsV1(stop_ids=(stop_id,)),
     )
 
 
@@ -168,9 +281,35 @@ def _bounded_chinese_edit_request(context: CopilotContextV1, message: str) -> Co
     for alias, token in sorted(aliases, key=lambda pair: len(pair[0]), reverse=True):
         text = re.sub(r"(?<![A-Za-z0-9_])" + re.escape(alias) + r"(?![A-Za-z0-9_])", token, text, flags=re.I)
     clauses = [part.strip() for part in re.split(r"[，,；;。.!?]+|並且|并且|而且|以及|並|并|且", text) if part.strip()]
+    # A clause with no place, no edit word and no condition that states a
+    # preference or reason only explains the request ("我們更喜歡海邊的自然保護區");
+    # drop it when another clause edits. A clause that asks for something else
+    # ("幫我預訂今晚的酒店", "把午餐變成免費") is a request, not an explanation.
+    explained = [
+        clause
+        for clause in clauses
+        if not (
+            "COPILOTZHPLACE" not in clause
+            and re.search(r"喜歡|喜欢|偏好|偏愛|偏爱|因為|因为|覺得|觉得|比較|比较|希望|擔心|担心|怕", clause)
+            and not re.search(
+                r"換|换|替|停留|改|刪|删|移|加|安排|調整|调整|保留|取消|去掉|不要|別|别|如果|若|假如|要是|除非|只要|一旦|的話|的话"
+                r"|把|幫|帮|請|请|預訂|预订|訂|订|變成|变成|買|买|付",
+                clause,
+            )
+        )
+    ]
+    if explained and len(explained) < len(clauses):
+        clauses = explained
     normalized = []
     for clause in clauses:
         clause = " ".join(clause.split())
+        # "第5天的 X 換成 Y" / "Day 5 的 X": the day label qualifies the stop.
+        clause = re.sub(
+            r"^((?:請|请)?\s*(?:把|將|将)?)\s*(?:第\s*\d+\s*天|day\s*\d+)\s*(?:的)?\s*(?=COPILOTZHPLACE)",
+            r"\1",
+            clause,
+            flags=re.I,
+        )
         replacement = re.fullmatch(
             r"(?:請|请)?\s*(?:把|將|将)?\s*(COPILOTZHPLACE\d+)\s*"
             r"(?:換成|换成|替換(?:為|成)|替换(?:为|成))\s*(COPILOTZHPLACE\d+)",
@@ -282,6 +421,18 @@ def request_semantic_guard(
             instruction_text = re.sub(
                 r"(?<!\w)" + re.escape(name) + r"(?!\w)", token, instruction_text, flags=re.IGNORECASE
             )
+    # "I don't want to remove X, just make it shorter": the negated removal only
+    # names the stop that the real edit is about. Keep the positive clause and
+    # point its pronoun at that stop, so the negation does not refuse the edit.
+    negated_target = _NEGATED_REMOVAL_THEN_EDIT.fullmatch(instruction_text)
+    if negated_target is not None and not _NEGATED_EDIT.search(negated_target["rest"]):
+        instruction_text = re.sub(r"\b(?:it|that|there)\b", negated_target["token"], negated_target["rest"], flags=re.I)
+        text = instruction_text
+        for token, name in place_names.items():
+            text = re.sub(re.escape(token), name, text, flags=re.I)
+    removal = _stop_removal_proposal(context, instruction_text, places)
+    if removal is not None:
+        return removal
     # A conjunction joining clock bounds is part of one time-window value.
     instruction_text = re.sub(r"(\d{2}:\d{2})\s+and\s+(?=\d{2}:\d{2})", r"\1 to ", instruction_text, flags=re.I)
     instruction_text = re.sub(
@@ -309,6 +460,39 @@ def request_semantic_guard(
         instruction_text,
         flags=re.I,
     )
+    # "I'd like to spend/visit/move ..." is one request: the courtesy phrase
+    # introduces the following edit verb and is not a second edit.
+    instruction_text = _COURTESY_EDIT_PREFIX.sub("", instruction_text)
+    # "visit time", "our COPILOTPLACE0 visit": a noun naming the stop's slot,
+    # not a second "visit" action.
+    instruction_text = re.sub(
+        r"\bvisit(?=\s+(?:time|times|duration|length|window|slot|hours?)\b)",
+        "stopslot",
+        instruction_text,
+        flags=re.I,
+    )
+    instruction_text = re.sub(
+        r"\b(our|the|my|your|this|that|copilotplace\d+)\s+visit\b",
+        r"\1 stopslot",
+        instruction_text,
+        flags=re.I,
+    )
+    # A complete descriptive sentence ("Bixby is too risky in this weather.",
+    # "Day 5 has too much driving.") explains the request; it contains no edit
+    # and is not a second clause. Only drop it when another sentence carries
+    # the edit, so a bare complaint still reaches the normal handling.
+    sentences = re.split(r"(?<=[.!?])\s+", instruction_text.strip())
+    if len(sentences) > 1:
+        kept = [
+            sentence
+            for sentence in sentences
+            if not _RATIONALE_SENTENCE.fullmatch(sentence)
+            or _EDIT_ACTION.search(sentence)
+            or _NEGATED_EDIT.search(sentence)
+            or _RATIONALE_CONDITION.search(sentence)
+        ]
+        if kept and len(kept) < len(sentences) and any(_EDIT_ACTION.search(sentence) for sentence in kept):
+            instruction_text = " ".join(kept)
     actions = [match.group().lower() for match in _EDIT_ACTION.finditer(instruction_text)]
     # A typed edit has no condition field. Preserve weather/event prerequisites
     # by asking, rather than silently proposing the unconditional subset.
@@ -403,7 +587,9 @@ def request_semantic_guard(
     unhandled_clause = len(clauses) > 1 and bool(actions)
     if (len(actions) > 1 or unhandled_clause) and not replacement_pair:
         labels = ", ".join(dict.fromkeys(actions)) or "multiple clauses"
-        if any(
+        # In the current workspace a removal clause resolves per clause like any
+        # other edit. Legacy v1 contexts have no removal path and refuse it whole.
+        if not isinstance(context, CopilotContextV2) and any(
             re.search(r"\b(?:remove|delete|exclude|skip)\s+copilotplace\d+\b", clause)
             and _NEGATED_EDIT.search(clause) is None
             and not (index == 0 and same_stop_replacement)
@@ -463,7 +649,11 @@ def request_semantic_guard(
             "Relative ordering needs two different accepted stops on the same accepted day. "
             "Please confirm those stops and their accepted day; no part was staged or changed."
         )
-    elif len(places) > (2 if is_stop_replacement_request(text) else 1) and actions:
+    elif (len(set(re.findall(r"copilotplace\d+", instruction_text, re.IGNORECASE))) or len(places)) > (
+        2 if is_stop_replacement_request(text) or _INSTEAD_OF.search(text) else 1
+    ) and actions:
+        # Count places in the instruction itself: a place named only in a
+        # dropped reason sentence ("sunset over Los Angeles") is not a target.
         question = "Your request names multiple places. Which single stop and edit should I handle first?"
     elif len(set(re.findall(r"\bday\s+(\d+)\b", text, re.IGNORECASE))) > 1 and actions:
         question = "Your request names multiple days. Which single destination day should I use?"
@@ -509,7 +699,8 @@ def _compound_proposal(context: CopilotContextV2, clauses: tuple[str, ...]) -> C
             return None
         days = {int(day) for day in re.findall(r"\bday\s+(\d+)\b", clause, re.IGNORECASE)}
         for intent in part.intents:
-            if days and intent.target_stop_id is not None:
+            # A move names its destination day, not the stop's accepted day.
+            if days and intent.target_stop_id is not None and intent.type != "move_day":
                 accepted_day = next(
                     (
                         row["day"]
@@ -521,7 +712,7 @@ def _compound_proposal(context: CopilotContextV2, clauses: tuple[str, ...]) -> C
                 if days != {accepted_day}:
                     question = (
                         f"Change {index} names a different day, but this stop is accepted on Day {accepted_day}. "
-                        "Moving stops between days is not enabled. Should I keep its accepted day instead? "
+                        "Should I keep its accepted day, or move the stop to the day you named? "
                         "No part of the combined request was staged or changed."
                     )
                     return CopilotInterpretationV1(
@@ -546,7 +737,8 @@ def _compound_proposal(context: CopilotContextV2, clauses: tuple[str, ...]) -> C
         state="proposal_ready",
         intents=intents,
         highlights=highlights,
-        assistant_message=f"I prepared all {len(intents)} requested changes as one combined suggestion. Nothing was staged or changed.",
+        assistant_message=describe_proposal(context, intents)
+        or f"I prepared all {len(intents)} requested changes as one combined suggestion. Nothing was staged or changed.",
     )
     return guard_contextual_output(context, result)
 
@@ -666,7 +858,7 @@ class DeterministicCopilotAdapter:
                 ),
             )
         if is_stop_removal_request(message) and not is_stop_replacement_request(message):
-            return self._validated(context, unsupported_stop_removal())
+            return self._validated(context, unsupported_stop_removal(context))
 
         operation = self._operation_intent(normalized, context)
         if operation is not None:
@@ -971,6 +1163,7 @@ def _validate_intent(context: CopilotContextV1, intent: CopilotIntentV1) -> None
         "review_registered_repair": ({"preference"}, set()),
         "keep_original": (set(), set()),
         "keep_stop": ({"target_stop_id"}, {"target_stop_id"}),
+        "remove_stop": ({"target_stop_id"}, {"target_stop_id"}),
         "lock_stop": ({"target_stop_id"}, {"target_stop_id"}),
         "mark_flexible": ({"target_stop_id"}, {"target_stop_id"}),
         "move_day": (
@@ -992,6 +1185,7 @@ def _validate_intent(context: CopilotContextV1, intent: CopilotIntentV1) -> None
         ),
         "unsupported_request": (set(), set()),
         "external_action_not_supported": (set(), set()),
+        "answer_question": (set(), set()),
     }
     allowed, required = allowed_required[intent.type]
     if not required <= present or not present <= allowed:
@@ -1033,6 +1227,10 @@ def _validate_state_combination(interpretation: CopilotInterpretationV1) -> None
             raise CopilotContractError
     elif interpretation.state == "unsupported":
         if intent_types - {"unsupported_request", "external_action_not_supported"}:
+            raise CopilotContractError
+    elif interpretation.state == "answered":
+        # A read-only answer: exactly one marker intent, never a proposal or permission.
+        if len(interpretation.intents) != 1 or intent_types != {"answer_question"}:
             raise CopilotContractError
     elif interpretation.intents:
         raise CopilotContractError
@@ -1144,15 +1342,40 @@ def _matched_known_places(
     return list(unique.values())
 
 
+def _only_labels_a_day(place: dict[str, object], message: str) -> bool:
+    padded = f" {_normalized_place_text(message)} "
+    found = [
+        match
+        for term in (str(place["name"]), *(str(alias) for alias in place["aliases"]))
+        if _normalized_place_text(term)
+        for match in re.finditer(r"(?<!\w)" + re.escape(_normalized_place_text(term)) + r"(?!\w)", padded)
+    ]
+    return bool(found) and all(re.match(r"\s+(?:day|days|leg)\b", padded[match.end() :]) for match in found)
+
+
 def known_place_clarification(context: CopilotContextV1, message: str) -> tuple[str, str] | None:
     """Return safe local copy for one recognized place without claiming feasibility."""
 
-    place = matched_known_place(context, message)
+    # "the Big Sur day" uses a place name as a day label, not as a place request.
+    matches = [place for place in _matched_known_places(context, message) if not _only_labels_a_day(place, message)]
+    place = matches[0] if len(matches) == 1 else None
+    replaced = None
+    if len(matches) == 2 and _INSTEAD_OF.search(message):
+        accepted = [row for row in matches if row["route_status"] == "accepted_stop"]
+        other = [row for row in matches if row["route_status"] != "accepted_stop"]
+        if len(accepted) == 1 and len(other) == 1:
+            place, replaced = other[0], accepted[0]
     if place is None:
         return None
     name = str(place["name"])
     status = place["route_status"]
-    if status == "accepted_stop":
+    if replaced is not None and status != "registered_route_candidate":
+        question = (
+            f"I found {name} in the California statewide discovery catalog, but its road access "
+            f"and route are not validated for this trip, so I cannot swap it in for {replaced['name']} yet. "
+            f"Do you want to replace {replaced['name']} with a route-validated nearby option instead?"
+        )
+    elif status == "accepted_stop":
         question = f"{name} is already in this itinerary. Do you want to keep it, move it, or review its assigned day?"
     elif status == "registered_route_candidate":
         question = f"Do you want to add {name} or replace an existing stop with it, and on which day?"

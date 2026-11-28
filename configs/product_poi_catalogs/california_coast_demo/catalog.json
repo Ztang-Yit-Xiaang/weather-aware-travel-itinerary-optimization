@@ -32,7 +32,7 @@
       "source_refs": [
         "bixby_candidate_request_w2",
         "registered_child_plan_f5ee52459659dcb5",
-        "registered_certificate_686ef65d376b2867",
+        "registered_certificate_22c4b9fb2dcbbe54",
         "route_matrix_68ab535465b06808"
       ]
     },
@@ -81,13 +81,13 @@
     },
     {
       "retrieved_at": null,
-      "source_id": "registered_certificate_5a6deef4c159d346",
+      "source_id": "registered_certificate_22c4b9fb2dcbbe54",
       "source_type": "curated_dataset",
       "source_url": null
     },
     {
       "retrieved_at": null,
-      "source_id": "registered_certificate_686ef65d376b2867",
+      "source_id": "registered_certificate_5a6deef4c159d346",
       "source_type": "curated_dataset",
       "source_url": null
     },

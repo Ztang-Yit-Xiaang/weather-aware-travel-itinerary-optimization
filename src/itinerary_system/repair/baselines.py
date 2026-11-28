@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import asdict, dataclass, replace
+from itertools import product
 from typing import Any
 
 from ..plans import OwnershipPolicy, compute_plan_diff
@@ -96,33 +97,64 @@ def plan_deterministic_context_aware_heuristic(
             planner_context_mode=PlannerContextMode.AWARE,
         )
         selected_by_day: dict[int, DayRouteCandidate] = {}
-        for day in neighborhood.editable_days:
-            result = solve_day_route_subproblem(model, route_matrix, day=day, config=config)
-            feasible = tuple(candidate for candidate in result.candidates if candidate.feasible)
-            scored = sorted(
-                ((_heuristic_score(model, candidate), candidate) for candidate in feasible),
-                key=lambda item: item[0],
-            )
-            selected = scored[0][1] if scored else None
-            if selected is None:
-                failure_reasons.append(f"no_feasible_local_candidate:day:{day}")
-            else:
-                selected_by_day[day] = selected
-            for candidate in result.candidates:
-                score = _heuristic_score(model, candidate) if candidate.feasible else None
-                decision_records.append(
-                    BaselineDecisionRecord(
-                        candidate_id=str(candidate.repair_solution.metadata.get("candidate_id", "")),
-                        day=day,
-                        stop_sequence=candidate.stop_sequence,
-                        feasible=candidate.feasible,
-                        contextual_burden=score[0] if score is not None else None,
-                        utility=-score[1] if score is not None else None,
-                        travel_minutes=candidate.travel_minutes,
-                        selected=candidate is selected,
-                        violations=candidate.violations,
+        if model.metadata.get("move_stops") or model.metadata.get("remove_stops"):
+            # A cross-day move (or a removal next to another edit) changes two or more days together, so each day's
+            # partial plan cannot pass the trip-wide checks alone. Keep the
+            # candidates that are feasible within their own day, then check
+            # every combination once as a whole plan.
+            results = {
+                day: solve_day_route_subproblem(model, route_matrix, day=day, config=config)
+                for day in neighborhood.editable_days
+            }
+            selected_by_day, joint_failures = _select_joint_move_candidates(model, results)
+            failure_reasons.extend(joint_failures)
+            if any(reason.startswith("day_time_exceeded:") for reason in joint_failures):
+                failure_reasons.append(f"daily_time_limit_minutes:{int(config.max_day_minutes)}")
+            for day, result in results.items():
+                for candidate in result.candidates:
+                    local = _day_local_violations(model, candidate)
+                    score = _heuristic_score(model, candidate) if not local else None
+                    decision_records.append(
+                        BaselineDecisionRecord(
+                            candidate_id=str(candidate.repair_solution.metadata.get("candidate_id", "")),
+                            day=day,
+                            stop_sequence=candidate.stop_sequence,
+                            feasible=not local,
+                            contextual_burden=score[0] if score is not None else None,
+                            utility=-score[1] if score is not None else None,
+                            travel_minutes=candidate.travel_minutes,
+                            selected=selected_by_day.get(day) is candidate,
+                            violations=local,
+                        )
                     )
+        else:
+            for day in neighborhood.editable_days:
+                result = solve_day_route_subproblem(model, route_matrix, day=day, config=config)
+                feasible = tuple(candidate for candidate in result.candidates if candidate.feasible)
+                scored = sorted(
+                    ((_heuristic_score(model, candidate), candidate) for candidate in feasible),
+                    key=lambda item: item[0],
                 )
+                selected = scored[0][1] if scored else None
+                if selected is None:
+                    failure_reasons.append(f"no_feasible_local_candidate:day:{day}")
+                else:
+                    selected_by_day[day] = selected
+                for candidate in result.candidates:
+                    score = _heuristic_score(model, candidate) if candidate.feasible else None
+                    decision_records.append(
+                        BaselineDecisionRecord(
+                            candidate_id=str(candidate.repair_solution.metadata.get("candidate_id", "")),
+                            day=day,
+                            stop_sequence=candidate.stop_sequence,
+                            feasible=candidate.feasible,
+                            contextual_burden=score[0] if score is not None else None,
+                            utility=-score[1] if score is not None else None,
+                            travel_minutes=candidate.travel_minutes,
+                            selected=candidate is selected,
+                            violations=candidate.violations,
+                        )
+                    )
         if not failure_reasons:
             solution = _merge_day_candidates(model, selected_by_day, method_id=method_id)
             violations = model.validate_solution(solution)
@@ -169,6 +201,68 @@ def _heuristic_score(model: RepairModel, candidate: DayRouteCandidate) -> tuple[
     return float(burden), -float(utility), float(candidate.travel_minutes), stable_id
 
 
+MAX_JOINT_MOVE_COMBINATIONS = 20_000
+
+
+def _day_local_violations(model: RepairModel, candidate: DayRouteCandidate) -> tuple[str, ...]:
+    """Violations that belong to the day itself: route legs, time, opening hours.
+
+    The day candidate's own list also holds trip-wide checks of a plan in which
+    only this day changed; those are checked again on the combined plan.
+    """
+    trip_wide = set(model.validate_solution(candidate.repair_solution))
+    return tuple(violation for violation in candidate.violations if violation not in trip_wide)
+
+
+def _select_joint_move_candidates(
+    model: RepairModel,
+    results: dict[int, Any],
+) -> tuple[dict[int, DayRouteCandidate], list[str]]:
+    days = sorted(results)
+    local_feasible: dict[int, list[DayRouteCandidate]] = {}
+    for day in days:
+        local_feasible[day] = []
+        local_violations = []
+        for candidate in results[day].candidates:
+            violations = _day_local_violations(model, candidate)
+            local_violations.append(violations)
+            if not violations:
+                local_feasible[day].append(candidate)
+        if not local_feasible[day]:
+            # Say why the day failed when every option breaks the daily time
+            # limit, so the product can explain an unreasonable move.
+            too_long = bool(local_violations) and all(
+                f"day_time_exceeded:{day}" in violations for violations in local_violations
+            )
+            failures = [f"no_feasible_local_candidate:day:{day}"]
+            if too_long:
+                failures.append(f"day_time_exceeded:{day}")
+            return {}, failures
+    combinations = 1
+    for day in days:
+        combinations *= len(local_feasible[day])
+    if combinations > MAX_JOINT_MOVE_COMBINATIONS:
+        return {}, [f"joint_move_search_too_large:{combinations}"]
+    best: tuple[tuple[float, float, float, str], dict[int, DayRouteCandidate]] | None = None
+    for choice in product(*(local_feasible[day] for day in days)):
+        selected = dict(zip(days, choice, strict=True))
+        merged = _merge_day_candidates(model, selected, method_id=DETERMINISTIC_CONTEXT_AWARE_HEURISTIC)
+        if model.validate_solution(merged):
+            continue
+        parts = [_heuristic_score(model, candidate) for candidate in choice]
+        score = (
+            sum(part[0] for part in parts),
+            sum(part[1] for part in parts),
+            sum(part[2] for part in parts),
+            "|".join(part[3] for part in parts),
+        )
+        if best is None or score < best[0]:
+            best = (score, selected)
+    if best is None:
+        return {}, ["no_feasible_joint_move_candidate"]
+    return best[1], []
+
+
 def _merge_day_candidates(
     model: RepairModel,
     selected_by_day: dict[int, DayRouteCandidate],
@@ -191,9 +285,12 @@ def _merge_day_candidates(
             )
         else:
             sequence = candidate.stop_sequence
-            route_ids.update(
-                {int(key): str(value) for key, value in candidate.repair_solution.route_ids_by_day.items()}
-            )
+            # Take only this day's route id: each day candidate also carries the
+            # parent's ids for every other day, which would overwrite the new
+            # ids of days merged earlier when several days change.
+            own_route_ids = {int(key): str(value) for key, value in candidate.repair_solution.route_ids_by_day.items()}
+            if day in own_route_ids:
+                route_ids[day] = own_route_ids[day]
             selected_candidate_ids.append(str(candidate.repair_solution.metadata.get("candidate_id", "")))
         day_sequences[str(day)] = sequence
         for stop_id in sequence:

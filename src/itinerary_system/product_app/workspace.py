@@ -52,6 +52,7 @@ class WorkspaceStore:
         "route_feedback",
         "replace_nearby",
         "add_candidate",
+        "remove_stop",
         *TYPED_EDIT_OPERATION_NAMES,
         *CONFIRMED_MAP_OPERATIONS,
     }
@@ -775,10 +776,10 @@ class WorkspaceStore:
             except (ValueError, TypeError, KeyError):
                 raise WorkspaceError("invalid_trip_planning_parameters", 422) from None
             return
-        parent_operations = {"keep_stop", "lock_stop", "mark_flexible", "move_day", "replace_nearby"}
+        parent_operations = {"keep_stop", "lock_stop", "mark_flexible", "move_day", "replace_nearby", "remove_stop"}
         if operation_type in parent_operations and target not in parent_targets:
             raise WorkspaceError("invalid_draft_target", 422)
-        if operation_type in {"keep_stop", "lock_stop", "mark_flexible"}:
+        if operation_type in {"keep_stop", "lock_stop", "mark_flexible", "remove_stop"}:
             if parameters:
                 raise WorkspaceError("invalid_draft_parameters", 422)
             return
@@ -1213,6 +1214,10 @@ class WorkspaceStore:
             raise WorkspaceError("draft_conflicting_day_moves", 409)
         if any(len(values) > 1 for values in replacements.values()):
             raise WorkspaceError("draft_conflicting_replacements", 409)
+        # A removed stop cannot also be kept, moved, replaced or edited.
+        removals = {row.target for row in operations if row.type == "remove_stop"}
+        if any(row.type != "remove_stop" and row.target in removals for row in operations):
+            raise WorkspaceError("draft_conflicts_with_removal", 409)
         if len(preferences) > 1:
             raise WorkspaceError("draft_conflicting_route_feedback", 409)
         if len(requested_candidates) > 1:

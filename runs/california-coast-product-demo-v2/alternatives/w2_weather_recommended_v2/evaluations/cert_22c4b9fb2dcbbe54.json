@@ -1,14 +1,14 @@
 {
   "artifact_grounding_status": "PASSED",
   "blocking_warning_count": 0,
-  "certificate_id": "cert_686ef65d376b2867",
+  "certificate_id": "cert_22c4b9fb2dcbbe54",
   "comparison_eligibility": "eligible",
-  "content_hash": "5c18f263adf94110",
+  "content_hash": "50a4fb33ca7c5c2a",
   "eligible": true,
   "evaluated_at": "2026-08-04T00:00:00+00:00",
-  "evaluation_id": "cert_686ef65d376b2867",
+  "evaluation_id": "cert_22c4b9fb2dcbbe54",
   "evaluation_status": "PASSED",
-  "evaluator_version": "verify-001-plan-evaluator-v1",
+  "evaluator_version": "verify-001-plan-evaluator-v3",
   "failure_count": 0,
   "failures": [],
   "hard_feasibility_status": "PASSED",
@@ -21,11 +21,10 @@
     "route_required_leg_count": 16.0,
     "route_road_validated_leg_count": 16.0,
     "selected_stop_count": 9.0,
-    "sequence_stop_count": 9.0,
-    "weather_risk_delta": 0.85
+    "sequence_stop_count": 9.0
   },
   "nonblocking_warning_count": 0,
-  "plan_content_hash": "101223352523c41c",
+  "plan_content_hash": "c7c4d4d9dfb93bc2",
   "plan_id": "plan_f5ee52459659dcb5",
   "reward_eligibility": true,
   "route_validation": {

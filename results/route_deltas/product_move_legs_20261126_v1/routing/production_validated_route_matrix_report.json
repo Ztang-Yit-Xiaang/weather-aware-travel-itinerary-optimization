@@ -1,0 +1,15 @@
+{
+  "matrix_id": "route_matrix_dda369a5e9ea6eac",
+  "context_snapshot_id": "context_coherent_california_demo_2026_08",
+  "required_leg_count": 235,
+  "present_leg_count": 235,
+  "road_validated_leg_count": 235,
+  "fallback_leg_count": 0,
+  "invalid_value_count": 0,
+  "missing_leg_count": 0,
+  "publication_ready": true,
+  "source_bundle_id": "route_bundle_3481f26443ff3923",
+  "source_content_sha256": "cf65054e3c24157524876e0235846969cf74844885fe1903684a0ad38cc958de",
+  "errors": [],
+  "warnings": []
+}

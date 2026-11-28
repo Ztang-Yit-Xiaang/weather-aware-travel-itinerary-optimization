@@ -16,7 +16,7 @@
     <a class="skip-link" href="#main-workspace">Skip to workspace</a>
     <div id="loading-screen" class="loading-screen" role="status">
       <span class="spinner" aria-hidden="true"></span>
-      <p>Validating local product readiness…</p>
+      <p>Loading your trip…</p>
       <div class="direct-file-help">
         <strong>This HTML file is not the application launcher.</strong>
         <p>Close this tab, then double-click <code>OPEN_ITINERARY_COPILOT.cmd</code> in the repository root and keep its terminal open.</p>
@@ -27,10 +27,10 @@
     <div id="app-shell" class="app-shell" hidden>
       <header class="topbar">
         <div class="brand">
-          <span class="brand-mark" aria-hidden="true">IR</span>
+          <span class="brand-mark" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19c3-1 4-5 8-5s5 4 8 5"/><circle cx="12" cy="8" r="3"/></svg></span>
           <div>
             <strong>Itinerary Repair Copilot</strong>
-            <span>Context-aware, inspectable itinerary repair</span>
+            <span>Weather-aware trip planning you can check</span>
           </div>
         </div>
         <ol class="flow" aria-label="Repair workflow">
@@ -51,11 +51,11 @@
 
       <div class="desktop-shell">
         <nav class="navigation-rail" aria-label="Primary">
-          <button class="nav-item is-active" data-route="/app/itinerary" type="button"><span aria-hidden="true">IT</span><span>Itinerary</span></button>
-          <button class="nav-item" data-route="/app/map" type="button"><span aria-hidden="true">MP</span><span>Map</span></button>
-          <button class="nav-item" data-route="/app/repairs" type="button"><span aria-hidden="true">RP</span><span>Repairs</span></button>
-          <button class="nav-item" data-route="/app/compare" type="button"><span aria-hidden="true">CP</span><span>Compare</span></button>
-          <button class="nav-item" data-route="/app/evidence" type="button"><span aria-hidden="true">EV</span><span>Evidence</span></button>
+          <button class="nav-item is-active" data-route="/app/itinerary" type="button"><span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 6h12M8 12h12M8 18h12"/><circle cx="4" cy="6" r="1.2"/><circle cx="4" cy="12" r="1.2"/><circle cx="4" cy="18" r="1.2"/></svg></span><span>Itinerary</span></button>
+          <button class="nav-item" data-route="/app/map" type="button"><span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4 3 6.5v13.5l6-2.5 6 2.5 6-2.5V4l-6 2.5z"/><path d="M9 4v13.5M15 6.5V20"/></svg></span><span>Map</span></button>
+          <button class="nav-item" data-route="/app/repairs" type="button"><span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a4 4 0 0 0-5.3 5.3L4 17l3 3 5.4-5.4a4 4 0 0 0 5.3-5.3l-2.6 2.6-2.3-.6-.6-2.3z"/></svg></span><span>Repairs</span></button>
+          <button class="nav-item" data-route="/app/compare" type="button"><span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="7" height="16" rx="1.5"/><rect x="14" y="4" width="7" height="16" rx="1.5"/></svg></span><span>Compare</span></button>
+          <button class="nav-item" data-route="/app/evidence" type="button"><span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 5 6v5c0 4.5 3 8 7 10 4-2 7-5.5 7-10V6z"/><path d="m9 12 2 2 4-4"/></svg></span><span>Evidence</span></button>
         </nav>
 
         <aside class="itinerary-rail" aria-labelledby="trip-title">
@@ -82,11 +82,11 @@
       </div>
 
       <nav class="mobile-nav" aria-label="Mobile navigation">
-        <button data-route="/app/itinerary" type="button"><span aria-hidden="true">IT</span>Itinerary</button>
-        <button data-route="/app/map" type="button"><span aria-hidden="true">MP</span>Map</button>
-        <button data-route="/app/repairs" type="button"><span aria-hidden="true">RP</span>Repairs</button>
-        <button data-route="/app/compare" type="button"><span aria-hidden="true">CP</span>Compare</button>
-        <button data-route="/app/evidence" type="button"><span aria-hidden="true">EV</span>Evidence</button>
+        <button data-route="/app/itinerary" type="button"><span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 6h12M8 12h12M8 18h12"/><circle cx="4" cy="6" r="1.2"/><circle cx="4" cy="12" r="1.2"/><circle cx="4" cy="18" r="1.2"/></svg></span>Itinerary</button>
+        <button data-route="/app/map" type="button"><span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4 3 6.5v13.5l6-2.5 6 2.5 6-2.5V4l-6 2.5z"/><path d="M9 4v13.5M15 6.5V20"/></svg></span>Map</button>
+        <button data-route="/app/repairs" type="button"><span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a4 4 0 0 0-5.3 5.3L4 17l3 3 5.4-5.4a4 4 0 0 0 5.3-5.3l-2.6 2.6-2.3-.6-.6-2.3z"/></svg></span>Repairs</button>
+        <button data-route="/app/compare" type="button"><span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="7" height="16" rx="1.5"/><rect x="14" y="4" width="7" height="16" rx="1.5"/></svg></span>Compare</button>
+        <button data-route="/app/evidence" type="button"><span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 5 6v5c0 4.5 3 8 7 10 4-2 7-5.5 7-10V6z"/><path d="m9 12 2 2 4-4"/></svg></span>Evidence</button>
       </nav>
 
       <aside id="copilot-dock" class="copilot-dock" role="complementary" aria-labelledby="copilot-title" hidden>
@@ -102,16 +102,19 @@
           </div>
         </header>
         <div id="context-chips" class="context-chips" aria-label="Visible Copilot context"></div>
-        <p id="copilot-disclosure" class="copilot-disclosure"></p>
+        <p id="copilot-disclosure" class="copilot-disclosure" tabindex="0"></p>
         <div id="copilot-lifecycle" class="copilot-lifecycle" role="status" aria-live="polite" aria-atomic="true">Idle</div>
         <div id="conversation" class="conversation" role="log" aria-live="polite" aria-relevant="additions text" aria-label="Copilot conversation"></div>
         <div class="quick-prompts" aria-label="Example requests">
           <button type="button" data-prompt="Review the safer weather repair">Review risk repair</button>
+          <button type="button" data-prompt="Which day has the most driving?">Most driving?</button>
+          <button type="button" data-prompt="Roughly how much will this trip cost?">Budget estimate</button>
+          <button type="button" data-prompt="What should I know about the stops on the selected day?">About this day</button>
           <button type="button" data-prompt="Keep the original plan">Keep original</button>
         </div>
         <form id="copilot-form" class="composer">
           <label class="sr-only" for="copilot-input">Ask about the trip</label>
-          <textarea id="copilot-input" rows="2" maxlength="2000" aria-describedby="copilot-disclosure copilot-lifecycle" placeholder="Ask about this trip…"></textarea>
+          <textarea id="copilot-input" rows="2" maxlength="2000" aria-describedby="copilot-disclosure copilot-lifecycle" placeholder="Ask about the trip, or describe a change…"></textarea>
           <button class="send-button" id="copilot-submit" type="submit" data-mode="send" aria-label="Send message">→</button>
         </form>
       </aside>
@@ -158,6 +161,7 @@
           <button id="draft-keep" value="none" type="button">Keep stop</button>
           <button id="draft-move" value="none" type="button">Move day</button>
           <button id="draft-lock" value="none" type="button">Lock stop</button>
+          <button id="draft-remove" value="none" type="button">Remove stop</button>
           <button id="draft-flexible" value="none" type="button">Mark flexible</button>
           <button id="draft-feedback" value="none" type="button">Reduce route risk</button>
           <button id="draft-replace" value="none" type="button">Replace nearby</button>

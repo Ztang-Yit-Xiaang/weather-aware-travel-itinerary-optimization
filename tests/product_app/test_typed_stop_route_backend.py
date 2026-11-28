@@ -111,6 +111,7 @@ def test_typed_edit_capabilities_are_closed_and_truthful(tmp_path: Path) -> None
         "early_arrival_policy": "wait_until_earliest_arrival",
         "latest_departure_semantics": "departure_after_visit",
         "combinable_operation_types": [
+            "add_candidate",
             "keep_stop",
             "replace_nearby",
             "set_stop_duration",
@@ -144,6 +145,7 @@ def test_typed_edit_capabilities_are_closed_and_truthful(tmp_path: Path) -> None
         "typed_source_field": "itinerary_role_source",
         "typed_source_value": "user_declared_itinerary_role",
         "combinable_operation_types": [
+            "add_candidate",
             "keep_stop",
             "replace_nearby",
             "set_stop_duration",
@@ -160,7 +162,7 @@ def test_typed_edit_capabilities_are_closed_and_truthful(tmp_path: Path) -> None
     ]
 
 
-def test_changed_set_stop_day_runs_pipeline_and_reports_no_feasible_child_truthfully() -> None:
+def test_changed_set_stop_day_runs_pipeline_and_moves_the_stop() -> None:
     package = load_product_demo_package(ROOT, ROOT / "runs" / "california-coast-product-demo-v2")
     compiler = FrozenDraftCompiler(
         package.primary_bundle.parent_plan,
@@ -180,12 +182,13 @@ def test_changed_set_stop_day_runs_pipeline_and_reports_no_feasible_child_truthf
         accepted_plan_id="plan_e1c4f803691e3188",
     )
 
-    assert compiled.state == "not_evaluated"
-    assert compiled.reason == "no_feasible_local_candidate"
-    assert compiled.runtime_execution["evaluation_executed"] is False
-    assert compiled.child_plan is None
-    assert compiled.diff is None
-    assert compiled.certificate is None
+    # The cross-day search (2026-11-26) can place the stop on its new day.
+    assert compiled.state == "eligible"
+    assert compiled.reason is None
+    days = {row["day"]: row["stop_ids"] for row in compiled.child_plan["ordered_days"]}
+    assert "griffith_observatory" in days[4]
+    assert 3 not in days
+    assert compiled.certificate["plan_id"] == compiled.child_plan["plan_id"]
 
 
 def test_same_day_set_stop_day_is_rejected_before_append(tmp_path: Path) -> None:

@@ -213,6 +213,6 @@ test("Trip metrics hide only in Compare/Evidence and return with the same canoni
     state.route = route; render();
     assert.equal(strip.hidden, ["/app/compare", "/app/evidence"].includes(route));
     assert.equal(strip.dataset.planId, plan.plan_id); assert.equal(strip.dataset.planContentHash, plan.content_hash);
-    assert.equal(strip.dataset.evaluationId, "certificate-child"); assert.match(strip.innerHTML, /1992.62 min/);
+    assert.equal(strip.dataset.evaluationId, "certificate-child"); assert.match(strip.innerHTML, /33 h 13 min/);
   }
 });

@@ -73,6 +73,7 @@ test("camera padding scales to the actual pane instead of consuming half a narro
   const options = new Function("container", `return (${match[1]});`);
   assert.deepEqual(options({ clientWidth:204, clientHeight:334 }), {padding:25.5,maxZoom:13,duration:0});
   assert.deepEqual(options({ clientWidth:720, clientHeight:650 }), {padding:54,maxZoom:13,duration:0});
+  assert.ok(source.includes("{ bounds: fittedBounds, fitBoundsOptions }"));
   const construction = source.match(/new window\.maplibregl\.Map\((\{[\s\S]*?\n      \})\)/);
   assert.ok(construction, "Map construction must retain the canonical fit options");
   const fitOptions = options({clientWidth:204, clientHeight:334});

@@ -32,7 +32,7 @@ from .context import (
     context_selection_requirements,
     contextualize_stop_records,
 )
-from .neighborhood import RepairNeighborhood, build_parent_plan_index
+from .neighborhood import RepairNeighborhood, _lookup_stop_id, build_parent_plan_index
 
 
 @dataclass(frozen=True)
@@ -182,6 +182,11 @@ class RepairModel:
             day = int(solution.day_assignments.get(stop_id, record.get("day", 0)) or 0)
             if day <= 0:
                 raise ValueError(f"repair solution requires a positive day for {stop_id}")
+            # A stop moved to another day sleeps where that day sleeps.
+            if stop_id in parent_stops and _coerce_int(record.get("day")) not in (None, day) and "lodging_id" in record:
+                lodging = solution.lodging_assignments.get(str(day))
+                if lodging:
+                    record["lodging_id"] = lodging
             record["day"] = day
             day_assignments[stop_id] = day
             ordered_by_day.setdefault(day, []).append(stop_id)
@@ -375,6 +380,8 @@ def build_repair_master_model(
             and constraint.scope in {ConstraintScope.STOP, ConstraintScope.POI}
         ),
         "parent_plan": parent,
+        "move_stops": _move_targets(request, index),
+        "remove_stops": _remove_targets(request, index),
     }
     model_seed = {
         "ownership_policy": asdict(policy),
@@ -897,6 +904,35 @@ def _change_counts(change_variables: tuple[TypedChangeVariable, ...], values: di
         if key:
             counts[key] += float(values.get(change.name, 0.0))
     return counts
+
+
+def _move_targets(request: Any, index: Any) -> dict[str, int]:
+    """Confirmed cross-day moves: accepted stop id -> destination day in this plan."""
+    raw = getattr(request, "confirmed_constraints", {})
+    moves = raw.get("move_stops", {}) if isinstance(raw, dict) else {}
+    if not isinstance(moves, dict):
+        return {}
+    stop_ids, days = set(index.stop_ids), set(index.days)
+    targets: dict[str, int] = {}
+    for stop_id, raw_day in moves.items():
+        stop_id = _lookup_stop_id(stop_id, index)
+        if not stop_id:
+            continue
+        day = _coerce_int(raw_day)
+        if str(stop_id) in stop_ids and day in days and index.stop_day.get(str(stop_id)) != day:
+            targets[str(stop_id)] = int(day)
+    return dict(sorted(targets.items()))
+
+
+def _remove_targets(request: Any, index: Any) -> tuple[str, ...]:
+    """Confirmed removals: accepted stops the user asked to drop with no replacement."""
+    raw = getattr(request, "confirmed_constraints", {})
+    removals = raw.get("remove_stops", ()) if isinstance(raw, dict) else ()
+    if not isinstance(removals, (list, tuple)):
+        return ()
+    stop_ids = set(index.stop_ids)
+    found = (_lookup_stop_id(stop_id, index) for stop_id in removals)
+    return tuple(sorted({str(stop_id) for stop_id in found if stop_id and str(stop_id) in stop_ids}))
 
 
 def _candidate_stops(request: Any) -> tuple[dict[str, Any], ...]:

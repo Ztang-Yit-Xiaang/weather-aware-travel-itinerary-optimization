@@ -247,8 +247,10 @@ def test_provider_prose_is_replaced_by_canonical_local_copy(provider_claim: str)
 
     result = _run(OpenAICopilotAdapter(model="gpt-5.6-terra", api_key="unused", client=client))
 
+    # The copy is built locally from the typed intent, never from provider prose.
     assert result.assistant_message == (
-        "I prepared a typed itinerary suggestion for your review. Nothing was changed or executed automatically."
+        "I prepared a change that will move stop_a to Day 3. "
+        "I will check the new route and schedule on the map; nothing is saved until you accept it."
     )
     assert provider_claim not in result.assistant_message
 

@@ -4,7 +4,7 @@
   "change_components": {
     "weighted_edit_cost": 6.0
   },
-  "content_hash": "101223352523c41c",
+  "content_hash": "c7c4d4d9dfb93bc2",
   "context_exposure_components": {},
   "context_snapshot_id": "context_static_demo_2026_06",
   "created_at": "",
@@ -192,7 +192,7 @@
       "source_confidence": 0.45,
       "source_list": "curated_social_must_go",
       "stop_id": "bixby_creek_bridge_viewpoint",
-      "stop_order": 2,
+      "stop_order": 1,
       "visit_duration_minutes": 45,
       "weather_risk": 0.1,
       "weather_sensitivity": 0.54209375

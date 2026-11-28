@@ -107,7 +107,8 @@ def test_context_v2_contains_current_capabilities_and_empty_plan_bound_memory(ru
     context = service.copilot_context(session).as_dict()
     assert context["schema_version"] == "copilot-context-v2"
     assert context["accepted_plan_content_hash"]
-    assert context["capabilities"]["operations"]["add_candidate"]["preview_executable"] is False
+    assert context["capabilities"]["operations"]["move_day"]["preview_executable"] is True
+    assert context["capabilities"]["operations"]["mark_flexible"]["preview_executable"] is False
     assert context["conversation_memory"]["plan_id"] == session.accepted_plan_id
     assert context["conversation_memory"]["pending_clarification"] is None
 
@@ -193,13 +194,17 @@ def test_supported_replacement_clarifies_one_slot_and_binds_short_answer(runtime
     evidence("replacement_slot_answer", runtime)
 
 
-def test_disabled_move_explains_capability_before_asking_for_a_day(runtime):
-    service, session, send = runtime.service, runtime.session, runtime.send
-    turn = send("Move Golden Gate Bridge.")
+def test_enabled_move_asks_for_the_missing_day(runtime):
+    turn = runtime.send("Move Golden Gate Bridge.")
+    assert turn["interpretation"]["state"] == "clarification_required"
+    assert runtime.session.draft == []
+
+
+def test_disabled_flexible_explains_capability_instead_of_staging(runtime):
+    turn = runtime.send("Mark Golden Gate Bridge as flexible.")
     assert turn["interpretation"]["state"] == "unsupported"
-    assert "optimizer" in turn["assistant_message"]
-    assert "Which day" not in turn["assistant_message"]
-    assert service.copilot_context(session).conversation_memory["pending_clarification"] is None
+    assert runtime.session.draft == []
+    assert runtime.service.copilot_context(runtime.session).conversation_memory["pending_clarification"] is None
 
 
 def test_explicit_preference_survives_beyond_six_turns_as_proposed_only(runtime):
@@ -309,7 +314,7 @@ def test_fake_provider_receives_v2_memory_and_exact_capability_context(runtime):
     context = json.loads(request["input"].split("<workspace_context>\n")[1].split("\n</workspace_context>")[0])
     assert context["schema_version"] == "copilot-context-v2"
     assert context["conversation_memory"]["proposed_preferences"][0]["preference"] == "reduce_driving"
-    assert context["capabilities"]["operations"]["add_candidate"]["preview_executable"] is False
+    assert context["capabilities"]["operations"]["mark_flexible"]["preview_executable"] is False
     assert response["interpretation"]["state"] == "clarification_required"
     from openai.lib._pydantic import to_strict_json_schema
 
@@ -333,7 +338,7 @@ def test_fake_provider_cannot_override_disabled_capability(runtime):
             "schema_version": "copilot-interpretation-v1",
             "state": "proposal_ready",
             "assistant_message": "Do this edit.",
-            "intents": [{"type": "move_day", "target_stop_id": "golden_gate_bridge", "destination_day": 3}],
+            "intents": [{"type": "mark_flexible", "target_stop_id": "golden_gate_bridge"}],
         }
     )
     runtime.service.copilot = OpenAICopilotAdapter(model="fake-model", api_key="unused", client=client)

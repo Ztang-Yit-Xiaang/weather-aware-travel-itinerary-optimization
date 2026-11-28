@@ -410,7 +410,14 @@ def test_context_after_real_acceptance_uses_saved_child_stop_universe(tmp_path: 
 
 
 @pytest.mark.parametrize("provider", ["deterministic", "openai"])
-def test_real_service_blocks_chat_add_when_route_insertion_is_not_ready(tmp_path: Path, provider: str) -> None:
+def test_real_service_blocks_chat_add_when_route_insertion_is_not_ready(
+    tmp_path: Path, provider: str, monkeypatch
+) -> None:
+    # The registered move-leg delta makes every candidate addition route-ready,
+    # so run on the base road matrix to keep the not-ready path covered.
+    from itinerary_system.product_app import service as service_module
+
+    monkeypatch.setattr(service_module, "configured_route_matrix", lambda root, run_id, base: base)
     registry = ProductRunRegistry(ROOT, ROOT / "configs/product_app_registry.json")
     service = ProductService(registry, tmp_path / "state")
     client = FakeClient(

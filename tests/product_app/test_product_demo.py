@@ -149,7 +149,7 @@ def test_evidence_download_is_bound_to_the_requested_alternative(tmp_path: Path)
     assert f"plans/{plan_id}.json" in names
     assert "evaluations/cert_5a6deef4c159d346.json" in names
     assert "plans/plan_f5ee52459659dcb5.json" not in names
-    assert "evaluations/cert_686ef65d376b2867.json" not in names
+    assert "evaluations/cert_22c4b9fb2dcbbe54.json" not in names
     assert missing.status_code == 400
     assert missing.json() == {"detail": "evidence_plan_required"}
 

@@ -1,0 +1,4782 @@
+{
+  "base_matrix_sha256": "fcb37e3aedbcd5c91d09f3851a6d751a74eff4d91874769abc96722395c1b041",
+  "directed_pairs": [
+    [
+      "best_western_yosemite_way_station",
+      "bixby_creek_bridge_viewpoint"
+    ],
+    [
+      "best_western_yosemite_way_station",
+      "golden_gate_bridge"
+    ],
+    [
+      "best_western_yosemite_way_station",
+      "griffith_observatory"
+    ],
+    [
+      "best_western_yosemite_way_station",
+      "kings_canyon_national_park"
+    ],
+    [
+      "best_western_yosemite_way_station",
+      "pfeiffer_big_sur_state_park"
+    ],
+    [
+      "best_western_yosemite_way_station",
+      "point_lobos_state_natural_reserve"
+    ],
+    [
+      "best_western_yosemite_way_station",
+      "sequoia_national_park"
+    ],
+    [
+      "best_western_yosemite_way_station",
+      "stanford_university_main_quad"
+    ],
+    [
+      "best_western_yosemite_way_station",
+      "stearns_wharf"
+    ],
+    [
+      "best_western_yosemite_way_station",
+      "yosemite_southgate_hotel"
+    ],
+    [
+      "bixby_creek_bridge_viewpoint",
+      "best_western_yosemite_way_station"
+    ],
+    [
+      "bixby_creek_bridge_viewpoint",
+      "comfort_inn_sequoia_kings_canyon"
+    ],
+    [
+      "bixby_creek_bridge_viewpoint",
+      "golden_gate_bridge"
+    ],
+    [
+      "bixby_creek_bridge_viewpoint",
+      "griffith_observatory"
+    ],
+    [
+      "bixby_creek_bridge_viewpoint",
+      "hotel_milo_santa_barbara"
+    ],
+    [
+      "bixby_creek_bridge_viewpoint",
+      "hotel_zephyr_san_francisco"
+    ],
+    [
+      "bixby_creek_bridge_viewpoint",
+      "kings_canyon_national_park"
+    ],
+    [
+      "bixby_creek_bridge_viewpoint",
+      "los_angeles_international_airport"
+    ],
+    [
+      "bixby_creek_bridge_viewpoint",
+      "pfeiffer_big_sur_state_park"
+    ],
+    [
+      "bixby_creek_bridge_viewpoint",
+      "point_lobos_state_natural_reserve"
+    ],
+    [
+      "bixby_creek_bridge_viewpoint",
+      "san_francisco_international_airport"
+    ],
+    [
+      "bixby_creek_bridge_viewpoint",
+      "sequoia_national_park"
+    ],
+    [
+      "bixby_creek_bridge_viewpoint",
+      "stanford_university_main_quad"
+    ],
+    [
+      "bixby_creek_bridge_viewpoint",
+      "stearns_wharf"
+    ],
+    [
+      "bixby_creek_bridge_viewpoint",
+      "yosemite_national_park"
+    ],
+    [
+      "bixby_creek_bridge_viewpoint",
+      "yosemite_southgate_hotel"
+    ],
+    [
+      "comfort_inn_sequoia_kings_canyon",
+      "golden_gate_bridge"
+    ],
+    [
+      "comfort_inn_sequoia_kings_canyon",
+      "griffith_observatory"
+    ],
+    [
+      "comfort_inn_sequoia_kings_canyon",
+      "kings_canyon_national_park"
+    ],
+    [
+      "comfort_inn_sequoia_kings_canyon",
+      "portola_hotel_monterey"
+    ],
+    [
+      "comfort_inn_sequoia_kings_canyon",
+      "sequoia_national_park"
+    ],
+    [
+      "comfort_inn_sequoia_kings_canyon",
+      "stanford_university_main_quad"
+    ],
+    [
+      "comfort_inn_sequoia_kings_canyon",
+      "stearns_wharf"
+    ],
+    [
+      "comfort_inn_sequoia_kings_canyon",
+      "yosemite_national_park"
+    ],
+    [
+      "golden_gate_bridge",
+      "best_western_yosemite_way_station"
+    ],
+    [
+      "golden_gate_bridge",
+      "bixby_creek_bridge_viewpoint"
+    ],
+    [
+      "golden_gate_bridge",
+      "comfort_inn_sequoia_kings_canyon"
+    ],
+    [
+      "golden_gate_bridge",
+      "griffith_observatory"
+    ],
+    [
+      "golden_gate_bridge",
+      "hotel_milo_santa_barbara"
+    ],
+    [
+      "golden_gate_bridge",
+      "kings_canyon_national_park"
+    ],
+    [
+      "golden_gate_bridge",
+      "los_angeles_international_airport"
+    ],
+    [
+      "golden_gate_bridge",
+      "pfeiffer_big_sur_state_park"
+    ],
+    [
+      "golden_gate_bridge",
+      "point_lobos_state_natural_reserve"
+    ],
+    [
+      "golden_gate_bridge",
+      "portola_hotel_monterey"
+    ],
+    [
+      "golden_gate_bridge",
+      "san_francisco_international_airport"
+    ],
+    [
+      "golden_gate_bridge",
+      "sequoia_national_park"
+    ],
+    [
+      "golden_gate_bridge",
+      "stanford_university_main_quad"
+    ],
+    [
+      "golden_gate_bridge",
+      "stearns_wharf"
+    ],
+    [
+      "golden_gate_bridge",
+      "yosemite_national_park"
+    ],
+    [
+      "golden_gate_bridge",
+      "yosemite_southgate_hotel"
+    ],
+    [
+      "griffith_observatory",
+      "best_western_yosemite_way_station"
+    ],
+    [
+      "griffith_observatory",
+      "bixby_creek_bridge_viewpoint"
+    ],
+    [
+      "griffith_observatory",
+      "comfort_inn_sequoia_kings_canyon"
+    ],
+    [
+      "griffith_observatory",
+      "golden_gate_bridge"
+    ],
+    [
+      "griffith_observatory",
+      "hotel_milo_santa_barbara"
+    ],
+    [
+      "griffith_observatory",
+      "hotel_zephyr_san_francisco"
+    ],
+    [
+      "griffith_observatory",
+      "kings_canyon_national_park"
+    ],
+    [
+      "griffith_observatory",
+      "pfeiffer_big_sur_state_park"
+    ],
+    [
+      "griffith_observatory",
+      "point_lobos_state_natural_reserve"
+    ],
+    [
+      "griffith_observatory",
+      "portola_hotel_monterey"
+    ],
+    [
+      "griffith_observatory",
+      "san_francisco_international_airport"
+    ],
+    [
+      "griffith_observatory",
+      "sequoia_national_park"
+    ],
+    [
+      "griffith_observatory",
+      "stanford_university_main_quad"
+    ],
+    [
+      "griffith_observatory",
+      "stearns_wharf"
+    ],
+    [
+      "griffith_observatory",
+      "yosemite_national_park"
+    ],
+    [
+      "griffith_observatory",
+      "yosemite_southgate_hotel"
+    ],
+    [
+      "hotel_milo_santa_barbara",
+      "bixby_creek_bridge_viewpoint"
+    ],
+    [
+      "hotel_milo_santa_barbara",
+      "golden_gate_bridge"
+    ],
+    [
+      "hotel_milo_santa_barbara",
+      "kings_canyon_national_park"
+    ],
+    [
+      "hotel_milo_santa_barbara",
+      "los_angeles_international_airport"
+    ],
+    [
+      "hotel_milo_santa_barbara",
+      "pfeiffer_big_sur_state_park"
+    ],
+    [
+      "hotel_milo_santa_barbara",
+      "point_lobos_state_natural_reserve"
+    ],
+    [
+      "hotel_milo_santa_barbara",
+      "sequoia_national_park"
+    ],
+    [
+      "hotel_milo_santa_barbara",
+      "stanford_university_main_quad"
+    ],
+    [
+      "hotel_milo_santa_barbara",
+      "stearns_wharf"
+    ],
+    [
+      "hotel_milo_santa_barbara",
+      "yosemite_national_park"
+    ],
+    [
+      "hotel_zephyr_san_francisco",
+      "best_western_yosemite_way_station"
+    ],
+    [
+      "hotel_zephyr_san_francisco",
+      "bixby_creek_bridge_viewpoint"
+    ],
+    [
+      "hotel_zephyr_san_francisco",
+      "golden_gate_bridge"
+    ],
+    [
+      "hotel_zephyr_san_francisco",
+      "griffith_observatory"
+    ],
+    [
+      "hotel_zephyr_san_francisco",
+      "kings_canyon_national_park"
+    ],
+    [
+      "hotel_zephyr_san_francisco",
+      "pfeiffer_big_sur_state_park"
+    ],
+    [
+      "hotel_zephyr_san_francisco",
+      "point_lobos_state_natural_reserve"
+    ],
+    [
+      "hotel_zephyr_san_francisco",
+      "sequoia_national_park"
+    ],
+    [
+      "hotel_zephyr_san_francisco",
+      "stearns_wharf"
+    ],
+    [
+      "hotel_zephyr_san_francisco",
+      "yosemite_national_park"
+    ],
+    [
+      "kings_canyon_national_park",
+      "best_western_yosemite_way_station"
+    ],
+    [
+      "kings_canyon_national_park",
+      "bixby_creek_bridge_viewpoint"
+    ],
+    [
+      "kings_canyon_national_park",
+      "golden_gate_bridge"
+    ],
+    [
+      "kings_canyon_national_park",
+      "griffith_observatory"
+    ],
+    [
+      "kings_canyon_national_park",
+      "hotel_milo_santa_barbara"
+    ],
+    [
+      "kings_canyon_national_park",
+      "hotel_zephyr_san_francisco"
+    ],
+    [
+      "kings_canyon_national_park",
+      "los_angeles_international_airport"
+    ],
+    [
+      "kings_canyon_national_park",
+      "pfeiffer_big_sur_state_park"
+    ],
+    [
+      "kings_canyon_national_park",
+      "point_lobos_state_natural_reserve"
+    ],
+    [
+      "kings_canyon_national_park",
+      "portola_hotel_monterey"
+    ],
+    [
+      "kings_canyon_national_park",
+      "san_francisco_international_airport"
+    ],
+    [
+      "kings_canyon_national_park",
+      "stanford_university_main_quad"
+    ],
+    [
+      "kings_canyon_national_park",
+      "stearns_wharf"
+    ],
+    [
+      "kings_canyon_national_park",
+      "yosemite_national_park"
+    ],
+    [
+      "kings_canyon_national_park",
+      "yosemite_southgate_hotel"
+    ],
+    [
+      "los_angeles_international_airport",
+      "bixby_creek_bridge_viewpoint"
+    ],
+    [
+      "los_angeles_international_airport",
+      "golden_gate_bridge"
+    ],
+    [
+      "los_angeles_international_airport",
+      "griffith_observatory"
+    ],
+    [
+      "los_angeles_international_airport",
+      "kings_canyon_national_park"
+    ],
+    [
+      "los_angeles_international_airport",
+      "pfeiffer_big_sur_state_park"
+    ],
+    [
+      "los_angeles_international_airport",
+      "point_lobos_state_natural_reserve"
+    ],
+    [
+      "los_angeles_international_airport",
+      "sequoia_national_park"
+    ],
+    [
+      "los_angeles_international_airport",
+      "stanford_university_main_quad"
+    ],
+    [
+      "los_angeles_international_airport",
+      "stearns_wharf"
+    ],
+    [
+      "los_angeles_international_airport",
+      "yosemite_national_park"
+    ],
+    [
+      "pfeiffer_big_sur_state_park",
+      "best_western_yosemite_way_station"
+    ],
+    [
+      "pfeiffer_big_sur_state_park",
+      "bixby_creek_bridge_viewpoint"
+    ],
+    [
+      "pfeiffer_big_sur_state_park",
+      "comfort_inn_sequoia_kings_canyon"
+    ],
+    [
+      "pfeiffer_big_sur_state_park",
+      "golden_gate_bridge"
+    ],
+    [
+      "pfeiffer_big_sur_state_park",
+      "griffith_observatory"
+    ],
+    [
+      "pfeiffer_big_sur_state_park",
+      "hotel_milo_santa_barbara"
+    ],
+    [
+      "pfeiffer_big_sur_state_park",
+      "hotel_zephyr_san_francisco"
+    ],
+    [
+      "pfeiffer_big_sur_state_park",
+      "kings_canyon_national_park"
+    ],
+    [
+      "pfeiffer_big_sur_state_park",
+      "los_angeles_international_airport"
+    ],
+    [
+      "pfeiffer_big_sur_state_park",
+      "point_lobos_state_natural_reserve"
+    ],
+    [
+      "pfeiffer_big_sur_state_park",
+      "san_francisco_international_airport"
+    ],
+    [
+      "pfeiffer_big_sur_state_park",
+      "sequoia_national_park"
+    ],
+    [
+      "pfeiffer_big_sur_state_park",
+      "stanford_university_main_quad"
+    ],
+    [
+      "pfeiffer_big_sur_state_park",
+      "stearns_wharf"
+    ],
+    [
+      "pfeiffer_big_sur_state_park",
+      "yosemite_national_park"
+    ],
+    [
+      "pfeiffer_big_sur_state_park",
+      "yosemite_southgate_hotel"
+    ],
+    [
+      "point_lobos_state_natural_reserve",
+      "best_western_yosemite_way_station"
+    ],
+    [
+      "point_lobos_state_natural_reserve",
+      "bixby_creek_bridge_viewpoint"
+    ],
+    [
+      "point_lobos_state_natural_reserve",
+      "comfort_inn_sequoia_kings_canyon"
+    ],
+    [
+      "point_lobos_state_natural_reserve",
+      "golden_gate_bridge"
+    ],
+    [
+      "point_lobos_state_natural_reserve",
+      "griffith_observatory"
+    ],
+    [
+      "point_lobos_state_natural_reserve",
+      "hotel_milo_santa_barbara"
+    ],
+    [
+      "point_lobos_state_natural_reserve",
+      "hotel_zephyr_san_francisco"
+    ],
+    [
+      "point_lobos_state_natural_reserve",
+      "kings_canyon_national_park"
+    ],
+    [
+      "point_lobos_state_natural_reserve",
+      "los_angeles_international_airport"
+    ],
+    [
+      "point_lobos_state_natural_reserve",
+      "pfeiffer_big_sur_state_park"
+    ],
+    [
+      "point_lobos_state_natural_reserve",
+      "san_francisco_international_airport"
+    ],
+    [
+      "point_lobos_state_natural_reserve",
+      "sequoia_national_park"
+    ],
+    [
+      "point_lobos_state_natural_reserve",
+      "stanford_university_main_quad"
+    ],
+    [
+      "point_lobos_state_natural_reserve",
+      "stearns_wharf"
+    ],
+    [
+      "point_lobos_state_natural_reserve",
+      "yosemite_national_park"
+    ],
+    [
+      "point_lobos_state_natural_reserve",
+      "yosemite_southgate_hotel"
+    ],
+    [
+      "portola_hotel_monterey",
+      "bixby_creek_bridge_viewpoint"
+    ],
+    [
+      "portola_hotel_monterey",
+      "golden_gate_bridge"
+    ],
+    [
+      "portola_hotel_monterey",
+      "griffith_observatory"
+    ],
+    [
+      "portola_hotel_monterey",
+      "hotel_milo_santa_barbara"
+    ],
+    [
+      "portola_hotel_monterey",
+      "kings_canyon_national_park"
+    ],
+    [
+      "portola_hotel_monterey",
+      "pfeiffer_big_sur_state_park"
+    ],
+    [
+      "portola_hotel_monterey",
+      "point_lobos_state_natural_reserve"
+    ],
+    [
+      "portola_hotel_monterey",
+      "sequoia_national_park"
+    ],
+    [
+      "portola_hotel_monterey",
+      "stanford_university_main_quad"
+    ],
+    [
+      "portola_hotel_monterey",
+      "yosemite_national_park"
+    ],
+    [
+      "san_francisco_international_airport",
+      "bixby_creek_bridge_viewpoint"
+    ],
+    [
+      "san_francisco_international_airport",
+      "griffith_observatory"
+    ],
+    [
+      "san_francisco_international_airport",
+      "hotel_zephyr_san_francisco"
+    ],
+    [
+      "san_francisco_international_airport",
+      "kings_canyon_national_park"
+    ],
+    [
+      "san_francisco_international_airport",
+      "pfeiffer_big_sur_state_park"
+    ],
+    [
+      "san_francisco_international_airport",
+      "point_lobos_state_natural_reserve"
+    ],
+    [
+      "san_francisco_international_airport",
+      "sequoia_national_park"
+    ],
+    [
+      "san_francisco_international_airport",
+      "stanford_university_main_quad"
+    ],
+    [
+      "san_francisco_international_airport",
+      "stearns_wharf"
+    ],
+    [
+      "san_francisco_international_airport",
+      "yosemite_national_park"
+    ],
+    [
+      "sequoia_national_park",
+      "best_western_yosemite_way_station"
+    ],
+    [
+      "sequoia_national_park",
+      "bixby_creek_bridge_viewpoint"
+    ],
+    [
+      "sequoia_national_park",
+      "golden_gate_bridge"
+    ],
+    [
+      "sequoia_national_park",
+      "griffith_observatory"
+    ],
+    [
+      "sequoia_national_park",
+      "hotel_milo_santa_barbara"
+    ],
+    [
+      "sequoia_national_park",
+      "hotel_zephyr_san_francisco"
+    ],
+    [
+      "sequoia_national_park",
+      "los_angeles_international_airport"
+    ],
+    [
+      "sequoia_national_park",
+      "pfeiffer_big_sur_state_park"
+    ],
+    [
+      "sequoia_national_park",
+      "point_lobos_state_natural_reserve"
+    ],
+    [
+      "sequoia_national_park",
+      "portola_hotel_monterey"
+    ],
+    [
+      "sequoia_national_park",
+      "san_francisco_international_airport"
+    ],
+    [
+      "sequoia_national_park",
+      "stanford_university_main_quad"
+    ],
+    [
+      "sequoia_national_park",
+      "stearns_wharf"
+    ],
+    [
+      "sequoia_national_park",
+      "yosemite_national_park"
+    ],
+    [
+      "sequoia_national_park",
+      "yosemite_southgate_hotel"
+    ],
+    [
+      "stanford_university_main_quad",
+      "bixby_creek_bridge_viewpoint"
+    ],
+    [
+      "stanford_university_main_quad",
+      "comfort_inn_sequoia_kings_canyon"
+    ],
+    [
+      "stanford_university_main_quad",
+      "golden_gate_bridge"
+    ],
+    [
+      "stanford_university_main_quad",
+      "griffith_observatory"
+    ],
+    [
+      "stanford_university_main_quad",
+      "hotel_milo_santa_barbara"
+    ],
+    [
+      "stanford_university_main_quad",
+      "hotel_zephyr_san_francisco"
+    ],
+    [
+      "stanford_university_main_quad",
+      "kings_canyon_national_park"
+    ],
+    [
+      "stanford_university_main_quad",
+      "los_angeles_international_airport"
+    ],
+    [
+      "stanford_university_main_quad",
+      "pfeiffer_big_sur_state_park"
+    ],
+    [
+      "stanford_university_main_quad",
+      "point_lobos_state_natural_reserve"
+    ],
+    [
+      "stanford_university_main_quad",
+      "portola_hotel_monterey"
+    ],
+    [
+      "stanford_university_main_quad",
+      "san_francisco_international_airport"
+    ],
+    [
+      "stanford_university_main_quad",
+      "sequoia_national_park"
+    ],
+    [
+      "stanford_university_main_quad",
+      "stearns_wharf"
+    ],
+    [
+      "stanford_university_main_quad",
+      "yosemite_national_park"
+    ],
+    [
+      "stanford_university_main_quad",
+      "yosemite_southgate_hotel"
+    ],
+    [
+      "stearns_wharf",
+      "best_western_yosemite_way_station"
+    ],
+    [
+      "stearns_wharf",
+      "bixby_creek_bridge_viewpoint"
+    ],
+    [
+      "stearns_wharf",
+      "comfort_inn_sequoia_kings_canyon"
+    ],
+    [
+      "stearns_wharf",
+      "golden_gate_bridge"
+    ],
+    [
+      "stearns_wharf",
+      "griffith_observatory"
+    ],
+    [
+      "stearns_wharf",
+      "hotel_zephyr_san_francisco"
+    ],
+    [
+      "stearns_wharf",
+      "kings_canyon_national_park"
+    ],
+    [
+      "stearns_wharf",
+      "los_angeles_international_airport"
+    ],
+    [
+      "stearns_wharf",
+      "pfeiffer_big_sur_state_park"
+    ],
+    [
+      "stearns_wharf",
+      "point_lobos_state_natural_reserve"
+    ],
+    [
+      "stearns_wharf",
+      "portola_hotel_monterey"
+    ],
+    [
+      "stearns_wharf",
+      "san_francisco_international_airport"
+    ],
+    [
+      "stearns_wharf",
+      "sequoia_national_park"
+    ],
+    [
+      "stearns_wharf",
+      "stanford_university_main_quad"
+    ],
+    [
+      "stearns_wharf",
+      "yosemite_national_park"
+    ],
+    [
+      "stearns_wharf",
+      "yosemite_southgate_hotel"
+    ],
+    [
+      "yosemite_national_park",
+      "best_western_yosemite_way_station"
+    ],
+    [
+      "yosemite_national_park",
+      "bixby_creek_bridge_viewpoint"
+    ],
+    [
+      "yosemite_national_park",
+      "comfort_inn_sequoia_kings_canyon"
+    ],
+    [
+      "yosemite_national_park",
+      "golden_gate_bridge"
+    ],
+    [
+      "yosemite_national_park",
+      "griffith_observatory"
+    ],
+    [
+      "yosemite_national_park",
+      "hotel_milo_santa_barbara"
+    ],
+    [
+      "yosemite_national_park",
+      "hotel_zephyr_san_francisco"
+    ],
+    [
+      "yosemite_national_park",
+      "kings_canyon_national_park"
+    ],
+    [
+      "yosemite_national_park",
+      "los_angeles_international_airport"
+    ],
+    [
+      "yosemite_national_park",
+      "pfeiffer_big_sur_state_park"
+    ],
+    [
+      "yosemite_national_park",
+      "point_lobos_state_natural_reserve"
+    ],
+    [
+      "yosemite_national_park",
+      "portola_hotel_monterey"
+    ],
+    [
+      "yosemite_national_park",
+      "san_francisco_international_airport"
+    ],
+    [
+      "yosemite_national_park",
+      "sequoia_national_park"
+    ],
+    [
+      "yosemite_national_park",
+      "stanford_university_main_quad"
+    ],
+    [
+      "yosemite_national_park",
+      "stearns_wharf"
+    ],
+    [
+      "yosemite_southgate_hotel",
+      "bixby_creek_bridge_viewpoint"
+    ],
+    [
+      "yosemite_southgate_hotel",
+      "comfort_inn_sequoia_kings_canyon"
+    ],
+    [
+      "yosemite_southgate_hotel",
+      "golden_gate_bridge"
+    ],
+    [
+      "yosemite_southgate_hotel",
+      "griffith_observatory"
+    ],
+    [
+      "yosemite_southgate_hotel",
+      "pfeiffer_big_sur_state_park"
+    ],
+    [
+      "yosemite_southgate_hotel",
+      "point_lobos_state_natural_reserve"
+    ],
+    [
+      "yosemite_southgate_hotel",
+      "stanford_university_main_quad"
+    ],
+    [
+      "yosemite_southgate_hotel",
+      "stearns_wharf"
+    ],
+    [
+      "yosemite_southgate_hotel",
+      "yosemite_national_park"
+    ]
+  ],
+  "route_point_source": "road-snapped endpoints of the base matrix legs",
+  "route_points": {
+    "best_western_yosemite_way_station": [
+      37.489167,
+      -119.965892
+    ],
+    "bixby_creek_bridge_viewpoint": [
+      36.371479,
+      -121.901894
+    ],
+    "comfort_inn_sequoia_kings_canyon": [
+      36.448137,
+      -118.900814
+    ],
+    "golden_gate_bridge": [
+      37.819883,
+      -122.478528
+    ],
+    "griffith_observatory": [
+      34.119175,
+      -118.300375
+    ],
+    "hotel_milo_santa_barbara": [
+      34.410928,
+      -119.691675
+    ],
+    "hotel_zephyr_san_francisco": [
+      37.806895,
+      -122.41405
+    ],
+    "kings_canyon_national_park": [
+      36.796291,
+      -118.583728
+    ],
+    "los_angeles_international_airport": [
+      33.942502,
+      -118.407858
+    ],
+    "pfeiffer_big_sur_state_park": [
+      36.252418,
+      -121.787339
+    ],
+    "point_lobos_state_natural_reserve": [
+      36.517094,
+      -121.941786
+    ],
+    "portola_hotel_monterey": [
+      36.602531,
+      -121.895083
+    ],
+    "san_francisco_international_airport": [
+      37.617243,
+      -122.384195
+    ],
+    "sequoia_national_park": [
+      36.452874,
+      -118.595875
+    ],
+    "stanford_university_main_quad": [
+      37.427265,
+      -122.168571
+    ],
+    "stearns_wharf": [
+      34.410121,
+      -119.685609
+    ],
+    "yosemite_national_park": [
+      37.850556,
+      -119.572345
+    ],
+    "yosemite_southgate_hotel": [
+      37.328489,
+      -119.649892
+    ]
+  },
+  "route_rows": [
+    {
+      "attraction_name": "best_western_yosemite_way_station",
+      "day": 1,
+      "latitude": 37.489167,
+      "longitude": -119.965892,
+      "method": "product_move_route_delta",
+      "stop_order": 1
+    },
+    {
+      "attraction_name": "bixby_creek_bridge_viewpoint",
+      "day": 1,
+      "latitude": 36.371479,
+      "longitude": -121.901894,
+      "method": "product_move_route_delta",
+      "stop_order": 2
+    },
+    {
+      "attraction_name": "best_western_yosemite_way_station",
+      "day": 2,
+      "latitude": 37.489167,
+      "longitude": -119.965892,
+      "method": "product_move_route_delta",
+      "stop_order": 1
+    },
+    {
+      "attraction_name": "golden_gate_bridge",
+      "day": 2,
+      "latitude": 37.819883,
+      "longitude": -122.478528,
+      "method": "product_move_route_delta",
+      "stop_order": 2
+    },
+    {
+      "attraction_name": "best_western_yosemite_way_station",
+      "day": 3,
+      "latitude": 37.489167,
+      "longitude": -119.965892,
+      "method": "product_move_route_delta",
+      "stop_order": 1
+    },
+    {
+      "attraction_name": "griffith_observatory",
+      "day": 3,
+      "latitude": 34.119175,
+      "longitude": -118.300375,
+      "method": "product_move_route_delta",
+      "stop_order": 2
+    },
+    {
+      "attraction_name": "best_western_yosemite_way_station",
+      "day": 4,
+      "latitude": 37.489167,
+      "longitude": -119.965892,
+      "method": "product_move_route_delta",
+      "stop_order": 1
+    },
+    {
+      "attraction_name": "kings_canyon_national_park",
+      "day": 4,
+      "latitude": 36.796291,
+      "longitude": -118.583728,
+      "method": "product_move_route_delta",
+      "stop_order": 2
+    },
+    {
+      "attraction_name": "best_western_yosemite_way_station",
+      "day": 5,
+      "latitude": 37.489167,
+      "longitude": -119.965892,
+      "method": "product_move_route_delta",
+      "stop_order": 1
+    },
+    {
+      "attraction_name": "pfeiffer_big_sur_state_park",
+      "day": 5,
+      "latitude": 36.252418,
+      "longitude": -121.787339,
+      "method": "product_move_route_delta",
+      "stop_order": 2
+    },
+    {
+      "attraction_name": "best_western_yosemite_way_station",
+      "day": 6,
+      "latitude": 37.489167,
+      "longitude": -119.965892,
+      "method": "product_move_route_delta",
+      "stop_order": 1
+    },
+    {
+      "attraction_name": "point_lobos_state_natural_reserve",
+      "day": 6,
+      "latitude": 36.517094,
+      "longitude": -121.941786,
+      "method": "product_move_route_delta",
+      "stop_order": 2
+    },
+    {
+      "attraction_name": "best_western_yosemite_way_station",
+      "day": 7,
+      "latitude": 37.489167,
+      "longitude": -119.965892,
+      "method": "product_move_route_delta",
+      "stop_order": 1
+    },
+    {
+      "attraction_name": "sequoia_national_park",
+      "day": 7,
+      "latitude": 36.452874,
+      "longitude": -118.595875,
+      "method": "product_move_route_delta",
+      "stop_order": 2
+    },
+    {
+      "attraction_name": "best_western_yosemite_way_station",
+      "day": 8,
+      "latitude": 37.489167,
+      "longitude": -119.965892,
+      "method": "product_move_route_delta",
+      "stop_order": 1
+    },
+    {
+      "attraction_name": "stanford_university_main_quad",
+      "day": 8,
+      "latitude": 37.427265,
+      "longitude": -122.168571,
+      "method": "product_move_route_delta",
+      "stop_order": 2
+    },
+    {
+      "attraction_name": "best_western_yosemite_way_station",
+      "day": 9,
+      "latitude": 37.489167,
+      "longitude": -119.965892,
+      "method": "product_move_route_delta",
+      "stop_order": 1
+    },
+    {
+      "attraction_name": "stearns_wharf",
+      "day": 9,
+      "latitude": 34.410121,
+      "longitude": -119.685609,
+      "method": "product_move_route_delta",
+      "stop_order": 2
+    },
+    {
+      "attraction_name": "best_western_yosemite_way_station",
+      "day": 10,
+      "latitude": 37.489167,
+      "longitude": -119.965892,
+      "method": "product_move_route_delta",
+      "stop_order": 1
+    },
+    {
+      "attraction_name": "yosemite_southgate_hotel",
+      "day": 10,
+      "latitude": 37.328489,
+      "longitude": -119.649892,
+      "method": "product_move_route_delta",
+      "stop_order": 2
+    },
+    {
+      "attraction_name": "bixby_creek_bridge_viewpoint",
+      "day": 11,
+      "latitude": 36.371479,
+      "longitude": -121.901894,
+      "method": "product_move_route_delta",
+      "stop_order": 1
+    },
+    {
+      "attraction_name": "best_western_yosemite_way_station",
+      "day": 11,
+      "latitude": 37.489167,
+      "longitude": -119.965892,
+      "method": "product_move_route_delta",
+      "stop_order": 2
+    },
+    {
+      "attraction_name": "bixby_creek_bridge_viewpoint",
+      "day": 12,
+      "latitude": 36.371479,
+      "longitude": -121.901894,
+      "method": "product_move_route_delta",
+      "stop_order": 1
+    },
+    {
+      "attraction_name": "comfort_inn_sequoia_kings_canyon",
+      "day": 12,
+      "latitude": 36.448137,
+      "longitude": -118.900814,
+      "method": "product_move_route_delta",
+      "stop_order": 2
+    },
+    {
+      "attraction_name": "bixby_creek_bridge_viewpoint",
+      "day": 13,
+      "latitude": 36.371479,
+      "longitude": -121.901894,
+      "method": "product_move_route_delta",
+      "stop_order": 1
+    },
+    {
+      "attraction_name": "golden_gate_bridge",
+      "day": 13,
+      "latitude": 37.819883,
+      "longitude": -122.478528,
+      "method": "product_move_route_delta",
+      "stop_order": 2
+    },
+    {
+      "attraction_name": "bixby_creek_bridge_viewpoint",
+      "day": 14,
+      "latitude": 36.371479,
+      "longitude": -121.901894,
+      "method": "product_move_route_delta",
+      "stop_order": 1
+    },
+    {
+      "attraction_name": "griffith_observatory",
+      "day": 14,
+      "latitude": 34.119175,
+      "longitude": -118.300375,
+      "method": "product_move_route_delta",
+      "stop_order": 2
+    },
+    {
+      "attraction_name": "bixby_creek_bridge_viewpoint",
+      "day": 15,
+      "latitude": 36.371479,
+      "longitude": -121.901894,
+      "method": "product_move_route_delta",
+      "stop_order": 1
+    },
+    {
+      "attraction_name": "hotel_milo_santa_barbara",
+      "day": 15,
+      "latitude": 34.410928,
+      "longitude": -119.691675,
+      "method": "product_move_route_delta",
+      "stop_order": 2
+    },
+    {
+      "attraction_name": "bixby_creek_bridge_viewpoint",
+      "day": 16,
+      "latitude": 36.371479,
+      "longitude": -121.901894,
+      "method": "product_move_route_delta",
+      "stop_order": 1
+    },
+    {
+      "attraction_name": "hotel_zephyr_san_francisco",
+      "day": 16,
+      "latitude": 37.806895,
+      "longitude": -122.41405,
+      "method": "product_move_route_delta",
+      "stop_order": 2
+    },
+    {
+      "attraction_name": "bixby_creek_bridge_viewpoint",
+      "day": 17,
+      "latitude": 36.371479,
+      "longitude": -121.901894,
+      "method": "product_move_route_delta",
+      "stop_order": 1
+    },
+    {
+      "attraction_name": "kings_canyon_national_park",
+      "day": 17,
+      "latitude": 36.796291,
+      "longitude": -118.583728,
+      "method": "product_move_route_delta",
+      "stop_order": 2
+    },
+    {
+      "attraction_name": "bixby_creek_bridge_viewpoint",
+      "day": 18,
+      "latitude": 36.371479,
+      "longitude": -121.901894,
+      "method": "product_move_route_delta",
+      "stop_order": 1
+    },
+    {
+      "attraction_name": "los_angeles_international_airport",
+      "day": 18,
+      "latitude": 33.942502,
+      "longitude": -118.407858,
+      "method": "product_move_route_delta",
+      "stop_order": 2
+    },
+    {
+      "attraction_name": "bixby_creek_bridge_viewpoint",
+      "day": 19,
+      "latitude": 36.371479,
+      "longitude": -121.901894,
+      "method": "product_move_route_delta",
+      "stop_order": 1
+    },
+    {
+      "attraction_name": "pfeiffer_big_sur_state_park",
+      "day": 19,
+      "latitude": 36.252418,
+      "longitude": -121.787339,
+      "method": "product_move_route_delta",
+      "stop_order": 2
+    },
+    {
+      "attraction_name": "bixby_creek_bridge_viewpoint",
+      "day": 20,
+      "latitude": 36.371479,
+      "longitude": -121.901894,
+      "method": "product_move_route_delta",
+      "stop_order": 1
+    },
+    {
+      "attraction_name": "point_lobos_state_natural_reserve",
+      "day": 20,
+      "latitude": 36.517094,
+      "longitude": -121.941786,
+      "method": "product_move_route_delta",
+      "stop_order": 2
+    },
+    {
+      "attraction_name": "bixby_creek_bridge_viewpoint",
+      "day": 21,
+      "latitude": 36.371479,
+      "longitude": -121.901894,
+      "method": "product_move_route_delta",
+      "stop_order": 1
+    },
+    {
+      "attraction_name": "san_francisco_international_airport",
+      "day": 21,
+      "latitude": 37.617243,
+      "longitude": -122.384195,
+      "method": "product_move_route_delta",
+      "stop_order": 2
+    },
+    {
+      "attraction_name": "bixby_creek_bridge_viewpoint",
+      "day": 22,
+      "latitude": 36.371479,
+      "longitude": -121.901894,
+      "method": "product_move_route_delta",
+      "stop_order": 1
+    },
+    {
+      "attraction_name": "sequoia_national_park",
+      "day": 22,
+      "latitude": 36.452874,
+      "longitude": -118.595875,
+      "method": "product_move_route_delta",
+      "stop_order": 2
+    },
+    {
+      "attraction_name": "bixby_creek_bridge_viewpoint",
+      "day": 23,
+      "latitude": 36.371479,
+      "longitude": -121.901894,
+      "method": "product_move_route_delta",
+      "stop_order": 1
+    },
+    {
+      "attraction_name": "stanford_university_main_quad",
+      "day": 23,
+      "latitude": 37.427265,
+      "longitude": -122.168571,
+      "method": "product_move_route_delta",
+      "stop_order": 2
+    },
+    {
+      "attraction_name": "bixby_creek_bridge_viewpoint",
+      "day": 24,
+      "latitude": 36.371479,
+      "longitude": -121.901894,
+      "method": "product_move_route_delta",
+      "stop_order": 1
+    },
+    {
+      "attraction_name": "stearns_wharf",
+      "day": 24,
+      "latitude": 34.410121,
+      "longitude": -119.685609,
+      "method": "product_move_route_delta",
+      "stop_order": 2
+    },
+    {
+      "attraction_name": "bixby_creek_bridge_viewpoint",
+      "day": 25,
+      "latitude": 36.371479,
+      "longitude": -121.901894,
+      "method": "product_move_route_delta",
+      "stop_order": 1
+    },
+    {
+      "attraction_name": "yosemite_national_park",
+      "day": 25,
+      "latitude": 37.850556,
+      "longitude": -119.572345,
+      "method": "product_move_route_delta",
+      "stop_order": 2
+    },
+    {
+      "attraction_name": "bixby_creek_bridge_viewpoint",
+      "day": 26,
+      "latitude": 36.371479,
+      "longitude": -121.901894,
+      "method": "product_move_route_delta",
+      "stop_order": 1
+    },
+    {
+      "attraction_name": "yosemite_southgate_hotel",
+      "day": 26,
+      "latitude": 37.328489,
+      "longitude": -119.649892,
+      "method": "product_move_route_delta",
+      "stop_order": 2
+    },
+    {
+      "attraction_name": "comfort_inn_sequoia_kings_canyon",
+      "day": 27,
+      "latitude": 36.448137,
+      "longitude": -118.900814,
+      "method": "product_move_route_delta",
+      "stop_order": 1
+    },
+    {
+      "attraction_name": "golden_gate_bridge",
+      "day": 27,
+      "latitude": 37.819883,
+      "longitude": -122.478528,
+      "method": "product_move_route_delta",
+      "stop_order": 2
+    },
+    {
+      "attraction_name": "comfort_inn_sequoia_kings_canyon",
+      "day": 28,
+      "latitude": 36.448137,
+      "longitude": -118.900814,
+      "method": "product_move_route_delta",
+      "stop_order": 1
+    },
+    {
+      "attraction_name": "griffith_observatory",
+      "day": 28,
+      "latitude": 34.119175,
+      "longitude": -118.300375,
+      "method": "product_move_route_delta",
+      "stop_order": 2
+    },
+    {
+      "attraction_name": "comfort_inn_sequoia_kings_canyon",
+      "day": 29,
+      "latitude": 36.448137,
+      "longitude": -118.900814,
+      "method": "product_move_route_delta",
+      "stop_order": 1
+    },
+    {
+      "attraction_name": "kings_canyon_national_park",
+      "day": 29,
+      "latitude": 36.796291,
+      "longitude": -118.583728,
+      "method": "product_move_route_delta",
+      "stop_order": 2
+    },
+    {
+      "attraction_name": "comfort_inn_sequoia_kings_canyon",
+      "day": 30,
+      "latitude": 36.448137,
+      "longitude": -118.900814,
+      "method": "product_move_route_delta",
+      "stop_order": 1
+    },
+    {
+      "attraction_name": "portola_hotel_monterey",
+      "day": 30,
+      "latitude": 36.602531,
+      "longitude": -121.895083,
+      "method": "product_move_route_delta",
+      "stop_order": 2
+    },
+    {
+      "attraction_name": "comfort_inn_sequoia_kings_canyon",
+      "day": 31,
+      "latitude": 36.448137,
+      "longitude": -118.900814,
+      "method": "product_move_route_delta",
+      "stop_order": 1
+    },
+    {
+      "attraction_name": "sequoia_national_park",
+      "day": 31,
+      "latitude": 36.452874,
+      "longitude": -118.595875,
+      "method": "product_move_route_delta",
+      "stop_order": 2
+    },
+    {
+      "attraction_name": "comfort_inn_sequoia_kings_canyon",
+      "day": 32,
+      "latitude": 36.448137,
+      "longitude": -118.900814,
+      "method": "product_move_route_delta",
+      "stop_order": 1
+    },
+    {
+      "attraction_name": "stanford_university_main_quad",
+      "day": 32,
+      "latitude": 37.427265,
+      "longitude": -122.168571,
+      "method": "product_move_route_delta",
+      "stop_order": 2
+    },
+    {
+      "attraction_name": "comfort_inn_sequoia_kings_canyon",
+      "day": 33,
+      "latitude": 36.448137,
+      "longitude": -118.900814,
+      "method": "product_move_route_delta",
+      "stop_order": 1
+    },
+    {
+      "attraction_name": "stearns_wharf",
+      "day": 33,
+      "latitude": 34.410121,
+      "longitude": -119.685609,
+      "method": "product_move_route_delta",
+      "stop_order": 2
+    },
+    {
+      "attraction_name": "comfort_inn_sequoia_kings_canyon",
+      "day": 34,
+      "latitude": 36.448137,
+      "longitude": -118.900814,
+      "method": "product_move_route_delta",
+      "stop_order": 1
+    },
+    {
+      "attraction_name": "yosemite_national_park",
+      "day": 34,
+      "latitude": 37.850556,
+      "longitude": -119.572345,
+      "method": "product_move_route_delta",
+      "stop_order": 2
+    },
+    {
+      "attraction_name": "golden_gate_bridge",
+      "day": 35,
+      "latitude": 37.819883,
+      "longitude": -122.478528,
+      "method": "product_move_route_delta",
+      "stop_order": 1
+    },
+    {
+      "attraction_name": "best_western_yosemite_way_station",
+      "day": 35,
+      "latitude": 37.489167,
+      "longitude": -119.965892,
+      "method": "product_move_route_delta",
+      "stop_order": 2
+    },
+    {
+      "attraction_name": "golden_gate_bridge",
+      "day": 36,
+      "latitude": 37.819883,
+      "longitude": -122.478528,
+      "method": "product_move_route_delta",
+      "stop_order": 1
+    },
+    {
+      "attraction_name": "bixby_creek_bridge_viewpoint",
+      "day": 36,
+      "latitude": 36.371479,
+      "longitude": -121.901894,
+      "method": "product_move_route_delta",
+      "stop_order": 2
+    },
+    {
+      "attraction_name": "golden_gate_bridge",
+      "day": 37,
+      "latitude": 37.819883,
+      "longitude": -122.478528,
+      "method": "product_move_route_delta",
+      "stop_order": 1
+    },
+    {
+      "attraction_name": "comfort_inn_sequoia_kings_canyon",
+      "day": 37,
+      "latitude": 36.448137,
+      "longitude": -118.900814,
+      "method": "product_move_route_delta",
+      "stop_order": 2
+    },
+    {
+      "attraction_name": "golden_gate_bridge",
+      "day": 38,
+      "latitude": 37.819883,
+      "longitude": -122.478528,
+      "method": "product_move_route_delta",
+      "stop_order": 1
+    },
+    {
+      "attraction_name": "griffith_observatory",
+      "day": 38,
+      "latitude": 34.119175,
+      "longitude": -118.300375,
+      "method": "product_move_route_delta",
+      "stop_order": 2
+    },
+    {
+      "attraction_name": "golden_gate_bridge",
+      "day": 39,
+      "latitude": 37.819883,
+      "longitude": -122.478528,
+      "method": "product_move_route_delta",
+      "stop_order": 1
+    },
+    {
+      "attraction_name": "hotel_milo_santa_barbara",
+      "day": 39,
+      "latitude": 34.410928,
+      "longitude": -119.691675,
+      "method": "product_move_route_delta",
+      "stop_order": 2
+    },
+    {
+      "attraction_name": "golden_gate_bridge",
+      "day": 40,
+      "latitude": 37.819883,
+      "longitude": -122.478528,
+      "method": "product_move_route_delta",
+      "stop_order": 1
+    },
+    {
+      "attraction_name": "kings_canyon_national_park",
+      "day": 40,
+      "latitude": 36.796291,
+      "longitude": -118.583728,
+      "method": "product_move_route_delta",
+      "stop_order": 2
+    },
+    {
+      "attraction_name": "golden_gate_bridge",
+      "day": 41,
+      "latitude": 37.819883,
+      "longitude": -122.478528,
+      "method": "product_move_route_delta",
+      "stop_order": 1
+    },
+    {
+      "attraction_name": "los_angeles_international_airport",
+      "day": 41,
+      "latitude": 33.942502,
+      "longitude": -118.407858,
+      "method": "product_move_route_delta",
+      "stop_order": 2
+    },
+    {
+      "attraction_name": "golden_gate_bridge",
+      "day": 42,
+      "latitude": 37.819883,
+      "longitude": -122.478528,
+      "method": "product_move_route_delta",
+      "stop_order": 1
+    },
+    {
+      "attraction_name": "pfeiffer_big_sur_state_park",
+      "day": 42,
+      "latitude": 36.252418,
+      "longitude": -121.787339,
+      "method": "product_move_route_delta",
+      "stop_order": 2
+    },
+    {
+      "attraction_name": "golden_gate_bridge",
+      "day": 43,
+      "latitude": 37.819883,
+      "longitude": -122.478528,
+      "method": "product_move_route_delta",
+      "stop_order": 1
+    },
+    {
+      "attraction_name": "point_lobos_state_natural_reserve",
+      "day": 43,
+      "latitude": 36.517094,
+      "longitude": -121.941786,
+      "method": "product_move_route_delta",
+      "stop_order": 2
+    },
+    {
+      "attraction_name": "golden_gate_bridge",
+      "day": 44,
+      "latitude": 37.819883,
+      "longitude": -122.478528,
+      "method": "product_move_route_delta",
+      "stop_order": 1
+    },
+    {
+      "attraction_name": "portola_hotel_monterey",
+      "day": 44,
+      "latitude": 36.602531,
+      "longitude": -121.895083,
+      "method": "product_move_route_delta",
+      "stop_order": 2
+    },
+    {
+      "attraction_name": "golden_gate_bridge",
+      "day": 45,
+      "latitude": 37.819883,
+      "longitude": -122.478528,
+      "method": "product_move_route_delta",
+      "stop_order": 1
+    },
+    {
+      "attraction_name": "san_francisco_international_airport",
+      "day": 45,
+      "latitude": 37.617243,
+      "longitude": -122.384195,
+      "method": "product_move_route_delta",
+      "stop_order": 2
+    },
+    {
+      "attraction_name": "golden_gate_bridge",
+      "day": 46,
+      "latitude": 37.819883,
+      "longitude": -122.478528,
+      "method": "product_move_route_delta",
+      "stop_order": 1
+    },
+    {
+      "attraction_name": "sequoia_national_park",
+      "day": 46,
+      "latitude": 36.452874,
+      "longitude": -118.595875,
+      "method": "product_move_route_delta",
+      "stop_order": 2
+    },
+    {
+      "attraction_name": "golden_gate_bridge",
+      "day": 47,
+      "latitude": 37.819883,
+      "longitude": -122.478528,
+      "method": "product_move_route_delta",
+      "stop_order": 1
+    },
+    {
+      "attraction_name": "stanford_university_main_quad",
+      "day": 47,
+      "latitude": 37.427265,
+      "longitude": -122.168571,
+      "method": "product_move_route_delta",
+      "stop_order": 2
+    },
+    {
+      "attraction_name": "golden_gate_bridge",
+      "day": 48,
+      "latitude": 37.819883,
+      "longitude": -122.478528,
+      "method": "product_move_route_delta",
+      "stop_order": 1
+    },
+    {
+      "attraction_name": "stearns_wharf",
+      "day": 48,
+      "latitude": 34.410121,
+      "longitude": -119.685609,
+      "method": "product_move_route_delta",
+      "stop_order": 2
+    },
+    {
+      "attraction_name": "golden_gate_bridge",
+      "day": 49,
+      "latitude": 37.819883,
+      "longitude": -122.478528,
+      "method": "product_move_route_delta",
+      "stop_order": 1
+    },
+    {
+      "attraction_name": "yosemite_national_park",
+      "day": 49,
+      "latitude": 37.850556,
+      "longitude": -119.572345,
+      "method": "product_move_route_delta",
+      "stop_order": 2
+    },
+    {
+      "attraction_name": "golden_gate_bridge",
+      "day": 50,
+      "latitude": 37.819883,
+      "longitude": -122.478528,
+      "method": "product_move_route_delta",
+      "stop_order": 1
+    },
+    {
+      "attraction_name": "yosemite_southgate_hotel",
+      "day": 50,
+      "latitude": 37.328489,
+      "longitude": -119.649892,
+      "method": "product_move_route_delta",
+      "stop_order": 2
+    },
+    {
+      "attraction_name": "griffith_observatory",
+      "day": 51,
+      "latitude": 34.119175,
+      "longitude": -118.300375,
+      "method": "product_move_route_delta",
+      "stop_order": 1
+    },
+    {
+      "attraction_name": "best_western_yosemite_way_station",
+      "day": 51,
+      "latitude": 37.489167,
+      "longitude": -119.965892,
+      "method": "product_move_route_delta",
+      "stop_order": 2
+    },
+    {
+      "attraction_name": "griffith_observatory",
+      "day": 52,
+      "latitude": 34.119175,
+      "longitude": -118.300375,
+      "method": "product_move_route_delta",
+      "stop_order": 1
+    },
+    {
+      "attraction_name": "bixby_creek_bridge_viewpoint",
+      "day": 52,
+      "latitude": 36.371479,
+      "longitude": -121.901894,
+      "method": "product_move_route_delta",
+      "stop_order": 2
+    },
+    {
+      "attraction_name": "griffith_observatory",
+      "day": 53,
+      "latitude": 34.119175,
+      "longitude": -118.300375,
+      "method": "product_move_route_delta",
+      "stop_order": 1
+    },
+    {
+      "attraction_name": "comfort_inn_sequoia_kings_canyon",
+      "day": 53,
+      "latitude": 36.448137,
+      "longitude": -118.900814,
+      "method": "product_move_route_delta",
+      "stop_order": 2
+    },
+    {
+      "attraction_name": "griffith_observatory",
+      "day": 54,
+      "latitude": 34.119175,
+      "longitude": -118.300375,
+      "method": "product_move_route_delta",
+      "stop_order": 1
+    },
+    {
+      "attraction_name": "golden_gate_bridge",
+      "day": 54,
+      "latitude": 37.819883,
+      "longitude": -122.478528,
+      "method": "product_move_route_delta",
+      "stop_order": 2
+    },
+    {
+      "attraction_name": "griffith_observatory",
+      "day": 55,
+      "latitude": 34.119175,
+      "longitude": -118.300375,
+      "method": "product_move_route_delta",
+      "stop_order": 1
+    },
+    {
+      "attraction_name": "hotel_milo_santa_barbara",
+      "day": 55,
+      "latitude": 34.410928,
+      "longitude": -119.691675,
+      "method": "product_move_route_delta",
+      "stop_order": 2
+    },
+    {
+      "attraction_name": "griffith_observatory",
+      "day": 56,
+      "latitude": 34.119175,
+      "longitude": -118.300375,
+      "method": "product_move_route_delta",
+      "stop_order": 1
+    },
+    {
+      "attraction_name": "hotel_zephyr_san_francisco",
+      "day": 56,
+      "latitude": 37.806895,
+      "longitude": -122.41405,
+      "method": "product_move_route_delta",
+      "stop_order": 2
+    },
+    {
+      "attraction_name": "griffith_observatory",
+      "day": 57,
+      "latitude": 34.119175,
+      "longitude": -118.300375,
+      "method": "product_move_route_delta",
+      "stop_order": 1
+    },
+    {
+      "attraction_name": "kings_canyon_national_park",
+      "day": 57,
+      "latitude": 36.796291,
+      "longitude": -118.583728,
+      "method": "product_move_route_delta",
+      "stop_order": 2
+    },
+    {
+      "attraction_name": "griffith_observatory",
+      "day": 58,
+      "latitude": 34.119175,
+      "longitude": -118.300375,
+      "method": "product_move_route_delta",
+      "stop_order": 1
+    },
+    {
+      "attraction_name": "pfeiffer_big_sur_state_park",
+      "day": 58,
+      "latitude": 36.252418,
+      "longitude": -121.787339,
+      "method": "product_move_route_delta",
+      "stop_order": 2
+    },
+    {
+      "attraction_name": "griffith_observatory",
+      "day": 59,
+      "latitude": 34.119175,
+      "longitude": -118.300375,
+      "method": "product_move_route_delta",
+      "stop_order": 1
+    },
+    {
+      "attraction_name": "point_lobos_state_natural_reserve",
+      "day": 59,
+      "latitude": 36.517094,
+      "longitude": -121.941786,
+      "method": "product_move_route_delta",
+      "stop_order": 2
+    },
+    {
+      "attraction_name": "griffith_observatory",
+      "day": 60,
+      "latitude": 34.119175,
+      "longitude": -118.300375,
+      "method": "product_move_route_delta",
+      "stop_order": 1
+    },
+    {
+      "attraction_name": "portola_hotel_monterey",
+      "day": 60,
+      "latitude": 36.602531,
+      "longitude": -121.895083,
+      "method": "product_move_route_delta",
+      "stop_order": 2
+    },
+    {
+      "attraction_name": "griffith_observatory",
+      "day": 61,
+      "latitude": 34.119175,
+      "longitude": -118.300375,
+      "method": "product_move_route_delta",
+      "stop_order": 1
+    },
+    {
+      "attraction_name": "san_francisco_international_airport",
+      "day": 61,
+      "latitude": 37.617243,
+      "longitude": -122.384195,
+      "method": "product_move_route_delta",
+      "stop_order": 2
+    },
+    {
+      "attraction_name": "griffith_observatory",
+      "day": 62,
+      "latitude": 34.119175,
+      "longitude": -118.300375,
+      "method": "product_move_route_delta",
+      "stop_order": 1
+    },
+    {
+      "attraction_name": "sequoia_national_park",
+      "day": 62,
+      "latitude": 36.452874,
+      "longitude": -118.595875,
+      "method": "product_move_route_delta",
+      "stop_order": 2
+    },
+    {
+      "attraction_name": "griffith_observatory",
+      "day": 63,
+      "latitude": 34.119175,
+      "longitude": -118.300375,
+      "method": "product_move_route_delta",
+      "stop_order": 1
+    },
+    {
+      "attraction_name": "stanford_university_main_quad",
+      "day": 63,
+      "latitude": 37.427265,
+      "longitude": -122.168571,
+      "method": "product_move_route_delta",
+      "stop_order": 2
+    },
+    {
+      "attraction_name": "griffith_observatory",
+      "day": 64,
+      "latitude": 34.119175,
+      "longitude": -118.300375,
+      "method": "product_move_route_delta",
+      "stop_order": 1
+    },
+    {
+      "attraction_name": "stearns_wharf",
+      "day": 64,
+      "latitude": 34.410121,
+      "longitude": -119.685609,
+      "method": "product_move_route_delta",
+      "stop_order": 2
+    },
+    {
+      "attraction_name": "griffith_observatory",
+      "day": 65,
+      "latitude": 34.119175,
+      "longitude": -118.300375,
+      "method": "product_move_route_delta",
+      "stop_order": 1
+    },
+    {
+      "attraction_name": "yosemite_national_park",
+      "day": 65,
+      "latitude": 37.850556,
+      "longitude": -119.572345,
+      "method": "product_move_route_delta",
+      "stop_order": 2
+    },
+    {
+      "attraction_name": "griffith_observatory",
+      "day": 66,
+      "latitude": 34.119175,
+      "longitude": -118.300375,
+      "method": "product_move_route_delta",
+      "stop_order": 1
+    },
+    {
+      "attraction_name": "yosemite_southgate_hotel",
+      "day": 66,
+      "latitude": 37.328489,
+      "longitude": -119.649892,
+      "method": "product_move_route_delta",
+      "stop_order": 2
+    },
+    {
+      "attraction_name": "hotel_milo_santa_barbara",
+      "day": 67,
+      "latitude": 34.410928,
+      "longitude": -119.691675,
+      "method": "product_move_route_delta",
+      "stop_order": 1
+    },
+    {
+      "attraction_name": "bixby_creek_bridge_viewpoint",
+      "day": 67,
+      "latitude": 36.371479,
+      "longitude": -121.901894,
+      "method": "product_move_route_delta",
+      "stop_order": 2
+    },
+    {
+      "attraction_name": "hotel_milo_santa_barbara",
+      "day": 68,
+      "latitude": 34.410928,
+      "longitude": -119.691675,
+      "method": "product_move_route_delta",
+      "stop_order": 1
+    },
+    {
+      "attraction_name": "golden_gate_bridge",
+      "day": 68,
+      "latitude": 37.819883,
+      "longitude": -122.478528,
+      "method": "product_move_route_delta",
+      "stop_order": 2
+    },
+    {
+      "attraction_name": "hotel_milo_santa_barbara",
+      "day": 69,
+      "latitude": 34.410928,
+      "longitude": -119.691675,
+      "method": "product_move_route_delta",
+      "stop_order": 1
+    },
+    {
+      "attraction_name": "kings_canyon_national_park",
+      "day": 69,
+      "latitude": 36.796291,
+      "longitude": -118.583728,
+      "method": "product_move_route_delta",
+      "stop_order": 2
+    },
+    {
+      "attraction_name": "hotel_milo_santa_barbara",
+      "day": 70,
+      "latitude": 34.410928,
+      "longitude": -119.691675,
+      "method": "product_move_route_delta",
+      "stop_order": 1
+    },
+    {
+      "attraction_name": "los_angeles_international_airport",
+      "day": 70,
+      "latitude": 33.942502,
+      "longitude": -118.407858,
+      "method": "product_move_route_delta",
+      "stop_order": 2
+    },
+    {
+      "attraction_name": "hotel_milo_santa_barbara",
+      "day": 71,
+      "latitude": 34.410928,
+      "longitude": -119.691675,
+      "method": "product_move_route_delta",
+      "stop_order": 1
+    },
+    {
+      "attraction_name": "pfeiffer_big_sur_state_park",
+      "day": 71,
+      "latitude": 36.252418,
+      "longitude": -121.787339,
+      "method": "product_move_route_delta",
+      "stop_order": 2
+    },
+    {
+      "attraction_name": "hotel_milo_santa_barbara",
+      "day": 72,
+      "latitude": 34.410928,
+      "longitude": -119.691675,
+      "method": "product_move_route_delta",
+      "stop_order": 1
+    },
+    {
+      "attraction_name": "point_lobos_state_natural_reserve",
+      "day": 72,
+      "latitude": 36.517094,
+      "longitude": -121.941786,
+      "method": "product_move_route_delta",
+      "stop_order": 2
+    },
+    {
+      "attraction_name": "hotel_milo_santa_barbara",
+      "day": 73,
+      "latitude": 34.410928,
+      "longitude": -119.691675,
+      "method": "product_move_route_delta",
+      "stop_order": 1
+    },
+    {
+      "attraction_name": "sequoia_national_park",
+      "day": 73,
+      "latitude": 36.452874,
+      "longitude": -118.595875,
+      "method": "product_move_route_delta",
+      "stop_order": 2
+    },
+    {
+      "attraction_name": "hotel_milo_santa_barbara",
+      "day": 74,
+      "latitude": 34.410928,
+      "longitude": -119.691675,
+      "method": "product_move_route_delta",
+      "stop_order": 1
+    },
+    {
+      "attraction_name": "stanford_university_main_quad",
+      "day": 74,
+      "latitude": 37.427265,
+      "longitude": -122.168571,
+      "method": "product_move_route_delta",
+      "stop_order": 2
+    },
+    {
+      "attraction_name": "hotel_milo_santa_barbara",
+      "day": 75,
+      "latitude": 34.410928,
+      "longitude": -119.691675,
+      "method": "product_move_route_delta",
+      "stop_order": 1
+    },
+    {
+      "attraction_name": "stearns_wharf",
+      "day": 75,
+      "latitude": 34.410121,
+      "longitude": -119.685609,
+      "method": "product_move_route_delta",
+      "stop_order": 2
+    },
+    {
+      "attraction_name": "hotel_milo_santa_barbara",
+      "day": 76,
+      "latitude": 34.410928,
+      "longitude": -119.691675,
+      "method": "product_move_route_delta",
+      "stop_order": 1
+    },
+    {
+      "attraction_name": "yosemite_national_park",
+      "day": 76,
+      "latitude": 37.850556,
+      "longitude": -119.572345,
+      "method": "product_move_route_delta",
+      "stop_order": 2
+    },
+    {
+      "attraction_name": "hotel_zephyr_san_francisco",
+      "day": 77,
+      "latitude": 37.806895,
+      "longitude": -122.41405,
+      "method": "product_move_route_delta",
+      "stop_order": 1
+    },
+    {
+      "attraction_name": "best_western_yosemite_way_station",
+      "day": 77,
+      "latitude": 37.489167,
+      "longitude": -119.965892,
+      "method": "product_move_route_delta",
+      "stop_order": 2
+    },
+    {
+      "attraction_name": "hotel_zephyr_san_francisco",
+      "day": 78,
+      "latitude": 37.806895,
+      "longitude": -122.41405,
+      "method": "product_move_route_delta",
+      "stop_order": 1
+    },
+    {
+      "attraction_name": "bixby_creek_bridge_viewpoint",
+      "day": 78,
+      "latitude": 36.371479,
+      "longitude": -121.901894,
+      "method": "product_move_route_delta",
+      "stop_order": 2
+    },
+    {
+      "attraction_name": "hotel_zephyr_san_francisco",
+      "day": 79,
+      "latitude": 37.806895,
+      "longitude": -122.41405,
+      "method": "product_move_route_delta",
+      "stop_order": 1
+    },
+    {
+      "attraction_name": "golden_gate_bridge",
+      "day": 79,
+      "latitude": 37.819883,
+      "longitude": -122.478528,
+      "method": "product_move_route_delta",
+      "stop_order": 2
+    },
+    {
+      "attraction_name": "hotel_zephyr_san_francisco",
+      "day": 80,
+      "latitude": 37.806895,
+      "longitude": -122.41405,
+      "method": "product_move_route_delta",
+      "stop_order": 1
+    },
+    {
+      "attraction_name": "griffith_observatory",
+      "day": 80,
+      "latitude": 34.119175,
+      "longitude": -118.300375,
+      "method": "product_move_route_delta",
+      "stop_order": 2
+    },
+    {
+      "attraction_name": "hotel_zephyr_san_francisco",
+      "day": 81,
+      "latitude": 37.806895,
+      "longitude": -122.41405,
+      "method": "product_move_route_delta",
+      "stop_order": 1
+    },
+    {
+      "attraction_name": "kings_canyon_national_park",
+      "day": 81,
+      "latitude": 36.796291,
+      "longitude": -118.583728,
+      "method": "product_move_route_delta",
+      "stop_order": 2
+    },
+    {
+      "attraction_name": "hotel_zephyr_san_francisco",
+      "day": 82,
+      "latitude": 37.806895,
+      "longitude": -122.41405,
+      "method": "product_move_route_delta",
+      "stop_order": 1
+    },
+    {
+      "attraction_name": "pfeiffer_big_sur_state_park",
+      "day": 82,
+      "latitude": 36.252418,
+      "longitude": -121.787339,
+      "method": "product_move_route_delta",
+      "stop_order": 2
+    },
+    {
+      "attraction_name": "hotel_zephyr_san_francisco",
+      "day": 83,
+      "latitude": 37.806895,
+      "longitude": -122.41405,
+      "method": "product_move_route_delta",
+      "stop_order": 1
+    },
+    {
+      "attraction_name": "point_lobos_state_natural_reserve",
+      "day": 83,
+      "latitude": 36.517094,
+      "longitude": -121.941786,
+      "method": "product_move_route_delta",
+      "stop_order": 2
+    },
+    {
+      "attraction_name": "hotel_zephyr_san_francisco",
+      "day": 84,
+      "latitude": 37.806895,
+      "longitude": -122.41405,
+      "method": "product_move_route_delta",
+      "stop_order": 1
+    },
+    {
+      "attraction_name": "sequoia_national_park",
+      "day": 84,
+      "latitude": 36.452874,
+      "longitude": -118.595875,
+      "method": "product_move_route_delta",
+      "stop_order": 2
+    },
+    {
+      "attraction_name": "hotel_zephyr_san_francisco",
+      "day": 85,
+      "latitude": 37.806895,
+      "longitude": -122.41405,
+      "method": "product_move_route_delta",
+      "stop_order": 1
+    },
+    {
+      "attraction_name": "stearns_wharf",
+      "day": 85,
+      "latitude": 34.410121,
+      "longitude": -119.685609,
+      "method": "product_move_route_delta",
+      "stop_order": 2
+    },
+    {
+      "attraction_name": "hotel_zephyr_san_francisco",
+      "day": 86,
+      "latitude": 37.806895,
+      "longitude": -122.41405,
+      "method": "product_move_route_delta",
+      "stop_order": 1
+    },
+    {
+      "attraction_name": "yosemite_national_park",
+      "day": 86,
+      "latitude": 37.850556,
+      "longitude": -119.572345,
+      "method": "product_move_route_delta",
+      "stop_order": 2
+    },
+    {
+      "attraction_name": "kings_canyon_national_park",
+      "day": 87,
+      "latitude": 36.796291,
+      "longitude": -118.583728,
+      "method": "product_move_route_delta",
+      "stop_order": 1
+    },
+    {
+      "attraction_name": "best_western_yosemite_way_station",
+      "day": 87,
+      "latitude": 37.489167,
+      "longitude": -119.965892,
+      "method": "product_move_route_delta",
+      "stop_order": 2
+    },
+    {
+      "attraction_name": "kings_canyon_national_park",
+      "day": 88,
+      "latitude": 36.796291,
+      "longitude": -118.583728,
+      "method": "product_move_route_delta",
+      "stop_order": 1
+    },
+    {
+      "attraction_name": "bixby_creek_bridge_viewpoint",
+      "day": 88,
+      "latitude": 36.371479,
+      "longitude": -121.901894,
+      "method": "product_move_route_delta",
+      "stop_order": 2
+    },
+    {
+      "attraction_name": "kings_canyon_national_park",
+      "day": 89,
+      "latitude": 36.796291,
+      "longitude": -118.583728,
+      "method": "product_move_route_delta",
+      "stop_order": 1
+    },
+    {
+      "attraction_name": "golden_gate_bridge",
+      "day": 89,
+      "latitude": 37.819883,
+      "longitude": -122.478528,
+      "method": "product_move_route_delta",
+      "stop_order": 2
+    },
+    {
+      "attraction_name": "kings_canyon_national_park",
+      "day": 90,
+      "latitude": 36.796291,
+      "longitude": -118.583728,
+      "method": "product_move_route_delta",
+      "stop_order": 1
+    },
+    {
+      "attraction_name": "griffith_observatory",
+      "day": 90,
+      "latitude": 34.119175,
+      "longitude": -118.300375,
+      "method": "product_move_route_delta",
+      "stop_order": 2
+    },
+    {
+      "attraction_name": "kings_canyon_national_park",
+      "day": 91,
+      "latitude": 36.796291,
+      "longitude": -118.583728,
+      "method": "product_move_route_delta",
+      "stop_order": 1
+    },
+    {
+      "attraction_name": "hotel_milo_santa_barbara",
+      "day": 91,
+      "latitude": 34.410928,
+      "longitude": -119.691675,
+      "method": "product_move_route_delta",
+      "stop_order": 2
+    },
+    {
+      "attraction_name": "kings_canyon_national_park",
+      "day": 92,
+      "latitude": 36.796291,
+      "longitude": -118.583728,
+      "method": "product_move_route_delta",
+      "stop_order": 1
+    },
+    {
+      "attraction_name": "hotel_zephyr_san_francisco",
+      "day": 92,
+      "latitude": 37.806895,
+      "longitude": -122.41405,
+      "method": "product_move_route_delta",
+      "stop_order": 2
+    },
+    {
+      "attraction_name": "kings_canyon_national_park",
+      "day": 93,
+      "latitude": 36.796291,
+      "longitude": -118.583728,
+      "method": "product_move_route_delta",
+      "stop_order": 1
+    },
+    {
+      "attraction_name": "los_angeles_international_airport",
+      "day": 93,
+      "latitude": 33.942502,
+      "longitude": -118.407858,
+      "method": "product_move_route_delta",
+      "stop_order": 2
+    },
+    {
+      "attraction_name": "kings_canyon_national_park",
+      "day": 94,
+      "latitude": 36.796291,
+      "longitude": -118.583728,
+      "method": "product_move_route_delta",
+      "stop_order": 1
+    },
+    {
+      "attraction_name": "pfeiffer_big_sur_state_park",
+      "day": 94,
+      "latitude": 36.252418,
+      "longitude": -121.787339,
+      "method": "product_move_route_delta",
+      "stop_order": 2
+    },
+    {
+      "attraction_name": "kings_canyon_national_park",
+      "day": 95,
+      "latitude": 36.796291,
+      "longitude": -118.583728,
+      "method": "product_move_route_delta",
+      "stop_order": 1
+    },
+    {
+      "attraction_name": "point_lobos_state_natural_reserve",
+      "day": 95,
+      "latitude": 36.517094,
+      "longitude": -121.941786,
+      "method": "product_move_route_delta",
+      "stop_order": 2
+    },
+    {
+      "attraction_name": "kings_canyon_national_park",
+      "day": 96,
+      "latitude": 36.796291,
+      "longitude": -118.583728,
+      "method": "product_move_route_delta",
+      "stop_order": 1
+    },
+    {
+      "attraction_name": "portola_hotel_monterey",
+      "day": 96,
+      "latitude": 36.602531,
+      "longitude": -121.895083,
+      "method": "product_move_route_delta",
+      "stop_order": 2
+    },
+    {
+      "attraction_name": "kings_canyon_national_park",
+      "day": 97,
+      "latitude": 36.796291,
+      "longitude": -118.583728,
+      "method": "product_move_route_delta",
+      "stop_order": 1
+    },
+    {
+      "attraction_name": "san_francisco_international_airport",
+      "day": 97,
+      "latitude": 37.617243,
+      "longitude": -122.384195,
+      "method": "product_move_route_delta",
+      "stop_order": 2
+    },
+    {
+      "attraction_name": "kings_canyon_national_park",
+      "day": 98,
+      "latitude": 36.796291,
+      "longitude": -118.583728,
+      "method": "product_move_route_delta",
+      "stop_order": 1
+    },
+    {
+      "attraction_name": "stanford_university_main_quad",
+      "day": 98,
+      "latitude": 37.427265,
+      "longitude": -122.168571,
+      "method": "product_move_route_delta",
+      "stop_order": 2
+    },
+    {
+      "attraction_name": "kings_canyon_national_park",
+      "day": 99,
+      "latitude": 36.796291,
+      "longitude": -118.583728,
+      "method": "product_move_route_delta",
+      "stop_order": 1
+    },
+    {
+      "attraction_name": "stearns_wharf",
+      "day": 99,
+      "latitude": 34.410121,
+      "longitude": -119.685609,
+      "method": "product_move_route_delta",
+      "stop_order": 2
+    },
+    {
+      "attraction_name": "kings_canyon_national_park",
+      "day": 100,
+      "latitude": 36.796291,
+      "longitude": -118.583728,
+      "method": "product_move_route_delta",
+      "stop_order": 1
+    },
+    {
+      "attraction_name": "yosemite_national_park",
+      "day": 100,
+      "latitude": 37.850556,
+      "longitude": -119.572345,
+      "method": "product_move_route_delta",
+      "stop_order": 2
+    },
+    {
+      "attraction_name": "kings_canyon_national_park",
+      "day": 101,
+      "latitude": 36.796291,
+      "longitude": -118.583728,
+      "method": "product_move_route_delta",
+      "stop_order": 1
+    },
+    {
+      "attraction_name": "yosemite_southgate_hotel",
+      "day": 101,
+      "latitude": 37.328489,
+      "longitude": -119.649892,
+      "method": "product_move_route_delta",
+      "stop_order": 2
+    },
+    {
+      "attraction_name": "los_angeles_international_airport",
+      "day": 102,
+      "latitude": 33.942502,
+      "longitude": -118.407858,
+      "method": "product_move_route_delta",
+      "stop_order": 1
+    },
+    {
+      "attraction_name": "bixby_creek_bridge_viewpoint",
+      "day": 102,
+      "latitude": 36.371479,
+      "longitude": -121.901894,
+      "method": "product_move_route_delta",
+      "stop_order": 2
+    },
+    {
+      "attraction_name": "los_angeles_international_airport",
+      "day": 103,
+      "latitude": 33.942502,
+      "longitude": -118.407858,
+      "method": "product_move_route_delta",
+      "stop_order": 1
+    },
+    {
+      "attraction_name": "golden_gate_bridge",
+      "day": 103,
+      "latitude": 37.819883,
+      "longitude": -122.478528,
+      "method": "product_move_route_delta",
+      "stop_order": 2
+    },
+    {
+      "attraction_name": "los_angeles_international_airport",
+      "day": 104,
+      "latitude": 33.942502,
+      "longitude": -118.407858,
+      "method": "product_move_route_delta",
+      "stop_order": 1
+    },
+    {
+      "attraction_name": "griffith_observatory",
+      "day": 104,
+      "latitude": 34.119175,
+      "longitude": -118.300375,
+      "method": "product_move_route_delta",
+      "stop_order": 2
+    },
+    {
+      "attraction_name": "los_angeles_international_airport",
+      "day": 105,
+      "latitude": 33.942502,
+      "longitude": -118.407858,
+      "method": "product_move_route_delta",
+      "stop_order": 1
+    },
+    {
+      "attraction_name": "kings_canyon_national_park",
+      "day": 105,
+      "latitude": 36.796291,
+      "longitude": -118.583728,
+      "method": "product_move_route_delta",
+      "stop_order": 2
+    },
+    {
+      "attraction_name": "los_angeles_international_airport",
+      "day": 106,
+      "latitude": 33.942502,
+      "longitude": -118.407858,
+      "method": "product_move_route_delta",
+      "stop_order": 1
+    },
+    {
+      "attraction_name": "pfeiffer_big_sur_state_park",
+      "day": 106,
+      "latitude": 36.252418,
+      "longitude": -121.787339,
+      "method": "product_move_route_delta",
+      "stop_order": 2
+    },
+    {
+      "attraction_name": "los_angeles_international_airport",
+      "day": 107,
+      "latitude": 33.942502,
+      "longitude": -118.407858,
+      "method": "product_move_route_delta",
+      "stop_order": 1
+    },
+    {
+      "attraction_name": "point_lobos_state_natural_reserve",
+      "day": 107,
+      "latitude": 36.517094,
+      "longitude": -121.941786,
+      "method": "product_move_route_delta",
+      "stop_order": 2
+    },
+    {
+      "attraction_name": "los_angeles_international_airport",
+      "day": 108,
+      "latitude": 33.942502,
+      "longitude": -118.407858,
+      "method": "product_move_route_delta",
+      "stop_order": 1
+    },
+    {
+      "attraction_name": "sequoia_national_park",
+      "day": 108,
+      "latitude": 36.452874,
+      "longitude": -118.595875,
+      "method": "product_move_route_delta",
+      "stop_order": 2
+    },
+    {
+      "attraction_name": "los_angeles_international_airport",
+      "day": 109,
+      "latitude": 33.942502,
+      "longitude": -118.407858,
+      "method": "product_move_route_delta",
+      "stop_order": 1
+    },
+    {
+      "attraction_name": "stanford_university_main_quad",
+      "day": 109,
+      "latitude": 37.427265,
+      "longitude": -122.168571,
+      "method": "product_move_route_delta",
+      "stop_order": 2
+    },
+    {
+      "attraction_name": "los_angeles_international_airport",
+      "day": 110,
+      "latitude": 33.942502,
+      "longitude": -118.407858,
+      "method": "product_move_route_delta",
+      "stop_order": 1
+    },
+    {
+      "attraction_name": "stearns_wharf",
+      "day": 110,
+      "latitude": 34.410121,
+      "longitude": -119.685609,
+      "method": "product_move_route_delta",
+      "stop_order": 2
+    },
+    {
+      "attraction_name": "los_angeles_international_airport",
+      "day": 111,
+      "latitude": 33.942502,
+      "longitude": -118.407858,
+      "method": "product_move_route_delta",
+      "stop_order": 1
+    },
+    {
+      "attraction_name": "yosemite_national_park",
+      "day": 111,
+      "latitude": 37.850556,
+      "longitude": -119.572345,
+      "method": "product_move_route_delta",
+      "stop_order": 2
+    },
+    {
+      "attraction_name": "pfeiffer_big_sur_state_park",
+      "day": 112,
+      "latitude": 36.252418,
+      "longitude": -121.787339,
+      "method": "product_move_route_delta",
+      "stop_order": 1
+    },
+    {
+      "attraction_name": "best_western_yosemite_way_station",
+      "day": 112,
+      "latitude": 37.489167,
+      "longitude": -119.965892,
+      "method": "product_move_route_delta",
+      "stop_order": 2
+    },
+    {
+      "attraction_name": "pfeiffer_big_sur_state_park",
+      "day": 113,
+      "latitude": 36.252418,
+      "longitude": -121.787339,
+      "method": "product_move_route_delta",
+      "stop_order": 1
+    },
+    {
+      "attraction_name": "bixby_creek_bridge_viewpoint",
+      "day": 113,
+      "latitude": 36.371479,
+      "longitude": -121.901894,
+      "method": "product_move_route_delta",
+      "stop_order": 2
+    },
+    {
+      "attraction_name": "pfeiffer_big_sur_state_park",
+      "day": 114,
+      "latitude": 36.252418,
+      "longitude": -121.787339,
+      "method": "product_move_route_delta",
+      "stop_order": 1
+    },
+    {
+      "attraction_name": "comfort_inn_sequoia_kings_canyon",
+      "day": 114,
+      "latitude": 36.448137,
+      "longitude": -118.900814,
+      "method": "product_move_route_delta",
+      "stop_order": 2
+    },
+    {
+      "attraction_name": "pfeiffer_big_sur_state_park",
+      "day": 115,
+      "latitude": 36.252418,
+      "longitude": -121.787339,
+      "method": "product_move_route_delta",
+      "stop_order": 1
+    },
+    {
+      "attraction_name": "golden_gate_bridge",
+      "day": 115,
+      "latitude": 37.819883,
+      "longitude": -122.478528,
+      "method": "product_move_route_delta",
+      "stop_order": 2
+    },
+    {
+      "attraction_name": "pfeiffer_big_sur_state_park",
+      "day": 116,
+      "latitude": 36.252418,
+      "longitude": -121.787339,
+      "method": "product_move_route_delta",
+      "stop_order": 1
+    },
+    {
+      "attraction_name": "griffith_observatory",
+      "day": 116,
+      "latitude": 34.119175,
+      "longitude": -118.300375,
+      "method": "product_move_route_delta",
+      "stop_order": 2
+    },
+    {
+      "attraction_name": "pfeiffer_big_sur_state_park",
+      "day": 117,
+      "latitude": 36.252418,
+      "longitude": -121.787339,
+      "method": "product_move_route_delta",
+      "stop_order": 1
+    },
+    {
+      "attraction_name": "hotel_milo_santa_barbara",
+      "day": 117,
+      "latitude": 34.410928,
+      "longitude": -119.691675,
+      "method": "product_move_route_delta",
+      "stop_order": 2
+    },
+    {
+      "attraction_name": "pfeiffer_big_sur_state_park",
+      "day": 118,
+      "latitude": 36.252418,
+      "longitude": -121.787339,
+      "method": "product_move_route_delta",
+      "stop_order": 1
+    },
+    {
+      "attraction_name": "hotel_zephyr_san_francisco",
+      "day": 118,
+      "latitude": 37.806895,
+      "longitude": -122.41405,
+      "method": "product_move_route_delta",
+      "stop_order": 2
+    },
+    {
+      "attraction_name": "pfeiffer_big_sur_state_park",
+      "day": 119,
+      "latitude": 36.252418,
+      "longitude": -121.787339,
+      "method": "product_move_route_delta",
+      "stop_order": 1
+    },
+    {
+      "attraction_name": "kings_canyon_national_park",
+      "day": 119,
+      "latitude": 36.796291,
+      "longitude": -118.583728,
+      "method": "product_move_route_delta",
+      "stop_order": 2
+    },
+    {
+      "attraction_name": "pfeiffer_big_sur_state_park",
+      "day": 120,
+      "latitude": 36.252418,
+      "longitude": -121.787339,
+      "method": "product_move_route_delta",
+      "stop_order": 1
+    },
+    {
+      "attraction_name": "los_angeles_international_airport",
+      "day": 120,
+      "latitude": 33.942502,
+      "longitude": -118.407858,
+      "method": "product_move_route_delta",
+      "stop_order": 2
+    },
+    {
+      "attraction_name": "pfeiffer_big_sur_state_park",
+      "day": 121,
+      "latitude": 36.252418,
+      "longitude": -121.787339,
+      "method": "product_move_route_delta",
+      "stop_order": 1
+    },
+    {
+      "attraction_name": "point_lobos_state_natural_reserve",
+      "day": 121,
+      "latitude": 36.517094,
+      "longitude": -121.941786,
+      "method": "product_move_route_delta",
+      "stop_order": 2
+    },
+    {
+      "attraction_name": "pfeiffer_big_sur_state_park",
+      "day": 122,
+      "latitude": 36.252418,
+      "longitude": -121.787339,
+      "method": "product_move_route_delta",
+      "stop_order": 1
+    },
+    {
+      "attraction_name": "san_francisco_international_airport",
+      "day": 122,
+      "latitude": 37.617243,
+      "longitude": -122.384195,
+      "method": "product_move_route_delta",
+      "stop_order": 2
+    },
+    {
+      "attraction_name": "pfeiffer_big_sur_state_park",
+      "day": 123,
+      "latitude": 36.252418,
+      "longitude": -121.787339,
+      "method": "product_move_route_delta",
+      "stop_order": 1
+    },
+    {
+      "attraction_name": "sequoia_national_park",
+      "day": 123,
+      "latitude": 36.452874,
+      "longitude": -118.595875,
+      "method": "product_move_route_delta",
+      "stop_order": 2
+    },
+    {
+      "attraction_name": "pfeiffer_big_sur_state_park",
+      "day": 124,
+      "latitude": 36.252418,
+      "longitude": -121.787339,
+      "method": "product_move_route_delta",
+      "stop_order": 1
+    },
+    {
+      "attraction_name": "stanford_university_main_quad",
+      "day": 124,
+      "latitude": 37.427265,
+      "longitude": -122.168571,
+      "method": "product_move_route_delta",
+      "stop_order": 2
+    },
+    {
+      "attraction_name": "pfeiffer_big_sur_state_park",
+      "day": 125,
+      "latitude": 36.252418,
+      "longitude": -121.787339,
+      "method": "product_move_route_delta",
+      "stop_order": 1
+    },
+    {
+      "attraction_name": "stearns_wharf",
+      "day": 125,
+      "latitude": 34.410121,
+      "longitude": -119.685609,
+      "method": "product_move_route_delta",
+      "stop_order": 2
+    },
+    {
+      "attraction_name": "pfeiffer_big_sur_state_park",
+      "day": 126,
+      "latitude": 36.252418,
+      "longitude": -121.787339,
+      "method": "product_move_route_delta",
+      "stop_order": 1
+    },
+    {
+      "attraction_name": "yosemite_national_park",
+      "day": 126,
+      "latitude": 37.850556,
+      "longitude": -119.572345,
+      "method": "product_move_route_delta",
+      "stop_order": 2
+    },
+    {
+      "attraction_name": "pfeiffer_big_sur_state_park",
+      "day": 127,
+      "latitude": 36.252418,
+      "longitude": -121.787339,
+      "method": "product_move_route_delta",
+      "stop_order": 1
+    },
+    {
+      "attraction_name": "yosemite_southgate_hotel",
+      "day": 127,
+      "latitude": 37.328489,
+      "longitude": -119.649892,
+      "method": "product_move_route_delta",
+      "stop_order": 2
+    },
+    {
+      "attraction_name": "point_lobos_state_natural_reserve",
+      "day": 128,
+      "latitude": 36.517094,
+      "longitude": -121.941786,
+      "method": "product_move_route_delta",
+      "stop_order": 1
+    },
+    {
+      "attraction_name": "best_western_yosemite_way_station",
+      "day": 128,
+      "latitude": 37.489167,
+      "longitude": -119.965892,
+      "method": "product_move_route_delta",
+      "stop_order": 2
+    },
+    {
+      "attraction_name": "point_lobos_state_natural_reserve",
+      "day": 129,
+      "latitude": 36.517094,
+      "longitude": -121.941786,
+      "method": "product_move_route_delta",
+      "stop_order": 1
+    },
+    {
+      "attraction_name": "bixby_creek_bridge_viewpoint",
+      "day": 129,
+      "latitude": 36.371479,
+      "longitude": -121.901894,
+      "method": "product_move_route_delta",
+      "stop_order": 2
+    },
+    {
+      "attraction_name": "point_lobos_state_natural_reserve",
+      "day": 130,
+      "latitude": 36.517094,
+      "longitude": -121.941786,
+      "method": "product_move_route_delta",
+      "stop_order": 1
+    },
+    {
+      "attraction_name": "comfort_inn_sequoia_kings_canyon",
+      "day": 130,
+      "latitude": 36.448137,
+      "longitude": -118.900814,
+      "method": "product_move_route_delta",
+      "stop_order": 2
+    },
+    {
+      "attraction_name": "point_lobos_state_natural_reserve",
+      "day": 131,
+      "latitude": 36.517094,
+      "longitude": -121.941786,
+      "method": "product_move_route_delta",
+      "stop_order": 1
+    },
+    {
+      "attraction_name": "golden_gate_bridge",
+      "day": 131,
+      "latitude": 37.819883,
+      "longitude": -122.478528,
+      "method": "product_move_route_delta",
+      "stop_order": 2
+    },
+    {
+      "attraction_name": "point_lobos_state_natural_reserve",
+      "day": 132,
+      "latitude": 36.517094,
+      "longitude": -121.941786,
+      "method": "product_move_route_delta",
+      "stop_order": 1
+    },
+    {
+      "attraction_name": "griffith_observatory",
+      "day": 132,
+      "latitude": 34.119175,
+      "longitude": -118.300375,
+      "method": "product_move_route_delta",
+      "stop_order": 2
+    },
+    {
+      "attraction_name": "point_lobos_state_natural_reserve",
+      "day": 133,
+      "latitude": 36.517094,
+      "longitude": -121.941786,
+      "method": "product_move_route_delta",
+      "stop_order": 1
+    },
+    {
+      "attraction_name": "hotel_milo_santa_barbara",
+      "day": 133,
+      "latitude": 34.410928,
+      "longitude": -119.691675,
+      "method": "product_move_route_delta",
+      "stop_order": 2
+    },
+    {
+      "attraction_name": "point_lobos_state_natural_reserve",
+      "day": 134,
+      "latitude": 36.517094,
+      "longitude": -121.941786,
+      "method": "product_move_route_delta",
+      "stop_order": 1
+    },
+    {
+      "attraction_name": "hotel_zephyr_san_francisco",
+      "day": 134,
+      "latitude": 37.806895,
+      "longitude": -122.41405,
+      "method": "product_move_route_delta",
+      "stop_order": 2
+    },
+    {
+      "attraction_name": "point_lobos_state_natural_reserve",
+      "day": 135,
+      "latitude": 36.517094,
+      "longitude": -121.941786,
+      "method": "product_move_route_delta",
+      "stop_order": 1
+    },
+    {
+      "attraction_name": "kings_canyon_national_park",
+      "day": 135,
+      "latitude": 36.796291,
+      "longitude": -118.583728,
+      "method": "product_move_route_delta",
+      "stop_order": 2
+    },
+    {
+      "attraction_name": "point_lobos_state_natural_reserve",
+      "day": 136,
+      "latitude": 36.517094,
+      "longitude": -121.941786,
+      "method": "product_move_route_delta",
+      "stop_order": 1
+    },
+    {
+      "attraction_name": "los_angeles_international_airport",
+      "day": 136,
+      "latitude": 33.942502,
+      "longitude": -118.407858,
+      "method": "product_move_route_delta",
+      "stop_order": 2
+    },
+    {
+      "attraction_name": "point_lobos_state_natural_reserve",
+      "day": 137,
+      "latitude": 36.517094,
+      "longitude": -121.941786,
+      "method": "product_move_route_delta",
+      "stop_order": 1
+    },
+    {
+      "attraction_name": "pfeiffer_big_sur_state_park",
+      "day": 137,
+      "latitude": 36.252418,
+      "longitude": -121.787339,
+      "method": "product_move_route_delta",
+      "stop_order": 2
+    },
+    {
+      "attraction_name": "point_lobos_state_natural_reserve",
+      "day": 138,
+      "latitude": 36.517094,
+      "longitude": -121.941786,
+      "method": "product_move_route_delta",
+      "stop_order": 1
+    },
+    {
+      "attraction_name": "san_francisco_international_airport",
+      "day": 138,
+      "latitude": 37.617243,
+      "longitude": -122.384195,
+      "method": "product_move_route_delta",
+      "stop_order": 2
+    },
+    {
+      "attraction_name": "point_lobos_state_natural_reserve",
+      "day": 139,
+      "latitude": 36.517094,
+      "longitude": -121.941786,
+      "method": "product_move_route_delta",
+      "stop_order": 1
+    },
+    {
+      "attraction_name": "sequoia_national_park",
+      "day": 139,
+      "latitude": 36.452874,
+      "longitude": -118.595875,
+      "method": "product_move_route_delta",
+      "stop_order": 2
+    },
+    {
+      "attraction_name": "point_lobos_state_natural_reserve",
+      "day": 140,
+      "latitude": 36.517094,
+      "longitude": -121.941786,
+      "method": "product_move_route_delta",
+      "stop_order": 1
+    },
+    {
+      "attraction_name": "stanford_university_main_quad",
+      "day": 140,
+      "latitude": 37.427265,
+      "longitude": -122.168571,
+      "method": "product_move_route_delta",
+      "stop_order": 2
+    },
+    {
+      "attraction_name": "point_lobos_state_natural_reserve",
+      "day": 141,
+      "latitude": 36.517094,
+      "longitude": -121.941786,
+      "method": "product_move_route_delta",
+      "stop_order": 1
+    },
+    {
+      "attraction_name": "stearns_wharf",
+      "day": 141,
+      "latitude": 34.410121,
+      "longitude": -119.685609,
+      "method": "product_move_route_delta",
+      "stop_order": 2
+    },
+    {
+      "attraction_name": "point_lobos_state_natural_reserve",
+      "day": 142,
+      "latitude": 36.517094,
+      "longitude": -121.941786,
+      "method": "product_move_route_delta",
+      "stop_order": 1
+    },
+    {
+      "attraction_name": "yosemite_national_park",
+      "day": 142,
+      "latitude": 37.850556,
+      "longitude": -119.572345,
+      "method": "product_move_route_delta",
+      "stop_order": 2
+    },
+    {
+      "attraction_name": "point_lobos_state_natural_reserve",
+      "day": 143,
+      "latitude": 36.517094,
+      "longitude": -121.941786,
+      "method": "product_move_route_delta",
+      "stop_order": 1
+    },
+    {
+      "attraction_name": "yosemite_southgate_hotel",
+      "day": 143,
+      "latitude": 37.328489,
+      "longitude": -119.649892,
+      "method": "product_move_route_delta",
+      "stop_order": 2
+    },
+    {
+      "attraction_name": "portola_hotel_monterey",
+      "day": 144,
+      "latitude": 36.602531,
+      "longitude": -121.895083,
+      "method": "product_move_route_delta",
+      "stop_order": 1
+    },
+    {
+      "attraction_name": "bixby_creek_bridge_viewpoint",
+      "day": 144,
+      "latitude": 36.371479,
+      "longitude": -121.901894,
+      "method": "product_move_route_delta",
+      "stop_order": 2
+    },
+    {
+      "attraction_name": "portola_hotel_monterey",
+      "day": 145,
+      "latitude": 36.602531,
+      "longitude": -121.895083,
+      "method": "product_move_route_delta",
+      "stop_order": 1
+    },
+    {
+      "attraction_name": "golden_gate_bridge",
+      "day": 145,
+      "latitude": 37.819883,
+      "longitude": -122.478528,
+      "method": "product_move_route_delta",
+      "stop_order": 2
+    },
+    {
+      "attraction_name": "portola_hotel_monterey",
+      "day": 146,
+      "latitude": 36.602531,
+      "longitude": -121.895083,
+      "method": "product_move_route_delta",
+      "stop_order": 1
+    },
+    {
+      "attraction_name": "griffith_observatory",
+      "day": 146,
+      "latitude": 34.119175,
+      "longitude": -118.300375,
+      "method": "product_move_route_delta",
+      "stop_order": 2
+    },
+    {
+      "attraction_name": "portola_hotel_monterey",
+      "day": 147,
+      "latitude": 36.602531,
+      "longitude": -121.895083,
+      "method": "product_move_route_delta",
+      "stop_order": 1
+    },
+    {
+      "attraction_name": "hotel_milo_santa_barbara",
+      "day": 147,
+      "latitude": 34.410928,
+      "longitude": -119.691675,
+      "method": "product_move_route_delta",
+      "stop_order": 2
+    },
+    {
+      "attraction_name": "portola_hotel_monterey",
+      "day": 148,
+      "latitude": 36.602531,
+      "longitude": -121.895083,
+      "method": "product_move_route_delta",
+      "stop_order": 1
+    },
+    {
+      "attraction_name": "kings_canyon_national_park",
+      "day": 148,
+      "latitude": 36.796291,
+      "longitude": -118.583728,
+      "method": "product_move_route_delta",
+      "stop_order": 2
+    },
+    {
+      "attraction_name": "portola_hotel_monterey",
+      "day": 149,
+      "latitude": 36.602531,
+      "longitude": -121.895083,
+      "method": "product_move_route_delta",
+      "stop_order": 1
+    },
+    {
+      "attraction_name": "pfeiffer_big_sur_state_park",
+      "day": 149,
+      "latitude": 36.252418,
+      "longitude": -121.787339,
+      "method": "product_move_route_delta",
+      "stop_order": 2
+    },
+    {
+      "attraction_name": "portola_hotel_monterey",
+      "day": 150,
+      "latitude": 36.602531,
+      "longitude": -121.895083,
+      "method": "product_move_route_delta",
+      "stop_order": 1
+    },
+    {
+      "attraction_name": "point_lobos_state_natural_reserve",
+      "day": 150,
+      "latitude": 36.517094,
+      "longitude": -121.941786,
+      "method": "product_move_route_delta",
+      "stop_order": 2
+    },
+    {
+      "attraction_name": "portola_hotel_monterey",
+      "day": 151,
+      "latitude": 36.602531,
+      "longitude": -121.895083,
+      "method": "product_move_route_delta",
+      "stop_order": 1
+    },
+    {
+      "attraction_name": "sequoia_national_park",
+      "day": 151,
+      "latitude": 36.452874,
+      "longitude": -118.595875,
+      "method": "product_move_route_delta",
+      "stop_order": 2
+    },
+    {
+      "attraction_name": "portola_hotel_monterey",
+      "day": 152,
+      "latitude": 36.602531,
+      "longitude": -121.895083,
+      "method": "product_move_route_delta",
+      "stop_order": 1
+    },
+    {
+      "attraction_name": "stanford_university_main_quad",
+      "day": 152,
+      "latitude": 37.427265,
+      "longitude": -122.168571,
+      "method": "product_move_route_delta",
+      "stop_order": 2
+    },
+    {
+      "attraction_name": "portola_hotel_monterey",
+      "day": 153,
+      "latitude": 36.602531,
+      "longitude": -121.895083,
+      "method": "product_move_route_delta",
+      "stop_order": 1
+    },
+    {
+      "attraction_name": "yosemite_national_park",
+      "day": 153,
+      "latitude": 37.850556,
+      "longitude": -119.572345,
+      "method": "product_move_route_delta",
+      "stop_order": 2
+    },
+    {
+      "attraction_name": "san_francisco_international_airport",
+      "day": 154,
+      "latitude": 37.617243,
+      "longitude": -122.384195,
+      "method": "product_move_route_delta",
+      "stop_order": 1
+    },
+    {
+      "attraction_name": "bixby_creek_bridge_viewpoint",
+      "day": 154,
+      "latitude": 36.371479,
+      "longitude": -121.901894,
+      "method": "product_move_route_delta",
+      "stop_order": 2
+    },
+    {
+      "attraction_name": "san_francisco_international_airport",
+      "day": 155,
+      "latitude": 37.617243,
+      "longitude": -122.384195,
+      "method": "product_move_route_delta",
+      "stop_order": 1
+    },
+    {
+      "attraction_name": "griffith_observatory",
+      "day": 155,
+      "latitude": 34.119175,
+      "longitude": -118.300375,
+      "method": "product_move_route_delta",
+      "stop_order": 2
+    },
+    {
+      "attraction_name": "san_francisco_international_airport",
+      "day": 156,
+      "latitude": 37.617243,
+      "longitude": -122.384195,
+      "method": "product_move_route_delta",
+      "stop_order": 1
+    },
+    {
+      "attraction_name": "hotel_zephyr_san_francisco",
+      "day": 156,
+      "latitude": 37.806895,
+      "longitude": -122.41405,
+      "method": "product_move_route_delta",
+      "stop_order": 2
+    },
+    {
+      "attraction_name": "san_francisco_international_airport",
+      "day": 157,
+      "latitude": 37.617243,
+      "longitude": -122.384195,
+      "method": "product_move_route_delta",
+      "stop_order": 1
+    },
+    {
+      "attraction_name": "kings_canyon_national_park",
+      "day": 157,
+      "latitude": 36.796291,
+      "longitude": -118.583728,
+      "method": "product_move_route_delta",
+      "stop_order": 2
+    },
+    {
+      "attraction_name": "san_francisco_international_airport",
+      "day": 158,
+      "latitude": 37.617243,
+      "longitude": -122.384195,
+      "method": "product_move_route_delta",
+      "stop_order": 1
+    },
+    {
+      "attraction_name": "pfeiffer_big_sur_state_park",
+      "day": 158,
+      "latitude": 36.252418,
+      "longitude": -121.787339,
+      "method": "product_move_route_delta",
+      "stop_order": 2
+    },
+    {
+      "attraction_name": "san_francisco_international_airport",
+      "day": 159,
+      "latitude": 37.617243,
+      "longitude": -122.384195,
+      "method": "product_move_route_delta",
+      "stop_order": 1
+    },
+    {
+      "attraction_name": "point_lobos_state_natural_reserve",
+      "day": 159,
+      "latitude": 36.517094,
+      "longitude": -121.941786,
+      "method": "product_move_route_delta",
+      "stop_order": 2
+    },
+    {
+      "attraction_name": "san_francisco_international_airport",
+      "day": 160,
+      "latitude": 37.617243,
+      "longitude": -122.384195,
+      "method": "product_move_route_delta",
+      "stop_order": 1
+    },
+    {
+      "attraction_name": "sequoia_national_park",
+      "day": 160,
+      "latitude": 36.452874,
+      "longitude": -118.595875,
+      "method": "product_move_route_delta",
+      "stop_order": 2
+    },
+    {
+      "attraction_name": "san_francisco_international_airport",
+      "day": 161,
+      "latitude": 37.617243,
+      "longitude": -122.384195,
+      "method": "product_move_route_delta",
+      "stop_order": 1
+    },
+    {
+      "attraction_name": "stanford_university_main_quad",
+      "day": 161,
+      "latitude": 37.427265,
+      "longitude": -122.168571,
+      "method": "product_move_route_delta",
+      "stop_order": 2
+    },
+    {
+      "attraction_name": "san_francisco_international_airport",
+      "day": 162,
+      "latitude": 37.617243,
+      "longitude": -122.384195,
+      "method": "product_move_route_delta",
+      "stop_order": 1
+    },
+    {
+      "attraction_name": "stearns_wharf",
+      "day": 162,
+      "latitude": 34.410121,
+      "longitude": -119.685609,
+      "method": "product_move_route_delta",
+      "stop_order": 2
+    },
+    {
+      "attraction_name": "san_francisco_international_airport",
+      "day": 163,
+      "latitude": 37.617243,
+      "longitude": -122.384195,
+      "method": "product_move_route_delta",
+      "stop_order": 1
+    },
+    {
+      "attraction_name": "yosemite_national_park",
+      "day": 163,
+      "latitude": 37.850556,
+      "longitude": -119.572345,
+      "method": "product_move_route_delta",
+      "stop_order": 2
+    },
+    {
+      "attraction_name": "sequoia_national_park",
+      "day": 164,
+      "latitude": 36.452874,
+      "longitude": -118.595875,
+      "method": "product_move_route_delta",
+      "stop_order": 1
+    },
+    {
+      "attraction_name": "best_western_yosemite_way_station",
+      "day": 164,
+      "latitude": 37.489167,
+      "longitude": -119.965892,
+      "method": "product_move_route_delta",
+      "stop_order": 2
+    },
+    {
+      "attraction_name": "sequoia_national_park",
+      "day": 165,
+      "latitude": 36.452874,
+      "longitude": -118.595875,
+      "method": "product_move_route_delta",
+      "stop_order": 1
+    },
+    {
+      "attraction_name": "bixby_creek_bridge_viewpoint",
+      "day": 165,
+      "latitude": 36.371479,
+      "longitude": -121.901894,
+      "method": "product_move_route_delta",
+      "stop_order": 2
+    },
+    {
+      "attraction_name": "sequoia_national_park",
+      "day": 166,
+      "latitude": 36.452874,
+      "longitude": -118.595875,
+      "method": "product_move_route_delta",
+      "stop_order": 1
+    },
+    {
+      "attraction_name": "golden_gate_bridge",
+      "day": 166,
+      "latitude": 37.819883,
+      "longitude": -122.478528,
+      "method": "product_move_route_delta",
+      "stop_order": 2
+    },
+    {
+      "attraction_name": "sequoia_national_park",
+      "day": 167,
+      "latitude": 36.452874,
+      "longitude": -118.595875,
+      "method": "product_move_route_delta",
+      "stop_order": 1
+    },
+    {
+      "attraction_name": "griffith_observatory",
+      "day": 167,
+      "latitude": 34.119175,
+      "longitude": -118.300375,
+      "method": "product_move_route_delta",
+      "stop_order": 2
+    },
+    {
+      "attraction_name": "sequoia_national_park",
+      "day": 168,
+      "latitude": 36.452874,
+      "longitude": -118.595875,
+      "method": "product_move_route_delta",
+      "stop_order": 1
+    },
+    {
+      "attraction_name": "hotel_milo_santa_barbara",
+      "day": 168,
+      "latitude": 34.410928,
+      "longitude": -119.691675,
+      "method": "product_move_route_delta",
+      "stop_order": 2
+    },
+    {
+      "attraction_name": "sequoia_national_park",
+      "day": 169,
+      "latitude": 36.452874,
+      "longitude": -118.595875,
+      "method": "product_move_route_delta",
+      "stop_order": 1
+    },
+    {
+      "attraction_name": "hotel_zephyr_san_francisco",
+      "day": 169,
+      "latitude": 37.806895,
+      "longitude": -122.41405,
+      "method": "product_move_route_delta",
+      "stop_order": 2
+    },
+    {
+      "attraction_name": "sequoia_national_park",
+      "day": 170,
+      "latitude": 36.452874,
+      "longitude": -118.595875,
+      "method": "product_move_route_delta",
+      "stop_order": 1
+    },
+    {
+      "attraction_name": "los_angeles_international_airport",
+      "day": 170,
+      "latitude": 33.942502,
+      "longitude": -118.407858,
+      "method": "product_move_route_delta",
+      "stop_order": 2
+    },
+    {
+      "attraction_name": "sequoia_national_park",
+      "day": 171,
+      "latitude": 36.452874,
+      "longitude": -118.595875,
+      "method": "product_move_route_delta",
+      "stop_order": 1
+    },
+    {
+      "attraction_name": "pfeiffer_big_sur_state_park",
+      "day": 171,
+      "latitude": 36.252418,
+      "longitude": -121.787339,
+      "method": "product_move_route_delta",
+      "stop_order": 2
+    },
+    {
+      "attraction_name": "sequoia_national_park",
+      "day": 172,
+      "latitude": 36.452874,
+      "longitude": -118.595875,
+      "method": "product_move_route_delta",
+      "stop_order": 1
+    },
+    {
+      "attraction_name": "point_lobos_state_natural_reserve",
+      "day": 172,
+      "latitude": 36.517094,
+      "longitude": -121.941786,
+      "method": "product_move_route_delta",
+      "stop_order": 2
+    },
+    {
+      "attraction_name": "sequoia_national_park",
+      "day": 173,
+      "latitude": 36.452874,
+      "longitude": -118.595875,
+      "method": "product_move_route_delta",
+      "stop_order": 1
+    },
+    {
+      "attraction_name": "portola_hotel_monterey",
+      "day": 173,
+      "latitude": 36.602531,
+      "longitude": -121.895083,
+      "method": "product_move_route_delta",
+      "stop_order": 2
+    },
+    {
+      "attraction_name": "sequoia_national_park",
+      "day": 174,
+      "latitude": 36.452874,
+      "longitude": -118.595875,
+      "method": "product_move_route_delta",
+      "stop_order": 1
+    },
+    {
+      "attraction_name": "san_francisco_international_airport",
+      "day": 174,
+      "latitude": 37.617243,
+      "longitude": -122.384195,
+      "method": "product_move_route_delta",
+      "stop_order": 2
+    },
+    {
+      "attraction_name": "sequoia_national_park",
+      "day": 175,
+      "latitude": 36.452874,
+      "longitude": -118.595875,
+      "method": "product_move_route_delta",
+      "stop_order": 1
+    },
+    {
+      "attraction_name": "stanford_university_main_quad",
+      "day": 175,
+      "latitude": 37.427265,
+      "longitude": -122.168571,
+      "method": "product_move_route_delta",
+      "stop_order": 2
+    },
+    {
+      "attraction_name": "sequoia_national_park",
+      "day": 176,
+      "latitude": 36.452874,
+      "longitude": -118.595875,
+      "method": "product_move_route_delta",
+      "stop_order": 1
+    },
+    {
+      "attraction_name": "stearns_wharf",
+      "day": 176,
+      "latitude": 34.410121,
+      "longitude": -119.685609,
+      "method": "product_move_route_delta",
+      "stop_order": 2
+    },
+    {
+      "attraction_name": "sequoia_national_park",
+      "day": 177,
+      "latitude": 36.452874,
+      "longitude": -118.595875,
+      "method": "product_move_route_delta",
+      "stop_order": 1
+    },
+    {
+      "attraction_name": "yosemite_national_park",
+      "day": 177,
+      "latitude": 37.850556,
+      "longitude": -119.572345,
+      "method": "product_move_route_delta",
+      "stop_order": 2
+    },
+    {
+      "attraction_name": "sequoia_national_park",
+      "day": 178,
+      "latitude": 36.452874,
+      "longitude": -118.595875,
+      "method": "product_move_route_delta",
+      "stop_order": 1
+    },
+    {
+      "attraction_name": "yosemite_southgate_hotel",
+      "day": 178,
+      "latitude": 37.328489,
+      "longitude": -119.649892,
+      "method": "product_move_route_delta",
+      "stop_order": 2
+    },
+    {
+      "attraction_name": "stanford_university_main_quad",
+      "day": 179,
+      "latitude": 37.427265,
+      "longitude": -122.168571,
+      "method": "product_move_route_delta",
+      "stop_order": 1
+    },
+    {
+      "attraction_name": "bixby_creek_bridge_viewpoint",
+      "day": 179,
+      "latitude": 36.371479,
+      "longitude": -121.901894,
+      "method": "product_move_route_delta",
+      "stop_order": 2
+    },
+    {
+      "attraction_name": "stanford_university_main_quad",
+      "day": 180,
+      "latitude": 37.427265,
+      "longitude": -122.168571,
+      "method": "product_move_route_delta",
+      "stop_order": 1
+    },
+    {
+      "attraction_name": "comfort_inn_sequoia_kings_canyon",
+      "day": 180,
+      "latitude": 36.448137,
+      "longitude": -118.900814,
+      "method": "product_move_route_delta",
+      "stop_order": 2
+    },
+    {
+      "attraction_name": "stanford_university_main_quad",
+      "day": 181,
+      "latitude": 37.427265,
+      "longitude": -122.168571,
+      "method": "product_move_route_delta",
+      "stop_order": 1
+    },
+    {
+      "attraction_name": "golden_gate_bridge",
+      "day": 181,
+      "latitude": 37.819883,
+      "longitude": -122.478528,
+      "method": "product_move_route_delta",
+      "stop_order": 2
+    },
+    {
+      "attraction_name": "stanford_university_main_quad",
+      "day": 182,
+      "latitude": 37.427265,
+      "longitude": -122.168571,
+      "method": "product_move_route_delta",
+      "stop_order": 1
+    },
+    {
+      "attraction_name": "griffith_observatory",
+      "day": 182,
+      "latitude": 34.119175,
+      "longitude": -118.300375,
+      "method": "product_move_route_delta",
+      "stop_order": 2
+    },
+    {
+      "attraction_name": "stanford_university_main_quad",
+      "day": 183,
+      "latitude": 37.427265,
+      "longitude": -122.168571,
+      "method": "product_move_route_delta",
+      "stop_order": 1
+    },
+    {
+      "attraction_name": "hotel_milo_santa_barbara",
+      "day": 183,
+      "latitude": 34.410928,
+      "longitude": -119.691675,
+      "method": "product_move_route_delta",
+      "stop_order": 2
+    },
+    {
+      "attraction_name": "stanford_university_main_quad",
+      "day": 184,
+      "latitude": 37.427265,
+      "longitude": -122.168571,
+      "method": "product_move_route_delta",
+      "stop_order": 1
+    },
+    {
+      "attraction_name": "hotel_zephyr_san_francisco",
+      "day": 184,
+      "latitude": 37.806895,
+      "longitude": -122.41405,
+      "method": "product_move_route_delta",
+      "stop_order": 2
+    },
+    {
+      "attraction_name": "stanford_university_main_quad",
+      "day": 185,
+      "latitude": 37.427265,
+      "longitude": -122.168571,
+      "method": "product_move_route_delta",
+      "stop_order": 1
+    },
+    {
+      "attraction_name": "kings_canyon_national_park",
+      "day": 185,
+      "latitude": 36.796291,
+      "longitude": -118.583728,
+      "method": "product_move_route_delta",
+      "stop_order": 2
+    },
+    {
+      "attraction_name": "stanford_university_main_quad",
+      "day": 186,
+      "latitude": 37.427265,
+      "longitude": -122.168571,
+      "method": "product_move_route_delta",
+      "stop_order": 1
+    },
+    {
+      "attraction_name": "los_angeles_international_airport",
+      "day": 186,
+      "latitude": 33.942502,
+      "longitude": -118.407858,
+      "method": "product_move_route_delta",
+      "stop_order": 2
+    },
+    {
+      "attraction_name": "stanford_university_main_quad",
+      "day": 187,
+      "latitude": 37.427265,
+      "longitude": -122.168571,
+      "method": "product_move_route_delta",
+      "stop_order": 1
+    },
+    {
+      "attraction_name": "pfeiffer_big_sur_state_park",
+      "day": 187,
+      "latitude": 36.252418,
+      "longitude": -121.787339,
+      "method": "product_move_route_delta",
+      "stop_order": 2
+    },
+    {
+      "attraction_name": "stanford_university_main_quad",
+      "day": 188,
+      "latitude": 37.427265,
+      "longitude": -122.168571,
+      "method": "product_move_route_delta",
+      "stop_order": 1
+    },
+    {
+      "attraction_name": "point_lobos_state_natural_reserve",
+      "day": 188,
+      "latitude": 36.517094,
+      "longitude": -121.941786,
+      "method": "product_move_route_delta",
+      "stop_order": 2
+    },
+    {
+      "attraction_name": "stanford_university_main_quad",
+      "day": 189,
+      "latitude": 37.427265,
+      "longitude": -122.168571,
+      "method": "product_move_route_delta",
+      "stop_order": 1
+    },
+    {
+      "attraction_name": "portola_hotel_monterey",
+      "day": 189,
+      "latitude": 36.602531,
+      "longitude": -121.895083,
+      "method": "product_move_route_delta",
+      "stop_order": 2
+    },
+    {
+      "attraction_name": "stanford_university_main_quad",
+      "day": 190,
+      "latitude": 37.427265,
+      "longitude": -122.168571,
+      "method": "product_move_route_delta",
+      "stop_order": 1
+    },
+    {
+      "attraction_name": "san_francisco_international_airport",
+      "day": 190,
+      "latitude": 37.617243,
+      "longitude": -122.384195,
+      "method": "product_move_route_delta",
+      "stop_order": 2
+    },
+    {
+      "attraction_name": "stanford_university_main_quad",
+      "day": 191,
+      "latitude": 37.427265,
+      "longitude": -122.168571,
+      "method": "product_move_route_delta",
+      "stop_order": 1
+    },
+    {
+      "attraction_name": "sequoia_national_park",
+      "day": 191,
+      "latitude": 36.452874,
+      "longitude": -118.595875,
+      "method": "product_move_route_delta",
+      "stop_order": 2
+    },
+    {
+      "attraction_name": "stanford_university_main_quad",
+      "day": 192,
+      "latitude": 37.427265,
+      "longitude": -122.168571,
+      "method": "product_move_route_delta",
+      "stop_order": 1
+    },
+    {
+      "attraction_name": "stearns_wharf",
+      "day": 192,
+      "latitude": 34.410121,
+      "longitude": -119.685609,
+      "method": "product_move_route_delta",
+      "stop_order": 2
+    },
+    {
+      "attraction_name": "stanford_university_main_quad",
+      "day": 193,
+      "latitude": 37.427265,
+      "longitude": -122.168571,
+      "method": "product_move_route_delta",
+      "stop_order": 1
+    },
+    {
+      "attraction_name": "yosemite_national_park",
+      "day": 193,
+      "latitude": 37.850556,
+      "longitude": -119.572345,
+      "method": "product_move_route_delta",
+      "stop_order": 2
+    },
+    {
+      "attraction_name": "stanford_university_main_quad",
+      "day": 194,
+      "latitude": 37.427265,
+      "longitude": -122.168571,
+      "method": "product_move_route_delta",
+      "stop_order": 1
+    },
+    {
+      "attraction_name": "yosemite_southgate_hotel",
+      "day": 194,
+      "latitude": 37.328489,
+      "longitude": -119.649892,
+      "method": "product_move_route_delta",
+      "stop_order": 2
+    },
+    {
+      "attraction_name": "stearns_wharf",
+      "day": 195,
+      "latitude": 34.410121,
+      "longitude": -119.685609,
+      "method": "product_move_route_delta",
+      "stop_order": 1
+    },
+    {
+      "attraction_name": "best_western_yosemite_way_station",
+      "day": 195,
+      "latitude": 37.489167,
+      "longitude": -119.965892,
+      "method": "product_move_route_delta",
+      "stop_order": 2
+    },
+    {
+      "attraction_name": "stearns_wharf",
+      "day": 196,
+      "latitude": 34.410121,
+      "longitude": -119.685609,
+      "method": "product_move_route_delta",
+      "stop_order": 1
+    },
+    {
+      "attraction_name": "bixby_creek_bridge_viewpoint",
+      "day": 196,
+      "latitude": 36.371479,
+      "longitude": -121.901894,
+      "method": "product_move_route_delta",
+      "stop_order": 2
+    },
+    {
+      "attraction_name": "stearns_wharf",
+      "day": 197,
+      "latitude": 34.410121,
+      "longitude": -119.685609,
+      "method": "product_move_route_delta",
+      "stop_order": 1
+    },
+    {
+      "attraction_name": "comfort_inn_sequoia_kings_canyon",
+      "day": 197,
+      "latitude": 36.448137,
+      "longitude": -118.900814,
+      "method": "product_move_route_delta",
+      "stop_order": 2
+    },
+    {
+      "attraction_name": "stearns_wharf",
+      "day": 198,
+      "latitude": 34.410121,
+      "longitude": -119.685609,
+      "method": "product_move_route_delta",
+      "stop_order": 1
+    },
+    {
+      "attraction_name": "golden_gate_bridge",
+      "day": 198,
+      "latitude": 37.819883,
+      "longitude": -122.478528,
+      "method": "product_move_route_delta",
+      "stop_order": 2
+    },
+    {
+      "attraction_name": "stearns_wharf",
+      "day": 199,
+      "latitude": 34.410121,
+      "longitude": -119.685609,
+      "method": "product_move_route_delta",
+      "stop_order": 1
+    },
+    {
+      "attraction_name": "griffith_observatory",
+      "day": 199,
+      "latitude": 34.119175,
+      "longitude": -118.300375,
+      "method": "product_move_route_delta",
+      "stop_order": 2
+    },
+    {
+      "attraction_name": "stearns_wharf",
+      "day": 200,
+      "latitude": 34.410121,
+      "longitude": -119.685609,
+      "method": "product_move_route_delta",
+      "stop_order": 1
+    },
+    {
+      "attraction_name": "hotel_zephyr_san_francisco",
+      "day": 200,
+      "latitude": 37.806895,
+      "longitude": -122.41405,
+      "method": "product_move_route_delta",
+      "stop_order": 2
+    },
+    {
+      "attraction_name": "stearns_wharf",
+      "day": 201,
+      "latitude": 34.410121,
+      "longitude": -119.685609,
+      "method": "product_move_route_delta",
+      "stop_order": 1
+    },
+    {
+      "attraction_name": "kings_canyon_national_park",
+      "day": 201,
+      "latitude": 36.796291,
+      "longitude": -118.583728,
+      "method": "product_move_route_delta",
+      "stop_order": 2
+    },
+    {
+      "attraction_name": "stearns_wharf",
+      "day": 202,
+      "latitude": 34.410121,
+      "longitude": -119.685609,
+      "method": "product_move_route_delta",
+      "stop_order": 1
+    },
+    {
+      "attraction_name": "los_angeles_international_airport",
+      "day": 202,
+      "latitude": 33.942502,
+      "longitude": -118.407858,
+      "method": "product_move_route_delta",
+      "stop_order": 2
+    },
+    {
+      "attraction_name": "stearns_wharf",
+      "day": 203,
+      "latitude": 34.410121,
+      "longitude": -119.685609,
+      "method": "product_move_route_delta",
+      "stop_order": 1
+    },
+    {
+      "attraction_name": "pfeiffer_big_sur_state_park",
+      "day": 203,
+      "latitude": 36.252418,
+      "longitude": -121.787339,
+      "method": "product_move_route_delta",
+      "stop_order": 2
+    },
+    {
+      "attraction_name": "stearns_wharf",
+      "day": 204,
+      "latitude": 34.410121,
+      "longitude": -119.685609,
+      "method": "product_move_route_delta",
+      "stop_order": 1
+    },
+    {
+      "attraction_name": "point_lobos_state_natural_reserve",
+      "day": 204,
+      "latitude": 36.517094,
+      "longitude": -121.941786,
+      "method": "product_move_route_delta",
+      "stop_order": 2
+    },
+    {
+      "attraction_name": "stearns_wharf",
+      "day": 205,
+      "latitude": 34.410121,
+      "longitude": -119.685609,
+      "method": "product_move_route_delta",
+      "stop_order": 1
+    },
+    {
+      "attraction_name": "portola_hotel_monterey",
+      "day": 205,
+      "latitude": 36.602531,
+      "longitude": -121.895083,
+      "method": "product_move_route_delta",
+      "stop_order": 2
+    },
+    {
+      "attraction_name": "stearns_wharf",
+      "day": 206,
+      "latitude": 34.410121,
+      "longitude": -119.685609,
+      "method": "product_move_route_delta",
+      "stop_order": 1
+    },
+    {
+      "attraction_name": "san_francisco_international_airport",
+      "day": 206,
+      "latitude": 37.617243,
+      "longitude": -122.384195,
+      "method": "product_move_route_delta",
+      "stop_order": 2
+    },
+    {
+      "attraction_name": "stearns_wharf",
+      "day": 207,
+      "latitude": 34.410121,
+      "longitude": -119.685609,
+      "method": "product_move_route_delta",
+      "stop_order": 1
+    },
+    {
+      "attraction_name": "sequoia_national_park",
+      "day": 207,
+      "latitude": 36.452874,
+      "longitude": -118.595875,
+      "method": "product_move_route_delta",
+      "stop_order": 2
+    },
+    {
+      "attraction_name": "stearns_wharf",
+      "day": 208,
+      "latitude": 34.410121,
+      "longitude": -119.685609,
+      "method": "product_move_route_delta",
+      "stop_order": 1
+    },
+    {
+      "attraction_name": "stanford_university_main_quad",
+      "day": 208,
+      "latitude": 37.427265,
+      "longitude": -122.168571,
+      "method": "product_move_route_delta",
+      "stop_order": 2
+    },
+    {
+      "attraction_name": "stearns_wharf",
+      "day": 209,
+      "latitude": 34.410121,
+      "longitude": -119.685609,
+      "method": "product_move_route_delta",
+      "stop_order": 1
+    },
+    {
+      "attraction_name": "yosemite_national_park",
+      "day": 209,
+      "latitude": 37.850556,
+      "longitude": -119.572345,
+      "method": "product_move_route_delta",
+      "stop_order": 2
+    },
+    {
+      "attraction_name": "stearns_wharf",
+      "day": 210,
+      "latitude": 34.410121,
+      "longitude": -119.685609,
+      "method": "product_move_route_delta",
+      "stop_order": 1
+    },
+    {
+      "attraction_name": "yosemite_southgate_hotel",
+      "day": 210,
+      "latitude": 37.328489,
+      "longitude": -119.649892,
+      "method": "product_move_route_delta",
+      "stop_order": 2
+    },
+    {
+      "attraction_name": "yosemite_national_park",
+      "day": 211,
+      "latitude": 37.850556,
+      "longitude": -119.572345,
+      "method": "product_move_route_delta",
+      "stop_order": 1
+    },
+    {
+      "attraction_name": "best_western_yosemite_way_station",
+      "day": 211,
+      "latitude": 37.489167,
+      "longitude": -119.965892,
+      "method": "product_move_route_delta",
+      "stop_order": 2
+    },
+    {
+      "attraction_name": "yosemite_national_park",
+      "day": 212,
+      "latitude": 37.850556,
+      "longitude": -119.572345,
+      "method": "product_move_route_delta",
+      "stop_order": 1
+    },
+    {
+      "attraction_name": "bixby_creek_bridge_viewpoint",
+      "day": 212,
+      "latitude": 36.371479,
+      "longitude": -121.901894,
+      "method": "product_move_route_delta",
+      "stop_order": 2
+    },
+    {
+      "attraction_name": "yosemite_national_park",
+      "day": 213,
+      "latitude": 37.850556,
+      "longitude": -119.572345,
+      "method": "product_move_route_delta",
+      "stop_order": 1
+    },
+    {
+      "attraction_name": "comfort_inn_sequoia_kings_canyon",
+      "day": 213,
+      "latitude": 36.448137,
+      "longitude": -118.900814,
+      "method": "product_move_route_delta",
+      "stop_order": 2
+    },
+    {
+      "attraction_name": "yosemite_national_park",
+      "day": 214,
+      "latitude": 37.850556,
+      "longitude": -119.572345,
+      "method": "product_move_route_delta",
+      "stop_order": 1
+    },
+    {
+      "attraction_name": "golden_gate_bridge",
+      "day": 214,
+      "latitude": 37.819883,
+      "longitude": -122.478528,
+      "method": "product_move_route_delta",
+      "stop_order": 2
+    },
+    {
+      "attraction_name": "yosemite_national_park",
+      "day": 215,
+      "latitude": 37.850556,
+      "longitude": -119.572345,
+      "method": "product_move_route_delta",
+      "stop_order": 1
+    },
+    {
+      "attraction_name": "griffith_observatory",
+      "day": 215,
+      "latitude": 34.119175,
+      "longitude": -118.300375,
+      "method": "product_move_route_delta",
+      "stop_order": 2
+    },
+    {
+      "attraction_name": "yosemite_national_park",
+      "day": 216,
+      "latitude": 37.850556,
+      "longitude": -119.572345,
+      "method": "product_move_route_delta",
+      "stop_order": 1
+    },
+    {
+      "attraction_name": "hotel_milo_santa_barbara",
+      "day": 216,
+      "latitude": 34.410928,
+      "longitude": -119.691675,
+      "method": "product_move_route_delta",
+      "stop_order": 2
+    },
+    {
+      "attraction_name": "yosemite_national_park",
+      "day": 217,
+      "latitude": 37.850556,
+      "longitude": -119.572345,
+      "method": "product_move_route_delta",
+      "stop_order": 1
+    },
+    {
+      "attraction_name": "hotel_zephyr_san_francisco",
+      "day": 217,
+      "latitude": 37.806895,
+      "longitude": -122.41405,
+      "method": "product_move_route_delta",
+      "stop_order": 2
+    },
+    {
+      "attraction_name": "yosemite_national_park",
+      "day": 218,
+      "latitude": 37.850556,
+      "longitude": -119.572345,
+      "method": "product_move_route_delta",
+      "stop_order": 1
+    },
+    {
+      "attraction_name": "kings_canyon_national_park",
+      "day": 218,
+      "latitude": 36.796291,
+      "longitude": -118.583728,
+      "method": "product_move_route_delta",
+      "stop_order": 2
+    },
+    {
+      "attraction_name": "yosemite_national_park",
+      "day": 219,
+      "latitude": 37.850556,
+      "longitude": -119.572345,
+      "method": "product_move_route_delta",
+      "stop_order": 1
+    },
+    {
+      "attraction_name": "los_angeles_international_airport",
+      "day": 219,
+      "latitude": 33.942502,
+      "longitude": -118.407858,
+      "method": "product_move_route_delta",
+      "stop_order": 2
+    },
+    {
+      "attraction_name": "yosemite_national_park",
+      "day": 220,
+      "latitude": 37.850556,
+      "longitude": -119.572345,
+      "method": "product_move_route_delta",
+      "stop_order": 1
+    },
+    {
+      "attraction_name": "pfeiffer_big_sur_state_park",
+      "day": 220,
+      "latitude": 36.252418,
+      "longitude": -121.787339,
+      "method": "product_move_route_delta",
+      "stop_order": 2
+    },
+    {
+      "attraction_name": "yosemite_national_park",
+      "day": 221,
+      "latitude": 37.850556,
+      "longitude": -119.572345,
+      "method": "product_move_route_delta",
+      "stop_order": 1
+    },
+    {
+      "attraction_name": "point_lobos_state_natural_reserve",
+      "day": 221,
+      "latitude": 36.517094,
+      "longitude": -121.941786,
+      "method": "product_move_route_delta",
+      "stop_order": 2
+    },
+    {
+      "attraction_name": "yosemite_national_park",
+      "day": 222,
+      "latitude": 37.850556,
+      "longitude": -119.572345,
+      "method": "product_move_route_delta",
+      "stop_order": 1
+    },
+    {
+      "attraction_name": "portola_hotel_monterey",
+      "day": 222,
+      "latitude": 36.602531,
+      "longitude": -121.895083,
+      "method": "product_move_route_delta",
+      "stop_order": 2
+    },
+    {
+      "attraction_name": "yosemite_national_park",
+      "day": 223,
+      "latitude": 37.850556,
+      "longitude": -119.572345,
+      "method": "product_move_route_delta",
+      "stop_order": 1
+    },
+    {
+      "attraction_name": "san_francisco_international_airport",
+      "day": 223,
+      "latitude": 37.617243,
+      "longitude": -122.384195,
+      "method": "product_move_route_delta",
+      "stop_order": 2
+    },
+    {
+      "attraction_name": "yosemite_national_park",
+      "day": 224,
+      "latitude": 37.850556,
+      "longitude": -119.572345,
+      "method": "product_move_route_delta",
+      "stop_order": 1
+    },
+    {
+      "attraction_name": "sequoia_national_park",
+      "day": 224,
+      "latitude": 36.452874,
+      "longitude": -118.595875,
+      "method": "product_move_route_delta",
+      "stop_order": 2
+    },
+    {
+      "attraction_name": "yosemite_national_park",
+      "day": 225,
+      "latitude": 37.850556,
+      "longitude": -119.572345,
+      "method": "product_move_route_delta",
+      "stop_order": 1
+    },
+    {
+      "attraction_name": "stanford_university_main_quad",
+      "day": 225,
+      "latitude": 37.427265,
+      "longitude": -122.168571,
+      "method": "product_move_route_delta",
+      "stop_order": 2
+    },
+    {
+      "attraction_name": "yosemite_national_park",
+      "day": 226,
+      "latitude": 37.850556,
+      "longitude": -119.572345,
+      "method": "product_move_route_delta",
+      "stop_order": 1
+    },
+    {
+      "attraction_name": "stearns_wharf",
+      "day": 226,
+      "latitude": 34.410121,
+      "longitude": -119.685609,
+      "method": "product_move_route_delta",
+      "stop_order": 2
+    },
+    {
+      "attraction_name": "yosemite_southgate_hotel",
+      "day": 227,
+      "latitude": 37.328489,
+      "longitude": -119.649892,
+      "method": "product_move_route_delta",
+      "stop_order": 1
+    },
+    {
+      "attraction_name": "bixby_creek_bridge_viewpoint",
+      "day": 227,
+      "latitude": 36.371479,
+      "longitude": -121.901894,
+      "method": "product_move_route_delta",
+      "stop_order": 2
+    },
+    {
+      "attraction_name": "yosemite_southgate_hotel",
+      "day": 228,
+      "latitude": 37.328489,
+      "longitude": -119.649892,
+      "method": "product_move_route_delta",
+      "stop_order": 1
+    },
+    {
+      "attraction_name": "comfort_inn_sequoia_kings_canyon",
+      "day": 228,
+      "latitude": 36.448137,
+      "longitude": -118.900814,
+      "method": "product_move_route_delta",
+      "stop_order": 2
+    },
+    {
+      "attraction_name": "yosemite_southgate_hotel",
+      "day": 229,
+      "latitude": 37.328489,
+      "longitude": -119.649892,
+      "method": "product_move_route_delta",
+      "stop_order": 1
+    },
+    {
+      "attraction_name": "golden_gate_bridge",
+      "day": 229,
+      "latitude": 37.819883,
+      "longitude": -122.478528,
+      "method": "product_move_route_delta",
+      "stop_order": 2
+    },
+    {
+      "attraction_name": "yosemite_southgate_hotel",
+      "day": 230,
+      "latitude": 37.328489,
+      "longitude": -119.649892,
+      "method": "product_move_route_delta",
+      "stop_order": 1
+    },
+    {
+      "attraction_name": "griffith_observatory",
+      "day": 230,
+      "latitude": 34.119175,
+      "longitude": -118.300375,
+      "method": "product_move_route_delta",
+      "stop_order": 2
+    },
+    {
+      "attraction_name": "yosemite_southgate_hotel",
+      "day": 231,
+      "latitude": 37.328489,
+      "longitude": -119.649892,
+      "method": "product_move_route_delta",
+      "stop_order": 1
+    },
+    {
+      "attraction_name": "pfeiffer_big_sur_state_park",
+      "day": 231,
+      "latitude": 36.252418,
+      "longitude": -121.787339,
+      "method": "product_move_route_delta",
+      "stop_order": 2
+    },
+    {
+      "attraction_name": "yosemite_southgate_hotel",
+      "day": 232,
+      "latitude": 37.328489,
+      "longitude": -119.649892,
+      "method": "product_move_route_delta",
+      "stop_order": 1
+    },
+    {
+      "attraction_name": "point_lobos_state_natural_reserve",
+      "day": 232,
+      "latitude": 36.517094,
+      "longitude": -121.941786,
+      "method": "product_move_route_delta",
+      "stop_order": 2
+    },
+    {
+      "attraction_name": "yosemite_southgate_hotel",
+      "day": 233,
+      "latitude": 37.328489,
+      "longitude": -119.649892,
+      "method": "product_move_route_delta",
+      "stop_order": 1
+    },
+    {
+      "attraction_name": "stanford_university_main_quad",
+      "day": 233,
+      "latitude": 37.427265,
+      "longitude": -122.168571,
+      "method": "product_move_route_delta",
+      "stop_order": 2
+    },
+    {
+      "attraction_name": "yosemite_southgate_hotel",
+      "day": 234,
+      "latitude": 37.328489,
+      "longitude": -119.649892,
+      "method": "product_move_route_delta",
+      "stop_order": 1
+    },
+    {
+      "attraction_name": "stearns_wharf",
+      "day": 234,
+      "latitude": 34.410121,
+      "longitude": -119.685609,
+      "method": "product_move_route_delta",
+      "stop_order": 2
+    },
+    {
+      "attraction_name": "yosemite_southgate_hotel",
+      "day": 235,
+      "latitude": 37.328489,
+      "longitude": -119.649892,
+      "method": "product_move_route_delta",
+      "stop_order": 1
+    },
+    {
+      "attraction_name": "yosemite_national_park",
+      "day": 235,
+      "latitude": 37.850556,
+      "longitude": -119.572345,
+      "method": "product_move_route_delta",
+      "stop_order": 2
+    }
+  ]
+}

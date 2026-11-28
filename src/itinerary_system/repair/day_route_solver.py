@@ -345,27 +345,58 @@ def _candidate_sequences(
         return _dedupe_sequences(supplied_sequences)
 
     parent_day_sequence = _parent_day_sequence(model, day)
-    sequences: list[tuple[str, ...]] = [parent_day_sequence]
+    base_sequences = _moved_day_sequences(model, day, parent_day_sequence)
+    sequences: list[tuple[str, ...]] = list(base_sequences)
     candidate_ids = tuple(
         str(stop.get("stop_id"))
         for stop in model.metadata.get("candidate_stops", ())
         if _coerce_int(stop.get("day")) in (None, day)
     )
-    editable_parent_stops = tuple(
-        stop_id for stop_id in parent_day_sequence if stop_id in set(model.neighborhood.editable_stop_ids)
-    )
-    for candidate_id in candidate_ids:
-        for replaced_stop in editable_parent_stops:
-            if replaced_stop in set(model.metadata.get("locked_stop_ids", ())):
-                continue
-            sequence = tuple(candidate_id if stop_id == replaced_stop else stop_id for stop_id in parent_day_sequence)
-            sequences.append(sequence)
-        if candidate_id not in parent_day_sequence:
-            sequences.append((*parent_day_sequence, candidate_id))
+    for base_sequence in base_sequences:
+        editable_parent_stops = tuple(
+            stop_id for stop_id in base_sequence if stop_id in set(model.neighborhood.editable_stop_ids)
+        )
+        for candidate_id in candidate_ids:
+            for replaced_stop in editable_parent_stops:
+                if replaced_stop in set(model.metadata.get("locked_stop_ids", ())):
+                    continue
+                sequence = tuple(candidate_id if stop_id == replaced_stop else stop_id for stop_id in base_sequence)
+                sequences.append(sequence)
+            if candidate_id not in base_sequence:
+                sequences.append((*base_sequence, candidate_id))
     # A generated sequence forbidden by confirmed selection constraints does
     # not need route evidence. Required cells for admissible routes stay strict.
     excluded = set(model.metadata.get("context_excluded_stop_ids", ()))
     return _dedupe_sequences(tuple(sequence for sequence in sequences if not excluded.intersection(sequence)))
+
+
+def _moved_day_sequences(
+    model: RepairModel,
+    day: int,
+    parent_day_sequence: tuple[str, ...],
+) -> tuple[tuple[str, ...], ...]:
+    """Base sequences for a day once confirmed cross-day moves are applied.
+
+    A stop moving away is left out. A stop moving in is tried at every position
+    of the remaining sequence. Without a move that touches this day the parent
+    sequence is the only base, as before.
+    """
+    # A confirmed removal leaves the day with no replacement; the stops before
+    # and after it are joined by the same bypass leg a move away would use.
+    removed = set(model.metadata.get("remove_stops") or ())
+    if removed:
+        parent_day_sequence = tuple(stop_id for stop_id in parent_day_sequence if stop_id not in removed)
+    moves = model.metadata.get("move_stops") or {}
+    if not moves:
+        return (parent_day_sequence,)
+    remaining = tuple(stop_id for stop_id in parent_day_sequence if moves.get(stop_id, day) == day)
+    arriving = tuple(sorted(stop_id for stop_id, target in moves.items() if target == day and stop_id not in remaining))
+    if remaining == parent_day_sequence and not arriving:
+        return (parent_day_sequence,)
+    bases: list[tuple[str, ...]] = [remaining]
+    for stop_id in arriving:
+        bases = [base[:position] + (stop_id,) + base[position:] for base in bases for position in range(len(base) + 1)]
+    return _dedupe_sequences(tuple(bases))
 
 
 def _solution_for_sequence(

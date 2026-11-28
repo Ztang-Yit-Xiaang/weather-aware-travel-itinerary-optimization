@@ -310,7 +310,7 @@ def test_all_current_literal_dynamic_and_responsive_bindings_have_exact_explicit
     registry = json.loads((gates.ROOT / "configs/e2e1_interaction_coverage.json").read_text())
     rows = gates.source_controls()
     mapped, unmatched, stale = gates.binding_inventory(registry, rows)
-    assert len(rows) == len(mapped) == 108 and unmatched == stale == []
+    assert len(rows) == len(mapped) == 111 and unmatched == stale == []
     added = {
         row["binding_id"]: row["required_execution_selectors"]
         for row in mapped

@@ -381,6 +381,11 @@ def _moved_day_sequences(
     of the remaining sequence. Without a move that touches this day the parent
     sequence is the only base, as before.
     """
+    # A confirmed removal leaves the day with no replacement; the stops before
+    # and after it are joined by the same bypass leg a move away would use.
+    removed = set(model.metadata.get("remove_stops") or ())
+    if removed:
+        parent_day_sequence = tuple(stop_id for stop_id in parent_day_sequence if stop_id not in removed)
     moves = model.metadata.get("move_stops") or {}
     if not moves:
         return (parent_day_sequence,)

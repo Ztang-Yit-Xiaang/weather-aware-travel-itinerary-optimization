@@ -6,6 +6,7 @@ import re
 from dataclasses import replace
 from typing import Protocol
 
+from .copilot_copy import describe_proposal
 from .copilot_typed_edits import TYPED_CHAT_OPERATIONS, validate_parameters
 from .models import (
     CopilotContextV1,
@@ -73,8 +74,8 @@ _PROPOSAL_INTENTS = frozenset(
         "add_candidate",
     }
 )
-ALLOWED_INTENT_TYPES |= TYPED_CHAT_OPERATIONS | {"replan_trip"}
-_PROPOSAL_INTENTS |= TYPED_CHAT_OPERATIONS | {"replan_trip"}
+ALLOWED_INTENT_TYPES |= TYPED_CHAT_OPERATIONS | {"replan_trip", "remove_stop"}
+_PROPOSAL_INTENTS |= TYPED_CHAT_OPERATIONS | {"replan_trip", "remove_stop"}
 
 _FALSE_EXECUTION_CLAIMS = (
     re.compile(
@@ -91,7 +92,22 @@ _FALSE_EXECUTION_CLAIMS = (
     ),
 )
 _STOP_REMOVAL_REQUEST = re.compile(
-    r"\b(?:remove|delete|exclude|skip)\b|\b(?:do not|don't|dont)\s+want\s+to\s+(?:go\s+to|visit|include)\b",
+    r"\b(?:remove|delete|exclude|skip|drop)\b|\b(?:do not|don't|dont)\s+want\s+to\s+(?:go\s+to|visit|include)\b",
+    re.IGNORECASE,
+)
+# One removal of one named stop, after place names are masked as copilotplaceN.
+_REMOVE_PLACE = re.compile(
+    r"\b(?:remove|delete|drop|skip|exclude|cancel|cut|take\s+out|get\s+rid\s+of)\s+"
+    r"(?:the\s+)?(?:(?:visit|trip|stop)\s+(?:to|at)\s+)?copilotplace(?P<index>\d+)\b",
+    re.IGNORECASE,
+)
+_DO_NOT_VISIT_PLACE = re.compile(
+    r"\b(?:do\s+not|don['’]?t|dont|no\s+longer|never)\s+(?:really\s+)?(?:want|wanna|need|like)\s+"
+    r"(?:to\s+)?(?:go\s+to|visit|see|stop\s+at|include|keep|do)\s+(?:the\s+)?copilotplace(?P<index>\d+)\b",
+    re.IGNORECASE,
+)
+_NEGATED_REMOVAL = re.compile(
+    r"\b(?:do\s+not|don['’]?t|dont|never|not)\s+(?:want\s+to\s+)?(?:remove|delete|drop|skip|exclude|cancel|cut)\b",
     re.IGNORECASE,
 )
 _STOP_REPLACEMENT_REQUEST = re.compile(
@@ -172,13 +188,81 @@ def is_stop_replacement_request(message: str) -> bool:
     return bool(_STOP_REPLACEMENT_REQUEST.search(message))
 
 
-def unsupported_stop_removal() -> CopilotInterpretationV1:
+def unsupported_stop_removal(context: CopilotContextV1 | None = None) -> CopilotInterpretationV1:
+    """A removal whose stop could not be resolved.
+
+    The current (v2) workspace can remove a stop, so it asks which one. Legacy
+    v1 contexts have no removal path and keep the honest refusal.
+    """
+    if not isinstance(context, CopilotContextV2):
+        return CopilotInterpretationV1(
+            state="unsupported",
+            assistant_message=(
+                "Removing or excluding an accepted stop is not enabled in this repair workflow. Nothing was changed."
+            ),
+            intents=(CopilotIntentV1(type="unsupported_request"),),
+        )
+    question = 'Which stop should I remove? Name it as it appears in your trip, for example "Remove Stearns Wharf".'
     return CopilotInterpretationV1(
-        state="unsupported",
+        state="clarification_required",
+        assistant_message=question + " Nothing was changed.",
+        intents=(CopilotIntentV1(type="request_clarification", clarification_question=question),),
+    )
+
+
+def _stop_removal_proposal(
+    context: CopilotContextV1, instruction_text: str, places: list
+) -> CopilotInterpretationV1 | None:
+    """Resolve "remove X" / "I don't want to visit X" to one remove_stop intent.
+
+    Only a single clause that names one place is resolved here; a compound
+    request goes through the per-clause path, and a replacement stays a
+    replacement. The optimizer and the evaluator still decide whether the trip
+    without the stop is feasible.
+    """
+    if not isinstance(context, CopilotContextV2) or is_stop_replacement_request(instruction_text):
+        return None
+    if _INSTEAD_OF.search(instruction_text) or _NEGATED_REMOVAL.search(instruction_text):
+        return None
+    match = _REMOVE_PLACE.search(instruction_text) or _DO_NOT_VISIT_PLACE.search(instruction_text)
+    if match is None or len(set(re.findall(r"copilotplace\d+", instruction_text, re.I))) != 1:
+        return None
+    rest = instruction_text[: match.start()] + " " + instruction_text[match.end() :]
+    if _EDIT_ACTION.search(re.sub(r"\bI(?:'d|’d| would) like\b|\bplease\b", " ", rest, flags=re.I)):
+        return None
+    # "Do not want to visit X for 75 minutes" rejects a length or a time, not the stop.
+    if re.search(
+        r"\b\d+\s*(?:min(?:ute)?s?|h(?:ou)?rs?)\b|\b(?:on|for)\s+day\s*\d|\b\d{1,2}(?::\d{2})?\s*(?:a\.?m|p\.?m)\b|\b(?:morning|afternoon|evening|tonight|today|tomorrow)\b",
+        instruction_text,
+        re.I,
+    ):
+        return None
+    index = int(match["index"])
+    if index >= len(places):
+        return None
+    place = places[index]
+    name = str(place["name"])
+    stop_id = str(place["place_id"])
+    if place["route_status"] != "accepted_stop" or stop_id not in context.allowed_stop_ids:
+        question = f"{name} is not in your current trip, so there is nothing to remove. Did you mean another stop?"
+        return CopilotInterpretationV1(
+            state="clarification_required",
+            assistant_message=question + " Nothing was changed.",
+            intents=(CopilotIntentV1(type="request_clarification", clarification_question=question),),
+        )
+    day = next(
+        (row["day"] for row in context.capabilities.get("stop_positions", ()) if row["stop_id"] == stop_id),
+        None,
+    )
+    where = f" from Day {day}" if day is not None else ""
+    return CopilotInterpretationV1(
+        state="proposal_ready",
         assistant_message=(
-            "Removing or excluding an accepted stop is not enabled in this repair workflow. Nothing was changed."
+            f"I prepared a change that removes {name}{where} with no replacement. "
+            "I will check the new route and schedule on the map; nothing is saved until you accept it."
         ),
-        intents=(CopilotIntentV1(type="unsupported_request"),),
+        intents=(CopilotIntentV1(type="remove_stop", target_stop_id=stop_id),),
+        highlights=CopilotHighlightsV1(stop_ids=(stop_id,)),
     )
 
 
@@ -342,6 +426,9 @@ def request_semantic_guard(
         text = instruction_text
         for token, name in place_names.items():
             text = re.sub(re.escape(token), name, text, flags=re.I)
+    removal = _stop_removal_proposal(context, instruction_text, places)
+    if removal is not None:
+        return removal
     # A conjunction joining clock bounds is part of one time-window value.
     instruction_text = re.sub(r"(\d{2}:\d{2})\s+and\s+(?=\d{2}:\d{2})", r"\1 to ", instruction_text, flags=re.I)
     instruction_text = re.sub(
@@ -496,7 +583,9 @@ def request_semantic_guard(
     unhandled_clause = len(clauses) > 1 and bool(actions)
     if (len(actions) > 1 or unhandled_clause) and not replacement_pair:
         labels = ", ".join(dict.fromkeys(actions)) or "multiple clauses"
-        if any(
+        # In the current workspace a removal clause resolves per clause like any
+        # other edit. Legacy v1 contexts have no removal path and refuse it whole.
+        if not isinstance(context, CopilotContextV2) and any(
             re.search(r"\b(?:remove|delete|exclude|skip)\s+copilotplace\d+\b", clause)
             and _NEGATED_EDIT.search(clause) is None
             and not (index == 0 and same_stop_replacement)
@@ -644,7 +733,8 @@ def _compound_proposal(context: CopilotContextV2, clauses: tuple[str, ...]) -> C
         state="proposal_ready",
         intents=intents,
         highlights=highlights,
-        assistant_message=f"I prepared all {len(intents)} requested changes as one combined suggestion. Nothing was staged or changed.",
+        assistant_message=describe_proposal(context, intents)
+        or f"I prepared all {len(intents)} requested changes as one combined suggestion. Nothing was staged or changed.",
     )
     return guard_contextual_output(context, result)
 
@@ -764,7 +854,7 @@ class DeterministicCopilotAdapter:
                 ),
             )
         if is_stop_removal_request(message) and not is_stop_replacement_request(message):
-            return self._validated(context, unsupported_stop_removal())
+            return self._validated(context, unsupported_stop_removal(context))
 
         operation = self._operation_intent(normalized, context)
         if operation is not None:
@@ -1069,6 +1159,7 @@ def _validate_intent(context: CopilotContextV1, intent: CopilotIntentV1) -> None
         "review_registered_repair": ({"preference"}, set()),
         "keep_original": (set(), set()),
         "keep_stop": ({"target_stop_id"}, {"target_stop_id"}),
+        "remove_stop": ({"target_stop_id"}, {"target_stop_id"}),
         "lock_stop": ({"target_stop_id"}, {"target_stop_id"}),
         "mark_flexible": ({"target_stop_id"}, {"target_stop_id"}),
         "move_day": (

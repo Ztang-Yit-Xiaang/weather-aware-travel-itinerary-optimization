@@ -45,6 +45,7 @@ from .copilot import (
     unsupported_stop_removal,
     validate_copilot_interpretation,
 )
+from .copilot_copy import clarification_examples, describe_proposal
 from .copilot_prompt import PromptBudgetError, build
 from .models import (
     CopilotContextV1,
@@ -59,6 +60,7 @@ from .models import (
 
 _INTENT_TYPES = Literal[
     "review_registered_repair",
+    "remove_stop",
     "keep_original",
     "keep_stop",
     "lock_stop",
@@ -295,21 +297,33 @@ class OpenAICopilotAdapter:
         )
         if guarded is not None and combined is None:
             return validate_copilot_interpretation(context=context, interpretation=guarded)
-        from .copilot_memory import interpret_context_request
+        from .copilot_memory import guard_contextual_output, interpret_context_request, is_local_choice
 
         contextual = interpret_context_request(context, message) if combined is None else None
         if contextual is not None and contextual.state != "proposal_ready":
             return validate_copilot_interpretation(context=context, interpretation=contextual)
+        if contextual is not None and is_local_choice(context, message):
+            return validate_copilot_interpretation(
+                context=context, interpretation=guard_contextual_output(context, contextual)
+            )
         draft_guidance = _draft_point_removal_guidance(context, message)
         if draft_guidance is not None:
             return validate_copilot_interpretation(
                 context=context,
                 interpretation=draft_guidance,
             )
-        if is_stop_removal_request(message) and not is_stop_replacement_request(message):
+        # In the current workspace, a removal the local guard could not resolve
+        # to one stop goes to the provider, which may return a remove_stop
+        # intent; its output is still validated against the allowed stops.
+        # Legacy v1 contexts have no removal path and refuse here.
+        if (
+            not isinstance(context, CopilotContextV2)
+            and is_stop_removal_request(message)
+            and not is_stop_replacement_request(message)
+        ):
             return validate_copilot_interpretation(
                 context=context,
-                interpretation=unsupported_stop_removal(),
+                interpretation=unsupported_stop_removal(context),
             )
         inclusion = _accepted_stop_inclusion(context, message) if combined is None and contextual is None else None
         if inclusion is not None:
@@ -599,7 +613,7 @@ def _canonicalize_provider_copy(
             )
             return replace(interpretation, assistant_message=copy)
     if is_stop_removal_request(message) and "mark_flexible" in intent_types and "replace_nearby" not in intent_types:
-        return unsupported_stop_removal()
+        return unsupported_stop_removal(context)
     place_copy = known_place_clarification(context, message)
     if interpretation.state == "clarification_required" and interpretation.intents:
         questions = tuple(intent.clarification_question for intent in interpretation.intents)
@@ -634,9 +648,16 @@ def _canonicalize_provider_copy(
         )
         for intent in interpretation.intents
     )
+    described = (
+        describe_proposal(context, intents)
+        if interpretation.state == "proposal_ready"
+        else clarification_examples(context)
+        if interpretation.state == "clarification_required"
+        else None
+    )
     return replace(
         interpretation,
-        assistant_message=_canonical_assistant_copy(interpretation),
+        assistant_message=described or _canonical_assistant_copy(interpretation),
         intents=intents,
     )
 

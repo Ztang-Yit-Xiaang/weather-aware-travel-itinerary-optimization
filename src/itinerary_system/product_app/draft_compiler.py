@@ -52,6 +52,7 @@ CANONICAL_OPERATIONS = frozenset(
         "route_feedback",
         "replace_nearby",
         "add_candidate",
+        "remove_stop",
         DraftOperationTypeV2.SET_STOP_DAY.value,
         DraftOperationTypeV2.SET_STOP_ORDER.value,
         DraftOperationTypeV2.SET_STOP_ROLE.value,
@@ -278,15 +279,15 @@ class FrozenDraftCompiler:
             # with keep, replacement and addition edits, not with direct edits.
             repair_operations = sorted(
                 name
-                for name in ("keep_stop", "lock_stop", "move_day", "replace_nearby", "add_candidate")
+                for name in ("keep_stop", "lock_stop", "move_day", "replace_nearby", "add_candidate", "remove_stop")
                 if capabilities["operations"].get(name, {}).get("preview_executable") is True
             )
-            if {"lock_stop", "move_day"} & set(repair_operations):
+            if {"lock_stop", "move_day", "remove_stop"} & set(repair_operations):
                 capabilities["executable_combinations"].append(
                     {
                         "operations": repair_operations,
                         "cardinality": 32,
-                        "description": "Lock, cross-day move, keep, replacement and addition edits run together through deterministic repair and independent evaluation.",
+                        "description": "Lock, cross-day move, removal, keep, replacement and addition edits run together through deterministic repair and independent evaluation.",
                     }
                 )
         if self._coherent_product and self.planning_state_root is not None:
@@ -579,7 +580,7 @@ class FrozenDraftCompiler:
             "set_stop_order": "_compile_stop_order",
         }
         groups = {kind: tuple(row for row in operations if row["type"] == kind) for kind in handlers}
-        removed = {row["target"] for row in operations if row["type"] == "replace_nearby"}
+        removed = {row["target"] for row in operations if row["type"] in {"replace_nearby", "remove_stop"}}
         if any(row["target"] in removed for kind in handlers for row in groups[kind]):
             raise WorkspaceError("draft_conflicts_with_replacement", 409)
         # Validate every typed clause before dispatching the selection optimizer.
@@ -791,6 +792,8 @@ class FrozenDraftCompiler:
         # core does not read flexible marks or route preferences, so those stay
         # off rather than imply an effect. set_stop_day stays a draft-only
         # typed edit until it shares the move path.
+        if operation_type == "remove_stop":
+            return not self._coherent_product
         return self._coherent_product and operation_type in {
             "mark_flexible",
             "route_feedback",
@@ -859,6 +862,7 @@ class FrozenDraftCompiler:
                 DraftOperationTypeV2.SET_STOP_DAY.value,
                 DraftOperationTypeV2.SET_STOP_ROLE.value,
                 "replace_nearby",
+                "remove_stop",
             }:
                 if target not in self.parent_stop_ids:
                     raise WorkspaceError("draft_target_not_in_parent", 409)
@@ -872,7 +876,7 @@ class FrozenDraftCompiler:
                 except (ValueError, TypeError, KeyError):
                     raise WorkspaceError("invalid_trip_planning_parameters", 422) from None
                 continue
-            if operation_type in {"keep_stop", "lock_stop", "mark_flexible"}:
+            if operation_type in {"keep_stop", "lock_stop", "mark_flexible", "remove_stop"}:
                 if parameters:
                     raise WorkspaceError("draft_operation_parameters_invalid", 409)
             elif operation_type in {"move_day", DraftOperationTypeV2.SET_STOP_DAY.value}:
@@ -977,6 +981,10 @@ class FrozenDraftCompiler:
         }
         if len(requested_candidates) > 1:
             raise WorkspaceError("draft_conflicting_candidates", 409)
+        # A removed stop cannot also be kept, moved, replaced or edited.
+        removals = {row["target"] for row in operations if row["type"] == "remove_stop"}
+        if any(row["type"] != "remove_stop" and row["target"] in removals for row in operations):
+            raise WorkspaceError("draft_conflicts_with_removal", 409)
         if (
             preferences == {"reduce_driving"}
             and requested_candidates
@@ -1024,6 +1032,7 @@ class FrozenDraftCompiler:
         affected_days = set(int(value) for value in constraints.get("affected_days") or ())
         preferences: list[str] = []
         day_moves: dict[str, int] = {}
+        removals: set[str] = set()
         flexible: set[str] = set()
         locked: set[str] = set()
         for row in operations:
@@ -1047,6 +1056,10 @@ class FrozenDraftCompiler:
                     affected_days.add(self._parent_day_by_stop[target])
             elif kind == "route_feedback":
                 preferences.append(str(row["parameters"]["preference"]))
+            elif kind == "remove_stop":
+                must_delete.add(target)
+                removals.add(target)
+                affected_days.add(self._parent_day_by_stop[target])
             elif kind == "replace_nearby":
                 must_delete.add(target)
                 affected_days.add(self._parent_day_by_stop[target])
@@ -1112,6 +1125,7 @@ class FrozenDraftCompiler:
                 "locked_stop_ids": sorted(locked),
                 "flexible_stop_ids": sorted(flexible),
                 "move_stops": dict(sorted(day_moves.items())),
+                "remove_stops": sorted(removals),
                 "route_feedback": preferences,
             }
         )
@@ -1491,6 +1505,8 @@ class FrozenDraftCompiler:
             elif kind == "add_candidate":
                 if day_by_stop.get(target) != row["parameters"]["day"]:
                     failures.append("requested_candidate_addition_not_satisfied")
+            elif kind == "remove_stop" and target in day_by_stop:
+                failures.append("requested_removal_not_satisfied")
         if self._coherent_product:
             expected = {row["day"]: list(row["stop_ids"]) for row in self.parent_plan["ordered_days"]}
             for row in operations:
@@ -1502,6 +1518,8 @@ class FrozenDraftCompiler:
                     ]
                 elif row["type"] == "add_candidate":
                     expected[row["parameters"]["day"]].append(row["target"])
+                elif row["type"] == "remove_stop":
+                    expected[self._parent_day_by_stop[row["target"]]].remove(row["target"])
             for row in operations:
                 if row["type"] == "set_stop_order":
                     stops = expected[row["parameters"]["day"]]

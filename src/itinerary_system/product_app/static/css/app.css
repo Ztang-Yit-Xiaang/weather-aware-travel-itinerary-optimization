@@ -149,11 +149,11 @@ button:disabled { cursor: not-allowed; opacity: 0.55; }
 .map-legend { position: absolute; z-index: 4; left: 16px; bottom: 92px; display: flex; flex-wrap: wrap; gap: 12px; padding: 10px 12px; background: rgba(255,255,255,.96); border: 1px solid var(--line); border-radius: 11px; box-shadow: 0 3px 12px rgba(18,37,53,.09); font-size: 12px; }
 .map-legend span { display: flex; align-items: center; gap: 6px; }
 .line-swatch { display: inline-block; width: 24px; height: 3px; background: var(--ink); }
-.line-swatch.original { height: 0; border-top: 3px dashed #173a4a; background: transparent; }
-.line-swatch.repair { height: 5px; background: #00857f; }
+.line-swatch.original { height: 0; border-top: 2px dashed #475569; background: transparent; opacity: .75; }
+.line-swatch.repair { height: 4px; border-radius: 2px; background: #0f766e; box-shadow: 0 0 0 1.5px #fff, 0 0 0 2.5px rgba(15,118,110,.18); }
 .line-swatch.alternative { height: 0; border-top: 4px dotted #6757c7; background: transparent; }
-.line-swatch.selected-day { height: 5px; background: var(--orange); }
-.marker-swatch { display: inline-block; width: 11px; height: 11px; border: 2px solid white; border-radius: 50%; background: var(--orange); box-shadow: 0 0 0 1px var(--orange); }
+.line-swatch.selected-day { height: 4px; border-radius: 2px; background: #f97316; }
+.marker-swatch { display: inline-block; width: 12px; height: 12px; border: 2px solid white; border-radius: 50%; background: #0f766e; box-shadow: 0 0 0 1px rgba(15,118,110,.45); }
 .map-note { position: absolute; z-index: 4; right: 48px; top: 15px; max-width: 250px; padding: 10px 12px; background: rgba(255,255,255,.94); border: 1px solid var(--line); border-radius: 10px; box-shadow: 0 3px 12px rgba(18,37,53,.09); color: var(--muted); font-size: 12px; line-height: 1.4; }
 .map-context-card { position: absolute; z-index: 6; right: 16px; top: 94px; width: min(310px, calc(100% - 32px)); max-height: calc(100% - 200px); overflow: auto; overscroll-behavior: contain; padding: 14px; border: 1px solid var(--line); border-left: 4px solid var(--teal); border-radius: 12px; background: rgba(255,255,255,.97); box-shadow: 0 8px 24px rgba(18,37,53,.15); color: var(--muted); font-size: 13px; line-height: 1.45; }
 .map-context-card.exploratory { border-left-color: #6d5bd0; }
@@ -839,3 +839,51 @@ body { background: var(--wash); }
   .map-stage:has(.destination-details:not(.is-expanded)) .map-legend { display: none; }
   .map-stage:has(.destination-details:not(.is-expanded)) .map-attribution { bottom: 156px; }
 }
+/* UX pass 2026-11-27: quieter map overlays, a visible next step, less noise. */
+/* Coverage is a caveat, not a warning: a small note keeps the route visible. */
+.map-render-status.is-info { align-self: flex-start; padding: 6px 10px; border-color: var(--line); background: rgba(255,255,255,.9); box-shadow: none; color: var(--muted); font-size: 12px; text-align: left; }
+/* The text route stays one tap away without covering the map while closed. */
+.textual-map-alternative:not([open]) { align-self: flex-start; min-height: 0; padding: 0 12px; }
+.textual-map-alternative:not([open]) summary { min-height: 36px; font-size: 12.5px; }
+/* After a passed preview the draft bar offers Accept. Wide maps fit all
+   three actions; compact maps give Accept the Preview slot, because
+   re-checking the same draft changes nothing. */
+@container mapstage (min-width: 721px) {
+  .draft-bar:has(#inline-accept) { grid-template-columns: auto minmax(120px, 1fr) auto auto auto; }
+}
+@container mapstage (max-width: 720px) {
+  .draft-bar:has(#inline-accept) #inline-preview { display: none; }
+  .draft-bar:has(#inline-accept) #inline-accept { grid-column: 2; grid-row: 2; }
+}
+.draft-bar #inline-accept:disabled { opacity: .6; cursor: progress; }
+/* Empty metrics repeat "Not evaluated for this plan"; keep it for screen
+   readers but out of sight so the filled metrics stand out. */
+.metric.is-empty small { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+/* Example requests wrap instead of running off the panel edge. */
+.quick-prompts { flex-wrap: wrap; overflow-x: visible; }
+/* While the app checks a just-sent action itself, its recovery buttons are
+   disabled; dim them so the calm status reads first. */
+#mutation-recovery-banner.is-checking button { opacity: .45; }
+.decision-detail { margin-top: 6px; color: var(--muted); font-size: 12px; }
+.decision-detail summary { cursor: pointer; }
+.decision-detail p { margin: 6px 0 0; }
+/* The privacy note stays exact but takes two lines until hovered or focused. */
+.copilot-disclosure { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; cursor: help;
+  /* Clip at the text edge: bottom padding would let a third line show. */
+  padding-bottom: 0; border-bottom: 8px solid #f6f2ff; box-shadow: 0 1px 0 #d8c9f8; }
+.copilot-disclosure:hover, .copilot-disclosure:focus { display: block; -webkit-line-clamp: unset; overflow: visible; }
+
+.marker-swatch.changed { background: #f97316; box-shadow: 0 0 0 1px rgba(249,115,22,.5); }
+/* With nothing to review, the draft bar steps out of the way of the map. */
+.draft-bar.is-idle { display: none; }
+.map-stage:has(.draft-bar.is-idle) .map-legend { bottom: 14px; }
+.map-stage:has(.draft-bar.is-idle) .map-attribution { bottom: 8px; font-size: 11px; }
+
+/* A selected stop card sized to its content, and one the traveler can hide to clear the map. */
+@media (min-width: 821px) { .map-context-card.destination-details:not(.is-expanded) { height: auto !important; max-height: min(420px, calc(100% - 200px)); } }
+.destination-heading-actions { display: flex; flex-direction: column; gap: 6px; flex-shrink: 0; }
+.destination-heading-actions > button { max-width: 110px; min-height: 34px; }
+.map-context-card.destination-details.is-collapsed { width: min(300px, calc(100% - 32px)); height: auto !important; max-height: none !important; bottom: auto !important; }
+.destination-details.is-collapsed .destination-tabs, .destination-details.is-collapsed .destination-content, .destination-details.is-collapsed #expand-destination-details { display: none; }
+.destination-details.is-collapsed .destination-heading { padding-bottom: 12px; }
+.destination-details.is-collapsed .destination-heading-actions { flex-direction: row; }

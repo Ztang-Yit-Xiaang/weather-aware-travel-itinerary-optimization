@@ -481,11 +481,13 @@ def _verify_current_context_extensions(context: dict[str, Any]) -> None:
             "set_stop_time_window",
             "set_stop_role",
             "replan_trip",
+            "remove_stop",
         },
         code,
     )
     # The move-leg road delta (2026-11-26) makes candidate additions route-ready
-    # and adds the deterministic-repair row for lock and cross-day moves.
+    # and adds the deterministic-repair row for lock and cross-day moves; stop
+    # removal (2026-11-27) joins that row.
     _require(
         caps["executable_combinations"]
         == [
@@ -502,7 +504,7 @@ def _verify_current_context_extensions(context: dict[str, Any]) -> None:
                 "cardinality": 32,
             },
             {
-                "operations": ["add_candidate", "keep_stop", "lock_stop", "move_day", "replace_nearby"],
+                "operations": ["add_candidate", "keep_stop", "lock_stop", "move_day", "remove_stop", "replace_nearby"],
                 "cardinality": 32,
             },
             {"operations": ["replan_trip"], "cardinality": 1},

@@ -108,7 +108,7 @@ def test_source_inventory_names_all_three_authoritative_operation_groups():
     assert groups["draft_capabilities"] == LEGACY_CAPABILITY_OPERATIONS
     assert groups["typed_edit_capabilities"] == set(TYPED_EDIT_OPERATION_NAMES)
     assert groups["map_edit_capabilities"] == WorkspaceStore.CONFIRMED_MAP_OPERATIONS
-    assert len({row["action_id"] for row in registry["rows"]}) == len(registry["rows"]) == 19
+    assert len({row["action_id"] for row in registry["rows"]}) == len(registry["rows"]) == 20
     assert all(all(row.get(field) for field in coverage.MAPPING_FIELDS) for row in registry["rows"])
     assert all(row["contexts"] == ["original", "accepted_child"] for row in registry["rows"])
     assert registry["unverified_requirements"]
